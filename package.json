@@ -37,7 +37,9 @@
     "audit:high": "npm audit --audit-level=high",
     "release:check": "node scripts/verify.mjs --release",
     "app": "npm run build && electron .",
-    "dist:mac": "npm run build && electron-builder --mac dmg"
+    "dist:mac": "npm run build && electron-builder --mac dmg",
+    "dist:win": "npm run build && electron-builder --win --x64",
+    "dist:all": "npm run build && electron-builder --mac dmg --win --x64"
   },
   "dependencies": {
     "chalk": "^5.3.0",
@@ -76,6 +78,18 @@
     },
     "dmg": {
       "title": "Hi Code"
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "zip"
+      ],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "${productName}-Setup-${version}-win-${arch}.${ext}"
     }
   },
   "engines": {

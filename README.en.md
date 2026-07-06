@@ -177,6 +177,15 @@ a model that actually checks the code can correct one that's guessing:
 
 ## Install
 
+**Prebuilt desktop packages** — grab them from the [Releases](../../releases) page:
+
+- **Windows:** `Hi Code-Setup-<version>-win-x64.exe` installer (choose your install dir), or the portable `Hi Code-<version>-win.zip`
+- **macOS:** `Hi Code-<version>.dmg` (unsigned for now — right-click → Open on first launch)
+
+Each release ships a `SHA256SUMS.txt` to verify downloads.
+
+**From source:**
+
 ```bash
 cd hi-code
 npm install
@@ -188,6 +197,13 @@ Or run from source without building:
 
 ```bash
 npm run dev      # uses tsx
+```
+
+Package desktop builds yourself:
+
+```bash
+npm run dist:mac   # macOS dmg
+npm run dist:win   # Windows installer + portable zip (cross-builds on macOS/Linux)
 ```
 
 ## Configure

@@ -93,6 +93,17 @@
 
 ---
 
+## 📦 下载安装
+
+从 [Releases](../../releases) 页面下载对应平台的安装包：
+
+- **Windows**：`Hi Code-Setup-<版本>-win-x64.exe` 安装器（可自选安装目录），或便携版 `Hi Code-<版本>-win.zip` 解压即用
+- **macOS**：`Hi Code-<版本>.dmg`（应用暂未签名，首次打开请右键 → 打开）
+
+发布包附带 `SHA256SUMS.txt`，可校验下载完整性。也可以按下面的方式从源码构建。
+
+---
+
 ## 🚀 快速开始
 
 > 需要 Node.js **>= 18**。
@@ -110,6 +121,13 @@ npm run build          # 编译 src/（TypeScript）→ dist/
 npm run app            # 构建并启动桌面应用（Electron）
 npm run dev            # 终端 TUI（用 tsx 直接跑，免构建）
 node dist/index.js     # 运行已编译的 CLI
+```
+
+自行打包桌面安装包：
+
+```bash
+npm run dist:mac       # macOS dmg
+npm run dist:win       # Windows 安装器 + 便携 zip（在 macOS/Linux 上也能交叉打包）
 ```
 
 > 代码入口：桌面主进程 `electron/main.mjs`，渲染进程 `renderer/index.html`（组件在 `renderer/components/`），终端 CLI `dist/index.js`（源码 `src/`）。
