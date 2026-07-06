@@ -478,8 +478,11 @@ function detectUiButtonsWithoutBehavior({ workspace, relative, text }: { workspa
   const findings: SkeletonFinding[] = [];
   for (const id of ids) {
     const idUse = new RegExp(`\\b${escapeRegExp(id)}\\b`);
+    // Wiring evidence can appear on either side of the id: `$("id").onclick = ...`
+    // as well as `closeButton: $("id")` (element captured for a component).
     const behaviorUse = new RegExp(`(${escapeRegExp(id)}|["']${escapeRegExp(id)}["']).{0,120}(onclick|addEventListener|dataset|querySelector|\\$\\()`, "s");
-    if (!idUse.test(jsCorpus) || !behaviorUse.test(jsCorpus)) {
+    const behaviorUseBefore = new RegExp(`(onclick|addEventListener|dataset|querySelector|\\$\\().{0,120}(${escapeRegExp(id)}|["']${escapeRegExp(id)}["'])`, "s");
+    if (!idUse.test(jsCorpus) || !(behaviorUse.test(jsCorpus) || behaviorUseBefore.test(jsCorpus))) {
       findings.push(finding("ui_button_without_behavior", "warning", `UI button has no detected behavior wiring: ${id}`, relative, "Wire the button to a real API/action or remove it.", id));
     }
   }

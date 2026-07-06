@@ -80,6 +80,14 @@ check("manifest contains required release fields", ["releaseId", "projectId", "v
 check("checksum manifest is generated", fs.existsSync(releasePackage.checksumPath) && fs.readFileSync(releasePackage.checksumPath, "utf8").includes("release-manifest.json"));
 check("artifact copy includes project artifacts", fs.existsSync(path.join(releasePackage.releasePath, "artifacts", "project-artifacts")) && releasePackage.artifacts.some((artifact) => artifact.id === "bom" && artifact.packagePath), JSON.stringify(releasePackage.artifacts));
 check("simulated gate is marked in release notes", /SIMULATED \/ DRY-RUN EVIDENCE/.test(fs.readFileSync(releasePackage.notesPath, "utf8")) && /CAD dry-run gate/.test(fs.readFileSync(releasePackage.notesPath, "utf8")));
+check(
+  "package readiness shape is internally consistent",
+  releasePackage.readiness.ready === (releasePackage.readiness.blockers.length === 0)
+    && releasePackage.readiness.risks.length === releasePackage.readiness.blockers.length + releasePackage.readiness.warnings.length
+    && releasePackage.readiness.blockers.every((item) => item.severity === "blocking")
+    && releasePackage.readiness.warnings.every((item) => item.severity !== "blocking"),
+  JSON.stringify(releasePackage.readiness),
+);
 
 console.log("\n[release-builder] blocking readiness");
 const blockedWorkspace = makeWorkspace("blocked", { failedGate: true });

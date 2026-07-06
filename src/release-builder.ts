@@ -374,12 +374,7 @@ export class ReleaseBuilder {
       evidenceReportPath,
       checksumPath,
       manifest: finalManifest,
-      readiness: {
-        ...readiness,
-        risks: accumulator.risks,
-        blockers: accumulator.risks.filter((item) => item.severity === "blocking"),
-        warnings: accumulator.risks.filter((item) => item.severity !== "blocking"),
-      },
+      readiness: finalizeReadiness(readiness, accumulator.risks),
       artifacts: accumulator.artifacts,
       checksums: finalChecksums,
     };
@@ -626,6 +621,22 @@ export class ReleaseBuilder {
       },
     });
   }
+}
+
+/**
+ * Rebuild the readiness view from the final risk list. Build steps may append
+ * risks after getReadiness(), so `ready`/`blockers`/`warnings` must be derived
+ * from the same final list to stay consistent with each other.
+ */
+function finalizeReadiness(readiness: ReleaseReadiness, finalRisks: ReleaseRisk[]): ReleaseReadiness {
+  const blockers = finalRisks.filter((item) => item.severity === "blocking");
+  return {
+    ...readiness,
+    ready: blockers.length === 0,
+    risks: finalRisks,
+    blockers,
+    warnings: finalRisks.filter((item) => item.severity !== "blocking"),
+  };
 }
 
 function collectProjectArtifacts(project: IndustrialProject | null, workspace: string): ReleaseArtifact[] {
