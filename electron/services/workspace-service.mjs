@@ -147,8 +147,7 @@ export function createWorkspaceService({
         if (!res.ok) return { ok: false, error: modelTestError(res.status, text, baseURL) };
         return { ok: true, message: "连接成功" };
       } catch (error) {
-        const message = error?.name === "AbortError" ? "连接超时" : (error?.message ?? "连接失败");
-        return { ok: false, error: message };
+        return { ok: false, error: modelTestNetworkError(error, baseURL) };
       } finally {
         clearTimeout(timer);
       }
@@ -177,7 +176,7 @@ function shouldOmitTemperatureForBaseURL(baseURL) {
   return value.includes("moonshot.") || value.includes("api.kimi.com");
 }
 
-function modelTestError(status, text, baseURL) {
+export function modelTestError(status, text, baseURL) {
   const raw = String(text || "").slice(0, 220);
   const endpoint = String(baseURL || "");
   if (status === 401) {
@@ -192,7 +191,45 @@ function modelTestError(status, text, baseURL) {
   if (status === 400 && isKimiEndpoint(endpoint) && /temperature/i.test(raw)) {
     return `Kimi 参数校验失败：该模型可能不接受 temperature 参数，新版请求已自动省略 temperature。请重新测试。原始错误：HTTP 400 ${raw}`;
   }
+  if (status === 403) {
+    return `访问被拒绝：Key 有效但没有该模型的使用权限，请到服务商控制台确认已开通此模型。原始错误：HTTP 403 ${raw}`;
+  }
+  if (status === 404) {
+    return `地址或模型名不对：请检查 Base URL 是否以 /v1 这类前缀结尾、模型名是否与服务商控制台一致。原始错误：HTTP 404 ${raw}`;
+  }
+  if (status === 429) {
+    return `请求被限流或额度不足：请稍后重试，或到服务商控制台检查余额/速率限制。原始错误：HTTP 429 ${raw}`;
+  }
+  if (status >= 500) {
+    return `服务商服务端异常：一般稍后重试即可，持续失败请检查服务商状态页。原始错误：HTTP ${status} ${raw}`;
+  }
   return `HTTP ${status}: ${raw}`;
+}
+
+export function modelTestNetworkError(error, baseURL) {
+  const msg = String(error?.message ?? "");
+  const code = String(error?.cause?.code ?? error?.code ?? "");
+  const isLocal = /localhost|127\.0\.0\.1|0\.0\.0\.0/.test(String(baseURL || ""));
+  if (error?.name === "AbortError") {
+    return "连接超时（15 秒）：请检查网络，或确认 Base URL 可达；国外服务在国内直连常见超时。";
+  }
+  if (code === "ECONNREFUSED" || /ECONNREFUSED/.test(msg)) {
+    return isLocal
+      ? "连接被拒绝：本地模型服务未启动。请先启动 Ollama / vLLM 等本地服务，再测试连接。"
+      : "连接被拒绝：目标地址没有服务在监听，请检查 Base URL 的主机和端口。";
+  }
+  if (code === "ENOTFOUND" || /ENOTFOUND|getaddrinfo/.test(msg)) {
+    return "域名无法解析：请检查 Base URL 拼写，或确认当前网络可以访问该服务商。";
+  }
+  if (code === "CERT_HAS_EXPIRED" || /certificate|SSL|TLS/i.test(msg)) {
+    return `TLS/证书错误：${msg}。如使用自建服务请检查证书配置。`;
+  }
+  if (/fetch failed/i.test(msg)) {
+    return isLocal
+      ? "网络请求失败：本地服务可能未启动或端口不对。请确认本地模型服务正在运行。"
+      : "网络请求失败：请检查网络连接和 Base URL；如在代理环境，请确认代理放行了该地址。";
+  }
+  return msg || "连接失败";
 }
 
 function isKimiEndpoint(baseURL) {

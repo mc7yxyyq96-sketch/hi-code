@@ -8,6 +8,7 @@ import { createRuntimeService } from "../electron/services/runtime-service.mjs";
 import { createQueueService } from "../electron/services/queue-service.mjs";
 import { createGitService } from "../electron/services/git-service.mjs";
 import { createPathGuard, redactSensitive } from "../electron/services/security-service.mjs";
+import { modelTestError, modelTestNetworkError } from "../electron/services/workspace-service.mjs";
 
 let pass = 0;
 let fail = 0;
@@ -275,6 +276,19 @@ const redacted = redactSensitive({ apiKey: "sk-secret123456789", nested: { autho
 check("security-service redacts sensitive fields", redacted.apiKey === "[REDACTED]" && redacted.nested.authorization === "[REDACTED]" && redacted.ok === "visible", JSON.stringify(redacted));
 fs.rmSync(tmp, { recursive: true, force: true });
 fs.rmSync(outside, { force: true });
+
+console.log("\n[services] model test error copy");
+check("401 maps to API key guidance", modelTestError(401, "unauthorized", "https://api.deepseek.com/v1").includes("API Key 鉴权失败"));
+check("403 maps to model access guidance", modelTestError(403, "forbidden", "https://api.deepseek.com/v1").includes("使用权限"));
+check("404 maps to base URL / model name guidance", modelTestError(404, "not found", "https://api.deepseek.com/v1").includes("Base URL"));
+check("429 maps to rate limit guidance", modelTestError(429, "rate limited", "https://api.deepseek.com/v1").includes("限流"));
+check("5xx maps to upstream guidance", modelTestError(502, "bad gateway", "https://api.deepseek.com/v1").includes("服务端异常"));
+check("error copy keeps raw error for debugging", modelTestError(404, "model_not_found", "https://api.deepseek.com/v1").includes("model_not_found"));
+check("timeout maps to actionable copy", modelTestNetworkError({ name: "AbortError", message: "aborted" }, "https://api.openai.com/v1").includes("连接超时"));
+check("local ECONNREFUSED suggests starting local service", modelTestNetworkError({ message: "fetch failed", cause: { code: "ECONNREFUSED" } }, "http://127.0.0.1:11434/v1").includes("本地模型服务未启动"));
+check("remote ECONNREFUSED suggests checking host/port", modelTestNetworkError({ message: "fetch failed", cause: { code: "ECONNREFUSED" } }, "https://example.com/v1").includes("主机和端口"));
+check("ENOTFOUND suggests checking spelling", modelTestNetworkError({ message: "getaddrinfo ENOTFOUND api.example.com" }, "https://api.example.com/v1").includes("域名无法解析"));
+check("generic fetch failed maps to network guidance", modelTestNetworkError({ message: "fetch failed" }, "https://api.example.com/v1").includes("网络请求失败"));
 
 console.log(`\n=== ${pass} passed, ${fail} failed ===`);
 process.exit(fail ? 1 : 0);
