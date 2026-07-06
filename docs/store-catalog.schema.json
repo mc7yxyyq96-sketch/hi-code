@@ -1,0 +1,152 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hicode.dev/schemas/store-catalog.schema.json",
+  "title": "Hi Code Store Catalog",
+  "description": "Catalog format for Hi Code plugins, skills, MCP servers, and agents.",
+  "oneOf": [
+    { "$ref": "#/$defs/catalog" },
+    {
+      "type": "array",
+      "items": { "$ref": "#/$defs/item" }
+    }
+  ],
+  "$defs": {
+    "catalog": {
+      "type": "object",
+      "required": ["items"],
+      "additionalProperties": true,
+      "properties": {
+        "version": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "items": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/item" }
+        }
+      }
+    },
+    "item": {
+      "type": "object",
+      "required": ["id", "kind", "name", "install"],
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:-]{1,79}$"
+        },
+        "kind": {
+          "type": "string",
+          "enum": ["plugin", "skill", "mcp", "agent"]
+        },
+        "category": {
+          "type": "string",
+          "default": "other"
+        },
+        "name": { "type": "string" },
+        "summary": { "type": "string" },
+        "description": { "type": "string" },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "source": { "type": "string" },
+        "install": { "$ref": "#/$defs/install" }
+      }
+    },
+    "install": {
+      "type": "object",
+      "required": ["kind"],
+      "additionalProperties": true,
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["plugin", "skill", "mcp", "agent", "download"]
+        },
+        "dir": {
+          "type": "string",
+          "pattern": "^[^/\\\\]+$"
+        },
+        "skill": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "name": { "type": "string" },
+            "description": { "type": "string" },
+            "body": { "type": "string" }
+          }
+        },
+        "server": {
+          "type": "object",
+          "required": ["name", "command"],
+          "additionalProperties": true,
+          "properties": {
+            "name": {
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:-]{1,79}$"
+            },
+            "command": { "type": "string" },
+            "args": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "env": {
+              "type": "object",
+              "additionalProperties": { "type": "string" }
+            }
+          }
+        },
+        "agent": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "role": { "type": "string" },
+            "modelProfile": { "type": "string" },
+            "bashMode": { "type": "string" },
+            "prompt": { "type": "string" }
+          }
+        },
+        "manifest": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "name": {
+              "type": "string",
+              "pattern": "^[^/\\\\]+$"
+            },
+            "version": { "type": "string" },
+            "contributes": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          }
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "mirrors": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "format": "uri"
+          }
+        },
+        "filename": {
+          "type": "string",
+          "pattern": "^[^/\\\\]+$"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-fA-F0-9]{64}$"
+        },
+        "signature": {
+          "type": "string",
+          "minLength": 16
+        },
+        "signatureAlgorithm": {
+          "type": "string",
+          "enum": ["minisign", "cosign", "sigstore", "ed25519", "rsa-pss-sha256"]
+        }
+      }
+    }
+  }
+}

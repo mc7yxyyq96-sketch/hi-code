@@ -1,0 +1,32 @@
+# dependencies
+node_modules/
+
+# build output / artifacts
+dist/
+release/
+*.tsbuildinfo
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# local runtime data (config, sessions, auth, keys) — never commit
+.hicode/
+.vibe/
+
+# environment / secrets
+.env
+.env.*
+!.env.example
+
+# internal working material — not part of the open-source release
+legacy/
+reports/
+work/
+
+# editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.local

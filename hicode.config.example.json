@@ -1,0 +1,38 @@
+{
+  "_comment": "Copy to ~/.hicode/config.json and edit. Multiple model profiles let agents complement each other (model fusion). A single flat { baseURL, apiKey, model } still works too.",
+
+  "profiles": {
+    "reasoner": {
+      "baseURL": "https://api.deepseek.com/v1",
+      "apiKey": "sk-REPLACE-ME",
+      "model": "deepseek-reasoner",
+      "contextWindow": 65536
+    },
+    "coder": {
+      "baseURL": "http://127.0.0.1:8000/v1",
+      "apiKey": "x",
+      "model": "qwen2.5-coder-32b-instruct",
+      "contextWindow": 32768
+    },
+    "fast": {
+      "baseURL": "http://127.0.0.1:11434/v1",
+      "apiKey": "x",
+      "model": "llama3.1:8b"
+    }
+  },
+
+  "defaultProfile": "coder",
+
+  "roleModels": {
+    "architect": "reasoner",
+    "coder": "coder",
+    "reviewer": "reasoner",
+    "tester": "coder",
+    "explorer": "fast"
+  },
+
+  "councilMembers": ["reasoner", "coder", "fast"],
+  "councilSynthesizer": "reasoner",
+
+  "compactThreshold": 0.75
+}

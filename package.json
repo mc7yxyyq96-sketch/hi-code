@@ -1,0 +1,84 @@
+{
+  "name": "hi-code",
+  "version": "0.5.0",
+  "description": "Hi Code — a desktop coding agent for any OpenAI-compatible model.",
+  "type": "module",
+  "main": "electron/main.mjs",
+  "bin": {
+    "hicode": "dist/index.js"
+  },
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsc -p tsconfig.json && chmod +x dist/index.js",
+    "start": "node dist/index.js",
+    "test": "node test/feature-tests.mjs",
+    "test:feature": "node test/feature-tests.mjs",
+    "test:services": "node test/main-process-services-tests.mjs",
+    "test:jobs": "node test/job-center-tests.mjs",
+    "test:providers": "node test/provider-tests.mjs",
+    "test:worktrees": "node test/worktree-runner-tests.mjs",
+    "test:arena": "node test/patch-arena-tests.mjs",
+    "test:industrial": "node test/industrial-project-tests.mjs",
+    "test:domain-packs": "node test/domain-pack-tests.mjs",
+    "test:agent-team": "node test/agent-team-tests.mjs",
+    "test:industrial-tools": "node test/industrial-tool-tests.mjs",
+    "test:quality-gates": "node test/quality-gate-tests.mjs",
+    "test:release-builder": "node test/release-builder-tests.mjs",
+    "test:samples": "node test/industrial-control-box-sample-tests.mjs",
+    "test:dod": "node test/definition-of-done-tests.mjs",
+    "test:renderer": "node test/renderer-architecture-tests.mjs",
+    "test:entrypoints": "node test/entrypoint-tests.mjs",
+    "test:security": "node test/security-baseline.mjs",
+    "scan:dod": "node scripts/scan-dod.mjs",
+    "check:syntax": "node --check electron/main.mjs && node --check electron/preload.cjs && node --check renderer/renderer.js",
+    "check:js": "node --check electron/main.mjs && node --check electron/preload.cjs && node --check renderer/renderer.js",
+    "verify": "node scripts/verify.mjs",
+    "audit:prod": "npm audit --omit=dev --audit-level=high",
+    "audit:high": "npm audit --audit-level=high",
+    "release:check": "node scripts/verify.mjs --release",
+    "app": "npm run build && electron .",
+    "dist:mac": "npm run build && electron-builder --mac dmg"
+  },
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "diff": "^5.2.0",
+    "ink": "^5.0.1",
+    "ink-spinner": "^5.0.0",
+    "react": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/diff": "^5.2.1",
+    "@types/node": "^22.7.0",
+    "@types/react": "^18.3.5",
+    "electron": "^31.7.7",
+    "electron-builder": "^24.13.3",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  },
+  "build": {
+    "appId": "com.hicode.desktop",
+    "productName": "Hi Code",
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "renderer/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.developer-tools",
+      "icon": "build/icon.icns",
+      "identity": null
+    },
+    "dmg": {
+      "title": "Hi Code"
+    }
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

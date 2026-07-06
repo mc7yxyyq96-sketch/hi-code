@@ -1,0 +1,48 @@
+import { createIpcRegistrar } from "./ipc-utils.mjs";
+import { registerRuntimeIpcEvents } from "../services/runtime-service.mjs";
+import { registerQueueIpc } from "../services/queue-service.mjs";
+import { registerMcpIpc } from "../services/mcp-service.mjs";
+import { registerStoreIpc } from "../services/store-service.mjs";
+import { registerJobIpc } from "../services/job-service.mjs";
+import { registerProviderIpc } from "../services/provider-service.mjs";
+import { registerWorktreeIpc } from "../services/worktree-service.mjs";
+import { registerPatchArenaIpc } from "../services/patch-arena-service.mjs";
+import { registerIndustrialProjectIpc } from "../services/industrial-project-service.mjs";
+import { registerDomainPackIpc } from "../services/domain-pack-service.mjs";
+import { registerAgentTeamIpc } from "../services/agent-team-service.mjs";
+import { registerIndustrialToolIpc } from "../services/industrial-tool-service.mjs";
+import { registerQualityGateIpc } from "../services/quality-gate-service.mjs";
+import { registerReleaseIpc } from "../services/release-service.mjs";
+import { registerSampleProjectIpc } from "../services/sample-project-service.mjs";
+import { registerGitIpc } from "../services/git-service.mjs";
+import { registerDiffIpc } from "../services/diff-service.mjs";
+import { registerWorkspaceIpc } from "../services/workspace-service.mjs";
+import { registerSecurityIpc } from "../services/security-service.mjs";
+
+export function registerIpcHandlers({ services, ipcMain, dialog, shell, logger = null }) {
+  if (!services) throw new Error("registerIpcHandlers requires services");
+  if (!ipcMain) throw new Error("registerIpcHandlers requires ipcMain");
+  const register = createIpcRegistrar(ipcMain, { logger });
+
+  registerRuntimeIpcEvents({ ipcMain, runtime: services.runtime });
+  registerQueueIpc({ register, queue: services.queue });
+  registerSecurityIpc({ register, security: services.security });
+  registerMcpIpc({ register, mcp: services.mcp });
+  registerStoreIpc({ register, store: services.store });
+  registerJobIpc({ register, job: services.job });
+  registerProviderIpc({ register, provider: services.provider });
+  registerWorktreeIpc({ register, worktree: services.worktree });
+  registerPatchArenaIpc({ register, arena: services.arena });
+  registerIndustrialProjectIpc({ register, industrialProject: services.industrialProject });
+  registerDomainPackIpc({ register, domainPack: services.domainPack });
+  registerAgentTeamIpc({ register, agentTeam: services.agentTeam });
+  registerIndustrialToolIpc({ register, industrialTool: services.industrialTool });
+  registerQualityGateIpc({ register, qualityGate: services.qualityGate });
+  registerReleaseIpc({ register, release: services.release });
+  registerSampleProjectIpc({ register, sampleProject: services.sampleProject });
+  registerDiffIpc({ register, diff: services.diff });
+  registerGitIpc({ register, git: services.git });
+  registerWorkspaceIpc({ register, workspace: services.workspace, dialog, shell });
+
+  return register;
+}
