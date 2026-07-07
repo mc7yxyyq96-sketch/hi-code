@@ -559,6 +559,12 @@ if (!window.hicode) {
       { role: "user", text: "优化 Hi Code 米白色工作台界面" },
       { role: "assistant", text: "已切换到米白色工作台，并保留会话、命令、权限与文件预览。" },
     ],
+    readSession: async (id) => (id === "demo-1"
+      ? [
+        { role: "user", text: "优化 Hi Code 米白色工作台界面" },
+        { role: "assistant", text: "已切换到米白色工作台，并保留会话、命令、权限与文件预览。" },
+      ]
+      : [{ role: "user", text: "hello" }, { role: "assistant", text: "你好，有什么可以帮你？" }]),
     deleteSession: async () => true,
     getConfig: async () => JSON.stringify(demoConfig, null, 2),
 	    saveConfig: async (text) => {
@@ -1951,6 +1957,10 @@ function startAgentMessage() {
   chat.appendChild(el); agentBody = el.querySelector(".agent-body"); agentRaw = ""; scrollDown();
 }
 function appendOutput(chunk) {
+  if (busy && runningSessionId && currentSessionId !== runningSessionId) {
+    if (liveSessionSnapshot?.id === runningSessionId) liveSessionSnapshot.agentRaw += chunk;
+    return;
+  }
   if (!agentBody) startAgentMessage();
   const stick = atBottom(); agentRaw += chunk; agentBody.innerHTML = ansiToHtml(agentRaw);
   updateRunStatus({
@@ -1981,6 +1991,8 @@ function runLine(text) {
   showChat();
   beginRunStatus(text);
   addUserMessage(text); startAgentMessage(); setBusy(true);
+  runningSessionId = activeRuntimeSessionId || runningSessionId || currentSessionId;
+  liveSessionSnapshot = null;
   api.send(text);
 }
 function submit() {
@@ -2666,6 +2678,11 @@ api.onReady((d) => {
   syncState({ cwd });
   setCurrentModelDisplay(d);
   if (appVersionEl) appVersionEl.textContent = d.version ? `v${d.version}` : "";
+  activeRuntimeSessionId = d.sessionId || activeRuntimeSessionId || null;
+  if (!busy) {
+    runningSessionId = activeRuntimeSessionId;
+    if (!currentSessionId) currentSessionId = activeRuntimeSessionId;
+  }
   projName.textContent = shortPath(d.cwd);
   currentProject.textContent = shortPath(d.cwd);
   loadSessions();
@@ -2678,6 +2695,11 @@ api.onTurnDone(() => {
     const status = runState.status === "interrupted" ? "interrupted" : runState.status === "denied" ? "denied" : "done";
     finishRunStatus(status, status === "done" ? "任务已结束" : runState.detail);
   }
+  if (liveSessionSnapshot?.id === runningSessionId) {
+    liveSessionSnapshot = null;
+  }
+  runningSessionId = null;
+  if (currentSessionId === null && activeRuntimeSessionId) currentSessionId = activeRuntimeSessionId;
   agentBody = null;
   loadSessions();
   refreshWorkbench();
@@ -2699,6 +2721,9 @@ api.onAsk(({ id, q }) => {
 /* ---------- sessions ---------- */
 let allSessions = [];
 let currentSessionId = null;
+let activeRuntimeSessionId = null;
+let runningSessionId = null;
+let liveSessionSnapshot = null;
 
 function formatSessionAge(value) {
   const ts = new Date(value).getTime();
@@ -2722,27 +2747,26 @@ function renderSessions(filter) {
   sessionsEl.innerHTML = "";
   if (!list.length) { sessionsEl.innerHTML = `<div class="sessions-empty">还没有最近会话</div>`; return; }
   for (const s of list) {
-    const el = document.createElement("div"); el.className = `sess${s.id === currentSessionId ? " active" : ""}`;
+    const running = busy && runningSessionId && s.id === runningSessionId;
+    const el = document.createElement("div");
+    el.className = `sess${s.id === currentSessionId ? " active" : ""}${running ? " sess-running" : ""}`;
     el.innerHTML = `<button class="sess-main" title="打开会话"><span class="t"></span><span class="s"><span class="sess-time"></span><span class="sess-count"></span></span></button><button class="sess-del" title="删除">×</button>`;
-    el.querySelector(".t").textContent = s.firstPrompt || "(空会话)";
-    el.querySelector(".sess-time").textContent = formatSessionAge(s.updatedAt);
+    el.querySelector(".t").textContent = (running ? "● " : "") + (s.firstPrompt || "(空会话)");
+    el.querySelector(".sess-time").textContent = running ? "进行中" : formatSessionAge(s.updatedAt);
     el.querySelector(".sess-count").textContent = `${s.messageCount || 0} 条`;
     el.querySelector(".sess-main").onclick = () => openSession(s.id);
     el.querySelector(".sess-del").onclick = async (e) => {
       e.stopPropagation();
+      if (busy && s.id === runningSessionId) return;
       await api.deleteSession(s.id);
+      if (currentSessionId === s.id) currentSessionId = null;
       loadSessions();
     };
     sessionsEl.appendChild(el);
   }
 }
 
-/** Open a saved session: restore it silently and render its history (no /resume echo). */
-async function openSession(id) {
-  if (busy) return;
-  const msgs = await api.resumeSession(id);
-  currentSessionId = id;
-  renderSessions(searchInput.value.trim());
+function renderChatFromMessages(msgs) {
   chat.innerHTML = "";
   showChat();
   for (const m of msgs) {
@@ -2750,7 +2774,58 @@ async function openSession(id) {
     else { startAgentMessage(); agentBody.textContent = m.text; }
   }
   agentBody = null;
+  agentRaw = "";
   scrollDown();
+}
+
+function saveLiveSessionSnapshot() {
+  if (!busy || !runningSessionId) return;
+  liveSessionSnapshot = {
+    id: runningSessionId,
+    chatHtml: chat.innerHTML,
+    agentRaw,
+  };
+}
+
+function restoreLiveSessionSnapshot() {
+  if (!liveSessionSnapshot || liveSessionSnapshot.id !== runningSessionId) return false;
+  chat.innerHTML = liveSessionSnapshot.chatHtml;
+  agentRaw = liveSessionSnapshot.agentRaw;
+  const bodies = chat.querySelectorAll(".msg.agent .agent-body");
+  agentBody = bodies.length ? bodies[bodies.length - 1] : null;
+  if (agentBody && agentRaw) agentBody.innerHTML = ansiToHtml(agentRaw);
+  scrollDown();
+  return true;
+}
+
+/** Open a saved session: restore it silently and render its history (no /resume echo). */
+async function openSession(id) {
+  if (id === currentSessionId) return;
+
+  if (busy && id === runningSessionId) {
+    currentSessionId = id;
+    restoreLiveSessionSnapshot();
+    renderSessions(searchInput.value.trim());
+    showChat();
+    return;
+  }
+
+  if (busy) {
+    if (currentSessionId === runningSessionId) saveLiveSessionSnapshot();
+    const msgs = await api.readSession(id);
+    currentSessionId = id;
+    renderSessions(searchInput.value.trim());
+    renderChatFromMessages(msgs);
+    return;
+  }
+
+  const msgs = await api.resumeSession(id);
+  currentSessionId = id;
+  runningSessionId = id;
+  activeRuntimeSessionId = id;
+  liveSessionSnapshot = null;
+  renderSessions(searchInput.value.trim());
+  renderChatFromMessages(msgs);
 }
 searchInput.addEventListener("input", () => renderSessions(searchInput.value.trim()));
 

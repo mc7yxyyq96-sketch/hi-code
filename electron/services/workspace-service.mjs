@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { contentText } from "../../dist/context.js";
 import { ipcObject, ipcString } from "../ipc/ipc-utils.mjs";
 
 const IGNORE_DIRS = new Set(["node_modules", ".git", "dist", "build", ".next", "release", "__pycache__"]);
@@ -13,6 +14,7 @@ export function createWorkspaceService({
   resolveInCwd,
   listSessions,
   deleteSession,
+  loadSession,
   getRuntime,
   configPath,
   loadConfig,
@@ -84,6 +86,14 @@ export function createWorkspaceService({
       }
     },
 
+    readSession(id) {
+      try {
+        return formatSessionMessages(loadSession(ipcString(id)));
+      } catch {
+        return [];
+      }
+    },
+
     getConfig() {
       try {
         return fs.existsSync(configPath) ? fs.readFileSync(configPath, "utf8") : "";
@@ -104,7 +114,7 @@ export function createWorkspaceService({
         const runtime = getRuntime();
         if (runtime?.updateConfig) {
           runtime.updateConfig(cfg, buildSystemPrompt(getCwd(), profile.model, cfg.reasoningLevel));
-          send("ready", { model: profile.model, baseURL: profile.baseURL, cwd: getCwd(), reasoningLevel: cfg.reasoningLevel });
+          send("ready", { model: profile.model, baseURL: profile.baseURL, cwd: getCwd(), reasoningLevel: cfg.reasoningLevel, sessionId: runtime?.sessionId || "" });
         } else {
           buildRuntime();
         }
@@ -166,6 +176,7 @@ export function registerWorkspaceIpc({ register, workspace }) {
   register.handle("list-sessions", () => workspace.listSessions());
   register.handle("resume-session", (_event, id) => workspace.resumeSession(id));
   register.handle("delete-session", (_event, id) => workspace.deleteSession(id));
+  register.handle("read-session", (_event, id) => workspace.readSession(id));
   register.handle("get-config", () => workspace.getConfig());
   register.handle("save-config", (_event, text) => workspace.saveConfig(text));
   register.handle("test-model", (_event, profile) => workspace.testModel(profile));
@@ -235,4 +246,12 @@ export function modelTestNetworkError(error, baseURL) {
 function isKimiEndpoint(baseURL) {
   const value = String(baseURL || "").toLowerCase();
   return value.includes("moonshot.") || value.includes("api.kimi.com");
+}
+
+function formatSessionMessages(stored) {
+  if (!stored?.messages) return [];
+  return stored.messages
+    .filter((m) => m.role === "user" || m.role === "assistant")
+    .map((m) => ({ role: m.role, text: contentText(m.content).trim() }))
+    .filter((m) => m.text.length > 0 && !m.text.startsWith("[Earlier conversation summary]"));
 }

@@ -446,6 +446,8 @@ body.sidebar-nav-collapsed .side-foot {
   background: rgba(255, 250, 241, .78);
   border-color: rgba(198, 181, 158, .58);
 }
+.sess-running .t { color: var(--ink); }
+.sess-running.active { box-shadow: inset 0 0 0 1px rgba(91, 111, 82, .28); }
 .sess-main {
   flex: 1;
   min-width: 0;

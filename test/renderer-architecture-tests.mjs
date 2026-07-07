@@ -59,6 +59,7 @@ check("bootstrap imports panel modules", [
   "components/settings-panel.js",
 ].every((needle) => bootstrap.includes(needle)));
 check("MCP config button opens MCP settings mode", bootstrap.includes("cfgBtn.onclick = openMcpSettings") && bootstrap.includes("return openSettings(\"mcp\")"));
+check("busy session switch previews without resuming runtime", bootstrap.includes("api.readSession(id)") && bootstrap.includes("saveLiveSessionSnapshot") && bootstrap.includes("restoreLiveSessionSnapshot"));
 check("MCP settings validates mcpServers JSON", bootstrap.includes("function validateMcpServersConfig") && bootstrap.includes("MCP JSON 格式错误") && bootstrap.includes("mcpServers 必须是 JSON 对象"));
 check("command sidebar opens visible command center", html.includes('section id="commandView"') && bootstrap.includes('route: "commandView"') && bootstrap.includes('"cmdBtn").onclick = showCommandCenter'));
 check("command center exposes real actions", bootstrap.includes("function executeCommand") && bootstrap.includes('if (name === "/mcp") return showCapabilities("mcp")') && bootstrap.includes('if (name === "/diff") return showGit()'));

@@ -80,6 +80,7 @@ contextBridge.exposeInMainWorld("hicode", {
   readFile: (p) => checkedInvoke("read-file", p, "path"),
   listSessions: () => safeInvoke("list-sessions"),
   resumeSession: (id) => checkedInvoke("resume-session", id, "sessionId"),
+  readSession: (id) => checkedInvoke("read-session", id, "sessionId"),
   deleteSession: (id) => checkedInvoke("delete-session", id, "sessionId"),
   getConfig: () => safeInvoke("get-config"),
   saveConfig: (text) => checkedInvoke("save-config", text, "configText"),
