@@ -278,6 +278,17 @@ button { -webkit-user-select: none; user-select: none; }
   gap: 6px;
 }
 .brand-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.brand-version {
+  flex: 0 0 auto;
+  font-size: 10.5px;
+  font-weight: 550;
+  color: var(--muted);
+  background: rgba(80, 63, 39, .07);
+  border-radius: 999px;
+  padding: 1px 7px;
+  line-height: 1.6;
+}
+.brand-version:empty { display: none; }
 .sidebar-toggle {
   -webkit-app-region: no-drag;
   min-width: 78px;

@@ -1211,7 +1211,7 @@ const userName = $("userName"), userEmail = $("userEmail"), userInitial = $("use
 const main = $("main"), home = $("home"), chatview = $("chatview"), chat = $("chat");
 const homeSlot = $("homeSlot"), chatSlot = $("chatSlot");
 const greeting = $("greeting"), sessionsEl = $("sessions"), searchInput = $("search");
-const projName = $("projName"), modelSide = $("modelNameSide");
+const projName = $("projName"), modelSide = $("modelNameSide"), appVersionEl = $("appVersion");
 const askBox = $("ask"), askQ = $("ask-q");
 const runStatus = $("runStatus"), runStatusDot = $("runStatusDot"), runStatusText = $("runStatusText"), runStatusMeta = $("runStatusMeta"), runStatusDetail = $("runStatusDetail");
 const timelineList = $("timelineList");
@@ -2643,6 +2643,7 @@ api.onReady((d) => {
   cwd = d.cwd;
   syncState({ cwd });
   setCurrentModelDisplay(d);
+  if (appVersionEl) appVersionEl.textContent = d.version ? `v${d.version}` : "";
   projName.textContent = shortPath(d.cwd);
   currentProject.textContent = shortPath(d.cwd);
   loadSessions();

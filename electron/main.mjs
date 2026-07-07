@@ -2357,7 +2357,7 @@ function buildRuntime() {
     emitEvent: handleRuntimeEvent,
     allowProcessExit: false,
   });
-  send("ready", { model: p.model, baseURL: p.baseURL, cwd, reasoningLevel: cfg.reasoningLevel });
+  send("ready", { model: p.model, baseURL: p.baseURL, cwd, reasoningLevel: cfg.reasoningLevel, version: app.getVersion() });
   sendInputQueueState();
 }
 
