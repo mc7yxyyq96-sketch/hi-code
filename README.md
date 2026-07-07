@@ -4,7 +4,7 @@
   <p><strong>简体中文</strong> | <a href="README.en.md">English</a></p>
   <p>本地优先的桌面编码 Agent 工作台 · 接入任意 OpenAI 兼容模型</p>
   <p>
-    <img src="https://img.shields.io/badge/version-0.5.0-4f6f64" alt="version" />
+    <img src="https://img.shields.io/badge/version-0.5.1-4f6f64" alt="version" />
     <img src="https://img.shields.io/badge/license-MIT-5b6f92" alt="license" />
     <img src="https://img.shields.io/badge/node-%3E%3D18-3c873a" alt="node" />
     <img src="https://img.shields.io/badge/status-起步阶段·持续更新-e0a458" alt="status" />
@@ -17,7 +17,7 @@
 
 它不是一个套壳聊天框，而是一个**真正会干活的 Agent 循环**：模型自己读写文件、执行命令、搜索仓库、反复迭代直到任务完成——全程有流式输出、彩色 diff 预览，以及在改动你机器之前的**权限确认**。
 
-> ⚠️ **项目处于起步阶段**：v0.5.0 是一个可用、可跑通的早期版本，核心能力已经成型，但仍在快速迭代中。功能、界面、文档都会**持续更新**。欢迎试用、提 Issue、参与共建 🙌
+> ⚠️ **项目处于起步阶段**：v0.5.1 是一个可用、可跑通的早期版本，核心能力已经成型，但仍在快速迭代中。功能、界面、文档都会**持续更新**。欢迎试用、提 Issue、参与共建 🙌
 
 ---
 

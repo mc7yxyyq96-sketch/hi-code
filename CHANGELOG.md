@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.5.1 - 2026-07-06
+
+- Fixed release readiness reporting so `ready` and `blockers` can no longer disagree (P2-004).
+- Fixed Definition-of-Done scanner to match button wiring in both directions (DOD-003); scan is now 0 blocking / 0 warning.
+- Improved model "test connection" errors with actionable Chinese guidance for 401/403/404/429/5xx, network failures, and local services that are not running.
+- Moved the built-in store catalog to `electron/store-catalog.mjs` and published it as `store/catalog.json`, so the GitHub Catalog store source now serves real data from this repository.
+- Added `npm run store:export` to regenerate the published catalog.
+- Added GitHub Actions CI: build, syntax check, all 16 test suites, and the DoD scan on every push and pull request.
+- Extracted native macOS app opening into `electron/services/native-open-service.mjs`; a failed open now falls through to the agent instead of ending the turn, and phrases like "运行测试" or file paths are no longer intercepted as app launches.
+
+Verification baseline: 16 suites, 837 checks, 0 failed (2026-07-06).
+
 ## 0.5.0 - 2026-07-04
 
 - Added structured runtime turn events and richer tool events.

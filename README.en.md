@@ -4,7 +4,7 @@
   <p><a href="README.md">简体中文</a> | <strong>English</strong></p>
   <p>A local-first desktop coding agent for any OpenAI-compatible model</p>
   <p>
-    <img src="https://img.shields.io/badge/version-0.5.0-4f6f64" alt="version" />
+    <img src="https://img.shields.io/badge/version-0.5.1-4f6f64" alt="version" />
     <img src="https://img.shields.io/badge/license-MIT-5b6f92" alt="license" />
     <img src="https://img.shields.io/badge/node-%3E%3D18-3c873a" alt="node" />
     <img src="https://img.shields.io/badge/status-early%20stage-e0a458" alt="status" />
@@ -13,7 +13,7 @@
 
 ---
 
-Current version: **0.5.0**.
+Current version: **0.5.1**.
 
 Hi Code is a desktop coding agent workbench in the spirit of Codex and Claude Code, built for **any OpenAI-compatible model** — Kimi, DeepSeek, Qwen, GLM, MiniMax, Ollama/local models, vLLM, OpenRouter, OpenAI-compatible APIs, or anything that speaks `/chat/completions`.
 
