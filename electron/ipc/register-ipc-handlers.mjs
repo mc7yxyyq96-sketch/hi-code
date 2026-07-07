@@ -18,6 +18,7 @@ import { registerGitIpc } from "../services/git-service.mjs";
 import { registerDiffIpc } from "../services/diff-service.mjs";
 import { registerWorkspaceIpc } from "../services/workspace-service.mjs";
 import { registerSecurityIpc } from "../services/security-service.mjs";
+import { registerAppInfoIpc } from "../services/app-info-service.mjs";
 
 export function registerIpcHandlers({ services, ipcMain, dialog, shell, logger = null }) {
   if (!services) throw new Error("registerIpcHandlers requires services");
@@ -43,6 +44,7 @@ export function registerIpcHandlers({ services, ipcMain, dialog, shell, logger =
   registerDiffIpc({ register, diff: services.diff });
   registerGitIpc({ register, git: services.git });
   registerWorkspaceIpc({ register, workspace: services.workspace, dialog, shell });
+  registerAppInfoIpc({ register, appInfo: services.appInfo });
 
   return register;
 }

@@ -10,6 +10,7 @@ import { createGitService } from "../electron/services/git-service.mjs";
 import { parseOpenAppRequest } from "../electron/services/native-open-service.mjs";
 import { createPathGuard, redactSensitive } from "../electron/services/security-service.mjs";
 import { modelTestError, modelTestNetworkError } from "../electron/services/workspace-service.mjs";
+import { createAppInfoService, compareVersions } from "../electron/services/app-info-service.mjs";
 
 let pass = 0;
 let fail = 0;
@@ -261,9 +262,16 @@ registerIpcHandlers({
       saveConfig: () => ({ ok: true }),
       testModel: () => ({ ok: true }),
     },
+    appInfo: {
+      getInfo: () => ({ ok: true, version: "0.5.1" }),
+      openDataDir: () => ({ ok: true }),
+      revealConfig: () => ({ ok: true }),
+      openPage: () => ({ ok: true }),
+      checkUpdates: () => ({ ok: true }),
+    },
   },
 });
-for (const channel of ["runtime-queue:clear", "auth-status", "list-store", "store:item", "store:enable", "store:disable", "store:uninstall", "job:create", "job:list", "job:get", "job:cancel", "job:retry", "job:pause", "job:resume", "job:events", "job:artifacts", "job:artifact:preview", "job:artifact:open", "provider:list", "provider:get", "provider:configure", "provider:run", "provider:cancel", "worktree:create", "worktree:run", "worktree:collectChanges", "worktree:cleanup", "arena:list", "arena:get", "arena:create", "arena:acceptCandidate", "arena:rejectCandidate", "arena:mergeCandidate", "arena:artifact:preview", "arena:artifact:open", "industrial-project:schema", "industrial-project:get", "industrial-project:validate", "industrial-project:save", "industrial-requirement:draft", "industrial-requirement:add", "industrial-requirement:criteria:update", "industrial-requirement:artifact-plan", "industrial-requirement:test-plan", "industrial-requirement:spec-package", "industrial-requirement:approve", "industrial-project:artifact:add", "industrial-project:traceability:add", "industrial-project:gate:add", "domain-pack:list", "domain-pack:get", "domain-pack:validate", "domain-pack:install", "domain-pack:update", "domain-pack:enable", "domain-pack:disable", "domain-pack:uninstall", "domain-pack:recommend", "agent-team:profiles", "agent-team:profile:get", "agent-team:plan:create", "agent-team:plan:list", "agent-team:plan:get", "agent-team:job:create", "toolchain:list", "toolchain:detect", "toolchain:capabilities", "toolchain:validate-adapter", "toolchain:run", "quality-gate:list", "quality-gate:run", "quality-gate:approve", "release:readiness", "release:build", "release:open", "sample:industrial-control-box:create", "diffs:list", "git:status", "read-file"]) {
+for (const channel of ["runtime-queue:clear", "auth-status", "list-store", "store:item", "store:enable", "store:disable", "store:uninstall", "job:create", "job:list", "job:get", "job:cancel", "job:retry", "job:pause", "job:resume", "job:events", "job:artifacts", "job:artifact:preview", "job:artifact:open", "provider:list", "provider:get", "provider:configure", "provider:run", "provider:cancel", "worktree:create", "worktree:run", "worktree:collectChanges", "worktree:cleanup", "arena:list", "arena:get", "arena:create", "arena:acceptCandidate", "arena:rejectCandidate", "arena:mergeCandidate", "arena:artifact:preview", "arena:artifact:open", "industrial-project:schema", "industrial-project:get", "industrial-project:validate", "industrial-project:save", "industrial-requirement:draft", "industrial-requirement:add", "industrial-requirement:criteria:update", "industrial-requirement:artifact-plan", "industrial-requirement:test-plan", "industrial-requirement:spec-package", "industrial-requirement:approve", "industrial-project:artifact:add", "industrial-project:traceability:add", "industrial-project:gate:add", "domain-pack:list", "domain-pack:get", "domain-pack:validate", "domain-pack:install", "domain-pack:update", "domain-pack:enable", "domain-pack:disable", "domain-pack:uninstall", "domain-pack:recommend", "agent-team:profiles", "agent-team:profile:get", "agent-team:plan:create", "agent-team:plan:list", "agent-team:plan:get", "agent-team:job:create", "toolchain:list", "toolchain:detect", "toolchain:capabilities", "toolchain:validate-adapter", "toolchain:run", "quality-gate:list", "quality-gate:run", "quality-gate:approve", "release:readiness", "release:build", "release:open", "sample:industrial-control-box:create", "diffs:list", "git:status", "read-file", "app:info", "app:open-data-dir", "app:reveal-config", "app:open-page", "app:check-updates"]) {
   check(`register-ipc-handlers exposes ${channel}`, ipc2.handles.has(channel));
 }
 for (const channel of ["input", "ask-response", "interrupt"]) {
@@ -283,6 +291,65 @@ const redacted = redactSensitive({ apiKey: "sk-secret123456789", nested: { autho
 check("security-service redacts sensitive fields", redacted.apiKey === "[REDACTED]" && redacted.nested.authorization === "[REDACTED]" && redacted.ok === "visible", JSON.stringify(redacted));
 fs.rmSync(tmp, { recursive: true, force: true });
 fs.rmSync(outside, { force: true });
+
+console.log("\n[services] app info");
+check("compareVersions orders patch releases", compareVersions("0.5.0", "0.5.1") < 0 && compareVersions("0.5.1", "0.5.0") > 0 && compareVersions("0.5.1", "0.5.1") === 0);
+check("compareVersions handles v prefix and length", compareVersions("v0.5.1", "0.6") < 0 && compareVersions("1.0", "0.9.9") > 0);
+
+const appInfoTmp = fs.mkdtempSync(path.join(os.tmpdir(), "hicode-appinfo-test-"));
+const openedUrls = [];
+const openedPaths = [];
+const appInfo = createAppInfoService({
+  getVersion: () => "0.5.1",
+  shell: {
+    openPath: async (p) => { openedPaths.push(p); return ""; },
+    showItemInFolder: (p) => openedPaths.push(p),
+    openExternal: async (url) => { openedUrls.push(url); },
+  },
+  dataDir: appInfoTmp,
+  configPath: path.join(appInfoTmp, "config.json"),
+  platform: "darwin",
+  arch: "arm64",
+  versions: { electron: "31.7.7", chrome: "126", node: "20" },
+  fetchImpl: async () => ({ ok: true, json: async () => ({ tag_name: "v0.6.0", html_url: "https://github.com/mc7yxyyq96-sketch/hi-code/releases/tag/v0.6.0" }) }),
+});
+const info = appInfo.getInfo();
+check("app info exposes version and data dir", info.ok && info.version === "0.5.1" && info.dataDir === appInfoTmp && info.license === "MIT");
+check("app info exposes runtime versions", info.electron === "31.7.7" && info.platform === "darwin" && info.arch === "arm64");
+const openedData = await appInfo.openDataDir();
+check("open data dir uses shell.openPath", openedData.ok && openedPaths.includes(appInfoTmp));
+const unknownPage = await appInfo.openPage("not-a-page");
+check("open page rejects unknown targets", unknownPage.ok === false && openedUrls.length === 0);
+const repoPage = await appInfo.openPage("repo");
+check("open page opens whitelisted repo url", repoPage.ok && openedUrls[0] === "https://github.com/mc7yxyyq96-sketch/hi-code");
+const update = await appInfo.checkUpdates();
+check("check updates detects newer release", update.ok && update.hasUpdate === true && update.latest === "0.6.0" && update.current === "0.5.1");
+const sameVersion = createAppInfoService({
+  getVersion: () => "0.6.0",
+  shell: {},
+  dataDir: appInfoTmp,
+  configPath: path.join(appInfoTmp, "config.json"),
+  fetchImpl: async () => ({ ok: true, json: async () => ({ tag_name: "v0.6.0" }) }),
+});
+check("check updates reports up to date", (await sameVersion.checkUpdates()).hasUpdate === false);
+const offline = createAppInfoService({
+  getVersion: () => "0.5.1",
+  shell: {},
+  dataDir: appInfoTmp,
+  configPath: path.join(appInfoTmp, "config.json"),
+  fetchImpl: async () => { throw new Error("fetch failed"); },
+});
+const offlineResult = await offline.checkUpdates();
+check("check updates degrades gracefully offline", offlineResult.ok === false && offlineResult.error.includes("下载页"));
+const rateLimited = createAppInfoService({
+  getVersion: () => "0.5.1",
+  shell: {},
+  dataDir: appInfoTmp,
+  configPath: path.join(appInfoTmp, "config.json"),
+  fetchImpl: async () => ({ ok: false, status: 403 }),
+});
+check("check updates maps rate limit to guidance", (await rateLimited.checkUpdates()).error.includes("限流"));
+fs.rmSync(appInfoTmp, { recursive: true, force: true });
 
 console.log("\n[services] model test error copy");
 check("401 maps to API key guidance", modelTestError(401, "unauthorized", "https://api.deepseek.com/v1").includes("API Key 鉴权失败"));

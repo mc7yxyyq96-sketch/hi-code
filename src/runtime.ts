@@ -382,6 +382,9 @@ export function createRuntime(opts: RuntimeOpts): Runtime {
       Object.assign(cfg, nextCfg);
       session.system.content = nextSystemPrompt;
       execEnv.cfg = cfg;
+      // ctx holds a sandbox snapshot; refresh it so a settings change applies
+      // to the next tool call without rebuilding the runtime.
+      execEnv.ctx.sandbox = cfg.sandbox;
       cmdEnv.cfg = cfg;
       cmdEnv.systemPrompt = nextSystemPrompt;
     },

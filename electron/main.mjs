@@ -49,6 +49,7 @@ import { createGitService } from "./services/git-service.mjs";
 import { createDiffIpcService } from "./services/diff-service.mjs";
 import { createWorkspaceService } from "./services/workspace-service.mjs";
 import { createSecurityService, redactSensitive } from "./services/security-service.mjs";
+import { createAppInfoService } from "./services/app-info-service.mjs";
 import { openMacApp, parseOpenAppRequest } from "./services/native-open-service.mjs";
 import { BUILTIN_STORE_CATALOG } from "./store-catalog.mjs";
 
@@ -2524,6 +2525,12 @@ function createMainServices() {
       defaultProfile,
       buildSystemPrompt,
       send,
+    }),
+    appInfo: createAppInfoService({
+      getVersion: () => app.getVersion(),
+      shell,
+      dataDir: HICODE_DIR,
+      configPath: CONFIG_PATH,
     }),
   };
   services.arena = createPatchArenaService({

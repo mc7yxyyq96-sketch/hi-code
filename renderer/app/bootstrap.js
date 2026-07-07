@@ -572,6 +572,11 @@ if (!window.hicode) {
       }
     },
 	    testModel: async () => ({ ok: true, message: "连接成功" }),
+    getAppInfo: async () => ({ ok: true, version: "0.0.0-demo", electron: "-", chrome: "-", node: "-", platform: "browser", arch: "-", dataDir: "~/.hicode", configPath: "~/.hicode/config.json", repoUrl: "https://github.com/mc7yxyyq96-sketch/hi-code", license: "MIT" }),
+    openDataDir: async () => ({ ok: false, error: "浏览器演示模式无法打开本地目录。" }),
+    revealConfigFile: async () => ({ ok: false, error: "浏览器演示模式无法定位本地文件。" }),
+    openAppPage: async () => ({ ok: false, error: "浏览器演示模式无法打开外部链接。" }),
+    checkUpdates: async () => ({ ok: false, error: "浏览器演示模式无法检查更新。" }),
     authStatus: async () => ({ user: demoUser }),
     register: async ({ email, name }) => {
       demoUser = { email, name: name || email.split("@")[0] };
@@ -1251,6 +1256,23 @@ const storeConfirmClose = $("storeConfirmClose"), storeConfirmCancel = $("storeC
 const settingsTitle = $("settingsTitle"), settingsSubtitle = $("settingsSubtitle"), settingsSteps = $("settingsSteps"), quickModelForm = $("quickModelForm");
 const cfgTest = $("cfg-test"), advancedToggle = $("advanced-toggle"), quickSave = $("quick-save"), cfgSave = $("cfg-save");
 const providerGrid = $("providerGrid");
+const settingsNav = $("settingsNav");
+const settingsSections = {
+  model: $("settingsModelSection"),
+  chat: $("settingsChatSection"),
+  safety: $("settingsSafetySection"),
+  mcp: $("settingsMcpSection"),
+  data: $("settingsDataSection"),
+  about: $("settingsAboutSection"),
+};
+const reasoningOptions = $("reasoningOptions"), compactThresholdSelect = $("compactThresholdSelect");
+const sandboxToggle = $("sandboxToggle"), sandboxHint = $("sandboxHint");
+const mcpCfg = $("mcpCfg"), mcpSave = $("mcp-save");
+const dataDirPath = $("dataDirPath"), configFilePath = $("configFilePath");
+const openDataDirBtn = $("openDataDirBtn"), revealConfigBtn = $("revealConfigBtn");
+const aboutVersion = $("aboutVersion"), aboutRuntime = $("aboutRuntime"), aboutPlatform = $("aboutPlatform");
+const updateStatus = $("updateStatus"), checkUpdatesBtn = $("checkUpdatesBtn");
+const aboutRepoBtn = $("aboutRepoBtn"), aboutReleasesBtn = $("aboutReleasesBtn"), aboutIssuesBtn = $("aboutIssuesBtn");
 const providerHint = $("providerHint");
 const quickBaseURL = $("quickBaseURL"), quickApiKey = $("quickApiKey"), quickModel = $("quickModel"), quickContext = $("quickContext");
 const advancedConfig = $("advanced-config");
@@ -3653,8 +3675,16 @@ function restoreStoreSearchFocus(inputEl) {
 }
 
 /* ---------- settings ---------- */
-async function openSettings() {
-  setSettingsMode("model");
+const SETTINGS_TAB_META = {
+  model: ["接入模型 API", "默认写入 ~/.hicode/config.json"],
+  chat: ["对话与推理", "推理深度与上下文压缩策略"],
+  safety: ["权限与安全", "命令沙箱与始终生效的安全边界"],
+  mcp: ["MCP 服务器", "只编辑 ~/.hicode/config.json 里的 mcpServers"],
+  data: ["数据与存储", "本地数据的位置与打开入口"],
+  about: ["关于 Hi Code", "版本、运行环境与开源信息"],
+};
+
+async function openSettings(tab = "model") {
   setCfgStatus("");
   cfgText = (await api.getConfig()) || "";
   syncState({ cfgText });
@@ -3662,39 +3692,134 @@ async function openSettings() {
   hydrateQuickForm(cfg.value);
   advancedConfig.classList.add("hidden");
   settings.classList.remove("hidden");
-  setTimeout(() => quickApiKey.focus(), 0);
+  await switchSettingsTab(tab);
 }
 
 async function openMcpSettings() {
-  setSettingsMode("mcp");
-  setCfgStatus("");
-  cfgText = (await api.getConfig()) || "";
-  syncState({ cfgText });
-  const config = parseConfig(cfgText);
-  cfg.value = JSON.stringify(config.mcpServers && typeof config.mcpServers === "object" && !Array.isArray(config.mcpServers) ? config.mcpServers : {}, null, 2);
-  advancedConfig.classList.remove("hidden");
-  settings.classList.remove("hidden");
-  setTimeout(() => cfg.focus(), 0);
+  return openSettings("mcp");
 }
 
-function setSettingsMode(mode) {
-  settingsMode = mode === "mcp" ? "mcp" : "model";
-  const modelMode = settingsMode === "model";
-  const card = settings.querySelector(".settings-card");
-  card.classList.toggle("api-key-only", false);
-  card.classList.toggle("mcp-config-mode", !modelMode);
-  settingsTitle.textContent = modelMode ? "接入模型 API" : "配置 MCP";
-  settingsSubtitle.textContent = modelMode
-    ? "默认写入 ~/.hicode/config.json"
-    : "只编辑 ~/.hicode/config.json 里的 mcpServers。";
-  settingsSteps.classList.toggle("hidden", !modelMode);
-  providerGrid.classList.toggle("hidden", !modelMode);
-  quickModelForm.classList.toggle("hidden", !modelMode);
-  cfgTest.classList.toggle("hidden", !modelMode);
-  advancedToggle.classList.toggle("hidden", !modelMode);
-  quickSave.classList.toggle("hidden", !modelMode);
-  cfgSave.textContent = modelMode ? "保存 JSON" : "保存 MCP 配置";
+async function switchSettingsTab(tab) {
+  settingsMode = SETTINGS_TAB_META[tab] ? tab : "model";
+  const [title, subtitle] = SETTINGS_TAB_META[settingsMode];
+  settingsTitle.textContent = title;
+  settingsSubtitle.textContent = subtitle;
+  settingsNav.querySelectorAll(".settings-tab").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.settingsTab === settingsMode);
+  });
+  for (const [name, section] of Object.entries(settingsSections)) {
+    section.classList.toggle("hidden", name !== settingsMode);
+  }
+  setCfgStatus("");
+  if (settingsMode === "model") setTimeout(() => quickApiKey.focus(), 0);
+  if (settingsMode === "chat") await renderChatSettings();
+  if (settingsMode === "safety") await renderSafetySettings();
+  if (settingsMode === "mcp") await renderMcpSettings();
+  if (settingsMode === "data" || settingsMode === "about") await renderAppInfoSettings();
 }
+
+settingsNav.querySelectorAll(".settings-tab").forEach((btn) => {
+  btn.onclick = () => switchSettingsTab(btn.dataset.settingsTab);
+});
+
+async function currentConfigObject() {
+  cfgText = (await api.getConfig()) || cfgText || "";
+  syncState({ cfgText });
+  return normalizeConfig(parseConfig(cfgText));
+}
+
+async function renderChatSettings() {
+  const config = await currentConfigObject();
+  const reasoning = config.reasoningLevel || "medium";
+  reasoningOptions.innerHTML = "";
+  for (const [key, label, desc] of REASONING_LEVELS) {
+    const row = pickerRow(label, desc, key === reasoning);
+    row.onclick = async () => {
+      await switchReasoningLevel(key);
+      await renderChatSettings();
+    };
+    reasoningOptions.appendChild(row);
+  }
+  const threshold = typeof config.compactThreshold === "number" ? config.compactThreshold : 0.75;
+  const options = Array.from(compactThresholdSelect.options).map((option) => Number(option.value));
+  compactThresholdSelect.value = String(options.reduce((best, value) => (Math.abs(value - threshold) < Math.abs(best - threshold) ? value : best), options[0]));
+}
+
+compactThresholdSelect.onchange = async () => {
+  const config = await currentConfigObject();
+  config.compactThreshold = Number(compactThresholdSelect.value);
+  await saveConfigText(JSON.stringify(config, null, 2), `压缩阈值已设为 ${Math.round(config.compactThreshold * 100)}%。`, { closeSettings: false });
+  setCfgStatus(`压缩阈值已保存（${Math.round(config.compactThreshold * 100)}%）。`, true);
+};
+
+async function renderSafetySettings() {
+  const config = await currentConfigObject();
+  sandboxToggle.checked = config.sandbox === true;
+  const info = await getAppInfoCached();
+  if (info && info.platform !== "darwin") {
+    sandboxToggle.disabled = true;
+    sandboxHint.textContent = "当前平台不是 macOS，sandbox-exec 不可用；写入仍受工作区路径校验和逐项确认保护。";
+  } else {
+    sandboxToggle.disabled = false;
+  }
+}
+
+sandboxToggle.onchange = async () => {
+  const config = await currentConfigObject();
+  config.sandbox = sandboxToggle.checked;
+  await saveConfigText(JSON.stringify(config, null, 2), `bash 沙箱已${config.sandbox ? "开启" : "关闭"}。`, { closeSettings: false });
+  setCfgStatus(`bash 沙箱已${config.sandbox ? "开启" : "关闭"}，立即生效。`, true);
+};
+
+async function renderMcpSettings() {
+  const config = await currentConfigObject();
+  mcpCfg.value = JSON.stringify(config.mcpServers && typeof config.mcpServers === "object" && !Array.isArray(config.mcpServers) ? config.mcpServers : {}, null, 2);
+  setTimeout(() => mcpCfg.focus(), 0);
+}
+
+let appInfoCache = null;
+async function getAppInfoCached() {
+  if (appInfoCache) return appInfoCache;
+  const info = await api.getAppInfo();
+  if (info && info.ok) appInfoCache = info;
+  return appInfoCache;
+}
+
+async function renderAppInfoSettings() {
+  const info = await getAppInfoCached();
+  if (!info) return;
+  dataDirPath.textContent = info.dataDir || "~/.hicode";
+  configFilePath.textContent = info.configPath || "~/.hicode/config.json";
+  aboutVersion.textContent = info.version ? `v${info.version}` : "";
+  aboutRuntime.textContent = `Electron ${info.electron || "?"} · Chromium ${info.chrome || "?"} · Node ${info.node || "?"}`;
+  aboutPlatform.textContent = `${info.platform || "?"} · ${info.arch || "?"}`;
+}
+
+openDataDirBtn.onclick = async () => {
+  const r = await api.openDataDir();
+  if (r.ok) setCfgStatus("已在文件管理器中打开数据目录。", true);
+};
+revealConfigBtn.onclick = async () => {
+  const r = await api.revealConfigFile();
+  if (r.ok) setCfgStatus("已定位配置文件。", true);
+};
+aboutRepoBtn.onclick = () => api.openAppPage("repo");
+aboutReleasesBtn.onclick = () => api.openAppPage("releases");
+aboutIssuesBtn.onclick = () => api.openAppPage("issues");
+
+checkUpdatesBtn.onclick = async () => {
+  checkUpdatesBtn.disabled = true;
+  updateStatus.textContent = "正在检查更新…";
+  const r = await api.checkUpdates();
+  checkUpdatesBtn.disabled = false;
+  if (!r.ok) {
+    updateStatus.textContent = r.error || "检查更新失败。";
+    return;
+  }
+  updateStatus.textContent = r.hasUpdate
+    ? `发现新版本 v${r.latest}（当前 v${r.current}），请到下载页获取。`
+    : `已是最新版本（v${r.current}）。`;
+};
 
 $("cfg-cancel").onclick = () => settings.classList.add("hidden");
 $("quickModelForm").onsubmit = (e) => e.preventDefault();
@@ -3703,10 +3828,8 @@ advancedToggle.onclick = () => {
   advancedConfig.classList.toggle("hidden");
   if (!advancedConfig.classList.contains("hidden")) cfg.value = JSON.stringify(makeConfigFromQuick(parseConfig(cfg.value)), null, 2);
 };
-cfgSave.onclick = async () => {
-  if (settingsMode === "mcp") return saveMcpConfigText();
-  return saveConfigText(cfg.value, "JSON 已保存,模型已重载。");
-};
+cfgSave.onclick = async () => saveConfigText(cfg.value, "JSON 已保存,模型已重载。");
+mcpSave.onclick = async () => saveMcpConfigText();
 quickSave.onclick = async () => {
   const problem = validateQuickProfile(quickProfile());
   if (problem) return setCfgStatus(problem);
@@ -3838,7 +3961,7 @@ async function saveConfigText(text, okMessage, options = {}) {
 async function saveMcpConfigText() {
   let servers;
   try {
-    servers = cfg.value.trim() ? JSON.parse(cfg.value) : {};
+    servers = mcpCfg.value.trim() ? JSON.parse(mcpCfg.value) : {};
   } catch (err) {
     return setCfgStatus(`MCP JSON 格式错误: ${err.message}`);
   }

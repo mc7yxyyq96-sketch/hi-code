@@ -585,65 +585,161 @@
       <div class="modal-card settings-card">
         <div class="settings-head">
           <div>
-            <div class="modal-title" id="settingsTitle">接入模型 API</div>
-            <div class="muted" id="settingsSubtitle">默认写入 <span class="mono">~/.vibe/config.json</span></div>
+            <div class="modal-title" id="settingsTitle">设置</div>
+            <div class="muted" id="settingsSubtitle">模型、对话、权限、数据与关于</div>
           </div>
           <button id="cfg-cancel" class="icon-btn" title="关闭">×</button>
         </div>
 
-        <div class="setup-steps" id="settingsSteps">
-          <span><b>1</b> 选服务商</span>
-          <span><b>2</b> 粘贴 API Key</span>
-          <span><b>3</b> 保存即用</span>
-        </div>
+        <div class="settings-body">
+          <nav class="settings-nav" id="settingsNav">
+            <button type="button" class="settings-tab active" data-settings-tab="model">模型 API</button>
+            <button type="button" class="settings-tab" data-settings-tab="chat">对话与推理</button>
+            <button type="button" class="settings-tab" data-settings-tab="safety">权限与安全</button>
+            <button type="button" class="settings-tab" data-settings-tab="mcp">MCP 服务器</button>
+            <button type="button" class="settings-tab" data-settings-tab="data">数据与存储</button>
+            <button type="button" class="settings-tab" data-settings-tab="about">关于 Hi Code</button>
+          </nav>
 
-        <div class="provider-grid" id="providerGrid">
-          <button class="provider active" data-provider="deepseek"><span>DeepSeek</span><small>官方云端</small></button>
-          <button class="provider" data-provider="kimi-cn"><span>Kimi 国内</span><small>Moonshot CN</small></button>
-          <button class="provider" data-provider="kimi"><span>Kimi 全球</span><small>Moonshot AI</small></button>
-          <button class="provider" data-provider="kimi-code"><span>Kimi Code</span><small>订阅 / Coding</small></button>
-          <button class="provider" data-provider="qwen"><span>通义千问</span><small>阿里百炼</small></button>
-          <button class="provider" data-provider="zhipu"><span>智谱 GLM</span><small>开放平台</small></button>
-          <button class="provider" data-provider="minimax"><span>MiniMax</span><small>Agentic / 长上下文</small></button>
-          <button class="provider" data-provider="siliconflow"><span>硅基流动</span><small>国内聚合</small></button>
-          <button class="provider" data-provider="gemini"><span>Gemini</span><small>Google AI</small></button>
-          <button class="provider" data-provider="openrouter"><span>OpenRouter</span><small>模型聚合</small></button>
-          <button class="provider" data-provider="openai"><span>OpenAI</span><small>官方 API</small></button>
-          <button class="provider" data-provider="ollama"><span>Ollama</span><small>本地 / 局域网</small></button>
-          <button class="provider" data-provider="custom"><span>自定义</span><small>OpenAI 兼容</small></button>
-        </div>
+          <div class="settings-content">
+            <section id="settingsModelSection" class="settings-section">
+              <div class="setup-steps" id="settingsSteps">
+                <span><b>1</b> 选服务商</span>
+                <span><b>2</b> 粘贴 API Key</span>
+                <span><b>3</b> 保存即用</span>
+              </div>
 
-        <form class="quick-form" id="quickModelForm">
-          <div id="providerHint" class="provider-hint"></div>
-          <label class="api-key-label">
-            <span>API Key</span>
-            <input id="quickApiKey" type="password" spellcheck="false" autocomplete="off" placeholder="sk-..." />
-          </label>
-          <label class="advanced-provider-field">
-            <span>Base URL</span>
-            <input id="quickBaseURL" spellcheck="false" autocomplete="off" />
-          </label>
-          <label class="advanced-provider-field">
-            <span>模型</span>
-            <input id="quickModel" spellcheck="false" autocomplete="off" placeholder="deepseek-chat" />
-          </label>
-          <label class="advanced-provider-field">
-            <span>上下文窗口</span>
-            <input id="quickContext" type="number" min="4096" step="1024" />
-          </label>
-        </form>
+              <div class="provider-grid" id="providerGrid">
+                <button class="provider active" data-provider="deepseek"><span>DeepSeek</span><small>官方云端</small></button>
+                <button class="provider" data-provider="kimi-cn"><span>Kimi 国内</span><small>Moonshot CN</small></button>
+                <button class="provider" data-provider="kimi"><span>Kimi 全球</span><small>Moonshot AI</small></button>
+                <button class="provider" data-provider="kimi-code"><span>Kimi Code</span><small>订阅 / Coding</small></button>
+                <button class="provider" data-provider="qwen"><span>通义千问</span><small>阿里百炼</small></button>
+                <button class="provider" data-provider="zhipu"><span>智谱 GLM</span><small>开放平台</small></button>
+                <button class="provider" data-provider="minimax"><span>MiniMax</span><small>Agentic / 长上下文</small></button>
+                <button class="provider" data-provider="siliconflow"><span>硅基流动</span><small>国内聚合</small></button>
+                <button class="provider" data-provider="gemini"><span>Gemini</span><small>Google AI</small></button>
+                <button class="provider" data-provider="openrouter"><span>OpenRouter</span><small>模型聚合</small></button>
+                <button class="provider" data-provider="openai"><span>OpenAI</span><small>官方 API</small></button>
+                <button class="provider" data-provider="ollama"><span>Ollama</span><small>本地 / 局域网</small></button>
+                <button class="provider" data-provider="custom"><span>自定义</span><small>OpenAI 兼容</small></button>
+              </div>
 
-        <div class="settings-actions" id="settingsActions">
-          <button id="cfg-test" class="ghost">测试连接</button>
-          <button id="advanced-toggle" class="ghost">高级 JSON</button>
-          <button id="quick-save" class="primary">保存并使用</button>
-        </div>
-        <div id="cfg-err" class="cfg-err"></div>
+              <form class="quick-form" id="quickModelForm">
+                <div id="providerHint" class="provider-hint"></div>
+                <label class="api-key-label">
+                  <span>API Key</span>
+                  <input id="quickApiKey" type="password" spellcheck="false" autocomplete="off" placeholder="sk-..." />
+                </label>
+                <label class="advanced-provider-field">
+                  <span>Base URL</span>
+                  <input id="quickBaseURL" spellcheck="false" autocomplete="off" />
+                </label>
+                <label class="advanced-provider-field">
+                  <span>模型</span>
+                  <input id="quickModel" spellcheck="false" autocomplete="off" placeholder="deepseek-chat" />
+                </label>
+                <label class="advanced-provider-field">
+                  <span>上下文窗口</span>
+                  <input id="quickContext" type="number" min="4096" step="1024" />
+                </label>
+              </form>
 
-        <div id="advanced-config" class="advanced-config hidden">
-          <textarea id="cfg" spellcheck="false"></textarea>
-          <div class="modal-foot">
-            <button id="cfg-save" class="primary">保存 JSON</button>
+              <div class="settings-actions" id="settingsActions">
+                <button id="cfg-test" class="ghost">测试连接</button>
+                <button id="advanced-toggle" class="ghost">高级 JSON</button>
+                <button id="quick-save" class="primary">保存并使用</button>
+              </div>
+
+              <div id="advanced-config" class="advanced-config hidden">
+                <textarea id="cfg" spellcheck="false"></textarea>
+                <div class="modal-foot">
+                  <button id="cfg-save" class="primary">保存 JSON</button>
+                </div>
+              </div>
+            </section>
+
+            <section id="settingsChatSection" class="settings-section hidden">
+              <div class="settings-group-title">推理等级</div>
+              <div class="settings-hint">控制系统提示词里的推理深度偏好，保存后立即对下一轮对话生效。</div>
+              <div id="reasoningOptions" class="settings-picker"></div>
+              <div class="settings-group-title">上下文自动压缩</div>
+              <div class="settings-hint">当会话估算 token 超过上下文窗口的该比例时，自动压缩历史消息（对应配置 <span class="mono">compactThreshold</span>）。</div>
+              <div class="settings-row">
+                <div class="settings-row-label"><b>触发阈值</b><p>越低越早压缩，长任务更稳但细节丢失更早。</p></div>
+                <select id="compactThresholdSelect" class="settings-select">
+                  <option value="0.5">50%（激进）</option>
+                  <option value="0.65">65%</option>
+                  <option value="0.75">75%（默认）</option>
+                  <option value="0.85">85%</option>
+                  <option value="0.9">90%（保守）</option>
+                </select>
+              </div>
+            </section>
+
+            <section id="settingsSafetySection" class="settings-section hidden">
+              <div class="settings-group-title">命令执行沙箱</div>
+              <div class="settings-row">
+                <div class="settings-row-label"><b>bash 写入沙箱</b><p id="sandboxHint">macOS 上通过 sandbox-exec 把 bash 的写入限制在当前工作区内，读取不受限。</p></div>
+                <input type="checkbox" id="sandboxToggle" class="settings-toggle" />
+              </div>
+              <div class="settings-group-title">始终生效的保护</div>
+              <div class="settings-hint">
+                以下安全边界不可关闭：写文件 / 改文件 / 执行命令前逐项询问；文件访问限制在工作区内（符号链接逃逸会被拦截）；
+                子进程环境变量默认剥离 API Key 等敏感项；日志与错误信息自动脱敏。
+              </div>
+            </section>
+
+            <section id="settingsMcpSection" class="settings-section hidden">
+              <div class="settings-group-title">MCP 服务器（stdio）</div>
+              <div class="settings-hint">编辑 <span class="mono">config.json</span> 里的 <span class="mono">mcpServers</span> 字段，保存后重连生效。也可以从商店一键安装。</div>
+              <div class="advanced-config">
+                <textarea id="mcpCfg" spellcheck="false"></textarea>
+                <div class="modal-foot">
+                  <button id="mcp-save" class="primary">保存 MCP 配置</button>
+                </div>
+              </div>
+            </section>
+
+            <section id="settingsDataSection" class="settings-section hidden">
+              <div class="settings-group-title">本地数据</div>
+              <div class="settings-row">
+                <div class="settings-row-label"><b>数据目录</b><p class="mono" id="dataDirPath">~/.hicode</p></div>
+                <button id="openDataDirBtn" class="ghost">打开</button>
+              </div>
+              <div class="settings-row">
+                <div class="settings-row-label"><b>配置文件</b><p class="mono" id="configFilePath">~/.hicode/config.json</p></div>
+                <button id="revealConfigBtn" class="ghost">定位</button>
+              </div>
+              <div class="settings-hint">
+                会话、配置、商店安装内容都保存在数据目录，卸载应用不会删除。旧版 <span class="mono">~/.vibe</span> 目录会被自动兼容读取。
+                环境变量 <span class="mono">HICODE_BASE_URL / HICODE_API_KEY / HICODE_MODEL</span> 优先级高于配置文件。
+              </div>
+            </section>
+
+            <section id="settingsAboutSection" class="settings-section hidden">
+              <div class="about-hero">
+                <span class="logo big"></span>
+                <div>
+                  <div class="about-name">Hi Code <span class="brand-version" id="aboutVersion"></span></div>
+                  <div class="muted">本地优先的桌面编码 Agent，兼容任意 OpenAI 接口模型。</div>
+                </div>
+              </div>
+              <div class="settings-row"><div class="settings-row-label"><b>运行环境</b><p class="mono" id="aboutRuntime">…</p></div></div>
+              <div class="settings-row"><div class="settings-row-label"><b>平台</b><p class="mono" id="aboutPlatform">…</p></div></div>
+              <div class="settings-row"><div class="settings-row-label"><b>开源许可</b><p>MIT License</p></div></div>
+              <div class="settings-row">
+                <div class="settings-row-label"><b>版本更新</b><p id="updateStatus">从 GitHub Releases 获取最新版本信息。</p></div>
+                <button id="checkUpdatesBtn" class="ghost">检查更新</button>
+              </div>
+              <div class="settings-actions about-actions">
+                <button id="aboutRepoBtn" class="ghost">GitHub 仓库</button>
+                <button id="aboutReleasesBtn" class="ghost">下载页</button>
+                <button id="aboutIssuesBtn" class="ghost">反馈问题</button>
+              </div>
+            </section>
+
+            <div id="cfg-err" class="cfg-err"></div>
           </div>
         </div>
       </div>
