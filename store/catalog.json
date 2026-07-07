@@ -1,0 +1,405 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-07-07",
+  "homepage": "https://github.com/mc7yxyyq96-sketch/hi-code",
+  "items": [
+    {
+      "id": "skill-auto-code-review",
+      "kind": "skill",
+      "category": "review",
+      "name": "自动代码审查",
+      "summary": "像 Codex/Claude Code 一样读取 git diff、定位风险、指出缺陷和测试缺口。",
+      "tags": [
+        "自动审查",
+        "代码审查",
+        "review",
+        "pr",
+        "diff",
+        "bug",
+        "测试",
+        "安全"
+      ],
+      "aliases": [
+        "自动审查",
+        "自动代码审查",
+        "审查代码",
+        "代码review",
+        "review code",
+        "PR审查",
+        "变更审查",
+        "diff审查"
+      ],
+      "source": "builtin",
+      "install": {
+        "kind": "skill",
+        "dir": "auto-code-review",
+        "skill": {
+          "name": "auto-code-review",
+          "description": "Use when the user asks to automatically review code, PRs, diffs, branches, or recent changes for bugs, regressions, security issues, and missing tests.",
+          "body": "Start with git status and git diff. Inspect changed files before judging. Lead with concrete findings ordered by severity, include file/line references when possible, then list test gaps and assumptions. If no issues are found, say so directly."
+        }
+      }
+    },
+    {
+      "id": "agent-auto-reviewer",
+      "kind": "agent",
+      "category": "review",
+      "name": "自动审查 Agent",
+      "summary": "只读 reviewer，自动检查变更风险、回归、权限边界和缺失测试。",
+      "tags": [
+        "自动审查",
+        "reviewer",
+        "agent",
+        "qa",
+        "security"
+      ],
+      "aliases": [
+        "自动审查",
+        "reviewer",
+        "代码审查员",
+        "自动review",
+        "质量审查",
+        "安全审查"
+      ],
+      "source": "builtin",
+      "install": {
+        "kind": "agent",
+        "agent": {
+          "role": "reviewer",
+          "modelProfile": "default",
+          "bashMode": "read-only",
+          "prompt": "Review the repository or diff without modifying files. Prioritize correctness, security, regressions, missing tests, and user-visible behavior changes. Return findings first."
+        }
+      }
+    },
+    {
+      "id": "plugin-auto-review-workflow",
+      "kind": "plugin",
+      "category": "review",
+      "name": "自动审查工作流",
+      "summary": "预置 /review 工作流、审查面板和 reviewer/测试 Agent 编排入口。",
+      "tags": [
+        "自动审查",
+        "review",
+        "plugin",
+        "workflow",
+        "codex"
+      ],
+      "aliases": [
+        "自动审查",
+        "review workflow",
+        "审查工作流",
+        "codex review",
+        "claude code review"
+      ],
+      "source": "builtin",
+      "install": {
+        "kind": "plugin",
+        "manifest": {
+          "name": "auto-review-workflow",
+          "version": "0.1.0",
+          "contributes": [
+            "commands:/review",
+            "views:review-panel",
+            "agents:reviewer",
+            "skills:auto-code-review"
+          ]
+        }
+      }
+    },
+    {
+      "id": "skill-local-app-control",
+      "kind": "skill",
+      "category": "local",
+      "name": "本机应用控制",
+      "summary": "识别“打开 ToDesk / Apple Music / Chrome”等请求，并通过 macOS open 启动应用。",
+      "tags": [
+        "本机应用",
+        "打开app",
+        "macOS",
+        "automation",
+        "ToDesk",
+        "Apple Music"
+      ],
+      "aliases": [
+        "打开app",
+        "打开应用",
+        "启动应用",
+        "打开Apple Music",
+        "打开ToDesk",
+        "本机控制",
+        "电脑控制"
+      ],
+      "source": "builtin",
+      "install": {
+        "kind": "skill",
+        "dir": "local-app-control",
+        "skill": {
+          "name": "local-app-control",
+          "description": "Use when the user asks to open or launch local macOS applications such as ToDesk, Music, Chrome, Safari, WeChat, or Terminal.",
+          "body": "For app-launch requests, use the local app open capability or bash `open -a <App Name>` when allowed. Confirm the app was opened or explain the exact macOS error."
+        }
+      }
+    },
+    {
+      "id": "skill-playwright",
+      "kind": "skill",
+      "category": "browser",
+      "name": "Playwright UI 验证",
+      "summary": "驱动真实浏览器做 UI 流程验证、截图和回归检查。",
+      "tags": [
+        "browser",
+        "qa",
+        "frontend",
+        "自动测试",
+        "UI审查"
+      ],
+      "aliases": [
+        "UI验证",
+        "自动测试",
+        "浏览器测试",
+        "截图验证",
+        "playwright",
+        "前端审查"
+      ],
+      "source": "builtin",
+      "install": {
+        "kind": "skill",
+        "dir": "playwright-ui",
+        "skill": {
+          "name": "playwright-ui",
+          "description": "Use when validating a local web UI with Playwright screenshots, snapshots, clicks, typing, and basic flow checks.",
+          "body": "Prefer the bundled Playwright CLI wrapper when available. Open the target, take a snapshot, interact through stable refs, and capture screenshots under output/playwright/."
+        }
+      }
+    },
+    {
+      "id": "skill-security-review",
+      "kind": "skill",
+      "category": "security",
+      "name": "代码安全审查",
+      "summary": "按威胁模型审查路径、命令、MCP、密钥和权限边界。",
+      "tags": [
+        "security",
+        "review",
+        "自动审查",
+        "安全审查"
+      ],
+      "aliases": [
+        "自动审查",
+        "安全审查",
+        "漏洞扫描",
+        "密钥泄露",
+        "权限审查",
+        "MCP安全"
+      ],
+      "source": "builtin",
+      "install": {
+        "kind": "skill",
+        "dir": "security-review",
+        "skill": {
+          "name": "security-review",
+          "description": "Use when reviewing repository changes for security issues, including path traversal, command execution, secrets, auth, and MCP/tool boundaries.",
+          "body": "Prioritize exploitable findings with file/line references. Verify source-to-sink paths and avoid speculative issues."
+        }
+      }
+    },
+    {
+      "id": "mcp-filesystem",
+      "kind": "mcp",
+      "category": "local",
+      "name": "Filesystem MCP",
+      "summary": "把当前项目目录暴露给 MCP 工具，适合本地文件读写类工作流。",
+      "tags": [
+        "mcp",
+        "filesystem",
+        "文件系统",
+        "本地文件"
+      ],
+      "aliases": [
+        "文件系统",
+        "本地文件",
+        "读写文件",
+        "filesystem"
+      ],
+      "source": "npm",
+      "install": {
+        "kind": "mcp",
+        "server": {
+          "name": "filesystem",
+          "command": "npx",
+          "args": [
+            "-y",
+            "@modelcontextprotocol/server-filesystem",
+            "."
+          ]
+        }
+      }
+    },
+    {
+      "id": "mcp-github",
+      "kind": "mcp",
+      "category": "git",
+      "name": "GitHub MCP",
+      "summary": "连接 GitHub issue、PR、repo 上下文。需要配置 GITHUB_TOKEN。",
+      "tags": [
+        "mcp",
+        "github",
+        "git",
+        "PR审查"
+      ],
+      "aliases": [
+        "github",
+        "PR",
+        "issue",
+        "pull request",
+        "仓库",
+        "代码审查"
+      ],
+      "source": "npm",
+      "install": {
+        "kind": "mcp",
+        "server": {
+          "name": "github",
+          "command": "npx",
+          "args": [
+            "-y",
+            "@modelcontextprotocol/server-github"
+          ],
+          "env": {
+            "GITHUB_TOKEN": "填入你的 GitHub token"
+          }
+        }
+      }
+    },
+    {
+      "id": "agent-reviewer",
+      "kind": "agent",
+      "category": "code",
+      "name": "Reviewer Agent",
+      "summary": "专门做代码审查、风险发现、测试缺口检查的只读审查员。",
+      "tags": [
+        "agent",
+        "review",
+        "qa",
+        "自动审查"
+      ],
+      "aliases": [
+        "自动审查",
+        "reviewer",
+        "代码审查员",
+        "质量检查",
+        "测试缺口"
+      ],
+      "source": "builtin",
+      "install": {
+        "kind": "agent",
+        "agent": {
+          "role": "reviewer",
+          "modelProfile": "default",
+          "bashMode": "read-only",
+          "prompt": "Review code changes for bugs, regressions, missing tests, and security risks. Prefer concrete file references."
+        }
+      }
+    },
+    {
+      "id": "agent-architect",
+      "kind": "agent",
+      "category": "code",
+      "name": "Architect Agent",
+      "summary": "负责拆任务、定边界、做方案和验收标准的架构 Agent。",
+      "tags": [
+        "agent",
+        "architecture",
+        "规划",
+        "架构"
+      ],
+      "aliases": [
+        "架构",
+        "规划",
+        "拆任务",
+        "技术方案",
+        "全栈经理"
+      ],
+      "source": "builtin",
+      "install": {
+        "kind": "agent",
+        "agent": {
+          "role": "architect",
+          "modelProfile": "default",
+          "bashMode": "read-only",
+          "prompt": "Plan implementation boundaries, contracts, migration steps, and validation strategy before coding."
+        }
+      }
+    },
+    {
+      "id": "plugin-git-workflow",
+      "kind": "plugin",
+      "category": "git",
+      "name": "Git 工作流套件",
+      "summary": "提供 diff、stage、commit、PR 相关命令和 UI 能力的插件骨架。",
+      "tags": [
+        "plugin",
+        "git",
+        "diff",
+        "commit",
+        "PR审查"
+      ],
+      "aliases": [
+        "git",
+        "diff",
+        "commit",
+        "stage",
+        "PR",
+        "变更审查"
+      ],
+      "source": "builtin",
+      "install": {
+        "kind": "plugin",
+        "manifest": {
+          "name": "git-workflow",
+          "version": "0.1.0",
+          "contributes": [
+            "commands",
+            "views",
+            "skills"
+          ]
+        }
+      }
+    },
+    {
+      "id": "plugin-data-analytics",
+      "kind": "plugin",
+      "category": "data",
+      "name": "数据分析套件",
+      "summary": "面向报表、仪表盘、KPI 分析的数据工作流插件骨架。",
+      "tags": [
+        "plugin",
+        "data",
+        "dashboard",
+        "报表",
+        "数据分析"
+      ],
+      "aliases": [
+        "数据分析",
+        "报表",
+        "仪表盘",
+        "dashboard",
+        "KPI"
+      ],
+      "source": "builtin",
+      "install": {
+        "kind": "plugin",
+        "manifest": {
+          "name": "data-analytics",
+          "version": "0.1.0",
+          "contributes": [
+            "skills",
+            "reports",
+            "dashboards"
+          ]
+        }
+      }
+    }
+  ]
+}
