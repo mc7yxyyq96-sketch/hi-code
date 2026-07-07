@@ -16,6 +16,7 @@ function check(name, cond, detail = "") {
 
 const root = process.cwd();
 const main = fs.readFileSync(path.join(root, "electron", "main.mjs"), "utf8");
+const nativeOpenService = fs.readFileSync(path.join(root, "electron", "services", "native-open-service.mjs"), "utf8");
 const preload = fs.readFileSync(path.join(root, "electron", "preload.cjs"), "utf8");
 const html = fs.readFileSync(path.join(root, "renderer", "index.html"), "utf8");
 const bash = fs.readFileSync(path.join(root, "src", "tools", "bash.ts"), "utf8");
@@ -54,7 +55,7 @@ check("renderer sandbox enabled", /sandbox:\s*true/.test(main));
 check("renderer CSP exists", html.includes("Content-Security-Policy"));
 check("CSP blocks remote script by default", /script-src 'self'/.test(html));
 check("desktop runtime disables slash-command process exit", main.includes("allowProcessExit: false") && runtime.includes("allowProcessExit: opts.allowProcessExit !== false") && commands.includes("env.allowProcessExit === false"));
-check("native app launcher only intercepts known app aliases", main.includes("if (!alias) return null") && !main.includes("alias || rawName"));
+check("native app launcher only intercepts known app aliases", nativeOpenService.includes("if (!alias) return null") && !nativeOpenService.includes("alias || rawName"));
 check("desktop bridge filters terminal tool chrome from chat output", main.includes("shouldForwardRuntimeOutput") && main.includes("/^⏺\\s/") && main.includes("/^[┌│└]/"));
 check("preload does not expose ipcRenderer", !/ipcRenderer[,}]/.test(preload) && !/ipcRenderer:\s*ipcRenderer/.test(preload));
 check("preload does not expose generic invoke", !/invoke:\s*\(/.test(preload));
