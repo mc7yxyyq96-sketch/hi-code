@@ -7,6 +7,7 @@ import { registerIpcHandlers } from "../electron/ipc/register-ipc-handlers.mjs";
 import { createRuntimeService } from "../electron/services/runtime-service.mjs";
 import { createQueueService } from "../electron/services/queue-service.mjs";
 import { createGitService } from "../electron/services/git-service.mjs";
+import { parseOpenAppRequest } from "../electron/services/native-open-service.mjs";
 import { createPathGuard, redactSensitive } from "../electron/services/security-service.mjs";
 import { modelTestError, modelTestNetworkError } from "../electron/services/workspace-service.mjs";
 
@@ -52,6 +53,12 @@ check("ipc-utils normalizes failed handler", failed.ok === false && failed.error
 check("ipc-utils logs redacted errors", JSON.stringify(logs).includes("[REDACTED]") && !JSON.stringify(logs).includes("sk-secret123456789"), JSON.stringify(logs));
 
 console.log("\n[services] smoke");
+check("native open app parses explicit app alias", parseOpenAppRequest("打开 Chrome")?.appName === "Google Chrome");
+check("native open app parses Chinese app alias", parseOpenAppRequest("请打开微信一下")?.appName === "WeChat");
+check("native open app does not intercept run tests", parseOpenAppRequest("运行测试") === null);
+check("native open app does not intercept npm commands", parseOpenAppRequest("运行 npm run build") === null);
+check("native open app does not intercept file inspection", parseOpenAppRequest("打开 src/runtime.ts 看看") === null);
+
 let cleared = false;
 const queue = createQueueService({
   inputQueue: {

@@ -8,7 +8,7 @@ import os from "node:os";
 import fs from "node:fs";
 import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
-import { spawn, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 
 import { loadConfig, defaultProfile, HICODE_DIR } from "../dist/config.js";
 import { createRuntime, buildSystemPrompt } from "../dist/runtime.js";
@@ -49,6 +49,7 @@ import { createGitService } from "./services/git-service.mjs";
 import { createDiffIpcService } from "./services/diff-service.mjs";
 import { createWorkspaceService } from "./services/workspace-service.mjs";
 import { createSecurityService, redactSensitive } from "./services/security-service.mjs";
+import { openMacApp, parseOpenAppRequest } from "./services/native-open-service.mjs";
 import { BUILTIN_STORE_CATALOG } from "./store-catalog.mjs";
 
 // Data dir (~/.hicode, or a legacy ~/.vibe if that's what exists) is resolved
@@ -2175,82 +2176,6 @@ function resolveInCwd(p = cwd) {
   return real;
 }
 
-function parseOpenAppRequest(text) {
-  const value = String(text || "")
-    .trim()
-    .replace(/[。.!！?？]+$/g, "");
-  const match = value.match(/^(?:帮我|请|麻烦你|能不能)?\s*(?:打开|启动|运行)\s*(?:一下|下)?\s*(.+)$/i);
-  if (!match) return null;
-  const rawName = match[1].trim().replace(/^[-—:：\s]+/, "");
-  if (!rawName || rawName.length > 80) return null;
-  const normalized = rawName.toLowerCase().replace(/\s+/g, " ").trim();
-  const aliases = {
-    "apple music": "Music",
-    "music": "Music",
-    "音乐": "Music",
-    "音乐app": "Music",
-    "todesk": "ToDesk",
-    "to desk": "ToDesk",
-    "向日葵": "SunloginClient",
-    "chrome": "Google Chrome",
-    "google chrome": "Google Chrome",
-    "谷歌浏览器": "Google Chrome",
-    "safari": "Safari",
-    "微信": "WeChat",
-    "wechat": "WeChat",
-    "终端": "Terminal",
-    "terminal": "Terminal",
-    "访达": "Finder",
-    "finder": "Finder",
-    "wps": ["WPS Office", "WPS Writer", "Kingsoft WPS", "WPS"],
-    "wps office": ["WPS Office", "WPS Writer", "Kingsoft WPS", "WPS"],
-    "金山文档": ["WPS Office", "WPS Writer", "Kingsoft WPS", "WPS"],
-    "金山办公": ["WPS Office", "WPS Writer", "Kingsoft WPS", "WPS"],
-    "word": ["Microsoft Word", "Word"],
-    "microsoft word": ["Microsoft Word", "Word"],
-  };
-  const alias = aliases[normalized];
-  if (!alias) return null;
-  return {
-    requested: rawName,
-    appName: Array.isArray(alias) ? alias[0] : alias,
-    candidates: Array.isArray(alias) ? alias : [alias],
-  };
-}
-
-function openMacApp(appName, candidates = [appName]) {
-  return new Promise((resolve) => {
-    if (process.platform !== "darwin") {
-      resolve({ ok: false, error: "本机应用启动目前只支持 macOS。" });
-      return;
-    }
-    const names = [...new Set((candidates || [appName]).filter(Boolean))];
-    const errors = [];
-    const tryOne = (idx) => {
-      const name = names[idx];
-      if (!name) {
-        resolve({ ok: false, error: errors.filter(Boolean).join("；") || `找不到应用 ${appName}` });
-        return;
-      }
-      const child = spawn("/usr/bin/open", ["-a", name], { stdio: ["ignore", "ignore", "pipe"] });
-      let err = "";
-      child.stderr.on("data", (chunk) => { err += chunk.toString(); });
-      child.on("error", (e) => {
-        errors.push(`${name}: ${e.message}`);
-        tryOne(idx + 1);
-      });
-      child.on("close", (code) => {
-        if (code === 0) resolve({ ok: true, appName: name });
-        else {
-          errors.push(`${name}: ${err.trim() || `open -a 退出码 ${code}`}`);
-          tryOne(idx + 1);
-        }
-      });
-    };
-    tryOne(0);
-  });
-}
-
 async function handleNativeOpenApp(text) {
   const request = parseOpenAppRequest(text);
   if (!request) return false;
@@ -2272,10 +2197,12 @@ async function handleNativeOpenApp(text) {
     status: result.ok ? "done" : "error",
     payload: { parentId: startId, appName: result.appName || request.appName, requested: request.requested },
   });
-  send("output", result.ok
-    ? `已打开 ${request.requested}${result.appName && result.appName !== request.requested ? `（${result.appName}）` : ""}。\n`
-    : `没能打开 ${request.requested}：${result.error}\n`);
-  return true;
+  if (result.ok) {
+    send("output", `已打开 ${request.requested}${result.appName && result.appName !== request.requested ? `（${result.appName}）` : ""}。\n`);
+    return true;
+  }
+  send("output", `没能打开 ${request.requested}：${result.error}。将继续交给 Agent 处理。\n`);
+  return false;
 }
 
 async function runRuntimeQueueJob(job) {
