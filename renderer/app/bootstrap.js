@@ -35,6 +35,7 @@ if (!window.hicode) {
     { id: "demo-2", firstPrompt: "检查 MCP 权限与文件沙箱", updatedAt: Date.now() - 1000 * 60 * 58, messageCount: 14 },
     { id: "demo-3", firstPrompt: "给 reviewer 加只读 bash", updatedAt: Date.now() - 1000 * 60 * 180, messageCount: 6 },
   ];
+  let demoRuntimeSessionId = `demo-${Date.now()}`;
   let demoUser = null;
 
   function buildDemoUsageStats() {
@@ -475,7 +476,7 @@ if (!window.hicode) {
     onReady: (cb) => {
       readyHandlers.push(cb);
       const p = demoConfig.profiles[demoConfig.defaultProfile] || demoConfig.profiles.default;
-      setTimeout(() => cb({ model: p.model, baseURL: p.baseURL, cwd: "/demo/hicode-project" }), 20);
+      setTimeout(() => cb({ model: p.model, baseURL: p.baseURL, cwd: "/demo/hicode-project", sessionId: demoRuntimeSessionId }), 20);
     },
     onAsk: (cb) => askHandlers.push(cb),
     onTurnDone: (cb) => turnDoneHandlers.push(cb),
@@ -605,6 +606,12 @@ if (!window.hicode) {
       { role: "user", text: "优化 Hi Code 米白色工作台界面" },
       { role: "assistant", text: "已切换到米白色工作台，并保留会话、命令、权限与文件预览。" },
     ],
+    newSession: async () => {
+      demoRuntimeSessionId = `demo-${Date.now()}`;
+      const p = demoConfig.profiles[demoConfig.defaultProfile] || demoConfig.profiles.default;
+      readyHandlers.forEach((cb) => cb({ model: p.model, baseURL: p.baseURL, cwd: "/demo/hicode-project", sessionId: demoRuntimeSessionId }));
+      return { ok: true, sessionId: demoRuntimeSessionId };
+    },
     readSession: async (id) => (id === "demo-1"
       ? [
         { role: "user", text: "优化 Hi Code 米白色工作台界面" },
@@ -2868,11 +2875,8 @@ api.onReady((d) => {
   syncState({ cwd });
   setCurrentModelDisplay(d);
   if (appVersionEl) appVersionEl.textContent = d.version ? `v${d.version}` : "";
-  activeRuntimeSessionId = d.sessionId || activeRuntimeSessionId || null;
-  if (!busy) {
-    runningSessionId = activeRuntimeSessionId;
-    if (!currentSessionId) currentSessionId = activeRuntimeSessionId;
-  }
+  if (d.sessionId) activeRuntimeSessionId = d.sessionId;
+  if (!busy && !currentSessionId && chatHasMessages()) currentSessionId = activeRuntimeSessionId;
   projName.textContent = shortPath(d.cwd);
   currentProject.textContent = shortPath(d.cwd);
   loadSessions();
@@ -2946,11 +2950,25 @@ function sessionMatchesFilter(session, filter) {
   ].some((value) => String(value || "").toLowerCase().includes(q));
 }
 
+function chatHasMessages() {
+  return Boolean(chat?.querySelector(".msg"));
+}
+
+function firstPromptFromVisibleChat() {
+  const bubble = chat?.querySelector(".msg.user .bubble");
+  const text = bubble?.childNodes?.[0]?.textContent || bubble?.textContent || "";
+  return text.replace(/\s+/g, " ").trim();
+}
+
 function makeRuntimeSessionFallback() {
   const id = runningSessionId || activeRuntimeSessionId || currentSessionId;
   if (!id || allSessions.some((session) => session.id === id)) return null;
-  const messageCount = Math.max(chat.querySelectorAll(".msg").length, liveSessionSnapshot?.messageCount || 0, 1);
-  const firstPrompt = runState?.detail || liveSessionSnapshot?.firstPrompt || "正在进行的会话";
+  const isRunning = Boolean(busy && runningSessionId === id);
+  const hasLiveSnapshot = liveSessionSnapshot?.id === id;
+  const visibleMessageCount = chat.querySelectorAll(".msg").length;
+  if (!isRunning && !hasLiveSnapshot && !(currentSessionId === id && visibleMessageCount > 0)) return null;
+  const messageCount = Math.max(visibleMessageCount, liveSessionSnapshot?.messageCount || 0, 1);
+  const firstPrompt = firstPromptFromVisibleChat() || runState?.detail || liveSessionSnapshot?.firstPrompt || "正在进行的会话";
   return {
     id,
     cwd,
@@ -2959,7 +2977,7 @@ function makeRuntimeSessionFallback() {
     firstPrompt,
     messageCount,
     transient: true,
-    running: Boolean(busy && runningSessionId === id),
+    running: isRunning,
   };
 }
 
@@ -3040,7 +3058,20 @@ function restoreLiveSessionSnapshot() {
 
 /** Open a saved session: restore it silently and render its history (no /resume echo). */
 async function openSession(id) {
+  if (!id) return;
   if (id === currentSessionId) {
+    if (liveSessionSnapshot?.id === id) restoreLiveSessionSnapshot();
+    if (!chatHasMessages()) {
+      const msgs = await api.readSession(id).catch(() => []);
+      if (msgs.length) renderChatFromMessages(msgs);
+      else {
+        chat.innerHTML = "";
+        showChat();
+        addSystemNote("这个会话还没有保存内容。发送第一条消息后会出现在最近列表。");
+      }
+    } else {
+      showChat();
+    }
     showChat();
     renderSessions(searchInput.value.trim());
     scrollDown();
@@ -3075,13 +3106,38 @@ async function openSession(id) {
 
   const msgs = await api.resumeSession(id);
   currentSessionId = id;
-  runningSessionId = id;
+  runningSessionId = null;
   activeRuntimeSessionId = id;
   liveSessionSnapshot = null;
   renderSessions(searchInput.value.trim());
   renderChatFromMessages(msgs);
 }
 searchInput.addEventListener("input", () => renderSessions(searchInput.value.trim()));
+
+async function startNewConversation() {
+  if (busy) {
+    saveLiveSessionSnapshot();
+    toast.info("当前任务仍在运行。请先等待完成或点击停止，再新建对话。");
+    renderSessions(searchInput.value.trim());
+    return;
+  }
+  const result = api.has("newSession") ? await api.newSession() : { ok: false };
+  if (result?.ok && result.sessionId) {
+    activeRuntimeSessionId = result.sessionId;
+  } else {
+    api.send("/clear");
+    activeRuntimeSessionId = null;
+  }
+  currentSessionId = null;
+  runningSessionId = null;
+  liveSessionSnapshot = null;
+  agentBody = null;
+  agentRaw = "";
+  chat.innerHTML = "";
+  renderSessions(searchInput.value.trim());
+  showHome();
+  setGreeting();
+}
 
 /* ---------- greeting ---------- */
 function setGreeting() {
@@ -3242,7 +3298,7 @@ function initSidebarCollapse() {
 }
 
 initSidebarCollapse();
-$("newChat").onclick = () => { currentSessionId = null; renderSessions(searchInput.value.trim()); chat.innerHTML = ""; api.send("/clear"); showHome(); setGreeting(); };
+$("newChat").onclick = startNewConversation;
 $("searchToggle").onclick = () => {
   const w = $("searchWrap"); w.classList.toggle("hidden");
   if (!w.classList.contains("hidden")) searchInput.focus(); else { searchInput.value = ""; renderSessions(""); }

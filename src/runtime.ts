@@ -83,6 +83,8 @@ export interface Runtime {
   /** Apply a new model config without discarding the active conversation. */
   updateConfig: (cfg: VibeConfig, systemPrompt: string) => void;
   shutdown: () => void;
+  /** Start a fresh empty conversation without reusing the previous session id. */
+  startNewSession: () => { sessionId: string };
   /** Load a saved session into the runtime (no output) and return its messages for display. */
   resume: (id: string) => { role: string; text: string }[];
 }
@@ -192,6 +194,7 @@ export function createRuntime(opts: RuntimeOpts): Runtime {
     currentTurnId = `${sessionId}-turn-${++turnSeq}`;
     execEnv.sessionId = sessionId;
     execEnv.turnId = currentTurnId;
+    cmdEnv.sessionId = sessionId;
   }
 
   function turnTitle(input: string): string {
@@ -367,7 +370,9 @@ export function createRuntime(opts: RuntimeOpts): Runtime {
     session,
     execEnv,
     cmdEnv,
-    sessionId,
+    get sessionId() {
+      return sessionId;
+    },
     handleInput,
     abort: () => {
       if (currentAbort && !currentAbort.signal.aborted) {
@@ -389,6 +394,19 @@ export function createRuntime(opts: RuntimeOpts): Runtime {
       cmdEnv.systemPrompt = nextSystemPrompt;
     },
     shutdown: shutdownMcp,
+    startNewSession: () => {
+      const fresh = newSession(cmdEnv.systemPrompt);
+      session.messages = fresh.messages;
+      session.totalPromptTokens = 0;
+      session.totalCompletionTokens = 0;
+      sessionId = newSessionId();
+      turnSeq = 0;
+      currentTurnId = `${sessionId}-turn-0`;
+      execEnv.sessionId = sessionId;
+      execEnv.turnId = currentTurnId;
+      cmdEnv.sessionId = sessionId;
+      return { sessionId };
+    },
     resume: (id: string) => {
       const stored = loadSession(id);
       if (!stored) return [];
@@ -397,6 +415,7 @@ export function createRuntime(opts: RuntimeOpts): Runtime {
       session.totalCompletionTokens = stored.totalCompletionTokens;
       sessionId = id; // continue saving into the resumed session
       execEnv.sessionId = sessionId;
+      cmdEnv.sessionId = sessionId;
       return stored.messages
         .filter((m) => m.role === "user" || m.role === "assistant")
         .map((m) => ({ role: m.role, text: contentText(m.content).trim() }))

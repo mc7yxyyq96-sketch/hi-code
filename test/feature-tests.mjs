@@ -205,6 +205,27 @@ check(
 );
 deleteStoredSession(offlineSessionId);
 
+const sessionResetEvents = [];
+const resetRuntime = createRuntime({
+  cfg,
+  cwd: tmp,
+  mode: "default",
+  systemPrompt: "test",
+  ask: async () => "n",
+  emitEvent: (event) => {
+    const id = `reset-runtime-evt-${sessionResetEvents.length + 1}`;
+    sessionResetEvents.push({ ...event, id });
+    return id;
+  },
+});
+const resetFirstSessionId = resetRuntime.sessionId;
+const resetResult = resetRuntime.startNewSession();
+check(
+  "runtime startNewSession creates a fresh visible session id",
+  resetResult.sessionId === resetRuntime.sessionId && resetRuntime.sessionId !== resetFirstSessionId,
+  JSON.stringify({ resetFirstSessionId, resetResult, visible: resetRuntime.sessionId }),
+);
+
 const emptyResponseEvents = [];
 const oldFetch = globalThis.fetch;
 globalThis.fetch = async () => new Response(

@@ -72,6 +72,7 @@ export function createHiCodeApi(rawApi = window.hicode, { onError = null } = {})
     readFile: (filePath) => call("readFile", [filePath], { error: "读取文件失败", content: "" }),
     listSessions: () => call("listSessions", [], []),
     resumeSession: (id) => call("resumeSession", [id], []),
+    newSession: () => call("newSession", [], { ok: false, error: "新对话创建失败" }),
     readSession: (id) => call("readSession", [id], []),
     deleteSession: (id) => call("deleteSession", [id], false),
     getConfig: () => call("getConfig", [], ""),

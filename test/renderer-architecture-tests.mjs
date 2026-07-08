@@ -76,12 +76,14 @@ check("settings usage layout is responsive and locally scrollable", css.includes
 check("modal and settings content guard against small-window clipping", css.includes(".modal {\n  position: fixed;") && css.includes("overflow: auto") && css.includes("max-height: calc(100vh - 28px)") && css.includes("overflow-x: hidden") && css.includes("align-items: flex-start"));
 check("MCP config button opens MCP settings mode", bootstrap.includes("cfgBtn.onclick = openMcpSettings") && bootstrap.includes("return openSettings(\"mcp\")"));
 check("busy session switch previews without resuming runtime", bootstrap.includes("api.readSession(id)") && bootstrap.includes("saveLiveSessionSnapshot") && bootstrap.includes("restoreLiveSessionSnapshot"));
-check("running conversation remains reachable after leaving chat", bootstrap.includes("function makeRuntimeSessionFallback") && bootstrap.includes("list = source.filter((session) => sessionMatchesFilter(session, filter))") && bootstrap.includes("currentSessionId !== transientSessionId") && bootstrap.includes("if (id === currentSessionId)") && bootstrap.includes("api.readSession(id).catch") && css.includes(".sess-transient"));
+check("running conversation remains reachable after leaving chat", bootstrap.includes("function makeRuntimeSessionFallback") && bootstrap.includes("list = source.filter((session) => sessionMatchesFilter(session, filter))") && bootstrap.includes("chatHasMessages()") && bootstrap.includes("if (id === currentSessionId)") && bootstrap.includes("api.readSession(id).catch") && css.includes(".sess-transient"));
+check("recent session click restores the active conversation instead of no-op", bootstrap.includes("if (id === currentSessionId)") && bootstrap.includes("if (!chatHasMessages())") && bootstrap.includes("renderChatFromMessages(msgs)") && bootstrap.includes("这个会话还没有保存内容"));
 check("MCP settings validates mcpServers JSON", bootstrap.includes("function validateMcpServersConfig") && bootstrap.includes("MCP JSON 格式错误") && bootstrap.includes("mcpServers 必须是 JSON 对象"));
 check("command sidebar opens visible command center", html.includes('section id="commandView"') && bootstrap.includes('route: "commandView"') && bootstrap.includes('"cmdBtn").onclick = showCommandCenter'));
 check("command center exposes real actions", bootstrap.includes("function executeCommand") && bootstrap.includes('if (name === "/mcp") return showCapabilities("mcp")') && bootstrap.includes('if (name === "/diff") return showGit()'));
 check("Agent sidebar opens installed agent capability list", html.includes('id="agentsBtn"') && bootstrap.includes('$("agentsBtn").onclick = () => showCapabilities("agents")') && bootstrap.includes('activeNav: CAPABILITY_META[kind]?.nav'));
 check("sidebar removes standalone conversation nav and keeps new chat", !html.includes('id="chatNav"') && !bootstrap.includes('$("chatNav")') && !bootstrap.includes('activeNav: "chatNav"') && html.includes('id="newChat"') && html.includes('<span class="nav-label">新对话</span>'));
+check("new chat creates a real runtime session instead of slash clear", bootstrap.includes("async function startNewConversation") && bootstrap.includes("api.newSession()") && bootstrap.includes('$("newChat").onclick = startNewConversation') && !bootstrap.includes('$("newChat").onclick = () => { currentSessionId = null; renderSessions(searchInput.value.trim()); chat.innerHTML = ""; api.send("/clear"); showHome(); setGreeting(); }'));
 check("sidebar menu collapse keeps only pinned navigation", html.includes('id="sidebarToggle"') && bootstrap.includes("hicode.sidebarCollapsed") && bootstrap.includes("sidebar-nav-collapsed") && html.includes("nav-pinned") && html.includes("nav-optional") && html.includes('id="newChat"') && html.includes('id="storeBtn"') && html.includes('id="industrialBtn"'));
 check("sidebar collapsed hides project recent and account chrome", css.includes("body.sidebar-nav-collapsed .section-label") && css.includes("body.sidebar-nav-collapsed .proj-row") && css.includes("body.sidebar-nav-collapsed .side-list") && css.includes("body.sidebar-nav-collapsed .side-foot"));
 check("sidebar reserves macOS traffic-light safe area", css.includes("--mac-titlebar-safe-top") && css.includes("padding: var(--mac-titlebar-safe-top) 10px 10px") && css.includes("height: var(--mac-titlebar-safe-top)") && css.includes("position: absolute"));
@@ -123,6 +125,7 @@ const api = createHiCodeApi({
   testModel: async () => ({ ok: true, value: 1 }),
   saveConfig: async () => ({ ok: false, error: "bad request" }),
   attachImage: async () => ({ ok: true, relativePath: ".hicode/attachments/test.png" }),
+  newSession: async () => ({ ok: true, sessionId: "session-new" }),
   listJobs: async () => ({ ok: true, jobs: [] }),
   getJob: async (id) => ({ ok: true, job: { id } }),
   listProviders: async () => ({ ok: true, providers: [{ id: "hicode-internal" }] }),
@@ -183,6 +186,7 @@ check("api wrapper returns failed API result", bad?.ok === false && /bad request
 const missing = await api.gitStatus();
 check("api wrapper returns standardized missing-method error", missing?.ok === false && /gitStatus/.test(missing.error || ""));
 check("api wrapper exposes image attachment bridge", (await api.attachImage({})).relativePath === ".hicode/attachments/test.png");
+check("api wrapper exposes new session bridge", (await api.newSession()).sessionId === "session-new");
 const missingIndustrialApi = createHiCodeApi({}, { onError: (message) => errors.push(message) });
 check("industrial project API does not fake success when preload is missing", (await missingIndustrialApi.getIndustrialProject()).ok === false);
 check("job center API list is callable", (await api.listJobs()).ok === true);

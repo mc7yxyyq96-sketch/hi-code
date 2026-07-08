@@ -136,6 +136,28 @@ export function createWorkspaceService({
       }
     },
 
+    newSession() {
+      try {
+        const runtime = getRuntime();
+        if (!runtime?.startNewSession) return { ok: false, error: "runtime not ready" };
+        if (runtime.isBusy?.()) return { ok: false, error: "当前任务仍在运行，结束后再新建对话" };
+        const result = runtime.startNewSession();
+        const cfg = loadConfig();
+        const profile = defaultProfile(cfg);
+        send("ready", {
+          model: profile.model,
+          baseURL: profile.baseURL,
+          cwd: getCwd(),
+          reasoningLevel: cfg.reasoningLevel,
+          sessionId: result.sessionId,
+          capabilities: modelCapabilityHint(profile),
+        });
+        return { ok: true, sessionId: result.sessionId };
+      } catch (error) {
+        return { ok: false, error: error?.message ?? "new session failed" };
+      }
+    },
+
     deleteSession(id) {
       try {
         return deleteSession(ipcString(id));
@@ -241,6 +263,7 @@ export function registerWorkspaceIpc({ register, workspace }) {
   register.handle("read-file", (_event, filePath) => workspace.readFile(filePath));
   register.handle("list-sessions", () => workspace.listSessions());
   register.handle("resume-session", (_event, id) => workspace.resumeSession(id));
+  register.handle("new-session", () => workspace.newSession());
   register.handle("delete-session", (_event, id) => workspace.deleteSession(id));
   register.handle("read-session", (_event, id) => workspace.readSession(id));
   register.handle("get-config", () => workspace.getConfig());
