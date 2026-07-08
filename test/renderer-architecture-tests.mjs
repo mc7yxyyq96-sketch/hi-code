@@ -103,6 +103,7 @@ check("composer attach button uses image attachment API", bootstrap.includes("at
 check("composer sends image attachments through workspace-relative refs", bootstrap.includes("inputTextWithAttachments") && bootstrap.includes("`@${attachment.relativePath}`") && bootstrap.includes("displayText"));
 check("composer supports pasted and dropped images", bootstrap.includes('input.addEventListener("paste"') && bootstrap.includes('composer.addEventListener("drop"') && bootstrap.includes("readImageFileAsDataUrl"));
 check("run status keeps runtime output errors visible", bootstrap.includes("function detectRuntimeOutputError") && bootstrap.includes("lastRunErrorDetail") && bootstrap.includes('label: "模型请求失败"') && bootstrap.includes('runState.status === "error" || lastRunErrorDetail'));
+check("model connection test surfaces vision capability hint", bootstrap.includes("function modelCapabilityHint") && bootstrap.includes("visionCapabilityNotice") && bootstrap.includes("图片输入：当前模型可能不支持") && bootstrap.includes("currentModel.capabilities"));
 
 console.log("\n[renderer] state");
 resetState();

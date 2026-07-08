@@ -172,7 +172,14 @@ export function createWorkspaceService({
         const runtime = getRuntime();
         if (runtime?.updateConfig) {
           runtime.updateConfig(cfg, buildSystemPrompt(getCwd(), profile.model, cfg.reasoningLevel));
-          send("ready", { model: profile.model, baseURL: profile.baseURL, cwd: getCwd(), reasoningLevel: cfg.reasoningLevel, sessionId: runtime?.sessionId || "" });
+          send("ready", {
+            model: profile.model,
+            baseURL: profile.baseURL,
+            cwd: getCwd(),
+            reasoningLevel: cfg.reasoningLevel,
+            sessionId: runtime?.sessionId || "",
+            capabilities: modelCapabilityHint(profile),
+          });
         } else {
           buildRuntime();
         }
@@ -213,7 +220,7 @@ export function createWorkspaceService({
         });
         const text = await res.text();
         if (!res.ok) return { ok: false, error: modelTestError(res.status, text, baseURL) };
-        return { ok: true, message: "连接成功" };
+        return { ok: true, message: "连接成功", capabilities: modelCapabilityHint({ baseURL, model }) };
       } catch (error) {
         return { ok: false, error: modelTestNetworkError(error, baseURL) };
       } finally {
@@ -320,6 +327,45 @@ function isPathInside(root, candidate) {
 function shouldOmitTemperatureForBaseURL(baseURL) {
   const value = String(baseURL || "").toLowerCase();
   return value.includes("moonshot.") || value.includes("api.kimi.com");
+}
+
+export function modelCapabilityHint(profile = {}) {
+  const model = String(profile.model || "").toLowerCase();
+  const baseURL = String(profile.baseURL || "").toLowerCase();
+  const haystack = `${model} ${baseURL}`;
+  const supportedPattern = /\b(gpt-4o|gpt-4\.1|o4|gemini|qwen[-_/]vl|qvq|vl\b|vision|visual|multimodal|omni|glm-4v|grok.*vision|claude-3|claude.*sonnet|claude.*opus)\b/;
+  const unsupportedPattern = /\b(deepseek-(chat|reasoner|coder)|kimi-k2|kimi.*coding|kimi-for-coding|coder|coding|embedding|rerank|text-embedding)\b/;
+  if (supportedPattern.test(haystack)) {
+    return {
+      vision: {
+        status: "supported",
+        supported: true,
+        confidence: "heuristic",
+        reason: "模型名称或服务商入口包含常见视觉/多模态标识。",
+        recommendation: "可以直接发送图片；如果服务商仍拒绝，请换成该服务商明确标注支持视觉的模型。",
+      },
+    };
+  }
+  if (unsupportedPattern.test(haystack)) {
+    return {
+      vision: {
+        status: "unsupported",
+        supported: false,
+        confidence: "heuristic",
+        reason: "当前模型名称更像文本/代码模型，通常不接收 image_url 输入。",
+        recommendation: "发图识别前请切换到 GPT-4o、Gemini、Qwen-VL、GLM-4V 等视觉/多模态模型，或把图片内容改成文字描述。",
+      },
+    };
+  }
+  return {
+    vision: {
+      status: "unknown",
+      supported: null,
+      confidence: "unknown",
+      reason: "无法仅凭模型名称确认图片能力。",
+      recommendation: "可以尝试发送图片；若失败，请换成服务商明确标注支持视觉/多模态的模型。",
+    },
+  };
 }
 
 export function modelTestError(status, text, baseURL) {

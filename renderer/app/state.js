@@ -5,6 +5,7 @@ const initialState = {
   yolo: false,
   cwd: "",
   inChat: false,
+  currentModel: { model: "", baseURL: "", capabilities: null },
   queuedInputs: [],
   runtimeQueueState: { running: null, queued: [] },
   cfgText: "",

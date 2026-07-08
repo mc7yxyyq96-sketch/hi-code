@@ -9,7 +9,7 @@ import { createQueueService } from "../electron/services/queue-service.mjs";
 import { createGitService } from "../electron/services/git-service.mjs";
 import { parseOpenAppRequest } from "../electron/services/native-open-service.mjs";
 import { createPathGuard, redactSensitive } from "../electron/services/security-service.mjs";
-import { createWorkspaceService, modelTestError, modelTestNetworkError } from "../electron/services/workspace-service.mjs";
+import { createWorkspaceService, modelCapabilityHint, modelTestError, modelTestNetworkError } from "../electron/services/workspace-service.mjs";
 import { createAppInfoService, compareVersions } from "../electron/services/app-info-service.mjs";
 import { createUsageService } from "../electron/services/usage-service.mjs";
 
@@ -411,6 +411,9 @@ check("local ECONNREFUSED suggests starting local service", modelTestNetworkErro
 check("remote ECONNREFUSED suggests checking host/port", modelTestNetworkError({ message: "fetch failed", cause: { code: "ECONNREFUSED" } }, "https://example.com/v1").includes("主机和端口"));
 check("ENOTFOUND suggests checking spelling", modelTestNetworkError({ message: "getaddrinfo ENOTFOUND api.example.com" }, "https://api.example.com/v1").includes("域名无法解析"));
 check("generic fetch failed maps to network guidance", modelTestNetworkError({ message: "fetch failed" }, "https://api.example.com/v1").includes("网络请求失败"));
+check("model capability marks vision-capable model names", modelCapabilityHint({ model: "gpt-4o-mini", baseURL: "https://api.openai.com/v1" }).vision.status === "supported");
+check("model capability warns for text-only code models", modelCapabilityHint({ model: "kimi-k2.7-code", baseURL: "https://api.moonshot.cn/v1" }).vision.status === "unsupported");
+check("model capability stays unknown for custom models", modelCapabilityHint({ model: "my-company-model", baseURL: "https://models.example.com/v1" }).vision.status === "unknown");
 
 console.log("\n[services] usage");
 const usageLogDir = fs.mkdtempSync(path.join(os.tmpdir(), "hicode-usage-log-"));

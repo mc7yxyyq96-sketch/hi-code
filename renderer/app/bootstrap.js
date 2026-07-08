@@ -617,13 +617,18 @@ if (!window.hicode) {
       try {
         demoConfig = JSON.parse(text);
         const p = demoConfig.profiles?.[demoConfig.defaultProfile] || demoConfig.profiles?.default || {};
-        readyHandlers.forEach((cb) => cb({ model: p.model || "model", baseURL: p.baseURL || "", cwd: "/demo/hicode-project" }));
+        readyHandlers.forEach((cb) => cb({
+          model: p.model || "model",
+          baseURL: p.baseURL || "",
+          cwd: "/demo/hicode-project",
+          capabilities: modelCapabilityHint(p),
+        }));
         return { ok: true };
       } catch (err) {
         return { ok: false, error: err?.message || "invalid JSON" };
       }
     },
-	    testModel: async () => ({ ok: true, message: "连接成功" }),
+	    testModel: async (profile = {}) => ({ ok: true, message: "连接成功", capabilities: modelCapabilityHint(profile) }),
     getAppInfo: async () => ({ ok: true, version: "0.0.0-demo", electron: "-", chrome: "-", node: "-", platform: "browser", arch: "-", dataDir: "~/.hicode", configPath: "~/.hicode/config.json", repoUrl: "https://github.com/mc7yxyyq96-sketch/hi-code", license: "MIT" }),
     openDataDir: async () => ({ ok: false, error: "浏览器演示模式无法打开本地目录。" }),
     revealConfigFile: async () => ({ ok: false, error: "浏览器演示模式无法定位本地文件。" }),
@@ -1354,6 +1359,7 @@ const queueOpenJob = composer.querySelector("#queueOpenJob");
 const queueClear = composer.querySelector("#queueClear");
 
 let busy = false, agentBody = null, agentRaw = "", yolo = false, cwd = "", inChat = false;
+let currentModel = { model: "", baseURL: "", capabilities: null };
 let pendingAttachments = [];
 let queuedInputs = [];
 let runtimeQueueState = { running: null, queued: [] };
@@ -3251,7 +3257,9 @@ async function chooseImageAttachment() {
     toast.error(result?.error || "图片附件失败");
     return;
   }
-  toast.ok("图片已添加，发送后会交给支持视觉的模型识别。");
+  const message = visionCapabilityNotice();
+  if (currentModel.capabilities?.vision?.status === "supported") toast.ok(message);
+  else toast.info(message);
 }
 async function attachImageDataUrl(dataUrl, name = "pasted-image.png") {
   const result = await api.attachImage({ dataUrl, name });
@@ -3259,7 +3267,9 @@ async function attachImageDataUrl(dataUrl, name = "pasted-image.png") {
     toast.error(result?.error || "图片附件失败");
     return false;
   }
-  toast.ok("图片已添加，发送后会交给支持视觉的模型识别。");
+  const message = visionCapabilityNotice();
+  if (currentModel.capabilities?.vision?.status === "supported") toast.ok(message);
+  else toast.info(message);
   return true;
 }
 function readImageFileAsDataUrl(file) {
@@ -4194,7 +4204,13 @@ cfgTest.onclick = async () => {
   if (problem) return setCfgStatus(problem);
   setCfgStatus("正在测试连接...");
   const r = await api.testModel(profile);
-  setCfgStatus(r.ok ? "连接成功,可以保存使用。" : (r.error || "连接失败"), r.ok);
+  const capability = r?.capabilities?.vision;
+  const capabilityText = capability?.status === "supported"
+    ? "图片输入：看起来支持。"
+    : capability?.status === "unsupported"
+      ? "图片输入：当前模型可能不支持，请切换视觉模型。"
+      : "图片输入：能力未知，失败时请切换视觉模型。";
+  setCfgStatus(r.ok ? `连接成功,可以保存使用。${capabilityText}` : (r.error || "连接失败"), r.ok);
 };
 
 providerGrid.querySelectorAll(".provider").forEach((btn) => {
@@ -4208,9 +4224,37 @@ providerGrid.querySelectorAll(".provider").forEach((btn) => {
 
 function setCurrentModelDisplay(profile = {}) {
   const label = profile.model || "model";
+  currentModel = {
+    model: label,
+    baseURL: profile.baseURL || "",
+    capabilities: profile.capabilities || modelCapabilityHint(profile),
+  };
+  syncState({ currentModel });
   modelName.textContent = label;
   modelName.title = profile.baseURL || "";
   modelSide.textContent = label;
+}
+
+function modelCapabilityHint(profile = {}) {
+  const model = String(profile.model || "").toLowerCase();
+  const baseURL = String(profile.baseURL || "").toLowerCase();
+  const haystack = `${model} ${baseURL}`;
+  if (/\b(gpt-4o|gpt-4\.1|o4|gemini|qwen[-_/]vl|qvq|vl\b|vision|visual|multimodal|omni|glm-4v|grok.*vision|claude-3|claude.*sonnet|claude.*opus)\b/.test(haystack)) {
+    return { vision: { status: "supported", supported: true, recommendation: "可以直接发送图片。" } };
+  }
+  if (/\b(deepseek-(chat|reasoner|coder)|kimi-k2|kimi.*coding|kimi-for-coding|coder|coding|embedding|rerank|text-embedding)\b/.test(haystack)) {
+    return { vision: { status: "unsupported", supported: false, recommendation: "请切换视觉/多模态模型，或把图片内容改成文字描述。" } };
+  }
+  return { vision: { status: "unknown", supported: null, recommendation: "图片能力未知；如果识别失败，请切换支持视觉的模型。" } };
+}
+
+function visionCapabilityNotice(capabilities = currentModel.capabilities) {
+  const vision = capabilities?.vision || {};
+  if (vision.status === "supported") return "图片已添加，当前模型看起来支持视觉输入。";
+  if (vision.status === "unsupported") {
+    return `图片已添加，但当前模型 ${currentModel.model || ""} 可能不支持图片识别。${vision.recommendation || "请切换视觉/多模态模型。"}`.trim();
+  }
+  return "图片已添加。当前模型图片能力未知；如果识别失败，请切换支持视觉/多模态的模型。";
 }
 
 async function toggleModelPicker() {

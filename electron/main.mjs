@@ -47,7 +47,7 @@ import { createReleaseService } from "./services/release-service.mjs";
 import { createSampleProjectService } from "./services/sample-project-service.mjs";
 import { createGitService } from "./services/git-service.mjs";
 import { createDiffIpcService } from "./services/diff-service.mjs";
-import { createWorkspaceService } from "./services/workspace-service.mjs";
+import { createWorkspaceService, modelCapabilityHint } from "./services/workspace-service.mjs";
 import { createSecurityService, redactSensitive } from "./services/security-service.mjs";
 import { createAppInfoService } from "./services/app-info-service.mjs";
 import { createUsageService } from "./services/usage-service.mjs";
@@ -2388,7 +2388,15 @@ function buildRuntime() {
     emitEvent: handleRuntimeEvent,
     allowProcessExit: false,
   });
-  send("ready", { model: p.model, baseURL: p.baseURL, cwd, reasoningLevel: cfg.reasoningLevel, version: app.getVersion(), sessionId: runtime?.sessionId || "" });
+  send("ready", {
+    model: p.model,
+    baseURL: p.baseURL,
+    cwd,
+    reasoningLevel: cfg.reasoningLevel,
+    version: app.getVersion(),
+    sessionId: runtime?.sessionId || "",
+    capabilities: modelCapabilityHint(p),
+  });
   sendInputQueueState();
 }
 
