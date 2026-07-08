@@ -97,7 +97,7 @@ export async function runLoop(
       if (!quiet) stopSpinner();
       const msg = `error: ${(e as Error).message}`;
       if (!quiet) ui.error(msg);
-      return finalText || msg;
+      throw e;
     }
     if (!quiet) stopSpinner();
     if (started) ui.newline();
@@ -186,7 +186,9 @@ export async function runTurn(
   env: ExecEnv,
   userInput: string | ContentPart[],
   signal?: AbortSignal,
+  onUserMessageSaved?: () => void,
 ): Promise<void> {
   session.messages.push({ role: "user", content: userInput });
+  onUserMessageSaved?.();
   await runLoop(cfg, session, env, { signal });
 }

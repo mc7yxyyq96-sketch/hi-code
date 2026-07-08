@@ -330,7 +330,7 @@ export function createRuntime(opts: RuntimeOpts): Runtime {
       const content = buildUserContent(input, cwd);
       const controller = startAbortableWork();
       try {
-        await runTurn(cfg, session, execEnv, content, controller.signal);
+        await runTurn(cfg, session, execEnv, content, controller.signal, persist);
       } finally {
         finishAbortableWork(controller);
       }

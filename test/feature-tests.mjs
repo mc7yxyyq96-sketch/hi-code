@@ -22,6 +22,7 @@ import {
 } from "../dist/git.js";
 import { buildUserContent, createRuntime } from "../dist/runtime.js";
 import { DiffService } from "../dist/diff-service.js";
+import { deleteSession as deleteStoredSession, loadSession } from "../dist/session-store.js";
 import { recoverableTasksFromEvents, readRecoverableTasksFromLogs } from "../dist/recovery.js";
 import { RuntimeJobQueue } from "../dist/job-queue.js";
 import { buildSafeChildEnv, redactEnvForLogs, validateAllowedEnvKeys } from "../dist/process-env.js";
@@ -173,6 +174,36 @@ const runtimeTurnStart = runtimeEvents.find((event) => event.type === "turn:star
 check("runtime turn start keeps retry input", runtimeTurnStart?.payload?.retryInput === "!touch raw-shell-denied.txt", JSON.stringify(runtimeTurnStart));
 const deniedTurn = runtimeEvents.find((event) => event.type === "turn:done");
 check("runtime emits denied turn done", deniedTurn?.status === "denied" && Number.isFinite(deniedTurn.payload?.durationMs), JSON.stringify(runtimeEvents));
+
+const offlineEvents = [];
+const offlineRuntime = createRuntime({
+  cfg,
+  cwd: tmp,
+  mode: "default",
+  systemPrompt: "test",
+  ask: async () => "n",
+  emitEvent: (event) => {
+    const id = `offline-runtime-evt-${offlineEvents.length + 1}`;
+    offlineEvents.push({ ...event, id });
+    return id;
+  },
+});
+const offlineSessionId = offlineRuntime.sessionId;
+await offlineRuntime.handleInput("persist this turn before model failure").catch(() => undefined);
+const persistedOfflineSession = loadSession(offlineSessionId);
+const offlineDone = offlineEvents.find((event) => event.type === "turn:done");
+check(
+  "runtime persists user turn before model failure",
+  offlineDone?.status === "error" &&
+    persistedOfflineSession?.messages.some(
+      (message) =>
+        message.role === "user" &&
+        typeof message.content === "string" &&
+        message.content.includes("persist this turn before model failure"),
+    ),
+  JSON.stringify({ persistedOfflineSession, offlineEvents }),
+);
+deleteStoredSession(offlineSessionId);
 
 // --- 2c. Recoverable task parser ---
 console.log("\n[2c] recoverable tasks");
