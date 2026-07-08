@@ -1364,7 +1364,7 @@ let storeCache = null, storeCacheKey = "", storeKind = "all", storeCategory = "a
 let storePage = 1;
 let pendingStoreInstall = null;
 let toolEvents = [], recoverableTasks = [], diffs = [], selectedDiffId = null, showArchivedDiffs = false;
-let runState = null, runTimer = null, runHideTimer = null;
+let runState = null, runTimer = null, runHideTimer = null, lastRunErrorDetail = "";
 let gitState = null, selectedGitPath = "", selectedGitStaged = false;
 let storeSearchComposing = false, composerComposing = false;
 syncState({
@@ -2091,11 +2091,21 @@ function appendOutput(chunk) {
   }
   if (!agentBody) startAgentMessage();
   const stick = atBottom(); agentRaw += chunk; agentBody.innerHTML = ansiToHtml(agentRaw);
-  updateRunStatus({
-    label: "正在输出",
-    detail: summarizeRunText(chunk),
-    status: "running",
-  });
+  const outputError = detectRuntimeOutputError(chunk);
+  if (outputError) {
+    lastRunErrorDetail = outputError;
+    updateRunStatus({
+      label: "模型请求失败",
+      detail: outputError,
+      status: "error",
+    });
+  } else if (runState?.status !== "error") {
+    updateRunStatus({
+      label: "正在输出",
+      detail: summarizeRunText(chunk),
+      status: "running",
+    });
+  }
   if (stick) scrollDown();
 }
 function addSystemNote(text) {
@@ -2179,6 +2189,7 @@ function renderQueueStatus() {
 
 function beginRunStatus(inputText) {
   clearTimeout(runHideTimer);
+  lastRunErrorDetail = "";
   runState = {
     active: true,
     status: "running",
@@ -2232,6 +2243,23 @@ function finishRunStatus(status = "done", detail = "") {
   runHideTimer = setTimeout(() => {
     if (runStatus) runStatus.classList.add("hidden");
   }, 7000);
+}
+
+function stripAnsiCodes(text) {
+  return String(text || "").replace(/\x1b\[[0-9;]*m/g, "");
+}
+
+function detectRuntimeOutputError(chunk) {
+  const firstLine = stripAnsiCodes(chunk)
+    .replace(/\r/g, "\n")
+    .split("\n")
+    .map((line) => line.trim())
+    .find(Boolean);
+  if (!firstLine) return "";
+  const match = /^(?:[✗×]\s*)?error:\s*(.+)$/i.exec(firstLine);
+  if (!match) return "";
+  const message = match[1]?.trim() || "模型或工具执行失败";
+  return message.length > 180 ? `${message.slice(0, 177)}...` : message;
 }
 
 function runStatusFromEvent(event) {
@@ -2830,8 +2858,14 @@ api.onOutput((s) => appendOutput(s));
 api.onTurnDone(() => {
   setBusy(false);
   if (runState?.active) {
-    const status = runState.status === "interrupted" ? "interrupted" : runState.status === "denied" ? "denied" : "done";
-    finishRunStatus(status, status === "done" ? "任务已结束" : runState.detail);
+    const status = runState.status === "error" || lastRunErrorDetail
+      ? "error"
+      : runState.status === "interrupted"
+        ? "interrupted"
+        : runState.status === "denied"
+          ? "denied"
+          : "done";
+    finishRunStatus(status, status === "done" ? "任务已结束" : lastRunErrorDetail || runState.detail);
   }
   if (liveSessionSnapshot?.id === runningSessionId) {
     liveSessionSnapshot = null;

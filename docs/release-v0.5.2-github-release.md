@@ -23,6 +23,8 @@ Hi Code v0.5.2 是早期开源桌面版的一次稳定性版本。这个版本�
 - 增加渲染层回归测试，覆盖弹窗裁切、设置页溢出、能力生命周期、侧边栏折叠和工作台断点。
 - 增加发布元数据和 `npm run release:checksums`，用于可重复生成发布校验文件。
 - 修复会话可靠性：用户输入会在模型响应前持久化，模型不可达时不会丢失本轮对话入口。
+- 增加真实图片附件输入：支持点击 `+`、粘贴或拖拽图片到输入框，附件会写入项目 `.hicode/attachments/`，并提示用户使用支持视觉的模型。
+- 改进运行状态反馈：模型或工具返回 `error:` 时状态条保持失败态，不再误显示为任务完成。
 
 ### 下载
 
@@ -103,6 +105,8 @@ This version is still an early preview. The core local agent loop, desktop workb
 - Added renderer regression tests for modal clipping, settings overflow, capability lifecycle states, sidebar collapse, and workbench breakpoints.
 - Added package metadata and `npm run release:checksums` for repeatable release checksum generation.
 - Fixed session reliability so user turns are persisted before model response and remain recoverable when the model server is unreachable.
+- Added real image attachments in chat: users can click `+`, paste, or drag PNG/JPG/GIF/WebP files into the composer. Hi Code stores them under `.hicode/attachments/` and sends them to vision-capable models.
+- Improved runtime failure feedback so `error:` output keeps the run status in a failed state instead of being overwritten as completed.
 
 ### Downloads
 
