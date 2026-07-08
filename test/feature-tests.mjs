@@ -205,6 +205,53 @@ check(
 );
 deleteStoredSession(offlineSessionId);
 
+const emptyResponseEvents = [];
+const oldFetch = globalThis.fetch;
+globalThis.fetch = async () => new Response(
+  new ReadableStream({
+    start(controller) {
+      controller.enqueue(new TextEncoder().encode("data: [DONE]\n\n"));
+      controller.close();
+    },
+  }),
+  { status: 200, headers: { "content-type": "text/event-stream" } },
+);
+try {
+  const emptyRuntime = createRuntime({
+    cfg: {
+      ...cfg,
+      profiles: {
+        default: {
+          ...cfg.profiles.default,
+          baseURL: "http://empty-model.test/v1",
+          model: "empty-model",
+        },
+      },
+    },
+    cwd: tmp,
+    mode: "default",
+    systemPrompt: "test",
+    ask: async () => "n",
+    emitEvent: (event) => {
+      const id = `empty-runtime-evt-${emptyResponseEvents.length + 1}`;
+      emptyResponseEvents.push({ ...event, id });
+      return id;
+    },
+  });
+  let emptyError = "";
+  await emptyRuntime.handleInput("return nothing").catch((error) => {
+    emptyError = error?.message || String(error);
+  });
+  const emptyDone = emptyResponseEvents.find((event) => event.type === "turn:done");
+  check(
+    "runtime treats empty model response as visible error",
+    emptyError.includes("返回了空内容") && emptyDone?.status === "error" && emptyDone.summary.includes("返回了空内容"),
+    JSON.stringify({ emptyError, emptyResponseEvents }),
+  );
+} finally {
+  globalThis.fetch = oldFetch;
+}
+
 // --- 2c. Recoverable task parser ---
 console.log("\n[2c] recoverable tasks");
 const recoverable = recoverableTasksFromEvents([

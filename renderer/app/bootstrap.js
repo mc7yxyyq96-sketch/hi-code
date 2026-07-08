@@ -2087,8 +2087,12 @@ function addUserMessage(text, attachments = []) {
 }
 function startAgentMessage() {
   const el = document.createElement("div"); el.className = "msg agent";
-  el.innerHTML = `<div class="avatar"><span class="logo"></span></div><div class="agent-body"></div>`;
-  chat.appendChild(el); agentBody = el.querySelector(".agent-body"); agentRaw = ""; scrollDown();
+  el.innerHTML = `<div class="avatar"><span class="logo"></span></div><div class="agent-body agent-pending"></div>`;
+  chat.appendChild(el);
+  agentBody = el.querySelector(".agent-body");
+  agentBody.textContent = "Hi Code 正在思考…";
+  agentRaw = "";
+  scrollDown();
 }
 function appendOutput(chunk) {
   if (busy && runningSessionId && currentSessionId !== runningSessionId) {
@@ -2096,7 +2100,10 @@ function appendOutput(chunk) {
     return;
   }
   if (!agentBody) startAgentMessage();
-  const stick = atBottom(); agentRaw += chunk; agentBody.innerHTML = ansiToHtml(agentRaw);
+  const stick = atBottom();
+  agentRaw += chunk;
+  agentBody.classList.remove("agent-pending", "agent-empty", "agent-error");
+  agentBody.innerHTML = ansiToHtml(agentRaw);
   const outputError = detectRuntimeOutputError(chunk);
   if (outputError) {
     lastRunErrorDetail = outputError;
@@ -2113,6 +2120,17 @@ function appendOutput(chunk) {
     });
   }
   if (stick) scrollDown();
+}
+function finishAgentMessageIfEmpty(status = "done", detail = "") {
+  if (!agentBody || agentRaw.trim()) return;
+  agentBody.classList.remove("agent-pending", "agent-empty", "agent-error");
+  if (status === "error" || status === "denied" || status === "interrupted") {
+    agentBody.classList.add("agent-error");
+    agentBody.textContent = detail || "任务没有完成。请查看上方状态或时间线里的失败原因。";
+    return;
+  }
+  agentBody.classList.add("agent-empty");
+  agentBody.textContent = "这次模型没有返回可显示内容。可以重试，或在“接入 API”里测试/切换模型。";
 }
 function addSystemNote(text) {
   const el = document.createElement("div"); el.className = "msg agent";
@@ -2863,16 +2881,20 @@ api.onReady((d) => {
 api.onOutput((s) => appendOutput(s));
 api.onTurnDone(() => {
   setBusy(false);
+  let finalStatus = "done";
+  let finalDetail = "任务已结束";
   if (runState?.active) {
-    const status = runState.status === "error" || lastRunErrorDetail
+    finalStatus = runState.status === "error" || lastRunErrorDetail
       ? "error"
       : runState.status === "interrupted"
         ? "interrupted"
         : runState.status === "denied"
           ? "denied"
           : "done";
-    finishRunStatus(status, status === "done" ? "任务已结束" : lastRunErrorDetail || runState.detail);
+    finalDetail = finalStatus === "done" ? "任务已结束" : lastRunErrorDetail || runState.detail;
+    finishRunStatus(finalStatus, finalDetail);
   }
+  finishAgentMessageIfEmpty(finalStatus, finalDetail);
   if (liveSessionSnapshot?.id === runningSessionId) {
     liveSessionSnapshot = null;
   }

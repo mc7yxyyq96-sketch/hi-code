@@ -190,5 +190,8 @@ export async function runTurn(
 ): Promise<void> {
   session.messages.push({ role: "user", content: userInput });
   onUserMessageSaved?.();
-  await runLoop(cfg, session, env, { signal });
+  const finalText = await runLoop(cfg, session, env, { signal });
+  if (!signal?.aborted && !finalText.trim()) {
+    throw new Error(`模型 ${defaultProfile(cfg).model} 返回了空内容。请重试，或在“接入 API”里切换到稳定的对话/视觉模型并测试连接。`);
+  }
 }
