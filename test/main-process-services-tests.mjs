@@ -9,7 +9,7 @@ import { createQueueService } from "../electron/services/queue-service.mjs";
 import { createGitService } from "../electron/services/git-service.mjs";
 import { parseOpenAppRequest } from "../electron/services/native-open-service.mjs";
 import { createPathGuard, redactSensitive } from "../electron/services/security-service.mjs";
-import { modelTestError, modelTestNetworkError } from "../electron/services/workspace-service.mjs";
+import { createWorkspaceService, modelTestError, modelTestNetworkError } from "../electron/services/workspace-service.mjs";
 import { createAppInfoService, compareVersions } from "../electron/services/app-info-service.mjs";
 import { createUsageService } from "../electron/services/usage-service.mjs";
 
@@ -253,6 +253,7 @@ registerIpcHandlers({
     git,
     workspace: {
       pickFolder: () => "/tmp/project",
+      attachImage: () => ({ ok: true, relativePath: ".hicode/attachments/test.png" }),
       getCwd: () => "/tmp/project",
       listDir: () => [],
       readFile: () => ({ content: "" }),
@@ -276,7 +277,7 @@ registerIpcHandlers({
     },
   },
 });
-for (const channel of ["runtime-queue:clear", "auth-status", "list-store", "store:item", "store:enable", "store:disable", "store:uninstall", "job:create", "job:list", "job:get", "job:cancel", "job:retry", "job:pause", "job:resume", "job:events", "job:artifacts", "job:artifact:preview", "job:artifact:open", "provider:list", "provider:get", "provider:configure", "provider:run", "provider:cancel", "worktree:create", "worktree:run", "worktree:collectChanges", "worktree:cleanup", "arena:list", "arena:get", "arena:create", "arena:acceptCandidate", "arena:rejectCandidate", "arena:mergeCandidate", "arena:artifact:preview", "arena:artifact:open", "industrial-project:schema", "industrial-project:get", "industrial-project:validate", "industrial-project:save", "industrial-requirement:draft", "industrial-requirement:add", "industrial-requirement:criteria:update", "industrial-requirement:artifact-plan", "industrial-requirement:test-plan", "industrial-requirement:spec-package", "industrial-requirement:approve", "industrial-project:artifact:add", "industrial-project:traceability:add", "industrial-project:gate:add", "domain-pack:list", "domain-pack:get", "domain-pack:validate", "domain-pack:install", "domain-pack:update", "domain-pack:enable", "domain-pack:disable", "domain-pack:uninstall", "domain-pack:recommend", "agent-team:profiles", "agent-team:profile:get", "agent-team:plan:create", "agent-team:plan:list", "agent-team:plan:get", "agent-team:job:create", "toolchain:list", "toolchain:detect", "toolchain:capabilities", "toolchain:validate-adapter", "toolchain:run", "quality-gate:list", "quality-gate:run", "quality-gate:approve", "release:readiness", "release:build", "release:open", "sample:industrial-control-box:create", "diffs:list", "git:status", "read-file", "read-session", "app:info", "app:open-data-dir", "app:reveal-config", "app:open-page", "app:check-updates", "usage:stats"]) {
+for (const channel of ["runtime-queue:clear", "auth-status", "list-store", "store:item", "store:enable", "store:disable", "store:uninstall", "job:create", "job:list", "job:get", "job:cancel", "job:retry", "job:pause", "job:resume", "job:events", "job:artifacts", "job:artifact:preview", "job:artifact:open", "provider:list", "provider:get", "provider:configure", "provider:run", "provider:cancel", "worktree:create", "worktree:run", "worktree:collectChanges", "worktree:cleanup", "arena:list", "arena:get", "arena:create", "arena:acceptCandidate", "arena:rejectCandidate", "arena:mergeCandidate", "arena:artifact:preview", "arena:artifact:open", "industrial-project:schema", "industrial-project:get", "industrial-project:validate", "industrial-project:save", "industrial-requirement:draft", "industrial-requirement:add", "industrial-requirement:criteria:update", "industrial-requirement:artifact-plan", "industrial-requirement:test-plan", "industrial-requirement:spec-package", "industrial-requirement:approve", "industrial-project:artifact:add", "industrial-project:traceability:add", "industrial-project:gate:add", "domain-pack:list", "domain-pack:get", "domain-pack:validate", "domain-pack:install", "domain-pack:update", "domain-pack:enable", "domain-pack:disable", "domain-pack:uninstall", "domain-pack:recommend", "agent-team:profiles", "agent-team:profile:get", "agent-team:plan:create", "agent-team:plan:list", "agent-team:plan:get", "agent-team:job:create", "toolchain:list", "toolchain:detect", "toolchain:capabilities", "toolchain:validate-adapter", "toolchain:run", "quality-gate:list", "quality-gate:run", "quality-gate:approve", "release:readiness", "release:build", "release:open", "sample:industrial-control-box:create", "diffs:list", "git:status", "attach-image", "read-file", "read-session", "app:info", "app:open-data-dir", "app:reveal-config", "app:open-page", "app:check-updates", "usage:stats"]) {
   check(`register-ipc-handlers exposes ${channel}`, ipc2.handles.has(channel));
 }
 for (const channel of ["input", "ask-response", "interrupt"]) {
@@ -296,6 +297,48 @@ const redacted = redactSensitive({ apiKey: "sk-secret123456789", nested: { autho
 check("security-service redacts sensitive fields", redacted.apiKey === "[REDACTED]" && redacted.nested.authorization === "[REDACTED]" && redacted.ok === "visible", JSON.stringify(redacted));
 fs.rmSync(tmp, { recursive: true, force: true });
 fs.rmSync(outside, { force: true });
+
+console.log("\n[services] workspace attachments");
+const attachTmp = fs.mkdtempSync(path.join(os.tmpdir(), "hicode-attach-test-"));
+const workspaceAttachments = createWorkspaceService({
+  dialog: { showOpenDialog: async () => ({ canceled: true, filePaths: [] }) },
+  getWindow: () => null,
+  getCwd: () => attachTmp,
+  setCwd: () => {},
+  buildRuntime: () => {},
+  resolveInCwd: (inputPath = attachTmp) => {
+    const abs = path.resolve(path.isAbsolute(inputPath) ? inputPath : path.join(attachTmp, inputPath));
+    if (!fs.existsSync(abs)) return null;
+    const rootReal = fs.realpathSync.native(attachTmp);
+    const real = fs.realpathSync.native(abs);
+    const rel = path.relative(rootReal, real);
+    return !rel || (!rel.startsWith("..") && !path.isAbsolute(rel)) ? real : null;
+  },
+  listSessions: () => [],
+  deleteSession: () => false,
+  loadSession: () => [],
+  getRuntime: () => null,
+  configPath: path.join(attachTmp, "config.json"),
+  loadConfig: () => ({}),
+  defaultProfile: () => ({}),
+  buildSystemPrompt: () => "",
+  send: () => {},
+});
+const onePixelPng = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=";
+const attachedImage = await workspaceAttachments.attachImage({ dataUrl: onePixelPng, name: "pasted image.png" });
+check(
+  "workspace service stores pasted image attachments inside workspace",
+  attachedImage.ok === true && attachedImage.relativePath.startsWith(".hicode/attachments/") && fs.existsSync(attachedImage.path),
+  JSON.stringify(attachedImage),
+);
+check(
+  "workspace service sanitizes attachment names",
+  attachedImage.ok === true && !path.basename(attachedImage.relativePath).includes(" "),
+  attachedImage.relativePath || "",
+);
+const rejectedAttachment = await workspaceAttachments.attachImage({ dataUrl: "data:text/plain;base64,aGVsbG8=", name: "note.txt" });
+check("workspace service rejects non-image data URLs", rejectedAttachment.ok === false && /图片/.test(rejectedAttachment.error || ""), JSON.stringify(rejectedAttachment));
+fs.rmSync(attachTmp, { recursive: true, force: true });
 
 console.log("\n[services] app info");
 check("compareVersions orders patch releases", compareVersions("0.5.0", "0.5.1") < 0 && compareVersions("0.5.1", "0.5.0") > 0 && compareVersions("0.5.1", "0.5.1") === 0);

@@ -47,6 +47,8 @@ const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"))
 const verifyScript = fs.readFileSync(path.join(root, "scripts", "verify.mjs"), "utf8");
 const commands = fs.readFileSync(path.join(root, "src", "commands.ts"), "utf8");
 const runtime = fs.readFileSync(path.join(root, "src", "runtime.ts"), "utf8");
+const llm = fs.readFileSync(path.join(root, "src", "llm.ts"), "utf8");
+const workspaceService = fs.readFileSync(path.join(root, "electron", "services", "workspace-service.mjs"), "utf8");
 
 console.log("\n[security] runtime baseline");
 check("contextIsolation remains enabled", /contextIsolation:\s*true/.test(main));
@@ -61,6 +63,7 @@ check("preload does not expose ipcRenderer", !/ipcRenderer[,}]/.test(preload) &&
 check("preload does not expose generic invoke", !/invoke:\s*\(/.test(preload));
 check("preload validates string parameters", preload.includes("requireString(") && preload.includes("checkedInvoke("));
 check("preload normalizes object parameters", preload.includes("optionalObject(") && preload.includes("stringArray("));
+check("preload exposes bounded image attachment API", preload.includes('attachImage: (payload) => safeInvoke("attach-image", optionalObject(payload))'));
 check("preload exposes Industrial Project API", [
   "getIndustrialProjectSchema",
   "getIndustrialProject",
@@ -135,6 +138,9 @@ check("preload normalizes Release Builder payloads", preload.includes('getReleas
 check("preload exposes Sample Project API", preload.includes('createIndustrialControlBoxSample: (payload) => safeInvoke("sample:industrial-control-box:create", optionalObject(payload))'));
 check("IPC handlers use normalized wrapper", ipcUtils.includes("createIpcRegistrar") && /ipcMain\.handle\(channel/.test(ipcUtils));
 check("main process delegates IPC registration", main.includes("registerIpcHandlers({") && ipcRegister.includes("registerSecurityIpc"));
+check("workspace image attachments are confined to workspace", workspaceService.includes("attachImage(payload") && workspaceService.includes(".hicode") && workspaceService.includes("attachments") && workspaceService.includes("safeNewWorkspacePath") && workspaceService.includes("safeExistingWorkspacePath"));
+check("workspace image attachments restrict formats and size", workspaceService.includes("MAX_ATTACHMENT_BYTES") && workspaceService.includes("image/png") && workspaceService.includes("image/webp") && workspaceService.includes("只支持 PNG、JPG、GIF、WebP"));
+check("model image rejection returns actionable guidance", llm.includes("当前模型或服务商接口拒绝了图片输入") && llm.includes("hasImageContent(messages)"));
 check("main process wires Release Builder service", main.includes("createReleaseService") && ipcRegister.includes("registerReleaseIpc"));
 check("main process wires Sample Project service", main.includes("createSampleProjectService") && ipcRegister.includes("registerSampleProjectIpc") && ipcRegister.includes("sampleProject"));
 check("no direct IPC handle registrations in main", (main.match(/ipcMain\.handle\(/g) || []).length === 0);

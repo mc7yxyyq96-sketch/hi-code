@@ -1337,6 +1337,8 @@ const routeViews = { home, chatview, capabilityView, commandView, gitView, jobVi
 const composer = $("composer-tpl").content.firstElementChild.cloneNode(true);
 homeSlot.appendChild(composer);
 const input = composer.querySelector("#input");
+const attachBtn = composer.querySelector("#attach");
+const attachmentTray = composer.querySelector("#attachmentTray");
 const sendBtn = composer.querySelector("#send");
 const stopBtn = composer.querySelector("#stop");
 const cmdmenu = composer.querySelector("#cmdmenu");
@@ -1352,6 +1354,7 @@ const queueOpenJob = composer.querySelector("#queueOpenJob");
 const queueClear = composer.querySelector("#queueClear");
 
 let busy = false, agentBody = null, agentRaw = "", yolo = false, cwd = "", inChat = false;
+let pendingAttachments = [];
 let queuedInputs = [];
 let runtimeQueueState = { running: null, queued: [] };
 let cfgText = "", selectedProvider = "deepseek", settingsMode = "model";
@@ -1371,6 +1374,7 @@ syncState({
   yolo,
   cwd,
   inChat,
+  pendingAttachments,
   queuedInputs,
   runtimeQueueState,
   cfgText,
@@ -2006,9 +2010,73 @@ async function showIndustrialProject() {
 /* ---------- chat rendering ---------- */
 const atBottom = () => chat.scrollHeight - chat.scrollTop - chat.clientHeight < 90;
 const scrollDown = () => (chat.scrollTop = chat.scrollHeight);
-function addUserMessage(text) {
-  const el = document.createElement("div"); el.className = "msg user";
-  el.innerHTML = `<div class="bubble"></div>`; el.querySelector(".bubble").textContent = text;
+function inputTextWithAttachments(text, attachments = []) {
+  const refs = attachments
+    .map((attachment) => attachment?.relativePath ? `@${attachment.relativePath}` : "")
+    .filter(Boolean);
+  return refs.length ? `${text}\n${refs.join("\n")}` : text;
+}
+function renderPendingAttachments() {
+  if (!attachmentTray) return;
+  attachmentTray.innerHTML = "";
+  attachmentTray.classList.toggle("hidden", pendingAttachments.length === 0);
+  pendingAttachments.forEach((attachment, index) => {
+    const chip = document.createElement("span");
+    chip.className = "attachment-chip";
+    chip.title = attachment.relativePath || attachment.name || "图片附件";
+    const label = document.createElement("span");
+    label.textContent = `图片：${attachment.name || "image"}`;
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.title = "移除图片";
+    remove.textContent = "×";
+    remove.onclick = () => {
+      pendingAttachments.splice(index, 1);
+      syncState({ pendingAttachments });
+      renderPendingAttachments();
+    };
+    chip.append(label, remove);
+    attachmentTray.appendChild(chip);
+  });
+}
+function clearPendingAttachments() {
+  pendingAttachments = [];
+  syncState({ pendingAttachments });
+  renderPendingAttachments();
+}
+function appendPendingAttachment(result) {
+  if (!result?.ok || !result.relativePath) return false;
+  pendingAttachments.push({
+    name: result.name || result.relativePath.split("/").pop() || "image",
+    relativePath: result.relativePath,
+    mime: result.mime || "image/*",
+    size: result.size || 0,
+  });
+  syncState({ pendingAttachments });
+  renderPendingAttachments();
+  input.focus();
+  return true;
+}
+function addUserMessage(text, attachments = []) {
+  const el = document.createElement("div");
+  el.className = "msg user";
+  const bubble = document.createElement("div");
+  bubble.className = "bubble";
+  bubble.textContent = text;
+  if (Array.isArray(attachments) && attachments.length) {
+    const tray = document.createElement("div");
+    tray.className = "attachment-tray";
+    for (const attachment of attachments) {
+      const chip = document.createElement("span");
+      chip.className = "attachment-chip";
+      const label = document.createElement("span");
+      label.textContent = `图片：${attachment.name || attachment.relativePath || "image"}`;
+      chip.appendChild(label);
+      tray.appendChild(chip);
+    }
+    bubble.appendChild(tray);
+  }
+  el.appendChild(bubble);
   chat.appendChild(el); scrollDown();
 }
 function startAgentMessage() {
@@ -2045,12 +2113,12 @@ function setBusy(v) {
   input.disabled = false;
   input.focus();
 }
-function runLine(text) {
+function runLine(text, options = {}) {
   if (!text) return;
   if (busy) return enqueueInput(text);
   showChat();
   beginRunStatus(text);
-  addUserMessage(text); startAgentMessage(); setBusy(true);
+  addUserMessage(options.displayText || text, options.attachments || []); startAgentMessage(); setBusy(true);
   runningSessionId = activeRuntimeSessionId || runningSessionId || currentSessionId;
   if (runningSessionId && !currentSessionId) currentSessionId = runningSessionId;
   liveSessionSnapshot = null;
@@ -2058,8 +2126,16 @@ function runLine(text) {
   api.send(text);
 }
 function submit() {
-  const t = input.value.trim(); if (!t) return;
-  input.value = ""; input.style.height = "auto"; hideMenu(); runLine(t);
+  const text = input.value.trim();
+  if (!text && !pendingAttachments.length) return;
+  const attachments = pendingAttachments.slice();
+  const displayText = text || "请识别这张图片。";
+  const payload = inputTextWithAttachments(displayText, attachments);
+  input.value = "";
+  input.style.height = "auto";
+  clearPendingAttachments();
+  hideMenu();
+  runLine(payload, { displayText, attachments });
 }
 
 function enqueueInput(text) {
@@ -3134,6 +3210,42 @@ async function pickFolder() {
     if (inChat) addSystemNote("已切换到 " + dir);
   }
 }
+async function chooseImageAttachment() {
+  const result = await api.attachImage({});
+  if (result?.canceled) return;
+  if (!appendPendingAttachment(result)) {
+    toast.error(result?.error || "图片附件失败");
+    return;
+  }
+  toast.ok("图片已添加，发送后会交给支持视觉的模型识别。");
+}
+async function attachImageDataUrl(dataUrl, name = "pasted-image.png") {
+  const result = await api.attachImage({ dataUrl, name });
+  if (!appendPendingAttachment(result)) {
+    toast.error(result?.error || "图片附件失败");
+    return false;
+  }
+  toast.ok("图片已添加，发送后会交给支持视觉的模型识别。");
+  return true;
+}
+function readImageFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(reader.error || new Error("图片读取失败"));
+    reader.readAsDataURL(file);
+  });
+}
+async function attachImageFile(file) {
+  if (!file || !String(file.type || "").startsWith("image/")) return false;
+  try {
+    const dataUrl = await readImageFileAsDataUrl(file);
+    return attachImageDataUrl(dataUrl, file.name || "image.png");
+  } catch (error) {
+    toast.error(error?.message || "图片读取失败");
+    return false;
+  }
+}
 $("projRow").onclick = pickFolder;
 $("settingsBtn").onclick = () => openSettings("usage");
 $("filesBtn").onclick = () => fileTree.open(cwd);
@@ -3154,7 +3266,7 @@ $("jobsTopBtn").onclick = () => showJobCenter();
 $("arenaTopBtn").onclick = showPatchArena;
 $("industrialTopBtn").onclick = showIndustrialProject;
 $("modelsBtn").onclick = () => openSettings("model");
-composer.querySelector("#attach").onclick = pickFolder;
+attachBtn.onclick = chooseImageAttachment;
 modelPill.onclick = (e) => {
   e.stopPropagation();
   toggleModelPicker();
@@ -4434,6 +4546,31 @@ input.addEventListener("input", (e) => {
   input.style.height = "auto"; input.style.height = Math.min(input.scrollHeight, 200) + "px";
   if (composerComposing || e.isComposing) return;
   if (/^\/[a-z]*$/i.test(input.value)) showMenu(input.value.toLowerCase()); else hideMenu();
+});
+input.addEventListener("paste", async (e) => {
+  const items = Array.from(e.clipboardData?.items || []);
+  const imageItem = items.find((item) => String(item.type || "").startsWith("image/"));
+  if (!imageItem) return;
+  const file = imageItem.getAsFile();
+  if (!file) return;
+  e.preventDefault();
+  await attachImageFile(file);
+});
+composer.addEventListener("dragover", (e) => {
+  const hasImage = Array.from(e.dataTransfer?.items || []).some((item) => String(item.type || "").startsWith("image/"));
+  if (!hasImage) return;
+  e.preventDefault();
+  composer.classList.add("is-busy");
+});
+composer.addEventListener("dragleave", () => {
+  composer.classList.toggle("is-busy", busy);
+});
+composer.addEventListener("drop", async (e) => {
+  const files = Array.from(e.dataTransfer?.files || []).filter((file) => String(file.type || "").startsWith("image/"));
+  if (!files.length) return;
+  e.preventDefault();
+  composer.classList.toggle("is-busy", busy);
+  for (const file of files.slice(0, 4)) await attachImageFile(file);
 });
 
 setGreeting();

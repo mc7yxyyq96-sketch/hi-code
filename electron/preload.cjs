@@ -75,6 +75,7 @@ contextBridge.exposeInMainWorld("hicode", {
   gitCommitMessage: () => safeInvoke("git:commit-message"),
   gitCommit: (message) => checkedInvoke("git:commit", message, "message"),
   pickFolder: () => safeInvoke("pick-folder"),
+  attachImage: (payload) => safeInvoke("attach-image", optionalObject(payload)),
   getCwd: () => safeInvoke("get-cwd"),
   listDir: (dir) => checkedInvoke("list-dir", dir, "dir"),
   readFile: (p) => checkedInvoke("read-file", p, "path"),

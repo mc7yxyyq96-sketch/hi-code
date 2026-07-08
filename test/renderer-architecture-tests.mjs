@@ -98,6 +98,10 @@ check("store detail exposes uninstall and local translation affordance", bootstr
 check("store detail re-translates mixed backend summaries", !bootstrap.includes("translatedCandidate && translatedCandidate !== originalSummary") && bootstrap.includes("translatedSummary: translatedCandidate || \"\""));
 check("toast controller deduplicates and limits repeated errors", toastSource.includes("maxVisible = 3") && toastSource.includes("active = new Map") && toastSource.includes("（${existing.count} 次）") && toastSource.includes("target.children.length > maxVisible"));
 check("demo browser shim uses neutral paths", !bootstrap.includes("/Users/liu") && bootstrap.includes("/demo/hicode-project") && bootstrap.includes("/demo/hicode-data"));
+check("composer exposes real image attachment tray", html.includes('id="attachmentTray"') && html.includes('title="添加图片附件"') && css.includes(".attachment-tray") && css.includes(".attachment-chip"));
+check("composer attach button uses image attachment API", bootstrap.includes("attachBtn.onclick = chooseImageAttachment") && bootstrap.includes("api.attachImage({})") && bootstrap.includes("pendingAttachments"));
+check("composer sends image attachments through workspace-relative refs", bootstrap.includes("inputTextWithAttachments") && bootstrap.includes("`@${attachment.relativePath}`") && bootstrap.includes("displayText"));
+check("composer supports pasted and dropped images", bootstrap.includes('input.addEventListener("paste"') && bootstrap.includes('composer.addEventListener("drop"') && bootstrap.includes("readImageFileAsDataUrl"));
 
 console.log("\n[renderer] state");
 resetState();
@@ -115,6 +119,7 @@ const errors = [];
 const api = createHiCodeApi({
   testModel: async () => ({ ok: true, value: 1 }),
   saveConfig: async () => ({ ok: false, error: "bad request" }),
+  attachImage: async () => ({ ok: true, relativePath: ".hicode/attachments/test.png" }),
   listJobs: async () => ({ ok: true, jobs: [] }),
   getJob: async (id) => ({ ok: true, job: { id } }),
   listProviders: async () => ({ ok: true, providers: [{ id: "hicode-internal" }] }),
@@ -174,6 +179,7 @@ const bad = await api.saveConfig("{}");
 check("api wrapper returns failed API result", bad?.ok === false && /bad request/.test(bad.error || ""));
 const missing = await api.gitStatus();
 check("api wrapper returns standardized missing-method error", missing?.ok === false && /gitStatus/.test(missing.error || ""));
+check("api wrapper exposes image attachment bridge", (await api.attachImage({})).relativePath === ".hicode/attachments/test.png");
 const missingIndustrialApi = createHiCodeApi({}, { onError: (message) => errors.push(message) });
 check("industrial project API does not fake success when preload is missing", (await missingIndustrialApi.getIndustrialProject()).ok === false);
 check("job center API list is callable", (await api.listJobs()).ok === true);

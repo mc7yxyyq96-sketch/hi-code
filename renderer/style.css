@@ -4108,6 +4108,49 @@ body.sidebar-nav-collapsed .side-foot {
   color: var(--fg);
   border-color: var(--border-strong);
 }
+.attachment-tray {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.attachment-chip {
+  min-width: 0;
+  max-width: 100%;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(222, 209, 191, .86);
+  border-radius: 8px;
+  background: rgba(239, 226, 207, .36);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.2;
+  padding: 5px 7px;
+}
+.attachment-chip span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.attachment-chip button {
+  width: 18px;
+  height: 18px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.attachment-chip button:hover {
+  background: rgba(42, 36, 28, .08);
+  color: var(--fg);
+}
 .composer textarea {
   width: 100%;
   resize: none;

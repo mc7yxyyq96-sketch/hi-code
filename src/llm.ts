@@ -119,7 +119,7 @@ export async function streamChat(
   if (!res.ok || !res.body) {
     const text = await res.text().catch(() => "");
     cleanupRequest();
-    throw new Error(`model server returned ${res.status} ${res.statusText}: ${text.slice(0, 400)}`);
+    throw new Error(modelResponseError(res.status, res.statusText, text, messages));
   }
 
   let content = "";
@@ -243,6 +243,18 @@ function streamTimeoutError(reason: "idle" | "total", url: string): string {
   const limit = reason === "idle" ? STREAM_IDLE_TIMEOUT_MS : STREAM_TOTAL_TIMEOUT_MS;
   const label = reason === "idle" ? "no streaming data arrived" : "the request did not finish";
   return `model stream timed out at ${host}: ${label} within ${Math.round(limit / 1000)}s. Try again, lower reasoning, or check the provider connection in Settings.`;
+}
+
+function hasImageContent(messages: ChatMessage[]): boolean {
+  return messages.some((message) => Array.isArray(message.content) && message.content.some((part) => part.type === "image_url"));
+}
+
+function modelResponseError(status: number, statusText: string, text: string, messages: ChatMessage[]): string {
+  const raw = String(text || "").slice(0, 400);
+  if (hasImageContent(messages) && (status === 400 || status === 415 || status === 422)) {
+    return `当前模型或服务商接口拒绝了图片输入。请切换到支持视觉/多模态的模型，或把图片内容改成文字描述后重试。原始错误：HTTP ${status} ${statusText}: ${raw}`;
+  }
+  return `model server returned ${status} ${statusText}: ${raw}`;
 }
 
 /** Turn an opaque "fetch failed" into an actionable message naming the endpoint. */

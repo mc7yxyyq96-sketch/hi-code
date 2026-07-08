@@ -66,6 +66,7 @@ export function createHiCodeApi(rawApi = window.hicode, { onError = null } = {})
     gitCommitMessage: () => call("gitCommitMessage", []),
     gitCommit: (message) => call("gitCommit", [message]),
     pickFolder: () => call("pickFolder", [], ""),
+    attachImage: (payload) => call("attachImage", [payload], { ok: false, error: "图片附件失败" }),
     getCwd: () => call("getCwd", [], ""),
     listDir: (dir) => call("listDir", [dir], []),
     readFile: (filePath) => call("readFile", [filePath], { error: "读取文件失败", content: "" }),

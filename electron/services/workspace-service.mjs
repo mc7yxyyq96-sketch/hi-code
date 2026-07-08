@@ -4,6 +4,22 @@ import { contentText } from "../../dist/context.js";
 import { ipcObject, ipcString } from "../ipc/ipc-utils.mjs";
 
 const IGNORE_DIRS = new Set(["node_modules", ".git", "dist", "build", ".next", "release", "__pycache__"]);
+const ATTACHMENT_DIR = path.join(".hicode", "attachments");
+const MAX_ATTACHMENT_BYTES = 8 * 1024 * 1024;
+const IMAGE_MIME_EXT = new Map([
+  ["image/png", ".png"],
+  ["image/jpeg", ".jpg"],
+  ["image/jpg", ".jpg"],
+  ["image/gif", ".gif"],
+  ["image/webp", ".webp"],
+]);
+const IMAGE_EXT_MIME = new Map([
+  [".png", "image/png"],
+  [".jpg", "image/jpeg"],
+  [".jpeg", "image/jpeg"],
+  [".gif", "image/gif"],
+  [".webp", "image/webp"],
+]);
 
 export function createWorkspaceService({
   dialog,
@@ -31,6 +47,48 @@ export function createWorkspaceService({
         buildRuntime();
       }
       return getCwd();
+    },
+
+    async attachImage(payload = {}) {
+      try {
+        const data = ipcObject(payload);
+        if (typeof data.dataUrl === "string" && data.dataUrl.trim()) {
+          const parsed = parseImageDataUrl(data.dataUrl);
+          if (!parsed.ok) return { ok: false, error: parsed.error };
+          return writeAttachment({
+            cwd: getCwd(),
+            name: data.name,
+            ext: parsed.ext,
+            mime: parsed.mime,
+            buffer: parsed.buffer,
+          });
+        }
+
+        const result = await dialog.showOpenDialog(getWindow(), {
+          properties: ["openFile"],
+          filters: [{ name: "Images", extensions: ["png", "jpg", "jpeg", "gif", "webp"] }],
+        });
+        if (result.canceled || !result.filePaths?.[0]) {
+          return { ok: false, canceled: true, error: "已取消选择图片" };
+        }
+
+        const sourcePath = result.filePaths[0];
+        const ext = path.extname(sourcePath).toLowerCase();
+        const mime = IMAGE_EXT_MIME.get(ext);
+        if (!mime) return { ok: false, error: "只支持 PNG、JPG、GIF、WebP 图片附件" };
+        const stat = fs.statSync(sourcePath);
+        if (!stat.isFile()) return { ok: false, error: "请选择一个图片文件" };
+        if (stat.size > MAX_ATTACHMENT_BYTES) return { ok: false, error: "图片超过 8MB，请压缩后再添加" };
+        return writeAttachment({
+          cwd: getCwd(),
+          name: path.basename(sourcePath),
+          ext,
+          mime,
+          buffer: fs.readFileSync(sourcePath),
+        });
+      } catch (error) {
+        return { ok: false, error: error?.message ?? "图片附件失败" };
+      }
     },
 
     getCwd,
@@ -170,6 +228,7 @@ export function registerWorkspaceIpc({ register, workspace }) {
   if (!workspace) throw new Error("registerWorkspaceIpc requires workspace service");
 
   register.handle("pick-folder", () => workspace.pickFolder());
+  register.handle("attach-image", (_event, payload) => workspace.attachImage(payload));
   register.handle("get-cwd", () => workspace.getCwd());
   register.handle("list-dir", (_event, dir) => workspace.listDir(dir));
   register.handle("read-file", (_event, filePath) => workspace.readFile(filePath));
@@ -180,6 +239,82 @@ export function registerWorkspaceIpc({ register, workspace }) {
   register.handle("get-config", () => workspace.getConfig());
   register.handle("save-config", (_event, text) => workspace.saveConfig(text));
   register.handle("test-model", (_event, profile) => workspace.testModel(profile));
+}
+
+function parseImageDataUrl(dataUrl) {
+  const match = /^data:(image\/(?:png|jpe?g|gif|webp));base64,([a-z0-9+/=\s]+)$/i.exec(String(dataUrl || ""));
+  if (!match) return { ok: false, error: "粘贴内容不是支持的图片格式" };
+  const mime = match[1].toLowerCase().replace("image/jpg", "image/jpeg");
+  const ext = IMAGE_MIME_EXT.get(mime);
+  if (!ext) return { ok: false, error: "只支持 PNG、JPG、GIF、WebP 图片附件" };
+  const buffer = Buffer.from(match[2].replace(/\s/g, ""), "base64");
+  if (!buffer.length) return { ok: false, error: "图片内容为空" };
+  if (buffer.length > MAX_ATTACHMENT_BYTES) return { ok: false, error: "图片超过 8MB，请压缩后再添加" };
+  return { ok: true, mime, ext, buffer };
+}
+
+function writeAttachment({ cwd, name, ext, mime, buffer }) {
+  const safeName = safeAttachmentName(name, ext);
+  const relativePath = path.posix.join(...ATTACHMENT_DIR.split(path.sep), safeName);
+  const target = safeNewWorkspacePath(cwd, relativePath);
+  if (!target) return { ok: false, error: "图片附件路径超出当前工作区" };
+  fs.mkdirSync(path.dirname(target), { recursive: true, mode: 0o700 });
+  fs.writeFileSync(target, buffer, { mode: 0o600 });
+  try { fs.chmodSync(target, 0o600); } catch {}
+  const verified = safeExistingWorkspacePath(cwd, target);
+  if (!verified) {
+    try { fs.rmSync(target, { force: true }); } catch {}
+    return { ok: false, error: "图片附件写入后路径校验失败" };
+  }
+  return {
+    ok: true,
+    name: safeName,
+    path: verified,
+    relativePath,
+    mime,
+    size: buffer.length,
+  };
+}
+
+function safeAttachmentName(name, ext) {
+  const base = path.basename(String(name || "image")).replace(/\.[^.]+$/, "");
+  const cleaned = base
+    .normalize("NFKD")
+    .replace(/[^\w.-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 64) || "image";
+  const nonce = Math.random().toString(36).slice(2, 8);
+  return `${Date.now()}-${nonce}-${cleaned}${ext}`;
+}
+
+function safeExistingWorkspacePath(cwd, filePath) {
+  const cwdReal = fs.realpathSync.native(cwd);
+  const real = fs.realpathSync.native(filePath);
+  return isPathInside(cwdReal, real) ? real : null;
+}
+
+function safeNewWorkspacePath(cwd, relativePath) {
+  const cwdReal = fs.realpathSync.native(cwd);
+  const normalized = String(relativePath || "").replace(/\\/g, "/");
+  if (!normalized || normalized.includes("\0") || path.isAbsolute(normalized)) return null;
+  const target = path.resolve(cwd, normalized);
+  const workspaceAbs = path.resolve(cwd);
+  if (!isPathInside(workspaceAbs, target)) return null;
+
+  let nearest = path.dirname(target);
+  while (!fs.existsSync(nearest)) {
+    const next = path.dirname(nearest);
+    if (next === nearest) return null;
+    nearest = next;
+  }
+  const nearestReal = fs.realpathSync.native(nearest);
+  if (!isPathInside(cwdReal, nearestReal)) return null;
+  return target;
+}
+
+function isPathInside(root, candidate) {
+  const rel = path.relative(root, candidate);
+  return !rel || (!rel.startsWith("..") && !path.isAbsolute(rel));
 }
 
 function shouldOmitTemperatureForBaseURL(baseURL) {
