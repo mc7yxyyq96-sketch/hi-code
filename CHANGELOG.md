@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.5.2 - 2026-07-07
+
+- Added local usage statistics persistence and included usage-store tests in the verification baseline.
+- Fixed desktop command flow issues around slash-command handling, native app opening, and capability management state.
+- Improved Store lifecycle visibility so installed Plugin, Skill, Agent, and MCP entries can show enable, disable, uninstall, or read-only states consistently.
+- Improved Chinese Store detail summaries without claiming network translation when only local summarization is available.
+- Tightened responsive desktop layout for settings, Git, Job Center, industrial workbench, Domain Pack, Agent Team, Toolchain, and Quality Gate panels.
+- Added renderer regression checks for small-window modal clipping, settings overflow, capability lifecycle states, and workbench single-column breakpoints.
+- Added `docs/release-v0.5.2-plan.md` plus Sprint C/D delivery reports for open-source release handoff.
+- Added package metadata and `npm run release:checksums` for reproducible release checksum generation.
+
+Verification baseline:
+
+- `npm run build`
+- `npm run verify`
+- `npm run release:check`
+- `node test/feature-tests.mjs`
+- `npm run test:usage`
+- Last known result: `75 passed, 0 failed` for feature tests and `140 passed, 0 failed` for renderer architecture tests.
+
 ## 0.5.1 - 2026-07-06
 
 - Fixed release readiness reporting so `ready` and `blockers` can no longer disagree (P2-004).

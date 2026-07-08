@@ -50,6 +50,8 @@ import { createDiffIpcService } from "./services/diff-service.mjs";
 import { createWorkspaceService } from "./services/workspace-service.mjs";
 import { createSecurityService, redactSensitive } from "./services/security-service.mjs";
 import { createAppInfoService } from "./services/app-info-service.mjs";
+import { createUsageService } from "./services/usage-service.mjs";
+import { recordUsage } from "../dist/usage-store.js";
 import { openMacApp, parseOpenAppRequest } from "./services/native-open-service.mjs";
 import { BUILTIN_STORE_CATALOG } from "./store-catalog.mjs";
 
@@ -233,6 +235,17 @@ function handleRuntimeEvent(event) {
 
   rememberToolEvent(normalized);
   recordRuntimeEventForActiveJob(normalized);
+  if (normalized.type === "turn:done") {
+    try {
+      recordUsage({
+        durationMs: Number(normalized.payload?.durationMs) || 0,
+        model: runtime?.cfg ? defaultProfile(runtime.cfg).model : undefined,
+        reasoningLevel: runtime?.cfg?.reasoningLevel,
+      });
+    } catch {
+      /* usage tracking must never break runtime events */
+    }
+  }
   if (diffChanged) send("diffs-changed", listDiffs());
   return normalized.id;
 }
@@ -2319,8 +2332,20 @@ function installBridge() {
 }
 
 function forwardRuntimeOutput(text) {
-  if (!shouldForwardRuntimeOutput(text)) return;
-  send("output", text);
+  const filtered = filterRuntimeOutput(text);
+  if (filtered) send("output", filtered);
+}
+
+function filterRuntimeOutput(text) {
+  const chunks = String(text || "").match(/[^\r\n]*(?:\r?\n|$)/g) || [];
+  let output = "";
+  for (const chunk of chunks) {
+    if (!chunk) continue;
+    const line = chunk.replace(/\r?\n$/, "");
+    const ending = chunk.slice(line.length);
+    if (shouldForwardRuntimeOutput(line)) output += line + ending;
+  }
+  return output;
 }
 
 function shouldForwardRuntimeOutput(text) {
@@ -2339,6 +2364,11 @@ function shouldForwardRuntimeOutput(text) {
     /^▶\s/,
     /^◆\s/,
     /^★\s*synthesis/i,
+    /^✓\s/,
+    /^↳\s/,
+    /^goal:/i,
+    /^question:/i,
+    /^members:/i,
     /^task plan:/i,
     /^⚠\s*permission required/i,
     /^permission required/i,
@@ -2533,6 +2563,7 @@ function createMainServices() {
       dataDir: HICODE_DIR,
       configPath: CONFIG_PATH,
     }),
+    usage: createUsageService({ logDir: LOG_DIR }),
   };
   services.arena = createPatchArenaService({
     arenaStore: patchArenaStore,

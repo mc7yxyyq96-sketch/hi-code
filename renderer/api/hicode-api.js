@@ -77,6 +77,7 @@ export function createHiCodeApi(rawApi = window.hicode, { onError = null } = {})
     saveConfig: (text) => call("saveConfig", [text]),
     testModel: (profile) => call("testModel", [profile]),
     getAppInfo: () => call("getAppInfo", [], { ok: false, error: "应用信息不可用" }),
+    getUsageStats: () => call("getUsageStats", [], { ok: false, error: "用量数据不可用" }),
     openDataDir: () => call("openDataDir", []),
     revealConfigFile: () => call("revealConfigFile", []),
     openAppPage: (target) => call("openAppPage", [target]),

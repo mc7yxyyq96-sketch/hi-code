@@ -5,6 +5,7 @@ import { TOOL_SCHEMAS, executeTool, type ExecEnv } from "./tools/index.js";
 import { mcpToolSchemas } from "./mcp.js";
 import { ui, startSpinner, stopSpinner } from "./ui.js";
 import { type Session, fullHistory, estimateTokens, compact } from "./context.js";
+import { recordUsage } from "./usage-store.js";
 
 export interface LoopOpts {
   /** Restrict the toolset (e.g. read-only tools for an architect subagent). */
@@ -104,6 +105,12 @@ export async function runLoop(
     if (turn.usage) {
       session.totalPromptTokens += turn.usage.prompt_tokens ?? 0;
       session.totalCompletionTokens += turn.usage.completion_tokens ?? 0;
+      recordUsage({
+        promptTokens: turn.usage.prompt_tokens ?? 0,
+        completionTokens: turn.usage.completion_tokens ?? 0,
+        model: p.model,
+        reasoningLevel: cfg.reasoningLevel,
+      });
     }
 
     // Cancelled mid-turn: record whatever streamed and stop cleanly.

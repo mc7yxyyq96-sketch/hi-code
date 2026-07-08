@@ -50,6 +50,32 @@ export function capabilityActionLabel(kind) {
   return "已安装";
 }
 
+export function capabilityLifecycleState(kind, item = {}, storeItem = null) {
+  const canUse = kind === "skills" || kind === "agents" || kind === "mcp";
+  if (storeItem) {
+    const enabled = storeItem.enabled !== false;
+    return {
+      managed: true,
+      readonly: false,
+      enabled,
+      statusLabel: enabled ? "已启用" : "已禁用",
+      useLabel: canUse && enabled ? capabilityActionLabel(kind, item) : "",
+      toggleAction: enabled ? "disable" : "enable",
+      toggleLabel: enabled ? "禁用" : "启用",
+      destructiveAction: "uninstall",
+      destructiveLabel: "卸载",
+    };
+  }
+  return {
+    managed: false,
+    readonly: true,
+    enabled: true,
+    statusLabel: "只读",
+    useLabel: canUse ? capabilityActionLabel(kind, item) : "",
+    readonlyReason: "该项不是由 Hi Code Store 管理，不能从这里安全卸载。",
+  };
+}
+
 function statusLabel(value = "") {
   return {
     configured: "已配置",

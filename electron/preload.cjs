@@ -86,6 +86,7 @@ contextBridge.exposeInMainWorld("hicode", {
   saveConfig: (text) => checkedInvoke("save-config", text, "configText"),
   testModel: (profile) => safeInvoke("test-model", optionalObject(profile)),
   getAppInfo: () => safeInvoke("app:info"),
+  getUsageStats: () => safeInvoke("usage:stats"),
   openDataDir: () => safeInvoke("app:open-data-dir"),
   revealConfigFile: () => safeInvoke("app:reveal-config"),
   openAppPage: (target) => checkedInvoke("app:open-page", target, "target"),

@@ -14,7 +14,7 @@ import { renderToolchainDetailMarkup, renderToolchainListMarkup, summarizeToolch
 import { renderQualityGateDetailMarkup, renderQualityGateListMarkup, summarizeQualityGates } from "../renderer/components/quality-gate-panel.js";
 import { renderDefinitionOfDoneChecklist, renderReleaseCenterMarkup, summarizeReleaseReadiness } from "../renderer/components/release-center-panel.js";
 import { renderSampleProjectResultMarkup, summarizeSampleProjectResult } from "../renderer/components/sample-project-panel.js";
-import { capabilityActionLabel, capabilityDescription, CAPABILITY_META } from "../renderer/components/mcp-panel.js";
+import { capabilityActionLabel, capabilityDescription, capabilityLifecycleState, CAPABILITY_META } from "../renderer/components/mcp-panel.js";
 import { storeChineseSummary, storeInstallActionState, storeQueryOptions } from "../renderer/components/store-panel.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -57,9 +57,26 @@ check("bootstrap imports panel modules", [
   "components/sample-project-panel.js",
   "components/ai-team-panel.js",
   "components/settings-panel.js",
+  "components/settings-usage-panel.js",
 ].every((needle) => bootstrap.includes(needle)));
+check("settings opens usage tab by default", html.includes('data-settings-tab="usage"') && bootstrap.includes('openSettings(tab = "usage")') && bootstrap.includes("renderUsageSettings"));
+check("settings nav groups personal and coding sections", html.includes('class="settings-nav-group"') && html.includes("用量与统计") && html.includes("模型 API"));
+check("bootstrap applies shared user profile to sidebar and usage page", bootstrap.includes("applyUserProfile") && bootstrap.includes("cachedUserProfile") && bootstrap.includes("buildUserProfile"));
+check("usage panel component renders profile dashboard", (() => {
+  const usagePanel = fs.readFileSync(path.join(root, "renderer", "components", "settings-usage-panel.js"), "utf8");
+  const profileUtil = fs.readFileSync(path.join(root, "renderer", "utils", "profile.js"), "utf8");
+  return usagePanel.includes("export function renderUsagePanel")
+    && usagePanel.includes("usage-badge")
+    && usagePanel.includes("usage-heatmap-scroll")
+    && usagePanel.includes("usage-heatmap-tooltip")
+    && usagePanel.includes("weekly")
+    && profileUtil.includes("buildUserProfile");
+})());
+check("settings usage layout is responsive and locally scrollable", css.includes(".modal {\n  position: fixed;") && css.includes(".settings-card") && css.includes("height: min(760px, calc(100vh - 52px))") && css.includes(".usage-heatmap-scroll") && css.includes("overflow-x: auto") && css.includes("@media (max-width: 820px)") && css.includes(".settings-body { flex-direction: column; }"));
+check("modal and settings content guard against small-window clipping", css.includes(".modal {\n  position: fixed;") && css.includes("overflow: auto") && css.includes("max-height: calc(100vh - 28px)") && css.includes("overflow-x: hidden") && css.includes("align-items: flex-start"));
 check("MCP config button opens MCP settings mode", bootstrap.includes("cfgBtn.onclick = openMcpSettings") && bootstrap.includes("return openSettings(\"mcp\")"));
 check("busy session switch previews without resuming runtime", bootstrap.includes("api.readSession(id)") && bootstrap.includes("saveLiveSessionSnapshot") && bootstrap.includes("restoreLiveSessionSnapshot"));
+check("running conversation remains reachable after leaving chat", bootstrap.includes("function makeRuntimeSessionFallback") && bootstrap.includes("list = source.filter((session) => sessionMatchesFilter(session, filter))") && bootstrap.includes("currentSessionId !== transientSessionId") && bootstrap.includes("if (id === currentSessionId)") && bootstrap.includes("api.readSession(id).catch") && css.includes(".sess-transient"));
 check("MCP settings validates mcpServers JSON", bootstrap.includes("function validateMcpServersConfig") && bootstrap.includes("MCP JSON 格式错误") && bootstrap.includes("mcpServers 必须是 JSON 对象"));
 check("command sidebar opens visible command center", html.includes('section id="commandView"') && bootstrap.includes('route: "commandView"') && bootstrap.includes('"cmdBtn").onclick = showCommandCenter'));
 check("command center exposes real actions", bootstrap.includes("function executeCommand") && bootstrap.includes('if (name === "/mcp") return showCapabilities("mcp")') && bootstrap.includes('if (name === "/diff") return showGit()'));
@@ -74,7 +91,8 @@ check("sidebar project row explains workspace switching", html.includes('class="
 check("sidebar recent sessions use compact product list", bootstrap.includes("function formatSessionAge") && bootstrap.includes("sessions-empty") && bootstrap.includes("sess-count") && bootstrap.includes("currentSessionId") && css.includes(".sess.active") && css.includes(".sess-count"));
 check("Git panel avoids clipped commit column on medium windows", css.includes('grid-template-areas:') && css.includes('"files diff"') && css.includes('"commit commit"') && css.includes(".git-commit-panel { grid-area: commit; }") && css.includes("@media (min-width: 1280px)") && css.includes('grid-template-areas: "files diff commit"'));
 check("Git commit controls remain visible in responsive layout", html.includes('class="git-commit-actions"') && css.includes(".git-commit-actions") && css.includes("grid-template-columns: minmax(0, 1fr) minmax(0, 1fr)") && css.includes(".git-commit-status:empty") && css.includes("height: 32px") && css.includes("#gitCommitMessage") && css.includes("max-height: 110px"));
-check("capability pages expose Store-managed disable and uninstall actions", bootstrap.includes("getCapabilityStoreItems") && bootstrap.includes("renderCapabilityActions") && bootstrap.includes("returnToCapability") && bootstrap.includes("已禁用") && bootstrap.includes("卸载"));
+check("industrial workbench panels stack before they clip", css.includes("@media (max-width: 1180px)") && css.includes(".job-grid,\n  .domain-pack-grid,\n  .agent-team-layout,\n  .toolchain-layout,\n  .quality-gate-layout") && css.includes("grid-template-columns: 1fr") && css.includes(".job-list-panel {\n    border-right: none;"));
+check("capability pages expose Store-managed disable and uninstall actions", bootstrap.includes("getCapabilityStoreItems") && bootstrap.includes("renderCapabilityActions") && bootstrap.includes("returnToCapability") && bootstrap.includes("capabilityLifecycleState"));
 check("capability Store lookup is silent for missing local-only items", bootstrap.includes("api.getStoreItemSilent") && bootstrap.includes("getCapabilityStoreItems"));
 check("store detail exposes uninstall and local translation affordance", bootstrap.includes('id="storeDetailUninstall"') && bootstrap.includes("storeChineseSummary({ ...item, translatedSummary: translatedCandidate || \"\" })") && css.includes(".ghost.danger"));
 check("store detail re-translates mixed backend summaries", !bootstrap.includes("translatedCandidate && translatedCandidate !== originalSummary") && bootstrap.includes("translatedSummary: translatedCandidate || \"\""));
@@ -221,6 +239,12 @@ check("store Chinese summary handles mixed English Chinese connectors", fallback
 check("store install action shows disable for enabled item", storeInstallActionState({ installed: true, enabled: true }).primary === "禁用");
 check("store install action shows enable for disabled item", storeInstallActionState({ installed: true, enabled: false }).primary === "启用");
 check("Agent capability metadata renders real agent entries", CAPABILITY_META.agents?.nav === "agentsBtn" && capabilityDescription("agents", { name: "Reviewer" }) === "本地智能体" && capabilityActionLabel("agents") === "查看");
+const managedPluginState = capabilityLifecycleState("plugins", { name: "Demo Plugin" }, { id: "plugin-demo", enabled: true });
+const disabledSkillState = capabilityLifecycleState("skills", { name: "Demo Skill" }, { id: "skill-demo", enabled: false });
+const readonlyMcpState = capabilityLifecycleState("mcp", { name: "Local MCP" }, null);
+check("capability lifecycle exposes disable and uninstall for Store-managed items", managedPluginState.managed && managedPluginState.toggleAction === "disable" && managedPluginState.destructiveAction === "uninstall");
+check("capability lifecycle exposes enable for disabled Store-managed items", disabledSkillState.managed && disabledSkillState.toggleAction === "enable" && disabledSkillState.statusLabel === "已禁用" && !disabledSkillState.useLabel);
+check("capability lifecycle marks unmanaged capabilities read-only", readonlyMcpState.readonly && readonlyMcpState.useLabel === "/mcp" && readonlyMcpState.readonlyReason.includes("不能从这里安全卸载"));
 check("job center empty list renders", renderJobListMarkup([]).includes("还没有任务"));
 const failedJob = {
   id: "job-failed",

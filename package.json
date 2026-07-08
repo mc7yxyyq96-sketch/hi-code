@@ -1,7 +1,17 @@
 {
   "name": "hi-code",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "Hi Code — a desktop coding agent for any OpenAI-compatible model.",
+  "author": "Hi Code contributors",
+  "license": "MIT",
+  "homepage": "https://github.com/mc7yxyyq96-sketch/hi-code#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mc7yxyyq96-sketch/hi-code.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mc7yxyyq96-sketch/hi-code/issues"
+  },
   "type": "module",
   "main": "electron/main.mjs",
   "bin": {
@@ -29,6 +39,7 @@
     "test:renderer": "node test/renderer-architecture-tests.mjs",
     "test:entrypoints": "node test/entrypoint-tests.mjs",
     "test:security": "node test/security-baseline.mjs",
+    "test:usage": "node test/usage-store-tests.mjs",
     "scan:dod": "node scripts/scan-dod.mjs",
     "store:export": "node scripts/export-store-catalog.mjs",
     "check:syntax": "node --check electron/main.mjs && node --check electron/preload.cjs && node --check renderer/renderer.js",
@@ -37,6 +48,7 @@
     "audit:prod": "npm audit --omit=dev --audit-level=high",
     "audit:high": "npm audit --audit-level=high",
     "release:check": "node scripts/verify.mjs --release",
+    "release:checksums": "node scripts/checksum-release.mjs",
     "app": "npm run build && electron .",
     "dist:mac": "npm run build && electron-builder --mac dmg",
     "dist:win": "npm run build && electron-builder --win --x64",

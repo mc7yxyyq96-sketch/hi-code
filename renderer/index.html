@@ -88,7 +88,10 @@
         <div class="side-foot">
           <div class="account user-account">
             <span class="ava"><span id="userInitial">H</span></span>
-            <div class="acc-info"><div class="acc-name" id="userName">Hi Code</div><div class="acc-sub" id="userEmail">本地账号</div></div>
+            <div class="acc-info">
+              <div class="acc-name"><span id="userName">Hi Code</span><span id="userBadge" class="acc-badge">本地版</span></div>
+              <div class="acc-sub" id="userEmail">本地账号</div>
+            </div>
             <button id="logoutBtn" class="icon-btn" title="退出登录">×</button>
           </div>
           <div class="account model-account">
@@ -586,23 +589,31 @@
         <div class="settings-head">
           <div>
             <div class="modal-title" id="settingsTitle">设置</div>
-            <div class="muted" id="settingsSubtitle">模型、对话、权限、数据与关于</div>
+            <div class="muted" id="settingsSubtitle">用量、模型、对话、权限、数据与关于</div>
           </div>
           <button id="cfg-cancel" class="icon-btn" title="关闭">×</button>
         </div>
 
         <div class="settings-body">
           <nav class="settings-nav" id="settingsNav">
-            <button type="button" class="settings-tab active" data-settings-tab="model">模型 API</button>
+            <div class="settings-nav-group">个人</div>
+            <button type="button" class="settings-tab active" data-settings-tab="usage">用量与统计</button>
+            <button type="button" class="settings-tab" data-settings-tab="data">数据与存储</button>
+            <div class="settings-nav-group">编码</div>
+            <button type="button" class="settings-tab" data-settings-tab="model">模型 API</button>
             <button type="button" class="settings-tab" data-settings-tab="chat">对话与推理</button>
             <button type="button" class="settings-tab" data-settings-tab="safety">权限与安全</button>
             <button type="button" class="settings-tab" data-settings-tab="mcp">MCP 服务器</button>
-            <button type="button" class="settings-tab" data-settings-tab="data">数据与存储</button>
+            <div class="settings-nav-group">关于</div>
             <button type="button" class="settings-tab" data-settings-tab="about">关于 Hi Code</button>
           </nav>
 
           <div class="settings-content">
-            <section id="settingsModelSection" class="settings-section">
+            <section id="settingsUsageSection" class="settings-section">
+              <div id="usagePanelRoot" class="usage-panel-root"></div>
+            </section>
+
+            <section id="settingsModelSection" class="settings-section hidden">
               <div class="setup-steps" id="settingsSteps">
                 <span><b>1</b> 选服务商</span>
                 <span><b>2</b> 粘贴 API Key</span>

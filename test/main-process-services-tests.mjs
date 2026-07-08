@@ -11,6 +11,7 @@ import { parseOpenAppRequest } from "../electron/services/native-open-service.mj
 import { createPathGuard, redactSensitive } from "../electron/services/security-service.mjs";
 import { modelTestError, modelTestNetworkError } from "../electron/services/workspace-service.mjs";
 import { createAppInfoService, compareVersions } from "../electron/services/app-info-service.mjs";
+import { createUsageService } from "../electron/services/usage-service.mjs";
 
 let pass = 0;
 let fail = 0;
@@ -270,9 +271,12 @@ registerIpcHandlers({
       openPage: () => ({ ok: true }),
       checkUpdates: () => ({ ok: true }),
     },
+    usage: {
+      getStats: () => ({ ok: true, lifetimeTokens: 0, heatmap: [], heatmapWeeks: 53, formatted: {}, topTools: [], topModels: [], reasoningBreakdown: [] }),
+    },
   },
 });
-for (const channel of ["runtime-queue:clear", "auth-status", "list-store", "store:item", "store:enable", "store:disable", "store:uninstall", "job:create", "job:list", "job:get", "job:cancel", "job:retry", "job:pause", "job:resume", "job:events", "job:artifacts", "job:artifact:preview", "job:artifact:open", "provider:list", "provider:get", "provider:configure", "provider:run", "provider:cancel", "worktree:create", "worktree:run", "worktree:collectChanges", "worktree:cleanup", "arena:list", "arena:get", "arena:create", "arena:acceptCandidate", "arena:rejectCandidate", "arena:mergeCandidate", "arena:artifact:preview", "arena:artifact:open", "industrial-project:schema", "industrial-project:get", "industrial-project:validate", "industrial-project:save", "industrial-requirement:draft", "industrial-requirement:add", "industrial-requirement:criteria:update", "industrial-requirement:artifact-plan", "industrial-requirement:test-plan", "industrial-requirement:spec-package", "industrial-requirement:approve", "industrial-project:artifact:add", "industrial-project:traceability:add", "industrial-project:gate:add", "domain-pack:list", "domain-pack:get", "domain-pack:validate", "domain-pack:install", "domain-pack:update", "domain-pack:enable", "domain-pack:disable", "domain-pack:uninstall", "domain-pack:recommend", "agent-team:profiles", "agent-team:profile:get", "agent-team:plan:create", "agent-team:plan:list", "agent-team:plan:get", "agent-team:job:create", "toolchain:list", "toolchain:detect", "toolchain:capabilities", "toolchain:validate-adapter", "toolchain:run", "quality-gate:list", "quality-gate:run", "quality-gate:approve", "release:readiness", "release:build", "release:open", "sample:industrial-control-box:create", "diffs:list", "git:status", "read-file", "read-session", "app:info", "app:open-data-dir", "app:reveal-config", "app:open-page", "app:check-updates"]) {
+for (const channel of ["runtime-queue:clear", "auth-status", "list-store", "store:item", "store:enable", "store:disable", "store:uninstall", "job:create", "job:list", "job:get", "job:cancel", "job:retry", "job:pause", "job:resume", "job:events", "job:artifacts", "job:artifact:preview", "job:artifact:open", "provider:list", "provider:get", "provider:configure", "provider:run", "provider:cancel", "worktree:create", "worktree:run", "worktree:collectChanges", "worktree:cleanup", "arena:list", "arena:get", "arena:create", "arena:acceptCandidate", "arena:rejectCandidate", "arena:mergeCandidate", "arena:artifact:preview", "arena:artifact:open", "industrial-project:schema", "industrial-project:get", "industrial-project:validate", "industrial-project:save", "industrial-requirement:draft", "industrial-requirement:add", "industrial-requirement:criteria:update", "industrial-requirement:artifact-plan", "industrial-requirement:test-plan", "industrial-requirement:spec-package", "industrial-requirement:approve", "industrial-project:artifact:add", "industrial-project:traceability:add", "industrial-project:gate:add", "domain-pack:list", "domain-pack:get", "domain-pack:validate", "domain-pack:install", "domain-pack:update", "domain-pack:enable", "domain-pack:disable", "domain-pack:uninstall", "domain-pack:recommend", "agent-team:profiles", "agent-team:profile:get", "agent-team:plan:create", "agent-team:plan:list", "agent-team:plan:get", "agent-team:job:create", "toolchain:list", "toolchain:detect", "toolchain:capabilities", "toolchain:validate-adapter", "toolchain:run", "quality-gate:list", "quality-gate:run", "quality-gate:approve", "release:readiness", "release:build", "release:open", "sample:industrial-control-box:create", "diffs:list", "git:status", "read-file", "read-session", "app:info", "app:open-data-dir", "app:reveal-config", "app:open-page", "app:check-updates", "usage:stats"]) {
   check(`register-ipc-handlers exposes ${channel}`, ipc2.handles.has(channel));
 }
 for (const channel of ["input", "ask-response", "interrupt"]) {
@@ -364,6 +368,25 @@ check("local ECONNREFUSED suggests starting local service", modelTestNetworkErro
 check("remote ECONNREFUSED suggests checking host/port", modelTestNetworkError({ message: "fetch failed", cause: { code: "ECONNREFUSED" } }, "https://example.com/v1").includes("主机和端口"));
 check("ENOTFOUND suggests checking spelling", modelTestNetworkError({ message: "getaddrinfo ENOTFOUND api.example.com" }, "https://api.example.com/v1").includes("域名无法解析"));
 check("generic fetch failed maps to network guidance", modelTestNetworkError({ message: "fetch failed" }, "https://api.example.com/v1").includes("网络请求失败"));
+
+console.log("\n[services] usage");
+const usageLogDir = fs.mkdtempSync(path.join(os.tmpdir(), "hicode-usage-log-"));
+fs.writeFileSync(
+  path.join(usageLogDir, "events-2026-07-07.jsonl"),
+  [
+    JSON.stringify({ type: "tool:start", tool: "bash" }),
+    JSON.stringify({ type: "tool:start", tool: "bash" }),
+    JSON.stringify({ type: "tool:start", tool: "grep" }),
+  ].join("\n"),
+);
+const usageSvc = createUsageService({ logDir: usageLogDir });
+const usageStats = usageSvc.getStats();
+check(
+  "usage service aggregates top tools from event logs",
+  usageStats.ok && usageStats.topTools[0]?.tool === "bash" && usageStats.topTools[0]?.count === 2,
+  JSON.stringify(usageStats.topTools),
+);
+fs.rmSync(usageLogDir, { recursive: true, force: true });
 
 console.log(`\n=== ${pass} passed, ${fail} failed ===`);
 process.exit(fail ? 1 : 0);

@@ -13,9 +13,11 @@ import { mountToolchainPanel } from "../components/toolchain-panel.js";
 import { mountQualityGatePanel } from "../components/quality-gate-panel.js";
 import { mountReleaseCenterPanel } from "../components/release-center-panel.js";
 import { mountSampleProjectPanel } from "../components/sample-project-panel.js";
-import { capabilityActionLabel, capabilityDescription, capabilityMeta, CAPABILITY_META } from "../components/mcp-panel.js";
+import { capabilityDescription, capabilityLifecycleState, capabilityMeta, CAPABILITY_META } from "../components/mcp-panel.js";
 import { normalizeRuntimeQueue, summarizeRunText } from "../components/runtime-panel.js";
 import { modelPickerSection, pickerRow } from "../components/settings-panel.js";
+import { renderUsagePanel } from "../components/settings-usage-panel.js";
+import { buildUserProfile } from "../utils/profile.js";
 import { STORE_ACTION_LABELS, STORE_CATEGORY_LABELS, STORE_KIND_LABELS, STORE_PAGE_SIZE, storeChineseSummary, storeIcon, storeInstallActionState, storeQueryOptions as buildStoreQueryOptions } from "../components/store-panel.js";
 import { createToastController } from "../components/toast.js";
 import { $ } from "../utils/dom.js";
@@ -34,6 +36,50 @@ if (!window.hicode) {
     { id: "demo-3", firstPrompt: "给 reviewer 加只读 bash", updatedAt: Date.now() - 1000 * 60 * 180, messageCount: 6 },
   ];
   let demoUser = null;
+
+  function buildDemoUsageStats() {
+    const heatmap = [];
+    const today = Date.now();
+    let lifetime = 0;
+    let peak = 0;
+    for (let offset = 370; offset >= 0; offset--) {
+      const date = new Date(today - offset * 86_400_000);
+      const key = date.toISOString().slice(0, 10);
+      const tokens = offset % 11 === 0 ? 0 : Math.floor(1200 + Math.sin(offset / 7) * 800 + (offset % 5) * 400);
+      lifetime += tokens;
+      peak = Math.max(peak, tokens);
+      const ratio = tokens <= 0 ? 0 : tokens / 2800;
+      const level = tokens <= 0 ? 0 : ratio > 0.75 ? 4 : ratio > 0.5 ? 3 : ratio > 0.25 ? 2 : 1;
+      heatmap.push({ date: key, tokens, level });
+    }
+    return {
+      ok: true,
+      lifetimeTokens: lifetime,
+      lifetimePromptTokens: Math.floor(lifetime * 0.72),
+      lifetimeCompletionTokens: Math.floor(lifetime * 0.28),
+      peakDayTokens: peak,
+      peakDay: heatmap[heatmap.length - 1]?.date || "",
+      longestTaskMs: 41 * 60 * 60 * 1000 + 35 * 60 * 1000,
+      currentStreak: 12,
+      longestStreak: 20,
+      totalSessions: sessions.length,
+      totalTurns: 48,
+      heatmap,
+      heatmapWeeks: Math.ceil(heatmap.length / 7),
+      reasoningBreakdown: [{ level: "high", count: 42, pct: 88 }],
+      currentReasoningLabel: "高 · 当前配置",
+      topModels: [{ model: "deepseek-chat", tokens: Math.floor(lifetime * 0.6) }, { model: "kimi-k2", tokens: Math.floor(lifetime * 0.25) }],
+      topTools: [{ tool: "bash", count: 61 }, { tool: "read", count: 35 }, { tool: "grep", count: 17 }],
+      formatted: {
+        lifetimeTokens: lifetime >= 1_000_000 ? `${(lifetime / 1_000_000).toFixed(1).replace(/\.0$/, "")}M` : `${Math.floor(lifetime / 1000)}K`,
+        peakDayTokens: peak >= 1_000_000 ? `${(peak / 1_000_000).toFixed(1).replace(/\.0$/, "")}M` : `${Math.floor(peak / 1000)}K`,
+        longestTask: "41h 35m",
+        currentStreak: "12 天",
+        longestStreak: "20 天",
+      },
+    };
+  }
+
   const demoStore = [
     { id: "skill-playwright", kind: "skill", category: "browser", name: "Playwright UI 验证", summary: "驱动真实浏览器验证本地 UI。", tags: ["browser", "qa"], installed: false },
     { id: "skill-security-review", kind: "skill", category: "security", name: "代码安全审查", summary: "按威胁模型审查路径、命令、MCP、密钥和权限边界。", tags: ["security", "review"], installed: false },
@@ -583,6 +629,7 @@ if (!window.hicode) {
     revealConfigFile: async () => ({ ok: false, error: "浏览器演示模式无法定位本地文件。" }),
     openAppPage: async () => ({ ok: false, error: "浏览器演示模式无法打开外部链接。" }),
     checkUpdates: async () => ({ ok: false, error: "浏览器演示模式无法检查更新。" }),
+    getUsageStats: async () => buildDemoUsageStats(),
     authStatus: async () => ({ user: demoUser }),
     register: async ({ email, name }) => {
       demoUser = { email, name: name || email.split("@")[0] };
@@ -1218,7 +1265,7 @@ const auth = $("auth"), appRoot = $("app");
 const authTitle = $("authTitle"), authForm = $("authForm"), authStatus = $("authStatus");
 const authName = $("authName"), authEmail = $("authEmail"), authPassword = $("authPassword"), nameField = $("nameField");
 const loginTab = $("loginTab"), registerTab = $("registerTab"), authSubmit = $("authSubmit");
-const userName = $("userName"), userEmail = $("userEmail"), userInitial = $("userInitial");
+const userName = $("userName"), userEmail = $("userEmail"), userInitial = $("userInitial"), userBadge = $("userBadge");
 const main = $("main"), home = $("home"), chatview = $("chatview"), chat = $("chat");
 const homeSlot = $("homeSlot"), chatSlot = $("chatSlot");
 const greeting = $("greeting"), sessionsEl = $("sessions"), searchInput = $("search");
@@ -1264,6 +1311,7 @@ const cfgTest = $("cfg-test"), advancedToggle = $("advanced-toggle"), quickSave 
 const providerGrid = $("providerGrid");
 const settingsNav = $("settingsNav");
 const settingsSections = {
+  usage: $("settingsUsageSection"),
   model: $("settingsModelSection"),
   chat: $("settingsChatSection"),
   safety: $("settingsSafetySection"),
@@ -1271,6 +1319,7 @@ const settingsSections = {
   data: $("settingsDataSection"),
   about: $("settingsAboutSection"),
 };
+const usagePanelRoot = $("usagePanelRoot");
 const reasoningOptions = $("reasoningOptions"), compactThresholdSelect = $("compactThresholdSelect");
 const sandboxToggle = $("sandboxToggle"), sandboxHint = $("sandboxHint");
 const mcpCfg = $("mcpCfg"), mcpSave = $("mcp-save");
@@ -1678,12 +1727,23 @@ function setAuthMode(mode) {
   authPassword.autocomplete = isRegister ? "new-password" : "current-password";
 }
 
+let cachedUserProfile = buildUserProfile(null);
+
+function applyUserProfile(user) {
+  cachedUserProfile = buildUserProfile(user);
+  userName.textContent = cachedUserProfile.displayName;
+  userEmail.textContent = cachedUserProfile.emailLine;
+  userInitial.textContent = cachedUserProfile.initials.slice(0, 1);
+  if (userBadge) {
+    userBadge.textContent = cachedUserProfile.badge;
+    userBadge.classList.toggle("hidden", !cachedUserProfile.badge);
+  }
+}
+
 function showSignedIn(user) {
   auth.classList.add("hidden");
   appRoot.classList.remove("hidden");
-  userName.textContent = user?.name || "Hi Code";
-  userEmail.textContent = user?.email || "本地账号";
-  userInitial.textContent = (user?.name || user?.email || "H").trim().slice(0, 1).toUpperCase();
+  applyUserProfile(user);
   input.focus();
 }
 
@@ -1992,7 +2052,9 @@ function runLine(text) {
   beginRunStatus(text);
   addUserMessage(text); startAgentMessage(); setBusy(true);
   runningSessionId = activeRuntimeSessionId || runningSessionId || currentSessionId;
+  if (runningSessionId && !currentSessionId) currentSessionId = runningSessionId;
   liveSessionSnapshot = null;
+  renderSessions(searchInput.value.trim());
   api.send(text);
 }
 function submit() {
@@ -2736,28 +2798,66 @@ function formatSessionAge(value) {
   return new Date(ts).toLocaleDateString("zh-CN", { month: "numeric", day: "numeric" });
 }
 
+function sessionMatchesFilter(session, filter) {
+  if (!filter) return true;
+  const q = filter.toLowerCase();
+  return [
+    session.firstPrompt,
+    session.model,
+    session.cwd,
+  ].some((value) => String(value || "").toLowerCase().includes(q));
+}
+
+function makeRuntimeSessionFallback() {
+  const id = runningSessionId || activeRuntimeSessionId || currentSessionId;
+  if (!id || allSessions.some((session) => session.id === id)) return null;
+  const messageCount = Math.max(chat.querySelectorAll(".msg").length, liveSessionSnapshot?.messageCount || 0, 1);
+  const firstPrompt = runState?.detail || liveSessionSnapshot?.firstPrompt || "正在进行的会话";
+  return {
+    id,
+    cwd,
+    model: currentModel?.model || "",
+    updatedAt: Date.now(),
+    firstPrompt,
+    messageCount,
+    transient: true,
+    running: Boolean(busy && runningSessionId === id),
+  };
+}
+
 async function loadSessions() {
   allSessions = await api.listSessions();
-  if (currentSessionId && !allSessions.some((session) => session.id === currentSessionId)) currentSessionId = null;
+  const knownIds = new Set(allSessions.map((session) => session.id));
+  const transientSessionId = runningSessionId || activeRuntimeSessionId;
+  if (currentSessionId && !knownIds.has(currentSessionId) && currentSessionId !== transientSessionId) currentSessionId = null;
   syncState({ allSessions });
   renderSessions(searchInput.value.trim());
 }
 function renderSessions(filter) {
-  const list = filter ? allSessions.filter((s) => (s.firstPrompt || "").toLowerCase().includes(filter.toLowerCase())) : allSessions;
+  const runtimeFallback = makeRuntimeSessionFallback();
+  const source = runtimeFallback ? [runtimeFallback, ...allSessions] : allSessions;
+  const list = source.filter((session) => sessionMatchesFilter(session, filter));
   sessionsEl.innerHTML = "";
   if (!list.length) { sessionsEl.innerHTML = `<div class="sessions-empty">还没有最近会话</div>`; return; }
   for (const s of list) {
-    const running = busy && runningSessionId && s.id === runningSessionId;
+    const running = Boolean(s.running || (busy && runningSessionId && s.id === runningSessionId));
+    const transient = Boolean(s.transient);
     const el = document.createElement("div");
-    el.className = `sess${s.id === currentSessionId ? " active" : ""}${running ? " sess-running" : ""}`;
+    el.className = `sess${s.id === currentSessionId ? " active" : ""}${running ? " sess-running" : ""}${transient ? " sess-transient" : ""}`;
     el.innerHTML = `<button class="sess-main" title="打开会话"><span class="t"></span><span class="s"><span class="sess-time"></span><span class="sess-count"></span></span></button><button class="sess-del" title="删除">×</button>`;
     el.querySelector(".t").textContent = (running ? "● " : "") + (s.firstPrompt || "(空会话)");
-    el.querySelector(".sess-time").textContent = running ? "进行中" : formatSessionAge(s.updatedAt);
+    el.querySelector(".sess-time").textContent = running ? "进行中" : transient ? "未保存" : formatSessionAge(s.updatedAt);
     el.querySelector(".sess-count").textContent = `${s.messageCount || 0} 条`;
     el.querySelector(".sess-main").onclick = () => openSession(s.id);
+    if (transient) {
+      const del = el.querySelector(".sess-del");
+      del.disabled = true;
+      del.classList.add("hidden");
+      del.title = "运行中的会话结束后可删除";
+    }
     el.querySelector(".sess-del").onclick = async (e) => {
       e.stopPropagation();
-      if (busy && s.id === runningSessionId) return;
+      if (transient || (busy && s.id === runningSessionId)) return;
       await api.deleteSession(s.id);
       if (currentSessionId === s.id) currentSessionId = null;
       loadSessions();
@@ -2784,6 +2884,8 @@ function saveLiveSessionSnapshot() {
     id: runningSessionId,
     chatHtml: chat.innerHTML,
     agentRaw,
+    firstPrompt: runState?.detail || "",
+    messageCount: Math.max(chat.querySelectorAll(".msg").length, 1),
   };
 }
 
@@ -2800,11 +2902,25 @@ function restoreLiveSessionSnapshot() {
 
 /** Open a saved session: restore it silently and render its history (no /resume echo). */
 async function openSession(id) {
-  if (id === currentSessionId) return;
+  if (id === currentSessionId) {
+    showChat();
+    renderSessions(searchInput.value.trim());
+    scrollDown();
+    return;
+  }
 
   if (busy && id === runningSessionId) {
+    const previousSessionId = currentSessionId;
     currentSessionId = id;
-    restoreLiveSessionSnapshot();
+    const restored = restoreLiveSessionSnapshot();
+    if (!restored) {
+      const msgs = await api.readSession(id).catch(() => []);
+      if (msgs.length) renderChatFromMessages(msgs);
+      else if (previousSessionId && previousSessionId !== id) {
+        chat.innerHTML = "";
+        addSystemNote("正在恢复进行中的会话，新的输出会继续显示在这里。");
+      }
+    }
     renderSessions(searchInput.value.trim());
     showChat();
     return;
@@ -2914,7 +3030,7 @@ function fillCommandInput(name) {
 
 function executeCommand(name) {
   if (!name) return;
-  if (name === "/models") return openSettings();
+  if (name === "/models") return openSettings("model");
   if (name === "/diff") return showGit();
   if (name === "/mcp") return showCapabilities("mcp");
   if (name === "/sessions") {
@@ -3019,7 +3135,7 @@ async function pickFolder() {
   }
 }
 $("projRow").onclick = pickFolder;
-$("settingsBtn").onclick = openSettings;
+$("settingsBtn").onclick = () => openSettings("usage");
 $("filesBtn").onclick = () => fileTree.open(cwd);
 $("jobsBtn").onclick = () => showJobCenter();
 $("arenaBtn").onclick = showPatchArena;
@@ -3037,7 +3153,7 @@ $("diffBtn").onclick = showGit;
 $("jobsTopBtn").onclick = () => showJobCenter();
 $("arenaTopBtn").onclick = showPatchArena;
 $("industrialTopBtn").onclick = showIndustrialProject;
-$("modelsBtn").onclick = openSettings;
+$("modelsBtn").onclick = () => openSettings("model");
 composer.querySelector("#attach").onclick = pickFolder;
 modelPill.onclick = (e) => {
   e.stopPropagation();
@@ -3189,42 +3305,42 @@ async function renderCapabilities(kind, refresh = false) {
 
 function renderCapabilityActions(actions, kind, item, storeItem) {
   actions.innerHTML = "";
-  const canUse = kind === "skills" || kind === "agents" || kind === "mcp";
-  if (storeItem) {
+  const lifecycle = capabilityLifecycleState(kind, item, storeItem);
+  if (lifecycle.managed) {
     const badge = document.createElement("span");
-    badge.className = `cap-badge installed${storeItem.enabled === false ? " disabled" : ""}`;
-    badge.textContent = storeItem.enabled === false ? "已禁用" : "已启用";
+    badge.className = `cap-badge installed${lifecycle.enabled ? "" : " disabled"}`;
+    badge.textContent = lifecycle.statusLabel;
     actions.appendChild(badge);
-    if (canUse && storeItem.enabled !== false) {
+    if (lifecycle.useLabel) {
       const use = document.createElement("button");
       use.className = "cap-badge";
-      use.textContent = capabilityActionLabel(kind, item);
+      use.textContent = lifecycle.useLabel;
       use.onclick = () => useCapability(kind, item);
       actions.appendChild(use);
     }
     const toggle = document.createElement("button");
     toggle.className = "cap-badge";
-    toggle.textContent = storeItem.enabled === false ? "启用" : "禁用";
-    toggle.onclick = () => storeManageItem(storeItem.id, storeItem.enabled === false ? "enable" : "disable", { returnToCapability: kind });
+    toggle.textContent = lifecycle.toggleLabel;
+    toggle.onclick = () => storeManageItem(storeItem.id, lifecycle.toggleAction, { returnToCapability: kind });
     actions.appendChild(toggle);
     const uninstall = document.createElement("button");
     uninstall.className = "cap-badge danger";
-    uninstall.textContent = "卸载";
-    uninstall.onclick = () => storeManageItem(storeItem.id, "uninstall", { returnToCapability: kind });
+    uninstall.textContent = lifecycle.destructiveLabel;
+    uninstall.onclick = () => storeManageItem(storeItem.id, lifecycle.destructiveAction, { returnToCapability: kind });
     actions.appendChild(uninstall);
     return;
   }
-  if (canUse) {
+  if (lifecycle.useLabel) {
     const action = document.createElement("button");
     action.className = "cap-badge";
-    action.textContent = capabilityActionLabel(kind, item);
+    action.textContent = lifecycle.useLabel;
     action.onclick = () => useCapability(kind, item);
     actions.appendChild(action);
   }
   const readonly = document.createElement("span");
   readonly.className = "cap-badge readonly";
-  readonly.title = "该项不是由 Hi Code Store 管理，不能从这里安全卸载。";
-  readonly.textContent = "只读";
+  readonly.title = lifecycle.readonlyReason;
+  readonly.textContent = lifecycle.statusLabel;
   actions.appendChild(readonly);
 }
 
@@ -3751,6 +3867,7 @@ function restoreStoreSearchFocus(inputEl) {
 
 /* ---------- settings ---------- */
 const SETTINGS_TAB_META = {
+  usage: ["用量与统计", "Token 消耗、活动热力图与会话概览"],
   model: ["接入模型 API", "默认写入 ~/.hicode/config.json"],
   chat: ["对话与推理", "推理深度与上下文压缩策略"],
   safety: ["权限与安全", "命令沙箱与始终生效的安全边界"],
@@ -3759,7 +3876,7 @@ const SETTINGS_TAB_META = {
   about: ["关于 Hi Code", "版本、运行环境与开源信息"],
 };
 
-async function openSettings(tab = "model") {
+async function openSettings(tab = "usage") {
   setCfgStatus("");
   cfgText = (await api.getConfig()) || "";
   syncState({ cfgText });
@@ -3775,22 +3892,36 @@ async function openMcpSettings() {
 }
 
 async function switchSettingsTab(tab) {
-  settingsMode = SETTINGS_TAB_META[tab] ? tab : "model";
+  settingsMode = SETTINGS_TAB_META[tab] ? tab : "usage";
   const [title, subtitle] = SETTINGS_TAB_META[settingsMode];
   settingsTitle.textContent = title;
   settingsSubtitle.textContent = subtitle;
   settingsNav.querySelectorAll(".settings-tab").forEach((btn) => {
     btn.classList.toggle("active", btn.dataset.settingsTab === settingsMode);
   });
+  settings.classList.add("settings-switching");
   for (const [name, section] of Object.entries(settingsSections)) {
-    section.classList.toggle("hidden", name !== settingsMode);
+    const active = name === settingsMode;
+    section.classList.toggle("hidden", !active);
+    section.classList.toggle("is-active", active);
   }
+  window.setTimeout(() => settings.classList.remove("settings-switching"), 180);
   setCfgStatus("");
+  if (settingsMode === "usage") await renderUsageSettings();
   if (settingsMode === "model") setTimeout(() => quickApiKey.focus(), 0);
   if (settingsMode === "chat") await renderChatSettings();
   if (settingsMode === "safety") await renderSafetySettings();
   if (settingsMode === "mcp") await renderMcpSettings();
   if (settingsMode === "data" || settingsMode === "about") await renderAppInfoSettings();
+}
+
+async function renderUsageSettings() {
+  if (!usagePanelRoot) return;
+  usagePanelRoot.classList.remove("is-mounted");
+  usagePanelRoot.innerHTML = '<div class="settings-hint usage-loading">正在加载用量数据…</div>';
+  const [stats, auth] = await Promise.all([api.getUsageStats(), api.authStatus()]);
+  if (auth?.user) applyUserProfile(auth.user);
+  renderUsagePanel(usagePanelRoot, stats, { profile: cachedUserProfile });
 }
 
 settingsNav.querySelectorAll(".settings-tab").forEach((btn) => {
@@ -3986,7 +4117,7 @@ async function renderModelPicker() {
   settingsBtn.textContent = "管理 API 和模型";
   settingsBtn.onclick = () => {
     hideModelPicker();
-    openSettings();
+    openSettings("model");
   };
   footer.appendChild(settingsBtn);
   modelPicker.appendChild(footer);

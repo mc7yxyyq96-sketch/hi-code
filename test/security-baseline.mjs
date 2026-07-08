@@ -56,7 +56,7 @@ check("renderer CSP exists", html.includes("Content-Security-Policy"));
 check("CSP blocks remote script by default", /script-src 'self'/.test(html));
 check("desktop runtime disables slash-command process exit", main.includes("allowProcessExit: false") && runtime.includes("allowProcessExit: opts.allowProcessExit !== false") && commands.includes("env.allowProcessExit === false"));
 check("native app launcher only intercepts known app aliases", nativeOpenService.includes("if (!alias) return null") && !nativeOpenService.includes("alias || rawName"));
-check("desktop bridge filters terminal tool chrome from chat output", main.includes("shouldForwardRuntimeOutput") && main.includes("/^⏺\\s/") && main.includes("/^[┌│└]/"));
+check("desktop bridge filters terminal tool chrome from chat output", main.includes("filterRuntimeOutput") && main.includes("shouldForwardRuntimeOutput") && main.includes("/^⏺\\s/") && main.includes("/^[┌│└]/") && main.includes("/^members:/i"));
 check("preload does not expose ipcRenderer", !/ipcRenderer[,}]/.test(preload) && !/ipcRenderer:\s*ipcRenderer/.test(preload));
 check("preload does not expose generic invoke", !/invoke:\s*\(/.test(preload));
 check("preload validates string parameters", preload.includes("requireString(") && preload.includes("checkedInvoke("));
@@ -239,6 +239,7 @@ check("verify script includes quality gate tests", verifyScript.includes('"test:
 check("verify script includes release builder tests", verifyScript.includes('"test:release-builder"'));
 check("verify script includes sample project tests", verifyScript.includes('"test:samples"'));
 check("verify script includes Definition of Done tests", verifyScript.includes('"test:dod"'));
+check("verify script includes usage persistence tests", verifyScript.includes('"test:usage"') && verifyScript.includes("test/usage-store-tests.mjs"));
 
 console.log(`\n=== ${pass} passed, ${fail} failed ===`);
 process.exit(fail ? 1 : 0);
