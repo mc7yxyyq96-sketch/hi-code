@@ -49,3 +49,13 @@ The next versions should prioritize parity-critical areas before adding broad ne
 - Patch Arena and review workflows that feel as polished as mainstream coding agents.
 - Settings, Store, Plugin, Skill, MCP, and industrial workbench UI that remain stable in small and large windows.
 - Release and update flow suitable for public open-source users.
+
+## Long-Term Reference Plan
+
+The detailed clean-room Claude Code / Codex parity roadmap is tracked in:
+
+- [Claude/Codex parity roadmap](./roadmap/claude-codex-parity-roadmap.md)
+- [Machine-readable parity backlog](./roadmap/claude-codex-parity-backlog.json)
+- [Source review notes](../reports/planning/claude-codex-source-review-2026-07-08.md)
+
+These files are the required context before starting future parity work. They describe what Hi Code should learn from Claude Code and Codex, what must stay self-developed, and how the industrial engineering direction remains different.

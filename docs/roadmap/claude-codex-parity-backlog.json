@@ -1,0 +1,192 @@
+{
+  "version": "2026-07-08",
+  "sourceArchives": [
+    {
+      "name": "claude-code-main.zip",
+      "path": "/Users/jack/Downloads/claude-code-main.zip",
+      "use": "product/plugin ecosystem reference only",
+      "copyingPolicy": "do not copy source, docs, prompts, assets, or branding"
+    },
+    {
+      "name": "codex-main.zip",
+      "path": "/Users/jack/Downloads/codex-main.zip",
+      "use": "architecture and capability reference",
+      "copyingPolicy": "clean-room Hi Code implementation even when license allows reuse"
+    }
+  ],
+  "principles": [
+    "Do not directly copy Claude Code or Codex code.",
+    "Match behavior and product depth through Hi Code-native implementation.",
+    "Keep Hi Code industrial engineering workbench direction.",
+    "No fake buttons, mock-only production paths, placeholder modules, fake gates, or simulated artifacts marked real.",
+    "Every product feature requires core logic, desktop API, UI, persistence, tests, docs, and acceptance commands."
+  ],
+  "metrics": {
+    "hicodeTrackedFilesObserved": 195,
+    "codexArchiveFilesObserved": 5370,
+    "codexRustCratesObserved": 94,
+    "claudeArchiveFilesObserved": 216,
+    "claudePluginsObserved": 12
+  },
+  "releases": [
+    {
+      "id": "v0.5.2",
+      "theme": "stabilization and public release quality",
+      "status": "in_progress",
+      "items": [
+        "recent sessions open after leaving chat",
+        "new chat creates a fresh runtime session",
+        "empty model responses stay visible",
+        "image attachments are reliable",
+        "store lifecycle actions are visible",
+        "small-window UI polish",
+        "release checks pass"
+      ],
+      "acceptanceCommands": [
+        "npm run build",
+        "npm run verify",
+        "npm run release:check"
+      ]
+    },
+    {
+      "id": "v0.6",
+      "theme": "runtime core parity",
+      "status": "planned",
+      "items": [
+        "runtime protocol boundary",
+        "durable append-only event store",
+        "turn replay and session recovery",
+        "shared desktop/CLI/TUI runtime protocol",
+        "separate model output from tool timeline",
+        "stronger attachment pipeline",
+        "crash and restart recovery tests"
+      ],
+      "acceptanceCommands": [
+        "npm run build",
+        "npm run verify",
+        "npm run release:check",
+        "node test/feature-tests.mjs"
+      ]
+    },
+    {
+      "id": "v0.7",
+      "theme": "plugin skill hook ecosystem",
+      "status": "planned",
+      "items": [
+        "hicode.plugin.json v2",
+        "plugin scaffold and validator",
+        "command agent skill hook support",
+        "managed hook policy",
+        "plugin dev panel",
+        "store trust levels",
+        "plugin security review gates"
+      ],
+      "acceptanceCommands": [
+        "npm run build",
+        "npm run verify",
+        "npm run release:check"
+      ]
+    },
+    {
+      "id": "v0.8",
+      "theme": "SDK app-server external agent integration",
+      "status": "planned",
+      "items": [
+        "local app-server daemon",
+        "TypeScript SDK",
+        "Python SDK",
+        "external agent adapters for Codex CLI and Claude Code",
+        "worktree isolation default",
+        "Patch Arena external candidates",
+        "thread handoff between desktop CLI and SDK"
+      ],
+      "acceptanceCommands": [
+        "npm run build",
+        "npm run verify",
+        "npm run release:check"
+      ]
+    },
+    {
+      "id": "v0.9",
+      "theme": "enterprise security release infrastructure",
+      "status": "planned",
+      "items": [
+        "keyring-backed secrets",
+        "enterprise policy file",
+        "MDM examples",
+        "model gateway examples",
+        "cross-platform sandbox hardening",
+        "telemetry and local event ledger",
+        "CI matrix and signed release evidence"
+      ],
+      "acceptanceCommands": [
+        "npm run build",
+        "npm run verify",
+        "npm run release:check",
+        "npm run test:security"
+      ]
+    },
+    {
+      "id": "v1.0",
+      "theme": "industrial engineering workbench",
+      "status": "planned",
+      "items": [
+        "industrial artifact graph",
+        "Domain Pack marketplace hardening",
+        "real FreeCAD KiCad OpenPLC IfcOpenShell execution paths",
+        "commercial bridge frameworks with external_required marking",
+        "release evidence binder",
+        "more industrial sample projects",
+        "human approval and compliance checklists"
+      ],
+      "acceptanceCommands": [
+        "npm run build",
+        "npm run verify",
+        "npm run release:check",
+        "npm run test:samples",
+        "npm run test:release-builder"
+      ]
+    }
+  ],
+  "nextBatch": [
+    {
+      "id": "HC-060-001",
+      "release": "v0.6",
+      "title": "Define Hi Code runtime protocol and event schema",
+      "priority": "P0",
+      "deliverables": [
+        "core TypeScript schema",
+        "Electron IPC mapping",
+        "CLI/TUI adapter notes",
+        "tests",
+        "docs"
+      ]
+    },
+    {
+      "id": "HC-060-002",
+      "release": "v0.6",
+      "title": "Append-only turn/event persistence and replay",
+      "priority": "P0",
+      "deliverables": [
+        "event store",
+        "session replay",
+        "recent conversation restore",
+        "crash recovery tests"
+      ]
+    },
+    {
+      "id": "HC-070-001",
+      "release": "v0.7",
+      "title": "hicode.plugin.json v2 clean-room plugin manifest",
+      "priority": "P1",
+      "deliverables": [
+        "manifest schema",
+        "validator",
+        "security restrictions",
+        "sample plugin",
+        "tests",
+        "docs"
+      ]
+    }
+  ]
+}
