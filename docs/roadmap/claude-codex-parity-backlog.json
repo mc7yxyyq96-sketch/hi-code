@@ -168,7 +168,7 @@
       "release": "v0.6",
       "title": "Append-only turn/event persistence and replay",
       "priority": "P0",
-      "status": "planned",
+      "status": "in_progress",
       "deliverables": [
         "event store",
         "session replay",

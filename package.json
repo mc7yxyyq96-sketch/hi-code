@@ -1,6 +1,6 @@
 {
   "name": "hi-code",
-  "version": "0.5.2",
+  "version": "0.6.0-alpha.1",
   "description": "Hi Code — a desktop coding agent for any OpenAI-compatible model.",
   "author": "Hi Code contributors",
   "license": "MIT",
@@ -41,6 +41,7 @@
     "test:entrypoints": "node test/entrypoint-tests.mjs",
     "test:security": "node test/security-baseline.mjs",
     "test:usage": "node test/usage-store-tests.mjs",
+    "sync:version": "node scripts/sync-version.mjs",
     "scan:dod": "node scripts/scan-dod.mjs",
     "store:export": "node scripts/export-store-catalog.mjs",
     "check:syntax": "node --check electron/main.mjs && node --check electron/preload.cjs && node --check renderer/renderer.js",

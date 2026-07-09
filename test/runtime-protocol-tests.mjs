@@ -8,6 +8,12 @@ import {
   protocolKindFromLegacy,
   validateRuntimeProtocolEvent,
 } from "../dist/runtime-protocol.js";
+import {
+  deleteRuntimeProtocolEvents,
+  readRuntimeProtocolEvents,
+  replayRuntimeProtocolEvents,
+  runtimeProtocolEventPath,
+} from "../dist/runtime-event-store.js";
 
 let pass = 0;
 let fail = 0;
@@ -81,6 +87,7 @@ const runtime = createRuntime({
 await runtime.handleInput("!touch should-not-run.txt");
 
 const protocolEvents = events.map((event) => event.payload?.runtimeProtocol).filter(Boolean);
+const replay = replayRuntimeProtocolEvents(runtime.sessionId);
 
 check("runtime emits protocol envelope on every event", protocolEvents.length === events.length, JSON.stringify(events));
 check(
@@ -108,7 +115,21 @@ check(
   protocolEvents.some((event) => event.kind === "turn.denied" && event.status === "denied"),
   JSON.stringify(protocolEvents),
 );
+check("runtime protocol events are appended to durable store", replay.eventCount === protocolEvents.length, JSON.stringify(replay));
+check("runtime replay keeps event order", replay.firstSequence === 1 && replay.lastSequence === protocolEvents.length, JSON.stringify(replay));
+check(
+  "runtime store reads valid protocol events",
+  readRuntimeProtocolEvents(runtime.sessionId).every((event) => validateRuntimeProtocolEvent(event).ok),
+);
+let invalidPathRejected = false;
+try {
+  runtimeProtocolEventPath("../bad-session");
+} catch {
+  invalidPathRejected = true;
+}
+check("runtime event store rejects path escape ids", invalidPathRejected);
 check("runtime did not execute denied command", !fs.existsSync(path.join(tmp, "should-not-run.txt")));
+deleteRuntimeProtocolEvents(runtime.sessionId);
 
 console.log(`\n=== ${pass} passed, ${fail} failed ===`);
 process.exit(fail ? 1 : 0);

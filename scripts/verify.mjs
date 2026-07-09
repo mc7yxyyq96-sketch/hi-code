@@ -59,6 +59,7 @@ function runSyntaxCheck() {
   }
 }
 
+run("sync:version", node, ["scripts/sync-version.mjs"]);
 runBuild();
 runSyntaxCheck();
 for (const [label, file] of testFiles) {

@@ -15,6 +15,7 @@ import { shutdownMcp } from "./mcp.js";
 import { gitInfo } from "./git.js";
 import type { RuntimeEventDraft, ToolEventStatus } from "./events.js";
 import { createRuntimeProtocolEvent } from "./runtime-protocol.js";
+import { appendRuntimeProtocolEvent } from "./runtime-event-store.js";
 
 /** System prompt for the agent, including project notes and git status. */
 export function buildSystemPrompt(cwd: string, model?: string, reasoningLevel: VibeConfig["reasoningLevel"] = "medium"): string {
@@ -68,6 +69,7 @@ export interface RuntimeOpts {
   restored?: StoredSession;
   emitEvent?: (event: RuntimeEventDraft & { sessionId: string; turnId: string }) => string | void;
   allowProcessExit?: boolean;
+  persistRuntimeEvents?: boolean;
 }
 
 export interface Runtime {
@@ -121,6 +123,10 @@ export function createRuntime(opts: RuntimeOpts): Runtime {
       },
       { sequence: ++protocolSequence },
     );
+    if (opts.persistRuntimeEvents !== false) {
+      const stored = appendRuntimeProtocolEvent(runtimeProtocol);
+      if (!stored.ok && process.env.VIBE_DEBUG) console.error(`[hicode] runtime event persistence failed: ${stored.error}`);
+    }
     return opts.emitEvent?.({
       ...event,
       payload: {

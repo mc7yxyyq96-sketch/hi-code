@@ -45,9 +45,11 @@ const solidWorksAdapter = fs.readFileSync(path.join(root, "src", "solidworks-bri
 const avevaAdapter = fs.readFileSync(path.join(root, "src", "aveva-bridge-adapter.ts"), "utf8");
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
 const verifyScript = fs.readFileSync(path.join(root, "scripts", "verify.mjs"), "utf8");
+const syncVersionScript = fs.readFileSync(path.join(root, "scripts", "sync-version.mjs"), "utf8");
 const commands = fs.readFileSync(path.join(root, "src", "commands.ts"), "utf8");
 const runtime = fs.readFileSync(path.join(root, "src", "runtime.ts"), "utf8");
 const runtimeProtocol = fs.readFileSync(path.join(root, "src", "runtime-protocol.ts"), "utf8");
+const runtimeEventStore = fs.readFileSync(path.join(root, "src", "runtime-event-store.ts"), "utf8");
 const llm = fs.readFileSync(path.join(root, "src", "llm.ts"), "utf8");
 const workspaceService = fs.readFileSync(path.join(root, "electron", "services", "workspace-service.mjs"), "utf8");
 
@@ -61,6 +63,8 @@ check("desktop runtime disables slash-command process exit", main.includes("allo
 check("native app launcher only intercepts known app aliases", nativeOpenService.includes("if (!alias) return null") && !nativeOpenService.includes("alias || rawName"));
 check("desktop bridge filters terminal tool chrome from chat output", main.includes("filterRuntimeOutput") && main.includes("shouldForwardRuntimeOutput") && main.includes("/^⏺\\s/") && main.includes("/^[┌│└]/") && main.includes("/^members:/i"));
 check("runtime emits versioned protocol envelopes", runtime.includes("createRuntimeProtocolEvent") && runtime.includes("runtimeProtocol") && runtimeProtocol.includes("RUNTIME_PROTOCOL_VERSION = 1") && runtimeProtocol.includes("validateRuntimeProtocolEvent"));
+check("runtime protocol events are append-only persisted", runtime.includes("appendRuntimeProtocolEvent") && runtimeEventStore.includes("RUNTIME_EVENT_STORE_DIR") && runtimeEventStore.includes("replayRuntimeProtocolEvents"));
+check("app version is synced from package metadata", main.includes("version: app.getVersion()") && main.includes("getVersion: () => app.getVersion()") && syncVersionScript.includes("app.getVersion()") && syncVersionScript.includes("appVersionEl.textContent"));
 check("preload does not expose ipcRenderer", !/ipcRenderer[,}]/.test(preload) && !/ipcRenderer:\s*ipcRenderer/.test(preload));
 check("preload does not expose generic invoke", !/invoke:\s*\(/.test(preload));
 check("preload validates string parameters", preload.includes("requireString(") && preload.includes("checkedInvoke("));
@@ -231,6 +235,8 @@ check("Industrial Control Box sample writes required real artifacts", ["requirem
 check("Industrial Control Box sample marks dry-run and not_run evidence", sampleProject.includes("result.simulated") && sampleProject.includes("artifact.simulated") && sampleProject.includes("\"not_run\""));
 check("Sample Project service records Job Center artifact and gate evidence", sampleProjectService.includes("jobStore.addArtifact") && sampleProjectService.includes("jobStore.addGateResult") && sampleProjectService.includes("sample.release.built"));
 check("release:check uses package-manager independent verifier", pkg.scripts["release:check"] === "node scripts/verify.mjs --release");
+check("package version is on v0.6 alpha development line", pkg.version === "0.6.0-alpha.1");
+check("verify script includes version sync", verifyScript.includes('"sync:version"') && verifyScript.includes("scripts/sync-version.mjs"));
 check("verify script includes build", verifyScript.includes('run("build"'));
 check("verify script includes syntax check", verifyScript.includes("runSyntaxCheck()") && verifyScript.includes("electron/main.mjs"));
 check("verify script includes feature tests", verifyScript.includes('"test:feature"') && verifyScript.includes("test/feature-tests.mjs"));

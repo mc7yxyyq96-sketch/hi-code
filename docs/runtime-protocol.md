@@ -18,12 +18,18 @@ Runtime integration:
 
 - `src/runtime.ts` calls `createRuntimeProtocolEvent(...)` for every emitted runtime event.
 - The generated envelope is attached as `event.payload.runtimeProtocol`.
+- `src/runtime-event-store.ts` appends validated protocol events to `~/.hicode/runtime-events/<sessionId>.jsonl` for replay and crash recovery.
 - Existing renderer and Electron event consumers can continue to use the legacy event fields while new code migrates to the protocol envelope.
 
 Tests:
 
 - `test/runtime-protocol-tests.mjs`
 - Included in `npm run verify` and `npm run release:check`.
+
+Version sync:
+
+- `package.json` is now on the `0.6.0-alpha.1` development line.
+- `scripts/sync-version.mjs` checks that Electron `app.getVersion()` and renderer labels remain wired to package metadata instead of hard-coded version text.
 
 ## Transport Mapping
 
@@ -147,7 +153,7 @@ The first slice mostly routes tool events to timeline/job/sdk, diffs to diff/tim
 
 1. Keep legacy runtime event fields intact.
 2. Attach protocol envelopes to every runtime event.
-3. Add append-only persistence for protocol events.
+3. Append protocol events to a durable JSONL event store.
 4. Make recent sessions replay from persisted protocol events.
 5. Make CLI/TUI and Electron consume the same protocol stream.
 6. Expose protocol streaming through a future local app-server and SDK.
