@@ -12,7 +12,7 @@ import { runTeam, spawnAgent } from "./agents/subagent.js";
 import { runCouncil, runDebate } from "./agents/council.js";
 import { runBuild } from "./agents/manager.js";
 import { gitDiff } from "./git.js";
-import { listSessions, loadSession } from "./session-store.js";
+import { listSessions, loadSession, replaySessionMessages, type StoredSession, type SessionDisplayMessage } from "./session-store.js";
 import { mcpStatus } from "./mcp.js";
 
 /** All user-facing slash commands, for tab-completion. */
@@ -34,6 +34,8 @@ export interface CommandEnv {
   sessionId: string;
   /** Whether slash commands may terminate the current Node process. Disabled for Electron. */
   allowProcessExit?: boolean;
+  /** Load a saved session into the active runtime, updating the runtime session id as well as messages. */
+  resumeStoredSession?: (id: string) => StoredSession | undefined;
   /** Revert the file changes made during the last turn. */
   undo: () => string;
 }
@@ -222,11 +224,13 @@ export async function handleCommand(input: string, env: CommandEnv): Promise<boo
       for (const s of list) {
         const when = new Date(s.updatedAt).toLocaleString();
         const cur = s.id === env.sessionId ? chalk.green(" ←current") : "";
+        const count = s.replayOnly ? `${s.eventCount ?? 0}evt` : `${s.messageCount}msg`;
+        const mode = s.replayOnly ? chalk.magenta(" replay") : "";
         console.log(
-          `    ${chalk.yellow(s.id)}  ${chalk.gray(when)}  ${chalk.gray(`${s.messageCount}msg`)}  ${s.firstPrompt}${cur}`,
+          `    ${chalk.yellow(s.id)}  ${chalk.gray(when)}  ${chalk.gray(count)}${mode}  ${s.firstPrompt}${cur}`,
         );
       }
-      ui.info("  resume with: /resume <id>   (or start vibe with --continue)");
+      ui.info("  resume with: /resume <id>   (event-only sessions open as read-only replay)");
       return true;
     }
 
@@ -235,15 +239,25 @@ export async function handleCommand(input: string, env: CommandEnv): Promise<boo
         // No id → just list.
         return handleCommand("/sessions", env);
       }
-      const stored = loadSession(arg);
-      if (!stored) {
-        ui.warn(`  no session found with id ${arg}`);
+      const stored = env.resumeStoredSession ? env.resumeStoredSession(arg) : loadSession(arg);
+      if (stored) {
+        if (!env.resumeStoredSession) {
+          env.session.messages = stored.messages;
+          env.session.totalPromptTokens = stored.totalPromptTokens;
+          env.session.totalCompletionTokens = stored.totalCompletionTokens;
+        }
+        ui.info(`  resumed ${chalk.bold(stored.id)} (${stored.messages.length} messages)`);
         return true;
       }
-      env.session.messages = stored.messages;
-      env.session.totalPromptTokens = stored.totalPromptTokens;
-      env.session.totalCompletionTokens = stored.totalCompletionTokens;
-      ui.info(`  resumed ${chalk.bold(stored.id)} (${stored.messages.length} messages)`);
+      const replayMeta = listSessions(env.cwd).find((session) => session.id === arg && session.replayOnly);
+      if (replayMeta) {
+        const messages = replaySessionMessages(arg);
+        ui.warn(`  ${arg} is event-only; opening read-only replay instead of continuing context.`);
+        printReplayTranscript(messages);
+        ui.info("  To continue, copy the relevant replay summary into a new prompt.");
+        return true;
+      }
+      ui.warn(`  no session found with id ${arg}`);
       return true;
     }
 
@@ -279,6 +293,19 @@ export async function handleCommand(input: string, env: CommandEnv): Promise<boo
     default:
       ui.warn(`  unknown command: /${cmd} (try /help)`);
       return true;
+  }
+}
+
+function printReplayTranscript(messages: SessionDisplayMessage[]): void {
+  if (!messages.length) {
+    ui.warn("  replay is empty");
+    return;
+  }
+  for (const message of messages) {
+    const label = message.role === "user" ? chalk.cyan("user") : chalk.green("assistant");
+    const text = message.text.split(/\r?\n/).map((line) => `      ${line}`).join("\n");
+    console.log(`    ${label}`);
+    console.log(text);
   }
 }
 

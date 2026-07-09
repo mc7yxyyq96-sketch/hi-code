@@ -98,6 +98,8 @@ Current first slice:
 - `src/runtime.ts` attaches `payload.runtimeProtocol` to existing runtime events without breaking current UI consumers.
 - `src/runtime-event-store.ts` persists protocol events as append-only JSONL for replay and recovery.
 - Recent sessions now surface event-only sessions as replay-only recovery entries when the full chat JSON is unavailable.
+- CLI/TUI `/sessions` lists event-only replay entries, and `/resume <id>` opens them as read-only transcript replay instead of silently failing.
+- Saved session resume continues protocol event sequence numbers from the append-only store.
 - `test/runtime-protocol-tests.mjs` verifies schema helpers and real runtime event emission.
 
 Build:

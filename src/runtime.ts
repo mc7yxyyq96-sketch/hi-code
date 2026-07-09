@@ -15,7 +15,7 @@ import { shutdownMcp } from "./mcp.js";
 import { gitInfo } from "./git.js";
 import type { RuntimeEventDraft, ToolEventStatus } from "./events.js";
 import { createRuntimeProtocolEvent } from "./runtime-protocol.js";
-import { appendRuntimeProtocolEvent } from "./runtime-event-store.js";
+import { appendRuntimeProtocolEvent, readRuntimeProtocolEvents } from "./runtime-event-store.js";
 
 /** System prompt for the agent, including project notes and git status. */
 export function buildSystemPrompt(cwd: string, model?: string, reasoningLevel: VibeConfig["reasoningLevel"] = "medium"): string {
@@ -109,9 +109,9 @@ export function createRuntime(opts: RuntimeOpts): Runtime {
   type Change = { file: string; before: string | null; diffId?: string };
   const undoStack: Change[][] = [];
   let turnChanges: Change[] = [];
-  let turnSeq = 0;
-  let protocolSequence = 0;
-  let currentTurnId = `${sessionId}-turn-0`;
+  let protocolSequence = lastProtocolSequenceForSession(sessionId);
+  let turnSeq = protocolSequence;
+  let currentTurnId = `${sessionId}-turn-${turnSeq}`;
 
   const emitRuntimeEvent = (event: RuntimeEventDraft): string | void => {
     const turnId = event.turnId ?? currentTurnId;
@@ -191,7 +191,25 @@ export function createRuntime(opts: RuntimeOpts): Runtime {
     return `reverted ${restoredCount} file change${restoredCount === 1 ? "" : "s"} from the last turn`;
   };
 
-  const cmdEnv: CommandEnv = {
+  let cmdEnv: CommandEnv;
+
+  function loadStoredSessionIntoRuntime(id: string): StoredSession | undefined {
+    const stored = loadSession(id);
+    if (!stored) return undefined;
+    session.messages = stored.messages;
+    session.totalPromptTokens = stored.totalPromptTokens;
+    session.totalCompletionTokens = stored.totalCompletionTokens;
+    sessionId = id;
+    protocolSequence = lastProtocolSequenceForSession(sessionId);
+    turnSeq = protocolSequence;
+    currentTurnId = `${sessionId}-turn-${turnSeq}`;
+    execEnv.sessionId = sessionId;
+    execEnv.turnId = currentTurnId;
+    if (cmdEnv) cmdEnv.sessionId = sessionId;
+    return stored;
+  }
+
+  cmdEnv = {
     cfg,
     session,
     perms,
@@ -200,6 +218,7 @@ export function createRuntime(opts: RuntimeOpts): Runtime {
     execEnv,
     sessionId,
     allowProcessExit: opts.allowProcessExit !== false,
+    resumeStoredSession: loadStoredSessionIntoRuntime,
     undo,
   };
 
@@ -439,21 +458,23 @@ export function createRuntime(opts: RuntimeOpts): Runtime {
       return { sessionId };
     },
     resume: (id: string) => {
-      const stored = loadSession(id);
+      const stored = loadStoredSessionIntoRuntime(id);
       if (!stored) return [];
-      session.messages = stored.messages;
-      session.totalPromptTokens = stored.totalPromptTokens;
-      session.totalCompletionTokens = stored.totalCompletionTokens;
-      sessionId = id; // continue saving into the resumed session
-      protocolSequence = 0;
-      execEnv.sessionId = sessionId;
-      cmdEnv.sessionId = sessionId;
       return stored.messages
         .filter((m) => m.role === "user" || m.role === "assistant")
         .map((m) => ({ role: m.role, text: contentText(m.content).trim() }))
         .filter((m) => m.text.length > 0 && !m.text.startsWith("[Earlier conversation summary]"));
     },
   };
+}
+
+function lastProtocolSequenceForSession(sessionId: string): number {
+  try {
+    const last = readRuntimeProtocolEvents(sessionId).at(-1)?.sequence;
+    return Number.isInteger(last) && Number(last) > 0 ? Number(last) : 0;
+  } catch {
+    return 0;
+  }
 }
 
 const IMAGE_EXT: Record<string, string> = {

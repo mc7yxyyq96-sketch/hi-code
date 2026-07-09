@@ -20,6 +20,8 @@ Runtime integration:
 - The generated envelope is attached as `event.payload.runtimeProtocol`.
 - `src/runtime-event-store.ts` appends validated protocol events to `~/.hicode/runtime-events/<sessionId>.jsonl` for replay and crash recovery.
 - `src/session-store.ts` merges event-only sessions into Recent as replay-only entries when the full chat session JSON is missing.
+- CLI/TUI `/sessions` shows replay-only event sessions, and `/resume <id>` opens those sessions as read-only transcript replay instead of pretending they can continue model context.
+- Full saved session resume continues runtime protocol sequence numbers from the append-only event store, so resumed turns do not duplicate prior event sequences.
 - Existing renderer and Electron event consumers can continue to use the legacy event fields while new code migrates to the protocol envelope.
 
 Tests:
@@ -29,7 +31,7 @@ Tests:
 
 Version sync:
 
-- `package.json` is now on the `0.6.0-alpha.1` development line.
+- `package.json` is now on the `0.6.0-alpha.5` development line.
 - `scripts/sync-version.mjs` checks that Electron `app.getVersion()` and renderer labels remain wired to package metadata instead of hard-coded version text.
 
 ## Transport Mapping
@@ -43,7 +45,10 @@ Desktop / Electron:
 CLI / TUI:
 
 - The shared `createRuntime(...)` path emits the same protocol envelope when an `emitEvent` callback is supplied.
-- Current CLI output remains unchanged until the append-only event store and replay layer land.
+- `/sessions` includes durable event-only sessions as `replay` entries.
+- `/resume <id>` resumes full saved sessions when session JSON exists.
+- `/resume <id>` opens event-only sessions as read-only replay with user turns, tool summaries, and completion status when only JSONL runtime events exist.
+- Event-only replay is intentionally not loaded into model context; users can copy the useful replay summary into a new prompt when they want to continue.
 
 Future SDK / app-server:
 
@@ -156,7 +161,7 @@ The first slice mostly routes tool events to timeline/job/sdk, diffs to diff/tim
 2. Attach protocol envelopes to every runtime event.
 3. Append protocol events to a durable JSONL event store.
 4. Make recent sessions replay from persisted protocol events. Event-only sessions are now visible as replay-only entries; full LLM context resume still requires the saved session JSON.
-5. Make CLI/TUI and Electron consume the same protocol stream.
+5. Make CLI/TUI replay event-only sessions from the same persisted protocol stream.
 6. Expose protocol streaming through a future local app-server and SDK.
 
 ## Guardrails

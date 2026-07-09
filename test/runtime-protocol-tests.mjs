@@ -2,6 +2,9 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { createRuntime } from "../dist/runtime.js";
+import { handleCommand } from "../dist/commands.js";
+import { newSession } from "../dist/context.js";
+import { newPermissionState } from "../dist/permissions.js";
 import {
   createRuntimeProtocolEvent,
   isRuntimeProtocolEvent,
@@ -137,6 +140,66 @@ check(
   "event-only runtime session explains replay-only recovery",
   replayMessages.some((message) => message.role === "assistant" && message.text.includes("事件回放")),
   JSON.stringify(replayMessages),
+);
+const priorLastSequence = replay.lastSequence;
+const resumedRuntime = createRuntime({
+  cfg,
+  cwd: tmp,
+  mode: "default",
+  systemPrompt: "test",
+  restored: {
+    id: runtime.sessionId,
+    cwd: tmp,
+    model: "mock",
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    firstPrompt: "resume sequence",
+    totalPromptTokens: 0,
+    totalCompletionTokens: 0,
+    messages: [],
+  },
+  ask: async () => "n",
+});
+await resumedRuntime.handleInput("!touch resumed-should-not-run.txt");
+const resumedEvents = readRuntimeProtocolEvents(runtime.sessionId);
+const resumedSequences = resumedEvents.map((event) => event.sequence);
+check(
+  "resumed runtime appends protocol events after prior sequence",
+  resumedSequences.length > protocolEvents.length &&
+    new Set(resumedSequences).size === resumedSequences.length &&
+    resumedSequences.at(-1) > priorLastSequence,
+  JSON.stringify(resumedSequences),
+);
+check("resumed runtime did not execute denied command", !fs.existsSync(path.join(tmp, "resumed-should-not-run.txt")));
+let replayOutput = "";
+const originalLog = console.log;
+console.log = (...args) => {
+  replayOutput += `${args.join(" ")}\n`;
+};
+try {
+  await handleCommand(`/resume ${runtime.sessionId}`, {
+    cfg,
+    session: newSession("test"),
+    perms: newPermissionState("default"),
+    systemPrompt: "test",
+    cwd: tmp,
+    execEnv: {
+      cfg,
+      ctx: { cwd: tmp, sandbox: false },
+      perms: newPermissionState("default"),
+      ask: async () => "n",
+      depth: 0,
+    },
+    sessionId: "cli-current",
+    undo: () => "nothing",
+  });
+} finally {
+  console.log = originalLog;
+}
+check(
+  "CLI slash resume opens event-only sessions as read-only replay",
+  replayOutput.includes("event-only") && replayOutput.includes("read-only replay") && replayOutput.includes("touch should-not-run.txt"),
+  replayOutput,
 );
 let invalidPathRejected = false;
 try {

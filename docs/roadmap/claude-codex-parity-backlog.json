@@ -173,6 +173,9 @@
         "event store",
         "session replay",
         "recent conversation restore",
+        "CLI/TUI replay-only session listing",
+        "CLI/TUI read-only replay resume",
+        "runtime protocol sequence continuation after resume",
         "crash recovery tests"
       ]
     },
