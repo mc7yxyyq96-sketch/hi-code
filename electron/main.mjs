@@ -14,7 +14,7 @@ import { loadConfig, defaultProfile, HICODE_DIR } from "../dist/config.js";
 import { createRuntime, buildSystemPrompt } from "../dist/runtime.js";
 import { setSpinnerEnabled } from "../dist/ui.js";
 import { initMcp } from "../dist/mcp.js";
-import { listSessions, deleteSession, loadSession } from "../dist/session-store.js";
+import { listSessions, deleteSession, loadSession, replaySessionMessages } from "../dist/session-store.js";
 import { DiffService } from "../dist/diff-service.js";
 import { readRecoverableTasksFromLogs } from "../dist/recovery.js";
 import { RuntimeJobQueue } from "../dist/job-queue.js";
@@ -2558,6 +2558,7 @@ function createMainServices() {
       listSessions,
       deleteSession,
       loadSession,
+      replaySessionMessages,
       getRuntime: () => runtime,
       configPath: CONFIG_PATH,
       loadConfig,

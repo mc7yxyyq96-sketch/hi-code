@@ -115,9 +115,17 @@ export function createRuntime(opts: RuntimeOpts): Runtime {
 
   const emitRuntimeEvent = (event: RuntimeEventDraft): string | void => {
     const turnId = event.turnId ?? currentTurnId;
+    const protocolPayload = {
+      ...(event.payload || {}),
+      runtimeContext: {
+        cwd,
+        model: defaultProfile(cfg).model,
+      },
+    };
     const runtimeProtocol = createRuntimeProtocolEvent(
       {
         ...event,
+        payload: protocolPayload,
         sessionId,
         turnId,
       },

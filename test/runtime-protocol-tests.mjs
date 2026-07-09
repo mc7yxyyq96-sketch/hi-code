@@ -14,6 +14,10 @@ import {
   replayRuntimeProtocolEvents,
   runtimeProtocolEventPath,
 } from "../dist/runtime-event-store.js";
+import {
+  listSessions,
+  replaySessionMessages,
+} from "../dist/session-store.js";
 
 let pass = 0;
 let fail = 0;
@@ -120,6 +124,19 @@ check("runtime replay keeps event order", replay.firstSequence === 1 && replay.l
 check(
   "runtime store reads valid protocol events",
   readRuntimeProtocolEvents(runtime.sessionId).every((event) => validateRuntimeProtocolEvent(event).ok),
+);
+const eventOnlySession = listSessions(tmp).find((session) => session.id === runtime.sessionId);
+check("event-only runtime session appears in recent sessions", eventOnlySession?.replayOnly === true && eventOnlySession?.eventCount === protocolEvents.length, JSON.stringify(eventOnlySession));
+const replayMessages = replaySessionMessages(runtime.sessionId);
+check(
+  "event-only runtime session replays user input",
+  replayMessages.some((message) => message.role === "user" && message.text.includes("touch should-not-run.txt")),
+  JSON.stringify(replayMessages),
+);
+check(
+  "event-only runtime session explains replay-only recovery",
+  replayMessages.some((message) => message.role === "assistant" && message.text.includes("事件回放")),
+  JSON.stringify(replayMessages),
 );
 let invalidPathRejected = false;
 try {

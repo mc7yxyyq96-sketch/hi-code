@@ -3002,8 +3002,8 @@ function renderSessions(filter) {
     el.className = `sess${s.id === currentSessionId ? " active" : ""}${running ? " sess-running" : ""}${transient ? " sess-transient" : ""}`;
     el.innerHTML = `<button class="sess-main" title="打开会话"><span class="t"></span><span class="s"><span class="sess-time"></span><span class="sess-count"></span></span></button><button class="sess-del" title="删除">×</button>`;
     el.querySelector(".t").textContent = (running ? "● " : "") + (s.firstPrompt || "(空会话)");
-    el.querySelector(".sess-time").textContent = running ? "进行中" : transient ? "未保存" : formatSessionAge(s.updatedAt);
-    el.querySelector(".sess-count").textContent = `${s.messageCount || 0} 条`;
+    el.querySelector(".sess-time").textContent = running ? "进行中" : transient ? "未保存" : s.replayOnly ? "回放" : formatSessionAge(s.updatedAt);
+    el.querySelector(".sess-count").textContent = s.replayOnly ? `${s.eventCount || s.messageCount || 0} 事件` : `${s.messageCount || 0} 条`;
     el.querySelector(".sess-main").onclick = () => openSession(s.id);
     if (transient) {
       const del = el.querySelector(".sess-del");
@@ -3020,6 +3020,10 @@ function renderSessions(filter) {
     };
     sessionsEl.appendChild(el);
   }
+}
+
+function sessionMetaById(id) {
+  return allSessions.find((session) => session.id === id) || (liveSessionSnapshot?.id === id ? liveSessionSnapshot : null);
 }
 
 function renderChatFromMessages(msgs) {
@@ -3059,6 +3063,7 @@ function restoreLiveSessionSnapshot() {
 /** Open a saved session: restore it silently and render its history (no /resume echo). */
 async function openSession(id) {
   if (!id) return;
+  const meta = sessionMetaById(id);
   if (id === currentSessionId) {
     if (liveSessionSnapshot?.id === id) restoreLiveSessionSnapshot();
     if (!chatHasMessages()) {
@@ -3075,6 +3080,16 @@ async function openSession(id) {
     showChat();
     renderSessions(searchInput.value.trim());
     scrollDown();
+    return;
+  }
+
+  if (meta?.replayOnly) {
+    const msgs = await api.readSession(id).catch(() => []);
+    currentSessionId = id;
+    runningSessionId = null;
+    liveSessionSnapshot = null;
+    renderSessions(searchInput.value.trim());
+    renderChatFromMessages(msgs);
     return;
   }
 

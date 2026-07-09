@@ -19,6 +19,7 @@ Runtime integration:
 - `src/runtime.ts` calls `createRuntimeProtocolEvent(...)` for every emitted runtime event.
 - The generated envelope is attached as `event.payload.runtimeProtocol`.
 - `src/runtime-event-store.ts` appends validated protocol events to `~/.hicode/runtime-events/<sessionId>.jsonl` for replay and crash recovery.
+- `src/session-store.ts` merges event-only sessions into Recent as replay-only entries when the full chat session JSON is missing.
 - Existing renderer and Electron event consumers can continue to use the legacy event fields while new code migrates to the protocol envelope.
 
 Tests:
@@ -154,7 +155,7 @@ The first slice mostly routes tool events to timeline/job/sdk, diffs to diff/tim
 1. Keep legacy runtime event fields intact.
 2. Attach protocol envelopes to every runtime event.
 3. Append protocol events to a durable JSONL event store.
-4. Make recent sessions replay from persisted protocol events.
+4. Make recent sessions replay from persisted protocol events. Event-only sessions are now visible as replay-only entries; full LLM context resume still requires the saved session JSON.
 5. Make CLI/TUI and Electron consume the same protocol stream.
 6. Expose protocol streaming through a future local app-server and SDK.
 

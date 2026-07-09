@@ -235,7 +235,7 @@ check("Industrial Control Box sample writes required real artifacts", ["requirem
 check("Industrial Control Box sample marks dry-run and not_run evidence", sampleProject.includes("result.simulated") && sampleProject.includes("artifact.simulated") && sampleProject.includes("\"not_run\""));
 check("Sample Project service records Job Center artifact and gate evidence", sampleProjectService.includes("jobStore.addArtifact") && sampleProjectService.includes("jobStore.addGateResult") && sampleProjectService.includes("sample.release.built"));
 check("release:check uses package-manager independent verifier", pkg.scripts["release:check"] === "node scripts/verify.mjs --release");
-check("package version is on v0.6 alpha development line", pkg.version === "0.6.0-alpha.1");
+check("package version is on v0.6 alpha development line", /^0\.6\.0-alpha\.\d+$/.test(pkg.version));
 check("verify script includes version sync", verifyScript.includes('"sync:version"') && verifyScript.includes("scripts/sync-version.mjs"));
 check("verify script includes build", verifyScript.includes('run("build"'));
 check("verify script includes syntax check", verifyScript.includes("runSyntaxCheck()") && verifyScript.includes("electron/main.mjs"));

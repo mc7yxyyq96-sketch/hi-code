@@ -31,6 +31,7 @@ export function createWorkspaceService({
   listSessions,
   deleteSession,
   loadSession,
+  replaySessionMessages = () => [],
   getRuntime,
   configPath,
   loadConfig,
@@ -130,7 +131,9 @@ export function createWorkspaceService({
     resumeSession(id) {
       try {
         const runtime = getRuntime();
-        return runtime ? runtime.resume(ipcString(id)) : [];
+        const sessionId = ipcString(id);
+        const messages = runtime ? runtime.resume(sessionId) : [];
+        return messages?.length ? messages : replaySessionMessages(sessionId);
       } catch {
         return [];
       }
@@ -168,7 +171,9 @@ export function createWorkspaceService({
 
     readSession(id) {
       try {
-        return formatSessionMessages(loadSession(ipcString(id)));
+        const sessionId = ipcString(id);
+        const messages = formatSessionMessages(loadSession(sessionId));
+        return messages.length ? messages : replaySessionMessages(sessionId);
       } catch {
         return [];
       }

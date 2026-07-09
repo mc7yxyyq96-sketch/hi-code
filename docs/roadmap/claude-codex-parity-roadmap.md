@@ -97,6 +97,7 @@ Current first slice:
 - `src/runtime-protocol.ts` defines the versioned runtime event envelope.
 - `src/runtime.ts` attaches `payload.runtimeProtocol` to existing runtime events without breaking current UI consumers.
 - `src/runtime-event-store.ts` persists protocol events as append-only JSONL for replay and recovery.
+- Recent sessions now surface event-only sessions as replay-only recovery entries when the full chat JSON is unavailable.
 - `test/runtime-protocol-tests.mjs` verifies schema helpers and real runtime event emission.
 
 Build:
