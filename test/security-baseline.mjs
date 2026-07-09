@@ -47,6 +47,7 @@ const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"))
 const verifyScript = fs.readFileSync(path.join(root, "scripts", "verify.mjs"), "utf8");
 const commands = fs.readFileSync(path.join(root, "src", "commands.ts"), "utf8");
 const runtime = fs.readFileSync(path.join(root, "src", "runtime.ts"), "utf8");
+const runtimeProtocol = fs.readFileSync(path.join(root, "src", "runtime-protocol.ts"), "utf8");
 const llm = fs.readFileSync(path.join(root, "src", "llm.ts"), "utf8");
 const workspaceService = fs.readFileSync(path.join(root, "electron", "services", "workspace-service.mjs"), "utf8");
 
@@ -59,6 +60,7 @@ check("CSP blocks remote script by default", /script-src 'self'/.test(html));
 check("desktop runtime disables slash-command process exit", main.includes("allowProcessExit: false") && runtime.includes("allowProcessExit: opts.allowProcessExit !== false") && commands.includes("env.allowProcessExit === false"));
 check("native app launcher only intercepts known app aliases", nativeOpenService.includes("if (!alias) return null") && !nativeOpenService.includes("alias || rawName"));
 check("desktop bridge filters terminal tool chrome from chat output", main.includes("filterRuntimeOutput") && main.includes("shouldForwardRuntimeOutput") && main.includes("/^⏺\\s/") && main.includes("/^[┌│└]/") && main.includes("/^members:/i"));
+check("runtime emits versioned protocol envelopes", runtime.includes("createRuntimeProtocolEvent") && runtime.includes("runtimeProtocol") && runtimeProtocol.includes("RUNTIME_PROTOCOL_VERSION = 1") && runtimeProtocol.includes("validateRuntimeProtocolEvent"));
 check("preload does not expose ipcRenderer", !/ipcRenderer[,}]/.test(preload) && !/ipcRenderer:\s*ipcRenderer/.test(preload));
 check("preload does not expose generic invoke", !/invoke:\s*\(/.test(preload));
 check("preload validates string parameters", preload.includes("requireString(") && preload.includes("checkedInvoke("));
@@ -232,6 +234,7 @@ check("release:check uses package-manager independent verifier", pkg.scripts["re
 check("verify script includes build", verifyScript.includes('run("build"'));
 check("verify script includes syntax check", verifyScript.includes("runSyntaxCheck()") && verifyScript.includes("electron/main.mjs"));
 check("verify script includes feature tests", verifyScript.includes('"test:feature"') && verifyScript.includes("test/feature-tests.mjs"));
+check("verify script includes runtime protocol tests", verifyScript.includes('"test:runtime-protocol"') && verifyScript.includes("test/runtime-protocol-tests.mjs"));
 check("verify script includes service tests", verifyScript.includes('"test:services"'));
 check("verify script includes job center tests", verifyScript.includes('"test:jobs"'));
 check("verify script includes provider tests", verifyScript.includes('"test:providers"'));

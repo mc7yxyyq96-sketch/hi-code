@@ -154,6 +154,7 @@
       "release": "v0.6",
       "title": "Define Hi Code runtime protocol and event schema",
       "priority": "P0",
+      "status": "completed",
       "deliverables": [
         "core TypeScript schema",
         "Electron IPC mapping",
@@ -167,6 +168,7 @@
       "release": "v0.6",
       "title": "Append-only turn/event persistence and replay",
       "priority": "P0",
+      "status": "planned",
       "deliverables": [
         "event store",
         "session replay",
@@ -179,6 +181,7 @@
       "release": "v0.7",
       "title": "hicode.plugin.json v2 clean-room plugin manifest",
       "priority": "P1",
+      "status": "planned",
       "deliverables": [
         "manifest schema",
         "validator",

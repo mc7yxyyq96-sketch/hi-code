@@ -1,0 +1,114 @@
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { createRuntime } from "../dist/runtime.js";
+import {
+  createRuntimeProtocolEvent,
+  isRuntimeProtocolEvent,
+  protocolKindFromLegacy,
+  validateRuntimeProtocolEvent,
+} from "../dist/runtime-protocol.js";
+
+let pass = 0;
+let fail = 0;
+
+function check(name, cond, detail = "") {
+  if (cond) {
+    console.log(`  ✓ ${name}`);
+    pass++;
+  } else {
+    console.log(`  ✗ ${name}  ${detail}`);
+    fail++;
+  }
+}
+
+console.log("\n[runtime-protocol] schema helpers");
+
+const envelope = createRuntimeProtocolEvent(
+  {
+    type: "turn:start",
+    title: "Agent turn",
+    status: "running",
+    sessionId: "session-a",
+    turnId: "session-a-turn-1",
+    payload: { retryInput: "run tests" },
+  },
+  { sequence: 1, createdAt: 100 },
+);
+
+check("protocol event validates", validateRuntimeProtocolEvent(envelope).ok, JSON.stringify(envelope));
+check("protocol event keeps stable version", envelope.schemaVersion === 1);
+check("turn start maps to turn.started", envelope.kind === "turn.started", JSON.stringify(envelope));
+check("validation rejects malformed event", validateRuntimeProtocolEvent({ ...envelope, sequence: 0 }).ok === false);
+check("kind mapper distinguishes failed turns", protocolKindFromLegacy("turn:done", "error") === "turn.failed");
+check("type guard accepts valid protocol event", isRuntimeProtocolEvent(envelope));
+
+console.log("\n[runtime-protocol] runtime integration");
+
+const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "hicode-runtime-protocol-"));
+const cfg = {
+  profiles: {
+    default: {
+      name: "default",
+      baseURL: "http://127.0.0.1:9",
+      apiKey: "x",
+      model: "mock",
+      contextWindow: 8192,
+      temperature: 0,
+    },
+  },
+  defaultProfile: "default",
+  roleModels: {},
+  councilMembers: [],
+  councilSynthesizer: "default",
+  compactThreshold: 0.75,
+  sandbox: false,
+  mcpServers: {},
+};
+const events = [];
+const runtime = createRuntime({
+  cfg,
+  cwd: tmp,
+  mode: "default",
+  systemPrompt: "test",
+  ask: async () => "n",
+  emitEvent: (event) => {
+    events.push(event);
+    return `event-${events.length}`;
+  },
+});
+
+await runtime.handleInput("!touch should-not-run.txt");
+
+const protocolEvents = events.map((event) => event.payload?.runtimeProtocol).filter(Boolean);
+
+check("runtime emits protocol envelope on every event", protocolEvents.length === events.length, JSON.stringify(events));
+check(
+  "runtime protocol sequence is monotonic",
+  protocolEvents.every((event, index) => event.sequence === index + 1),
+  JSON.stringify(protocolEvents),
+);
+check(
+  "runtime protocol carries active session id",
+  protocolEvents.every((event) => event.sessionId === runtime.sessionId),
+  JSON.stringify(protocolEvents),
+);
+check(
+  "runtime protocol validates emitted events",
+  protocolEvents.every((event) => validateRuntimeProtocolEvent(event).ok),
+  JSON.stringify(protocolEvents),
+);
+check(
+  "permission request maps to approval kind",
+  protocolEvents.some((event) => event.kind === "approval.requested" && event.status === "waiting"),
+  JSON.stringify(protocolEvents),
+);
+check(
+  "denied turn maps to turn.denied",
+  protocolEvents.some((event) => event.kind === "turn.denied" && event.status === "denied"),
+  JSON.stringify(protocolEvents),
+);
+check("runtime did not execute denied command", !fs.existsSync(path.join(tmp, "should-not-run.txt")));
+
+console.log(`\n=== ${pass} passed, ${fail} failed ===`);
+process.exit(fail ? 1 : 0);

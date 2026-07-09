@@ -14,6 +14,7 @@ import { saveSession, loadSession, newSessionId, type StoredSession } from "./se
 import { shutdownMcp } from "./mcp.js";
 import { gitInfo } from "./git.js";
 import type { RuntimeEventDraft, ToolEventStatus } from "./events.js";
+import { createRuntimeProtocolEvent } from "./runtime-protocol.js";
 
 /** System prompt for the agent, including project notes and git status. */
 export function buildSystemPrompt(cwd: string, model?: string, reasoningLevel: VibeConfig["reasoningLevel"] = "medium"): string {
@@ -107,14 +108,29 @@ export function createRuntime(opts: RuntimeOpts): Runtime {
   const undoStack: Change[][] = [];
   let turnChanges: Change[] = [];
   let turnSeq = 0;
+  let protocolSequence = 0;
   let currentTurnId = `${sessionId}-turn-0`;
 
-  const emitRuntimeEvent = (event: RuntimeEventDraft): string | void =>
-    opts.emitEvent?.({
+  const emitRuntimeEvent = (event: RuntimeEventDraft): string | void => {
+    const turnId = event.turnId ?? currentTurnId;
+    const runtimeProtocol = createRuntimeProtocolEvent(
+      {
+        ...event,
+        sessionId,
+        turnId,
+      },
+      { sequence: ++protocolSequence },
+    );
+    return opts.emitEvent?.({
       ...event,
+      payload: {
+        ...(event.payload || {}),
+        runtimeProtocol,
+      },
       sessionId,
-      turnId: event.turnId ?? currentTurnId,
+      turnId,
     });
+  };
 
   const execEnv: ExecEnv = {
     cfg,
@@ -401,6 +417,7 @@ export function createRuntime(opts: RuntimeOpts): Runtime {
       session.totalCompletionTokens = 0;
       sessionId = newSessionId();
       turnSeq = 0;
+      protocolSequence = 0;
       currentTurnId = `${sessionId}-turn-0`;
       execEnv.sessionId = sessionId;
       execEnv.turnId = currentTurnId;
@@ -414,6 +431,7 @@ export function createRuntime(opts: RuntimeOpts): Runtime {
       session.totalPromptTokens = stored.totalPromptTokens;
       session.totalCompletionTokens = stored.totalCompletionTokens;
       sessionId = id; // continue saving into the resumed session
+      protocolSequence = 0;
       execEnv.sessionId = sessionId;
       cmdEnv.sessionId = sessionId;
       return stored.messages

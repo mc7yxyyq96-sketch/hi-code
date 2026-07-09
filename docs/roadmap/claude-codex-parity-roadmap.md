@@ -92,6 +92,12 @@ Exit criteria:
 
 Goal: make the coding-agent core feel reliable at Codex/Claude level.
 
+Current first slice:
+
+- `src/runtime-protocol.ts` defines the versioned runtime event envelope.
+- `src/runtime.ts` attaches `payload.runtimeProtocol` to existing runtime events without breaking current UI consumers.
+- `test/runtime-protocol-tests.mjs` verifies schema helpers and real runtime event emission.
+
 Build:
 
 - Runtime protocol boundary: `core-api`, `runtime-protocol`, `event-stream`, `turn-store`.
@@ -224,4 +230,3 @@ Required checks for product code:
 5. Draft `hicode.plugin.json` v2 and hook engine design.
 6. Draft SDK/app-server protocol.
 7. Expand CI/release evidence and packaging.
-
