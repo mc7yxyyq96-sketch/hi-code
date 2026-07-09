@@ -20,8 +20,14 @@ pnpm-debug.log*
 .env.*
 !.env.example
 
-# internal working material — not part of the open-source release
-legacy/
+# internal working material — not part of the open-source release.
+# Keep the v0.4 entrypoint archive tracked so CI can prove the old root
+# entrypoints were moved out of production without reintroducing them.
+legacy/*
+!legacy/v0.4/
+!legacy/v0.4/main.mjs
+!legacy/v0.4/renderer.js
+!legacy/v0.4/index.html
 reports/
 work/
 

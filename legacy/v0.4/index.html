@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self';" />
+    <title>Hi Code</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23fffaf1'/%3E%3Cpath d='M32 9l6.2 16.8L56 32l-17.8 6.2L32 55l-6.2-16.8L8 32l17.8-6.2z' fill='%2315130f'/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div id="auth" class="auth-screen">
+      <div class="auth-shell">
+        <div class="auth-card">
+          <div class="auth-brand"><span class="logo"></span> Hi Code</div>
+          <h1 id="authTitle">登录</h1>
+          <div class="auth-tabs">
+            <button id="loginTab" class="active">登录</button>
+            <button id="registerTab">注册</button>
+          </div>
+          <form id="authForm" class="auth-form">
+            <label id="nameField" class="hidden">
+              <span>昵称</span>
+              <input id="authName" autocomplete="name" />
+            </label>
+            <label>
+              <span>邮箱</span>
+              <input id="authEmail" type="email" autocomplete="email" placeholder="you@example.com" />
+            </label>
+            <label>
+              <span>密码</span>
+              <input id="authPassword" type="password" autocomplete="current-password" />
+            </label>
+            <button id="authSubmit" class="primary" type="submit">登录</button>
+            <div id="authStatus" class="auth-status"></div>
+          </form>
+        </div>
+        <div class="auth-preview">
+          <div class="preview-top"><span class="logo"></span><span>Hi Code Workspace</span></div>
+          <div class="preview-line wide"></div>
+          <div class="preview-line"></div>
+          <div class="preview-grid">
+            <div>Chat</div><div>Plugins</div><div>Skills</div><div>MCP</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="app" class="hidden">
+      <aside id="sidebar">
+        <div class="side-drag"></div>
+        <div class="brand"><span class="logo"></span> Hi Code</div>
+
+        <nav class="side-nav">
+          <button class="nav-row active" id="chatNav"><span class="i-chat"></span> 对话</button>
+          <button class="nav-row" id="newChat"><span class="i-edit"></span> 新对话</button>
+          <button class="nav-row" id="searchToggle"><span class="i-search"></span> 搜索</button>
+          <button class="nav-row" id="filesBtn"><span class="i-folder"></span> 文件</button>
+          <button class="nav-row" id="jobsBtn"><span class="i-stack"></span> 任务</button>
+          <button class="nav-row" id="arenaBtn"><span class="i-stack"></span> Arena</button>
+          <button class="nav-row" id="industrialBtn"><span class="i-folder"></span> 工业项目</button>
+          <button class="nav-row" id="gitBtn"><span class="i-git"></span> Git</button>
+          <button class="nav-row" id="storeBtn"><span class="i-store"></span> 商店</button>
+          <button class="nav-row" id="pluginsBtn"><span class="i-plug"></span> 插件</button>
+          <button class="nav-row" id="skillsBtn"><span class="i-spark"></span> Skill</button>
+          <button class="nav-row" id="mcpBtn"><span class="i-network"></span> MCP</button>
+          <button class="nav-row" id="cmdBtn"><span class="i-command"></span> 命令</button>
+        </nav>
+
+        <div class="search-wrap hidden" id="searchWrap"><span class="i-search"></span><input id="search" placeholder="搜索会话" /></div>
+
+        <div class="section-label">项目</div>
+        <button class="proj-row" id="projRow"><span class="i-folder"></span> <span id="projName">~</span><span class="i-chev"></span></button>
+
+        <div class="section-label">最近</div>
+        <div id="sessions" class="side-list"></div>
+
+        <div class="side-foot">
+          <div class="account user-account">
+            <span class="ava"><span id="userInitial">H</span></span>
+            <div class="acc-info"><div class="acc-name" id="userName">Hi Code</div><div class="acc-sub" id="userEmail">本地账号</div></div>
+            <button id="logoutBtn" class="icon-btn" title="退出登录">×</button>
+          </div>
+          <div class="account model-account">
+            <span class="ava"><span class="logo"></span></span>
+            <div class="acc-info"><div class="acc-name">模型 API</div><div class="acc-sub" id="modelNameSide">…</div></div>
+            <button id="settingsBtn" class="icon-btn" title="设置"><span class="i-settings"></span></button>
+          </div>
+        </div>
+      </aside>
+
+      <main id="main" class="home">
+        <header id="workspacebar">
+          <div class="crumb"><span>Hi Code</span><span class="sep">/</span><span id="currentProject">~</span></div>
+          <div class="workspace-actions">
+            <button id="diffBtn" class="top-btn"><span class="i-stack"></span> 改动</button>
+            <button id="jobsTopBtn" class="top-btn"><span class="i-stack"></span> 任务</button>
+            <button id="arenaTopBtn" class="top-btn"><span class="i-stack"></span> Arena</button>
+            <button id="industrialTopBtn" class="top-btn"><span class="i-folder"></span> 工业项目</button>
+            <button id="modelsBtn" class="top-btn"><span class="i-cpu"></span> 接入 API</button>
+          </div>
+        </header>
+
+        <section id="home">
+          <div class="hero-mark"><span class="logo big"></span></div>
+          <h1 id="greeting">你好</h1>
+          <p id="subtitle">在当前项目里规划、编辑、运行与审查。</p>
+          <div id="homeSlot"></div>
+          <div id="cards">
+            <button class="qcard connect" id="connectApiCard"><span class="qi i-key"></span><span class="qt">接入云端模型</span><span class="qd">选服务商、粘贴 Key、保存即用</span></button>
+            <button class="qcard" data-cmd="team"><span class="qi i-users"></span><span class="qt">AI 团队</span><span class="qd">架构师→程序员→审查员协作完成目标</span></button>
+            <button class="qcard" data-cmd="build"><span class="qi i-stack"></span><span class="qt">并行构建</span><span class="qd">经理拆解任务图,多智能体并行执行</span></button>
+            <button class="qcard" data-cmd="debate"><span class="qi i-chat"></span><span class="qt">模型辩论</span><span class="qd">模型带工具多轮辩论,最后给出裁决</span></button>
+          </div>
+        </section>
+
+        <section id="chatview" class="hidden">
+          <div class="workbench-grid">
+            <aside id="timelinePanel" class="timeline-panel">
+              <div class="panel-head">
+                <div>
+                  <div class="panel-title">Timeline</div>
+                  <div class="panel-sub">工具调用</div>
+                </div>
+              </div>
+              <div id="recoveryPanel" class="recovery-panel hidden">
+                <div class="recovery-head">
+                  <span>可恢复任务</span>
+                  <button id="recoveryRefresh" class="timeline-action" title="重新读取失败任务">刷新</button>
+                </div>
+                <div id="recoveryList" class="recovery-list"></div>
+              </div>
+              <div id="timelineList" class="timeline-list"></div>
+            </aside>
+
+            <div class="chat-column">
+              <div id="chat"></div>
+              <div id="ask" class="ask hidden">
+                <div class="ask-q" id="ask-q"></div>
+                <div class="ask-buttons">
+                  <button data-v="y" class="btn allow">允许</button>
+                  <button data-v="a" class="btn always">总是允许</button>
+                  <button data-v="n" class="btn deny">拒绝</button>
+                </div>
+              </div>
+              <div id="runStatus" class="run-status hidden">
+                <div class="run-status-main">
+                  <span id="runStatusDot" class="run-status-dot"></span>
+                  <span id="runStatusText" class="run-status-text">准备中</span>
+                  <span id="runStatusMeta" class="run-status-meta"></span>
+                </div>
+                <div id="runStatusDetail" class="run-status-detail"></div>
+                <div class="run-progress"><span></span></div>
+              </div>
+              <div id="chatSlot"></div>
+            </div>
+
+            <aside id="diffPanel" class="diff-panel">
+              <div class="panel-head">
+                <div>
+                  <div class="panel-title">Changes</div>
+                  <div class="panel-sub" id="diffSummary">0 pending</div>
+                </div>
+                <div class="panel-actions diff-head-actions">
+                  <button id="diffHistory" class="mini-btn">History</button>
+                  <button id="diffClear" class="mini-btn">Clear</button>
+                </div>
+              </div>
+              <div id="diffList" class="diff-list"></div>
+              <pre id="diffView" class="diff-view">还没有文件改动。</pre>
+              <div class="diff-actions">
+                <button id="diffAccept" class="primary">Accept</button>
+                <button id="diffReject" class="ghost">Reject</button>
+                <button id="diffAcceptAll" class="ghost">Accept all</button>
+                <button id="diffRejectAll" class="ghost">Reject all</button>
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        <section id="capabilityView" class="hidden">
+          <div class="cap-shell">
+            <div class="cap-head">
+              <div>
+                <h2 id="capTitle">插件</h2>
+                <p id="capSubtitle">管理 Hi Code 的扩展能力。</p>
+              </div>
+              <div id="capActions" class="cap-actions"></div>
+            </div>
+            <div id="capSummary" class="cap-summary"></div>
+            <div id="capList" class="cap-list"></div>
+          </div>
+        </section>
+
+        <section id="commandView" class="hidden">
+          <div class="command-shell">
+            <div class="command-head">
+              <div>
+                <h2>命令</h2>
+                <p>搜索、填入或直接执行 Hi Code 的 slash 命令。</p>
+              </div>
+              <button id="commandFocusInput" class="ghost">输入命令</button>
+            </div>
+            <div class="command-toolbar">
+              <input id="commandSearch" spellcheck="false" placeholder="搜索命令，例如 mcp、diff、team" />
+              <button id="commandRunInput" class="primary">运行当前输入</button>
+            </div>
+            <div id="commandSummary" class="job-summary"></div>
+            <div id="commandList" class="command-list"></div>
+            <section class="command-composer-panel">
+              <div class="command-panel-title">命令输入</div>
+              <div id="commandComposerSlot"></div>
+            </section>
+          </div>
+        </section>
+
+        <section id="gitView" class="hidden">
+          <div class="git-shell">
+            <div class="git-head">
+              <div>
+                <h2>Git</h2>
+                <p id="gitSub">查看改动、stage 文件并提交。</p>
+              </div>
+              <div class="git-head-actions">
+                <button id="gitRefresh" class="ghost">刷新</button>
+                <button id="gitStageAll" class="primary">Stage all</button>
+                <button id="gitUnstageAll" class="ghost">Unstage all</button>
+              </div>
+            </div>
+
+            <div class="git-stats">
+              <div><strong id="gitBranch">-</strong><span>Branch</span></div>
+              <div><strong id="gitDirty">0</strong><span>Changed</span></div>
+              <div><strong id="gitStaged">0</strong><span>Staged</span></div>
+              <div><strong id="gitUnstaged">0</strong><span>Unstaged</span></div>
+            </div>
+
+            <div class="git-grid">
+              <aside class="git-files-panel">
+                <div class="git-panel-title">Files</div>
+                <div id="gitFiles" class="git-files"></div>
+              </aside>
+              <section class="git-diff-panel">
+                <div class="git-panel-title">
+                  <span id="gitSelected">Diff</span>
+                  <span class="git-mode">
+                    <button id="gitWorktreeMode" class="mini-btn active">Worktree</button>
+                    <button id="gitStagedMode" class="mini-btn">Staged</button>
+                  </span>
+                </div>
+                <pre id="gitDiffView" class="git-diff-view">选择一个文件查看 diff。</pre>
+              </section>
+              <aside class="git-commit-panel">
+                <div class="git-panel-title">Commit</div>
+                <textarea id="gitCommitMessage" spellcheck="false" placeholder="Commit message"></textarea>
+                <div id="gitCommitStatus" class="git-commit-status"></div>
+                <button id="gitGenerateMessage" class="ghost">生成 message</button>
+                <button id="gitCommitBtn" class="primary">Commit staged</button>
+              </aside>
+            </div>
+          </div>
+        </section>
+
+        <section id="jobView" class="hidden">
+          <div class="job-shell">
+            <div class="job-head">
+              <div>
+                <h2>Job Center</h2>
+                <p>追踪 Runtime Queue、工程任务、事件、产物和质量门禁。</p>
+              </div>
+              <div class="job-head-actions">
+                <span id="jobStatusText">准备就绪</span>
+                <button id="jobRefresh" class="ghost">刷新</button>
+              </div>
+            </div>
+            <div id="jobSummary" class="job-summary"></div>
+            <div class="job-grid">
+              <aside class="job-list-panel">
+                <div class="job-panel-title">Jobs</div>
+                <div id="jobList" class="job-list"></div>
+              </aside>
+              <section id="jobDetail" class="job-detail"></section>
+            </div>
+          </div>
+        </section>
+
+        <section id="arenaView" class="hidden">
+          <div class="arena-shell">
+            <div class="arena-head">
+              <div>
+                <h2>Patch Arena</h2>
+                <p>隔离生成候选 patch，检查质量门禁后再选择合并。</p>
+              </div>
+              <div class="arena-head-actions">
+                <span id="arenaStatusText">准备就绪</span>
+                <button id="arenaRefresh" class="ghost">刷新</button>
+              </div>
+            </div>
+            <div class="arena-create">
+              <textarea id="arenaTask" spellcheck="false" placeholder="描述本轮要让候选方案解决的问题"></textarea>
+              <div id="arenaProviders" class="arena-providers"></div>
+              <input id="arenaCommand" spellcheck="false" placeholder="可选：候选执行命令" />
+              <button id="arenaCreate" class="primary">Create Run</button>
+            </div>
+            <div id="arenaSummary" class="job-summary"></div>
+            <div class="arena-grid">
+              <aside class="arena-list-panel">
+                <div class="arena-panel-title">Runs</div>
+                <div id="arenaRunList" class="arena-run-list"></div>
+              </aside>
+              <aside class="arena-candidate-panel">
+                <div class="arena-panel-title">Candidates</div>
+                <div id="arenaCandidateList" class="arena-candidate-list"></div>
+              </aside>
+              <section id="arenaDetail" class="arena-detail"></section>
+            </div>
+          </div>
+        </section>
+
+        <section id="industrialView" class="hidden">
+          <div class="industrial-shell">
+            <div class="industrial-head">
+              <div>
+                <h2>Industrial Project</h2>
+                <p>统一追踪工业项目需求、交付物、质量门禁和可追溯关系。</p>
+              </div>
+              <div class="industrial-head-actions">
+                <span id="industrialStatusText">准备就绪</span>
+                <button id="industrialRefresh" class="ghost">刷新</button>
+              </div>
+            </div>
+            <section class="sample-project-panel">
+              <div class="sample-project-head">
+                <div>
+                  <div class="industrial-panel-title">Sample Project</div>
+                  <p>生成 Industrial Control Box Demo 的需求、CAD/PCB/PLC、电气、BOM、文档、Gate 和 Release 交付包。</p>
+                </div>
+                <span id="sampleProjectStatus">准备就绪</span>
+              </div>
+              <div class="sample-project-controls">
+                <label><input id="sampleProjectOverwrite" type="checkbox" /> overwrite existing sample</label>
+                <label><input id="sampleProjectRunInstalledTools" type="checkbox" /> run installed tools with approval</label>
+                <button id="sampleProjectCreateControlBox" class="primary">Create Sample Industrial Project</button>
+              </div>
+              <div id="sampleProjectDetail" class="sample-project-detail"></div>
+            </section>
+            <div class="industrial-editor">
+              <input id="industrialName" spellcheck="false" placeholder="项目名称" />
+              <input id="industrialType" spellcheck="false" placeholder="项目类型" />
+              <input id="industrialDomains" spellcheck="false" placeholder="software, mechanical, electrical, qa" />
+              <button id="industrialSave" class="primary">Save</button>
+            </div>
+            <div class="industrial-requirement-builder">
+              <section>
+                <div class="industrial-panel-title">Requirement Builder</div>
+                <textarea id="industrialRequirementText" spellcheck="false" rows="4" placeholder="输入自然语言需求，例如：PCB 控制板必须完成原理图、Layout、Gerber、BOM，并通过 ERC/DRC。"></textarea>
+                <div class="industrial-inline-controls">
+                  <select id="industrialRequirementDomain"></select>
+                  <select id="industrialRequirementPriority">
+                    <option value="">auto priority</option>
+                    <option value="low">low</option>
+                    <option value="medium">medium</option>
+                    <option value="high">high</option>
+                    <option value="critical">critical</option>
+                  </select>
+                  <button id="industrialRequirementDraft" class="ghost">Generate Draft</button>
+                  <button id="industrialRequirementAdd" class="primary">Add Requirement</button>
+                </div>
+                <input id="industrialRequirementTitle" spellcheck="false" placeholder="requirement title" />
+                <textarea id="industrialRequirementCriteria" spellcheck="false" rows="3" placeholder="acceptance criteria, one per line"></textarea>
+                <div class="industrial-inline-controls">
+                  <select id="industrialRequirementRisk">
+                    <option value="low">low risk</option>
+                    <option value="medium">medium risk</option>
+                    <option value="high">high risk</option>
+                    <option value="critical">critical risk</option>
+                  </select>
+                  <label><input id="industrialRequirementApprovalRequired" type="checkbox" /> approval required</label>
+                  <button id="industrialRequirementCriteriaSave" class="ghost">Save Criteria</button>
+                </div>
+              </section>
+              <section>
+                <div class="industrial-panel-title">Spec Builder</div>
+                <select id="industrialRequirementSelect"></select>
+                <div class="industrial-inline-controls">
+                  <button id="industrialGenerateArtifactPlan" class="ghost">Artifact Plan</button>
+                  <button id="industrialGenerateTestPlan" class="ghost">Test Plan</button>
+                  <button id="industrialGenerateSpecPackage" class="ghost">Spec Package</button>
+                  <button id="industrialApproveRequirement" class="primary">Approve</button>
+                </div>
+                <div id="industrialRequirementDraftPreview" class="industrial-draft-preview"></div>
+              </section>
+            </div>
+            <div class="industrial-actions-grid">
+              <section>
+                <div class="industrial-panel-title">Artifact</div>
+                <select id="industrialArtifactType"></select>
+                <select id="industrialArtifactDomain"></select>
+                <input id="industrialArtifactName" spellcheck="false" placeholder="artifact name" />
+                <input id="industrialArtifactPath" spellcheck="false" placeholder="artifact path" />
+                <button id="industrialAddArtifact" class="ghost">Add Artifact</button>
+              </section>
+              <section>
+                <div class="industrial-panel-title">Traceability</div>
+                <select id="industrialTraceFromType">
+                  <option value="requirement">requirement</option>
+                  <option value="design">design</option>
+                  <option value="artifact">artifact</option>
+                  <option value="test">test</option>
+                </select>
+                <input id="industrialTraceFromId" spellcheck="false" placeholder="from id" />
+                <select id="industrialTraceToType">
+                  <option value="design">design</option>
+                  <option value="artifact">artifact</option>
+                  <option value="test">test</option>
+                  <option value="release_gate">release_gate</option>
+                </select>
+                <input id="industrialTraceToId" spellcheck="false" placeholder="to id" />
+                <button id="industrialAddTrace" class="ghost">Add Trace</button>
+              </section>
+              <section>
+                <div class="industrial-panel-title">Quality Gate</div>
+                <select id="industrialGateType"></select>
+                <select id="industrialGateStatus">
+                  <option value="pending">pending</option>
+                  <option value="passed">passed</option>
+                  <option value="failed">failed</option>
+                  <option value="warning">warning</option>
+                  <option value="skipped">skipped</option>
+                </select>
+                <input id="industrialGateName" spellcheck="false" placeholder="gate name" />
+                <input id="industrialGateMessage" spellcheck="false" placeholder="message" />
+                <button id="industrialAddGate" class="ghost">Add Gate</button>
+              </section>
+            </div>
+            <div id="industrialSummary" class="job-summary"></div>
+            <section class="quality-gate-panel">
+              <div class="quality-gate-head">
+                <div>
+                  <div class="industrial-panel-title">Quality Gate Runner</div>
+                  <p>统一运行软件、工业工具、文档、安全和人工审批门禁，并保存 evidence。</p>
+                </div>
+                <div class="quality-gate-head-actions">
+                  <span id="qualityGateStatus">准备就绪</span>
+                  <button id="qualityGateRefresh" class="ghost">刷新</button>
+                </div>
+              </div>
+              <div id="qualityGateSummary" class="job-summary"></div>
+              <div class="quality-gate-layout">
+                <aside id="qualityGateList" class="quality-gate-list"></aside>
+                <section id="qualityGateDetail" class="quality-gate-detail"></section>
+              </div>
+            </section>
+            <section class="release-center-panel">
+              <div class="release-center-head">
+                <div>
+                  <div class="industrial-panel-title">Release Center</div>
+                  <p>生成可审计、可复现、可验收的产品交付包，包含 manifest、evidence、checksums 和工业 artifact。</p>
+                </div>
+                <div class="release-center-head-actions">
+                  <span id="releaseCenterStatus">准备就绪</span>
+                  <button id="releaseCenterRefresh" class="ghost">刷新</button>
+                </div>
+              </div>
+              <div class="release-center-controls">
+                <input id="releaseVersion" spellcheck="false" placeholder="version，例如 0.5.0" />
+                <input id="releaseCreatedBy" spellcheck="false" placeholder="created by" />
+                <label class="release-overwrite"><input id="releaseOverwrite" type="checkbox" /> overwrite</label>
+                <button id="releaseBuild" class="primary">Build Release Package</button>
+                <button id="releaseOpen" class="ghost">Open Release Folder</button>
+              </div>
+              <div id="releaseCenterSummary" class="job-summary"></div>
+              <div id="releaseCenterDetail" class="release-center-detail"></div>
+            </section>
+            <section class="domain-pack-panel">
+              <div class="domain-pack-head">
+                <div>
+                  <div class="industrial-panel-title">Domain Packs</div>
+                  <p>安装、启用并查看工业领域标准、模板、checklist 和质量门禁。</p>
+                </div>
+                <button id="domainPackRefresh" class="ghost">刷新</button>
+              </div>
+              <div id="domainPackSummary" class="job-summary"></div>
+              <div class="domain-pack-grid">
+                <aside id="domainPackList" class="domain-pack-list"></aside>
+                <section id="domainPackDetail" class="domain-pack-detail"></section>
+              </div>
+            </section>
+            <section class="toolchain-panel">
+              <div class="toolchain-head">
+                <div>
+                  <div class="industrial-panel-title">Toolchain Adapters</div>
+                  <p>检测本机工业工具安装状态，查看能力和 setup hint，并生成 dry-run 输出。</p>
+                </div>
+                <div class="toolchain-head-actions">
+                  <span id="toolchainStatus">准备就绪</span>
+                  <button id="toolchainRefresh" class="ghost">刷新</button>
+                </div>
+              </div>
+              <div class="toolchain-runner">
+                <input id="toolchainTask" spellcheck="false" placeholder="dry-run task，例如：生成 KiCad ERC/DRC 和 Gerber 输出计划" />
+              </div>
+              <div id="toolchainSummary" class="job-summary"></div>
+              <div class="toolchain-layout">
+                <aside id="toolchainList" class="toolchain-list"></aside>
+                <section id="toolchainDetail" class="toolchain-detail"></section>
+              </div>
+            </section>
+            <section class="agent-team-panel">
+              <div class="agent-team-head">
+                <div>
+                  <div class="industrial-panel-title">Professional Agent Team</div>
+                  <p>根据项目类型、Domain Pack 和任务目标生成专业 Agent 分工、评审链和审批点。</p>
+                </div>
+                <div class="agent-team-head-actions">
+                  <span id="agentTeamStatus">准备就绪</span>
+                  <button id="agentTeamRefresh" class="ghost">刷新</button>
+                </div>
+              </div>
+              <div class="agent-team-create">
+                <textarea id="agentTeamTask" rows="3" spellcheck="false" placeholder="输入任务，例如：为 PCB 控制板建立原理图、Layout、Gerber、BOM、ERC/DRC 和发布审查计划。"></textarea>
+                <div class="agent-team-create-actions">
+                  <button id="agentTeamCreatePlan" class="primary">Generate Plan</button>
+                  <button id="agentTeamCreateJob" class="ghost">Create Job</button>
+                </div>
+              </div>
+              <div id="agentTeamSummary" class="job-summary"></div>
+              <div class="agent-team-layout">
+                <aside>
+                  <div class="industrial-panel-title">Profiles</div>
+                  <div id="agentTeamProfiles" class="agent-profile-list"></div>
+                  <div class="industrial-panel-title">Plans</div>
+                  <div id="agentTeamPlanList" class="agent-plan-list"></div>
+                </aside>
+                <section id="agentTeamDetail" class="agent-team-detail"></section>
+              </div>
+            </section>
+            <section id="industrialDetail" class="industrial-detail"></section>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <template id="composer-tpl">
+      <div class="composer">
+        <div id="cmdmenu" class="cmdmenu hidden"></div>
+        <div id="modelPicker" class="model-picker hidden"></div>
+        <div id="queueStatus" class="queue-status hidden">
+          <span id="queueCount">待发送 0 条</span>
+          <span id="queuePreview"></span>
+          <button id="queueOpenJob" type="button" class="hidden">任务</button>
+          <button id="queueClear" type="button">清空</button>
+        </div>
+        <textarea id="input" rows="1" placeholder="随心向 Hi Code 提问…  (Enter 发送 · Shift+Enter 换行 · / 命令)"></textarea>
+        <div class="composer-bar">
+          <div class="cb-left">
+            <button id="attach" class="cb-icon" title="打开文件夹"><span class="i-plus"></span></button>
+            <button id="access" class="cb-pill" title="访问权限"><span class="dot"></span> <span id="accessLabel">需确认</span></button>
+          </div>
+          <div class="cb-right">
+            <button id="modelPill" class="cb-pill" title="模型设置"><span class="i-cpu"></span> <span id="modelName">…</span></button>
+            <button id="send" class="cb-send" title="发送"><span class="i-up"></span></button>
+            <button id="stop" class="cb-send stop hidden" title="停止"><span class="i-stop"></span></button>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <div id="settings" class="modal hidden">
+      <div class="modal-card settings-card">
+        <div class="settings-head">
+          <div>
+            <div class="modal-title" id="settingsTitle">接入模型 API</div>
+            <div class="muted" id="settingsSubtitle">默认写入 <span class="mono">~/.vibe/config.json</span></div>
+          </div>
+          <button id="cfg-cancel" class="icon-btn" title="关闭">×</button>
+        </div>
+
+        <div class="setup-steps" id="settingsSteps">
+          <span><b>1</b> 选服务商</span>
+          <span><b>2</b> 粘贴 API Key</span>
+          <span><b>3</b> 保存即用</span>
+        </div>
+
+        <div class="provider-grid" id="providerGrid">
+          <button class="provider active" data-provider="deepseek"><span>DeepSeek</span><small>官方云端</small></button>
+          <button class="provider" data-provider="kimi-cn"><span>Kimi 国内</span><small>Moonshot CN</small></button>
+          <button class="provider" data-provider="kimi"><span>Kimi 全球</span><small>Moonshot AI</small></button>
+          <button class="provider" data-provider="kimi-code"><span>Kimi Code</span><small>订阅 / Coding</small></button>
+          <button class="provider" data-provider="qwen"><span>通义千问</span><small>阿里百炼</small></button>
+          <button class="provider" data-provider="zhipu"><span>智谱 GLM</span><small>开放平台</small></button>
+          <button class="provider" data-provider="minimax"><span>MiniMax</span><small>Agentic / 长上下文</small></button>
+          <button class="provider" data-provider="siliconflow"><span>硅基流动</span><small>国内聚合</small></button>
+          <button class="provider" data-provider="gemini"><span>Gemini</span><small>Google AI</small></button>
+          <button class="provider" data-provider="openrouter"><span>OpenRouter</span><small>模型聚合</small></button>
+          <button class="provider" data-provider="openai"><span>OpenAI</span><small>官方 API</small></button>
+          <button class="provider" data-provider="ollama"><span>Ollama</span><small>本地 / 局域网</small></button>
+          <button class="provider" data-provider="custom"><span>自定义</span><small>OpenAI 兼容</small></button>
+        </div>
+
+        <form class="quick-form" id="quickModelForm">
+          <div id="providerHint" class="provider-hint"></div>
+          <label class="api-key-label">
+            <span>API Key</span>
+            <input id="quickApiKey" type="password" spellcheck="false" autocomplete="off" placeholder="sk-..." />
+          </label>
+          <label class="advanced-provider-field">
+            <span>Base URL</span>
+            <input id="quickBaseURL" spellcheck="false" autocomplete="off" />
+          </label>
+          <label class="advanced-provider-field">
+            <span>模型</span>
+            <input id="quickModel" spellcheck="false" autocomplete="off" placeholder="deepseek-chat" />
+          </label>
+          <label class="advanced-provider-field">
+            <span>上下文窗口</span>
+            <input id="quickContext" type="number" min="4096" step="1024" />
+          </label>
+        </form>
+
+        <div class="settings-actions" id="settingsActions">
+          <button id="cfg-test" class="ghost">测试连接</button>
+          <button id="advanced-toggle" class="ghost">高级 JSON</button>
+          <button id="quick-save" class="primary">保存并使用</button>
+        </div>
+        <div id="cfg-err" class="cfg-err"></div>
+
+        <div id="advanced-config" class="advanced-config hidden">
+          <textarea id="cfg" spellcheck="false"></textarea>
+          <div class="modal-foot">
+            <button id="cfg-save" class="primary">保存 JSON</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="files" class="modal hidden">
+      <div class="file-card">
+        <div class="file-head">
+          <div>
+            <div class="modal-title">项目文件</div>
+            <div class="muted" id="filePath">~</div>
+          </div>
+          <button id="file-close" class="icon-btn" title="关闭">×</button>
+        </div>
+        <div class="file-body">
+          <div id="fileList" class="file-list"></div>
+          <pre id="filePreview" class="file-preview">选择一个文件预览内容。</pre>
+        </div>
+      </div>
+    </div>
+
+    <div id="storeConfirm" class="modal hidden">
+      <div class="modal-card store-confirm-card">
+        <div class="settings-head">
+          <div>
+            <div class="modal-title" id="storeConfirmTitle">安装扩展</div>
+            <div class="muted" id="storeConfirmSub">确认安装前的权限和变更。</div>
+          </div>
+          <button id="storeConfirmClose" class="icon-btn" title="关闭">×</button>
+        </div>
+        <div class="store-confirm-body">
+          <div id="storeConfirmSummary" class="store-confirm-summary"></div>
+          <div class="store-confirm-grid">
+            <section>
+              <h3>将要变更</h3>
+              <div id="storeConfirmChanges" class="store-confirm-list"></div>
+            </section>
+            <section>
+              <h3>权限说明</h3>
+              <div id="storeConfirmPerms" class="store-confirm-list"></div>
+            </section>
+          </div>
+          <div id="storeConfirmWarnings" class="store-confirm-warnings hidden"></div>
+        </div>
+        <div class="modal-foot store-confirm-foot">
+          <button id="storeConfirmCancel" class="ghost">取消</button>
+          <button id="storeConfirmInstall" class="primary">确认安装</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="renderer.js"></script>
+  </body>
+</html>
