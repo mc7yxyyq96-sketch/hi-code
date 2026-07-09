@@ -4261,6 +4261,7 @@ async function renderAppInfoSettings() {
   dataDirPath.textContent = info.dataDir || "~/.hicode";
   configFilePath.textContent = info.configPath || "~/.hicode/config.json";
   aboutVersion.textContent = info.version ? `v${info.version}` : "";
+  aboutVersion.title = info.version ? `当前版本 v${info.version}` : "当前版本";
   aboutRuntime.textContent = `Electron ${info.electron || "?"} · Chromium ${info.chrome || "?"} · Node ${info.node || "?"}`;
   aboutPlatform.textContent = `${info.platform || "?"} · ${info.arch || "?"}`;
 }

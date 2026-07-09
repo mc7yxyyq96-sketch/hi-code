@@ -300,6 +300,22 @@ button { -webkit-user-select: none; user-select: none; }
   line-height: 1.6;
 }
 .brand-version:empty { display: none; }
+.about-version {
+  display: inline-flex;
+  align-items: center;
+  max-width: none;
+  overflow: visible;
+  white-space: nowrap;
+  vertical-align: middle;
+  font-size: 10.5px;
+  font-weight: 550;
+  color: var(--muted);
+  background: rgba(80, 63, 39, .07);
+  border-radius: 999px;
+  padding: 1px 7px;
+  line-height: 1.6;
+}
+.about-version:empty { display: none; }
 .sidebar-toggle {
   -webkit-app-region: no-drag;
   min-width: 78px;
