@@ -1757,6 +1757,21 @@ function applyUserProfile(user) {
   }
 }
 
+function formatSidebarVersion(version) {
+  const raw = String(version || "").trim();
+  if (!raw) return "";
+  const prerelease = raw.match(/^(\d+\.\d+\.\d+)-alpha\.(\d+)$/i);
+  if (prerelease) return `v${prerelease[1]} α${prerelease[2]}`;
+  return `v${raw}`;
+}
+
+function setSidebarVersion(version) {
+  if (!appVersionEl) return;
+  const raw = String(version || "").trim();
+  appVersionEl.textContent = formatSidebarVersion(raw);
+  appVersionEl.title = raw ? `当前版本 v${raw}` : "当前版本";
+}
+
 function showSignedIn(user) {
   auth.classList.add("hidden");
   appRoot.classList.remove("hidden");
@@ -2874,7 +2889,7 @@ api.onReady((d) => {
   cwd = d.cwd;
   syncState({ cwd });
   setCurrentModelDisplay(d);
-  if (appVersionEl) appVersionEl.textContent = d.version ? `v${d.version}` : "";
+  setSidebarVersion(d.version);
   if (d.sessionId) activeRuntimeSessionId = d.sessionId;
   if (!busy && !currentSessionId && chatHasMessages()) currentSessionId = activeRuntimeSessionId;
   projName.textContent = shortPath(d.cwd);

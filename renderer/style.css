@@ -276,10 +276,21 @@ button { -webkit-user-select: none; user-select: none; }
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  flex: 1 1 auto;
+  overflow: hidden;
 }
-.brand-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.brand-version {
+.brand-label {
   flex: 0 0 auto;
+  white-space: nowrap;
+  overflow: visible;
+}
+.brand-version {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 86px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 10.5px;
   font-weight: 550;
   color: var(--muted);
