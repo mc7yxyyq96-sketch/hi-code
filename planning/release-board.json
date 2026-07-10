@@ -9,20 +9,20 @@
     "branch": "codex/program-control/hc-prog-100"
   },
   "currentRelease": "0.6.0-alpha.7",
-  "releaseObjective": "Establish auditable program control, real Electron responsive smoke coverage, and protocol-native assistant output without a big-bang rewrite.",
+  "releaseObjective": "Integrate typed runtime replay, conservative turn recovery, and the supported Electron line into one auditable alpha.8 candidate.",
   "candidate": {
-    "version": "0.6.0-alpha.7",
-    "parentCommit": "d36923bed32267a5bfb3433e4450307060cbda69",
-    "branch": "codex/release/0.6.0-alpha.7",
-    "status": "passed",
-    "verifiedAt": "2026-07-10T13:56:17Z",
-    "evidence": "reports/evidence/HC-REL-ALPHA-7/manifest.json"
+    "version": "0.6.0-alpha.8",
+    "parentCommit": "265a69f3aaffa13772d80d0ab9087d9e8ff7f9ed",
+    "branch": "codex/release/0.6.0-alpha.8",
+    "status": "in_progress",
+    "evidence": "reports/tasks/HC-REL-ALPHA-8.md"
   },
   "releaseExitCriteria": [
-    "HC-PROG-100, HC-QA-101, and HC-RUN-201 are completed with independent commits",
+    "HC-RUN-202, HC-RUN-203, and HC-PLAT-110 are completed with committed evidence",
     "all repository gates pass from the release candidate commit",
-    "real Electron smoke passes at 720, 1024, and 1440 viewport widths",
-    "parallel runtime sessions cannot mix assistant output",
+    "event-only sessions reconstruct exact resumable model context when the stream is complete",
+    "interrupted turns cannot replay unknown or completed mutating side effects",
+    "real Electron startup passes on Linux, macOS, and Windows with the pinned embedded runtime",
     "no blocking DoD or Skeleton Detector finding",
     "no security boundary is weaker than the source baseline"
   ],
