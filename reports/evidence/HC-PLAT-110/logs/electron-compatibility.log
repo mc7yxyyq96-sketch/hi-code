@@ -1,0 +1,35 @@
+$ npm run test:electron-compatibility
+
+> hi-code@0.6.0-alpha.7 test:electron-compatibility
+> node test/electron-compatibility-tests.mjs
+
+
+[electron-compatibility] contract tests
+  ✓ native inventory includes production build dependencies
+  ✓ native inventory excludes development-only build dependencies
+  ✓ target records the supported stable major
+  ✓ electron-package-pin
+  ✓ electron-lock-pin
+  ✓ electron-installed-version
+  ✓ builder-package-pin
+  ✓ builder-lock-pin
+  ✓ builder-installed-version
+  ✓ builder-npm-tool-pin
+  ✓ builder-wrapper
+  ✓ host-node-contract
+  ✓ supported-major-record
+  ✓ context-isolation
+  ✓ node-integration
+  ✓ renderer-sandbox
+  ✓ window-open-guard
+  ✓ navigation-guard
+  ✓ native-production-inventory
+  ✓ three-platform-ci-matrix
+  ✓ linux-xvfb-smoke
+  ✓ native-desktop-smoke
+  ✓ ci-evidence-run
+  ✓ ci-evidence-platforms
+  ✓ current production graph has no native rebuild requirement
+  ✓ complete compatibility report passes
+
+=== 26 passed, 0 failed ===

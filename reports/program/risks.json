@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "program": "Hi Code Product-Grade Desktop and Industrial Workbench",
-  "updatedAt": "2026-07-10T17:54:05Z",
+  "updatedAt": "2026-07-10T19:01:57Z",
   "risks": [
     {
       "id": "RISK-RUN-001",
@@ -50,12 +50,12 @@
     {
       "id": "RISK-PLAT-001",
       "severity": "high",
-      "status": "open",
+      "status": "mitigated",
       "owner": "security-release",
       "title": "Electron compatibility line needs an isolated supported-version upgrade",
-      "evidence": ["package.json", "docs/adr/ADR-0005-supported-electron-line.md", "reports/tasks/HC-PLAT-110.md"],
+      "evidence": ["package.json", "docs/adr/ADR-0005-supported-electron-line.md", "reports/evidence/HC-PLAT-110/manifest.json", "reports/evidence/HC-PLAT-110/ci-matrix.json"],
       "impact": "Runtime support and Chromium security maintenance can age before stable release.",
-      "mitigation": "HC-PLAT-110 is active after HC-QA-101. It pins Electron 43.1.0, validates embedded runtime and security flags, inventories native production dependencies, and requires Linux/macOS/Windows startup smoke.",
+      "mitigation": "HC-PLAT-110 pins Electron 43.1.0, validates the Chromium 150 / Node 24 embedded runtime and security flags, confirms no native production add-on, generates the macOS alpha DMG, and records passing Linux/macOS/Windows startup smoke from GitHub Actions run 29116173672.",
       "trigger": "Unsupported Electron status or a high production/runtime advisory blocks release."
     },
     {

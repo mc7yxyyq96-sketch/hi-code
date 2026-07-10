@@ -31,7 +31,7 @@ The final machine-captured evidence is written by `npm run program:baseline` to 
 | 3 | HC-RUN-201 | Completed | Runtime Engine | HC-PROG-100 |
 | 4 | HC-RUN-202 | Completed | Runtime Engine | HC-RUN-201 |
 | 5 | HC-RUN-203 | Completed | Runtime Engine | HC-RUN-202 |
-| 6 | HC-PLAT-110 | In Progress | Security And Release | HC-QA-101 |
+| 6 | HC-PLAT-110 | Completed | Security And Release | HC-QA-101 |
 
 HC-QA-101 established a real Electron responsive baseline. HC-RUN-201 introduces protocol-native assistant output and concurrency isolation. No new industrial domain module is authorized before HC-RUN-201 completes.
 
@@ -45,7 +45,7 @@ HC-RUN-202 completed in the isolated `codex/runtime-engine/hc-run-202` worktree 
 
 HC-RUN-203 completed in the isolated `codex/runtime-engine/hc-run-203` worktree from HC-RUN-202 completion commit `9245a0a57f71b6e56157260c5bcb45776bfa0f96`. The explicit turn reducer preserves bounded partial output, pairs approval decisions, restores source sessions before safe retries, and blocks automatic replay for unknown or completed mutating tool effects. Eighteen machine-captured gates passed, including append-only crash fixtures and real Electron E2E.
 
-HC-PLAT-110 is active in the isolated `codex/security-release/hc-plat-110` worktree from HC-RUN-203 completion commit `6a27bd3`. The task pins a currently supported Electron line, records the embedded Chromium/Node runtime, inventories native production dependencies, and expands real startup smoke to Linux, macOS, and Windows without changing persisted user data.
+HC-PLAT-110 completed in the isolated `codex/security-release/hc-plat-110` worktree from HC-RUN-203 completion commit `6a27bd31980c240434d3b5e0c2b18da84f686c8d`. Electron is pinned to 43.1.0 with Chromium 150 and Node 24 runtime evidence; electron-builder 26 generates the unsigned alpha DMG through a deterministic package-manager shim. The production graph has no native Node add-on. GitHub Actions run `29116173672` passed real Electron startup on Ubuntu, macOS, and Windows. Thirteen local evidence gates also passed.
 
 ## Release Integration
 
@@ -66,6 +66,7 @@ The `0.6.0-alpha.7` candidate was integrated on `codex/release/0.6.0-alpha.7` fr
 - Runtime task evidence: `reports/tasks/HC-RUN-201.md`, `reports/evidence/HC-RUN-201/manifest.json`
 - Runtime store evidence: `reports/tasks/HC-RUN-202.md`, `reports/evidence/HC-RUN-202/manifest.json`
 - Turn recovery evidence: `reports/tasks/HC-RUN-203.md`, `reports/evidence/HC-RUN-203/manifest.json`
+- Electron compatibility evidence: `reports/tasks/HC-PLAT-110.md`, `reports/evidence/HC-PLAT-110/manifest.json`, `reports/evidence/HC-PLAT-110/ci-matrix.json`
 - Current risks: `reports/program/risks.json`
 - Historical final acceptance: `reports/final-acceptance-historical.md`
 - Historical audit policy: `reports/audit/README.md`

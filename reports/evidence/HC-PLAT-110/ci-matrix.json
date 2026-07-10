@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "provider": "github-actions",
+  "repository": "mc7yxyyq96-sketch/hi-code",
+  "workflow": "CI",
+  "event": "pull_request",
+  "pullRequest": 6,
+  "runId": 29116173672,
+  "headBranch": "codex/security-release/hc-plat-110",
+  "headSha": "14fb10e2b943deed6d231dd52265f791ff1cb6e3",
+  "status": "completed",
+  "conclusion": "success",
+  "createdAt": "2026-07-10T18:54:06Z",
+  "completedAt": "2026-07-10T18:55:21Z",
+  "url": "https://github.com/mc7yxyyq96-sketch/hi-code/actions/runs/29116173672",
+  "jobs": [
+    {
+      "id": 86439962055,
+      "name": "test",
+      "platform": "ubuntu-latest",
+      "conclusion": "success",
+      "startedAt": "2026-07-10T18:54:08Z",
+      "completedAt": "2026-07-10T18:54:31Z",
+      "url": "https://github.com/mc7yxyyq96-sketch/hi-code/actions/runs/29116173672/job/86439962055"
+    },
+    {
+      "id": 86439962104,
+      "name": "Electron smoke (ubuntu-latest)",
+      "platform": "ubuntu-latest",
+      "conclusion": "success",
+      "artifactUpload": "success",
+      "startedAt": "2026-07-10T18:54:08Z",
+      "completedAt": "2026-07-10T18:54:43Z",
+      "url": "https://github.com/mc7yxyyq96-sketch/hi-code/actions/runs/29116173672/job/86439962104"
+    },
+    {
+      "id": 86439962105,
+      "name": "Electron smoke (macos-latest)",
+      "platform": "macos-latest",
+      "conclusion": "success",
+      "artifactUpload": "success",
+      "startedAt": "2026-07-10T18:54:08Z",
+      "completedAt": "2026-07-10T18:54:47Z",
+      "url": "https://github.com/mc7yxyyq96-sketch/hi-code/actions/runs/29116173672/job/86439962105"
+    },
+    {
+      "id": 86439962089,
+      "name": "Electron smoke (windows-latest)",
+      "platform": "windows-latest",
+      "conclusion": "success",
+      "artifactUpload": "success",
+      "startedAt": "2026-07-10T18:54:08Z",
+      "completedAt": "2026-07-10T18:55:20Z",
+      "url": "https://github.com/mc7yxyyq96-sketch/hi-code/actions/runs/29116173672/job/86439962089"
+    }
+  ]
+}

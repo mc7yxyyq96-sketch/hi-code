@@ -58,6 +58,8 @@ const requiredFiles = [
   "reports/evidence/HC-RUN-202/manifest.json",
   "reports/evidence/HC-RUN-203/manifest.json",
   "reports/evidence/HC-REL-ALPHA-7/manifest.json",
+  "reports/evidence/HC-PLAT-110/ci-matrix.json",
+  "reports/evidence/HC-PLAT-110/manifest.json",
   "scripts/electron-compatibility.mjs",
   "scripts/run-electron-builder.mjs",
   "test/electron-compatibility-tests.mjs",
@@ -82,6 +84,8 @@ const qaManifest = readJson(root, "reports/evidence/HC-QA-101/manifest.json");
 const runtimeManifest = readJson(root, "reports/evidence/HC-RUN-201/manifest.json");
 const runtimeStoreManifest = readJson(root, "reports/evidence/HC-RUN-202/manifest.json");
 const turnRecoveryManifest = readJson(root, "reports/evidence/HC-RUN-203/manifest.json");
+const platformManifest = readJson(root, "reports/evidence/HC-PLAT-110/manifest.json");
+const platformCiEvidence = readJson(root, "reports/evidence/HC-PLAT-110/ci-matrix.json");
 const releaseManifest = readJson(root, "reports/evidence/HC-REL-ALPHA-7/manifest.json");
 const packageJson = readJson(root, "package.json");
 const packageLock = readJson(root, "package-lock.json");
@@ -138,16 +142,33 @@ check("release board records HC-RUN-203 completion", turnRecoveryTask?.status ==
 check("turn recovery gate passed", board.gates?.find((gate) => gate.id === "runtime-turn-recovery")?.status === "passed");
 check("turn recovery test is part of the global verification matrix", packageJson.scripts["test:turn-recovery"] === "node test/turn-recovery-tests.mjs" && fs.readFileSync(path.join(root, "scripts/verify.mjs"), "utf8").includes("test/turn-recovery-tests.mjs"));
 check(
-  "HC-PLAT-110 is active only after its dependency",
-  platformTask?.status === "in_progress" &&
+  "HC-PLAT-110 completed only after its dependency",
+  platformTask?.status === "completed" &&
     platformTask?.branch === "codex/security-release/hc-plat-110" &&
     platformTask?.startedAt &&
+    platformTask?.completedAt &&
+    platformTask?.evidenceManifest === "reports/evidence/HC-PLAT-110/manifest.json" &&
     platformTask?.dependencies?.every((id) => backlog.tasks.find((task) => task.id === id)?.status === "completed") &&
-    platformBoardTask?.status === "in_progress",
+    platformBoardTask?.status === "completed" &&
+    platformBoardTask?.evidence === "reports/evidence/HC-PLAT-110/manifest.json",
   JSON.stringify(platformTask),
 );
 check("HC-PLAT-110 pins the supported Electron toolchain", packageJson.devDependencies?.electron === "43.1.0" && packageLock.packages?.["node_modules/electron"]?.version === "43.1.0" && packageJson.devDependencies?.["electron-builder"] === "26.15.3");
 check("Electron compatibility contract is part of global verification", packageJson.scripts["test:electron-compatibility"] === "node test/electron-compatibility-tests.mjs" && fs.readFileSync(path.join(root, "scripts/verify.mjs"), "utf8").includes("test/electron-compatibility-tests.mjs"));
+check("Electron supported-line gate passed", board.gates?.find((gate) => gate.id === "electron-supported-line")?.status === "passed");
+check("HC-PLAT-110 evidence records every command passing", platformManifest.summary?.allPassed === true && platformManifest.summary?.total === 13, JSON.stringify(platformManifest.summary));
+check("HC-PLAT-110 evidence is captured from its task branch", platformManifest.source?.branch === "codex/security-release/hc-plat-110" && platformManifest.source?.parentCommit === platformCiEvidence.headSha);
+for (const requiredCommand of ["build", "verify", "release-check", "feature-tests", "electron-compatibility", "security-tests", "dod-tests", "dod-scan", "production-audit", "electron-e2e", "mac-package", "program-control", "git-diff-check"]) {
+  check(`HC-PLAT-110 captured ${requiredCommand}`, platformManifest.commands?.some((command) => command.id === requiredCommand && command.status === "passed"));
+}
+for (const command of platformManifest.commands || []) {
+  const absolute = path.join(root, command.logPath || "");
+  check(`HC-PLAT-110 ${command.id} log exists`, Boolean(command.logPath) && fs.existsSync(absolute));
+  if (fs.existsSync(absolute)) check(`HC-PLAT-110 ${command.id} log hash matches`, digest(absolute) === command.logSha256);
+}
+for (const platform of ["ubuntu-latest", "macos-latest", "windows-latest"]) {
+  check(`HC-PLAT-110 ${platform} Electron smoke passed`, platformCiEvidence.jobs?.some((job) => job.name === `Electron smoke (${platform})` && job.conclusion === "success" && job.artifactUpload === "success"));
+}
 check("HC-UI-301 is dependency-ready", uiShellTask?.status === "ready" && uiShellTask?.dependencies?.every((id) => backlog.tasks.find((task) => task.id === id)?.status === "completed"));
 check("alpha.7 version is synchronized", packageJson.version === "0.6.0-alpha.7" && packageLock.version === packageJson.version && packageLock.packages?.[""]?.version === packageJson.version && fs.readFileSync(path.join(root, "VERSION"), "utf8").trim() === packageJson.version);
 check("alpha.7 release candidate gate passed", board.candidate?.version === packageJson.version && board.candidate?.status === "passed" && board.gates?.find((gate) => gate.id === "alpha-7-release-candidate")?.status === "passed");

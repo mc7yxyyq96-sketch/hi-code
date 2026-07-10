@@ -53,6 +53,7 @@ export function inspectElectronCompatibility(root = defaultRoot) {
   const installedNpm = readJson(root, "node_modules/npm/package.json");
   const mainSource = fs.readFileSync(path.join(root, "electron", "main.mjs"), "utf8");
   const workflow = fs.readFileSync(path.join(root, ".github", "workflows", "ci.yml"), "utf8");
+  const ciEvidence = readJson(root, "reports/evidence/HC-PLAT-110/ci-matrix.json");
   const checks = [];
   const check = (id, passed, detail) => checks.push({ id, passed: Boolean(passed), detail });
   const lockRoot = lock.packages?.[""] || {};
@@ -77,6 +78,9 @@ export function inspectElectronCompatibility(root = defaultRoot) {
   check("three-platform-ci-matrix", /os:\s*\[ubuntu-latest, macos-latest, windows-latest\]/.test(workflow), "Ubuntu, macOS, and Windows are required");
   check("linux-xvfb-smoke", workflow.includes("xvfb-run -a npm run test:electron-e2e"), "Linux Electron smoke requires Xvfb");
   check("native-desktop-smoke", workflow.includes("if: runner.os != 'Linux'") && workflow.includes("run: npm run test:electron-e2e"), "macOS and Windows must launch Electron directly");
+  const requiredSmokeJobs = ["ubuntu-latest", "macos-latest", "windows-latest"];
+  check("ci-evidence-run", ciEvidence.status === "completed" && ciEvidence.conclusion === "success" && /^[0-9a-f]{40}$/.test(ciEvidence.headSha || ""), ciEvidence.url || "missing run URL");
+  check("ci-evidence-platforms", requiredSmokeJobs.every((platform) => ciEvidence.jobs?.some((job) => job.platform === platform && job.name === `Electron smoke (${platform})` && job.conclusion === "success" && job.artifactUpload === "success")), requiredSmokeJobs.join(","));
 
   return {
     schemaVersion: 1,
@@ -85,6 +89,11 @@ export function inspectElectronCompatibility(root = defaultRoot) {
     allPassed: checks.every((entry) => entry.passed),
     checks,
     nativeProductionDependencies,
+    ciEvidence: {
+      runId: ciEvidence.runId,
+      headSha: ciEvidence.headSha,
+      url: ciEvidence.url,
+    },
   };
 }
 

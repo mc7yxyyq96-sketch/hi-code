@@ -1,6 +1,6 @@
 # HC-PLAT-110 Task Manifest
 
-Status: In Progress
+Status: Completed
 
 Owner: Security And Release
 
@@ -8,9 +8,11 @@ Release: `0.6.0-alpha.8`
 
 Branch: `codex/security-release/hc-plat-110`
 
-Parent commit: `6a27bd3`
+Parent commit: `6a27bd31980c240434d3b5e0c2b18da84f686c8d`
 
 Started: `2026-07-10T17:48:41Z`
+
+Completed: `2026-07-10T19:01:57Z`
 
 Evidence: `reports/evidence/HC-PLAT-110/manifest.json` after acceptance
 
@@ -59,6 +61,17 @@ There is no persisted-data migration. The compatibility contract covers Electron
 ## Rollback
 
 Revert the HC-PLAT-110 commits to restore Electron 31.7.7, electron-builder 24.13.3, and the previous Linux-only smoke job. No user data or workspace files require rollback.
+
+## Result
+
+- Electron 31.7.7 was replaced with exact Electron 43.1.0; electron-builder is exact 26.15.3.
+- Real E2E records Electron 43.1.0, Chromium 150.0.7871.47, and Node 24.18.0 and passes 13 interaction/security checks.
+- BrowserWindow keeps context isolation, renderer sandboxing, and disabled Node integration, and now denies untrusted navigation and renderer-created windows.
+- The production lock graph has no native Node add-on. The documented future rebuild gate remains fail-closed.
+- A pinned dev-only npm CLI makes electron-builder dependency collection deterministic even when the global `npm` executable is a wrapper. Native rebuild remains enabled.
+- The macOS arm64 unsigned alpha DMG was generated successfully. Signing and notarization remain a separate release approval.
+- GitHub Actions run `29116173672` passed the test job plus real Electron smoke on Ubuntu, macOS, and Windows; job URLs are captured in `reports/evidence/HC-PLAT-110/ci-matrix.json`.
+- The local evidence manifest records 13 passing commands and 22 hashed key artifacts.
 
 ## Commit Plan
 
