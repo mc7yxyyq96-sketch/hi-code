@@ -1,6 +1,6 @@
 # Hi Code 0.6.0-alpha.8 Security Report
 
-Status: Candidate verification in progress
+Status: Candidate gate passed
 
 ## Preserved Boundaries
 
@@ -19,7 +19,7 @@ Status: Candidate verification in progress
 
 ## Dependency And Platform Review
 
-Electron and electron-builder are exact-pinned. The production dependency graph contains no native Node add-on. GitHub Actions startup smoke passed on Linux, macOS, and Windows for the HC-PLAT-110 commit. The alpha.8 candidate must repeat local security, DoD, production audit, E2E, and packaging gates before its status can become passed.
+Electron and electron-builder are exact-pinned. The production dependency graph contains no native Node add-on. GitHub Actions startup smoke passed on Linux, macOS, and Windows for the HC-PLAT-110 commit. The alpha.8 candidate repeated local security, DoD, production audit, E2E, and packaging gates with 13 of 13 commands passing.
 
 ## Residual Security Risks
 

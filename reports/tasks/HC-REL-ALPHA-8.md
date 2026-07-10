@@ -1,6 +1,6 @@
 # HC-REL-ALPHA-8 Task Manifest
 
-Status: In Progress
+Status: Completed
 
 Owner: Release Owner
 
@@ -11,6 +11,8 @@ Branch: `codex/release/0.6.0-alpha.8`
 Parent commit: `265a69f`
 
 Started: `2026-07-10T19:25:33Z`
+
+Completed: `2026-07-10T19:55:25Z`
 
 Evidence: `reports/evidence/HC-REL-ALPHA-8/manifest.json` after acceptance
 
@@ -44,8 +46,17 @@ The candidate cannot weaken Electron sandboxing, context isolation, navigation g
 
 Revert the alpha.8 candidate commits and continue using the verified alpha.7 metadata. Runtime and project stores do not require rollback because this task performs no data migration.
 
+## Result
+
+- Package metadata, lock metadata, `VERSION`, Electron app info, and renderer version labels resolve to `0.6.0-alpha.8`.
+- Six source-backed release reports distinguish implemented, unavailable, external-required, unsigned, and future capabilities.
+- The release profile ran 13 commands with 13 passes, including real Electron E2E, Electron compatibility, security, DoD, production audit, and unsigned macOS packaging.
+- The full-tree DoD scan reported zero findings.
+- HC-PLAT-110 three-platform CI startup evidence is linked without extending that claim to signing or physical installer smoke.
+- No tag, GitHub Release, signing, notarization, or public promotion was performed.
+
 ## Commit Plan
 
-1. Record the release-candidate task and dependency boundary.
-2. Synchronize version metadata and add source-backed release reports.
-3. Capture all acceptance evidence and complete the candidate state.
+1. Record the release-candidate task and dependency boundary: completed.
+2. Synchronize version metadata and add source-backed release reports: completed.
+3. Capture all acceptance evidence and complete the candidate state: completed.

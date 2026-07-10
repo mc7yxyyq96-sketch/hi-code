@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "program": "Hi Code Product-Grade Desktop and Industrial Workbench",
-  "updatedAt": "2026-07-10T19:01:57Z",
+  "updatedAt": "2026-07-10T19:55:25Z",
   "risks": [
     {
       "id": "RISK-RUN-001",
@@ -64,7 +64,7 @@
       "status": "open",
       "owner": "security-release",
       "title": "Desktop installers are not commercially signed",
-      "evidence": ["package.json", "GitHub prerelease notes"],
+      "evidence": ["package.json", "reports/releases/0.6.0-alpha.8/known-limitations.md", "reports/evidence/HC-REL-ALPHA-8/manifest.json"],
       "impact": "macOS Gatekeeper or Windows SmartScreen can warn users and weaken installation trust.",
       "mitigation": "Keep artifacts prerelease-only, publish checksums, and require signing identities before stable promotion.",
       "trigger": "Stable release or automatic update enablement requires valid signing and platform smoke evidence."

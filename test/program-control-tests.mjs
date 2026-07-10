@@ -61,6 +61,7 @@ const requiredFiles = [
   "reports/evidence/HC-REL-ALPHA-7/manifest.json",
   "reports/evidence/HC-PLAT-110/ci-matrix.json",
   "reports/evidence/HC-PLAT-110/manifest.json",
+  "reports/evidence/HC-REL-ALPHA-8/manifest.json",
   "scripts/electron-compatibility.mjs",
   "scripts/run-electron-builder.mjs",
   "test/electron-compatibility-tests.mjs",
@@ -94,6 +95,7 @@ const turnRecoveryManifest = readJson(root, "reports/evidence/HC-RUN-203/manifes
 const platformManifest = readJson(root, "reports/evidence/HC-PLAT-110/manifest.json");
 const platformCiEvidence = readJson(root, "reports/evidence/HC-PLAT-110/ci-matrix.json");
 const releaseManifest = readJson(root, "reports/evidence/HC-REL-ALPHA-7/manifest.json");
+const alpha8ReleaseManifest = readJson(root, "reports/evidence/HC-REL-ALPHA-8/manifest.json");
 const packageJson = readJson(root, "package.json");
 const packageLock = readJson(root, "package-lock.json");
 const programTask = backlog.tasks.find((task) => task.id === "HC-PROG-100");
@@ -179,16 +181,19 @@ for (const platform of ["ubuntu-latest", "macos-latest", "windows-latest"]) {
   check(`HC-PLAT-110 ${platform} Electron smoke passed`, platformCiEvidence.jobs?.some((job) => job.name === `Electron smoke (${platform})` && job.conclusion === "success" && job.artifactUpload === "success"));
 }
 check(
-  "HC-REL-ALPHA-8 is active only after all candidate dependencies",
-  alpha8ReleaseTask?.status === "in_progress" &&
+  "HC-REL-ALPHA-8 completed only after all candidate dependencies",
+  alpha8ReleaseTask?.status === "completed" &&
     alpha8ReleaseTask?.branch === "codex/release/0.6.0-alpha.8" &&
+    alpha8ReleaseTask?.completedAt &&
+    alpha8ReleaseTask?.evidenceManifest === "reports/evidence/HC-REL-ALPHA-8/manifest.json" &&
     alpha8ReleaseTask?.dependencies?.every((id) => backlog.tasks.find((task) => task.id === id)?.status === "completed") &&
-    alpha8ReleaseBoardTask?.status === "in_progress",
+    alpha8ReleaseBoardTask?.status === "completed" &&
+    alpha8ReleaseBoardTask?.evidence === "reports/evidence/HC-REL-ALPHA-8/manifest.json",
   JSON.stringify(alpha8ReleaseTask),
 );
 check("HC-UI-301 is dependency-ready", uiShellTask?.status === "ready" && uiShellTask?.dependencies?.every((id) => backlog.tasks.find((task) => task.id === id)?.status === "completed"));
 check("alpha.8 version is synchronized", packageJson.version === "0.6.0-alpha.8" && packageLock.version === packageJson.version && packageLock.packages?.[""]?.version === packageJson.version && fs.readFileSync(path.join(root, "VERSION"), "utf8").trim() === packageJson.version);
-check("alpha.8 release candidate is isolated and in progress", board.candidate?.version === packageJson.version && board.candidate?.branch === "codex/release/0.6.0-alpha.8" && board.candidate?.status === "in_progress" && board.gates?.find((gate) => gate.id === "alpha-8-release-candidate")?.status === "in_progress");
+check("alpha.8 release candidate gate passed", board.currentRelease === packageJson.version && board.candidate?.version === packageJson.version && board.candidate?.branch === "codex/release/0.6.0-alpha.8" && board.candidate?.status === "passed" && board.candidate?.evidence === "reports/evidence/HC-REL-ALPHA-8/manifest.json" && board.gates?.find((gate) => gate.id === "alpha-8-release-candidate")?.status === "passed");
 check("historical alpha.7 release candidate gate remains passed", board.gates?.find((gate) => gate.id === "alpha-7-release-candidate")?.status === "passed");
 check("risk register has active risks", Array.isArray(risks.risks) && risks.risks.length > 0);
 check("baseline records source commit", manifest.source?.commit === backlog.sourceCommit);
@@ -248,6 +253,16 @@ for (const command of releaseManifest.commands || []) {
 check("alpha.7 capability report does not claim event-only resume", fs.readFileSync(path.join(root, "reports/releases/0.6.0-alpha.7/capability-matrix.md"), "utf8").includes("Full event-only context reconstruction | Not delivered"));
 check("alpha.8 capability report claims only evidence-backed event reconstruction", fs.readFileSync(path.join(root, "reports/releases/0.6.0-alpha.8/capability-matrix.md"), "utf8").toLowerCase().includes("complete normalized streams only"));
 check("alpha.8 limitations keep signing outside the candidate", fs.readFileSync(path.join(root, "reports/releases/0.6.0-alpha.8/known-limitations.md"), "utf8").includes("not signed or notarized"));
+check("alpha.8 evidence records every command passing", alpha8ReleaseManifest.summary?.allPassed === true && alpha8ReleaseManifest.summary?.total === 13, JSON.stringify(alpha8ReleaseManifest.summary));
+check("alpha.8 evidence is captured from its release branch", alpha8ReleaseManifest.source?.branch === "codex/release/0.6.0-alpha.8" && alpha8ReleaseManifest.source?.version === packageJson.version);
+for (const requiredCommand of ["build", "verify", "release-check", "feature-tests", "electron-compatibility", "security-tests", "dod-tests", "dod-scan", "production-audit", "electron-e2e", "mac-package", "program-control", "git-diff-check"]) {
+  check(`alpha.8 captured ${requiredCommand}`, alpha8ReleaseManifest.commands?.some((command) => command.id === requiredCommand && command.status === "passed"));
+}
+for (const command of alpha8ReleaseManifest.commands || []) {
+  const absolute = path.join(root, command.logPath || "");
+  check(`alpha.8 ${command.id} log exists`, Boolean(command.logPath) && fs.existsSync(absolute));
+  if (fs.existsSync(absolute)) check(`alpha.8 ${command.id} log hash matches`, digest(absolute) === command.logSha256);
+}
 check("historical final acceptance is explicitly named", fs.existsSync(path.join(root, "reports/final-acceptance-historical.md")));
 check("unmarked final acceptance path is absent", !fs.existsSync(path.join(root, "reports/final-acceptance.md")));
 check("audit archive policy is present", fs.readFileSync(path.join(root, "reports/audit/README.md"), "utf8").includes("not current release status"));

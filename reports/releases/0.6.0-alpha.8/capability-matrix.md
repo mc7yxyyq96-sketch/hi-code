@@ -1,6 +1,6 @@
 # Hi Code 0.6.0-alpha.8 Capability Matrix
 
-Status: Candidate verification in progress
+Status: Candidate gate passed
 
 | Capability | Delivery state | Evidence | Public claim boundary |
 | --- | --- | --- | --- |

@@ -1,6 +1,6 @@
 # Hi Code 0.6.0-alpha.8 E2E Report
 
-Status: Candidate verification in progress
+Status: Candidate gate passed
 
 ## Desktop Acceptance
 
@@ -10,4 +10,4 @@ HC-PLAT-110 recorded 13 local E2E checks passing on macOS and a GitHub Actions m
 
 ## Candidate Gate
 
-`npm run program:evidence:alpha8` repeats the real Electron E2E on the alpha.8 candidate and hashes its log. The same profile runs the Electron compatibility contract and macOS unsigned packaging. Passing CI startup is linked evidence, not a claim that signed installers were installed on physical end-user machines.
+`npm run program:evidence:alpha8` repeated the real Electron E2E on the alpha.8 candidate and hashed its passing log. The same profile passed the Electron compatibility contract and macOS unsigned packaging. Passing CI startup is linked evidence, not a claim that signed installers were installed on physical end-user machines.

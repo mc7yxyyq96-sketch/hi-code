@@ -4,9 +4,9 @@ Updated: 2026-07-10
 
 Program state: Active
 
-Current verified release candidate: `0.6.0-alpha.7`
+Current verified release candidate: `0.6.0-alpha.8`
 
-Active development slice: `0.6.0-alpha.8`
+Active development slice: `0.6.0-alpha.9`
 
 ## Source Baseline
 
@@ -32,7 +32,7 @@ The final machine-captured evidence is written by `npm run program:baseline` to 
 | 4 | HC-RUN-202 | Completed | Runtime Engine | HC-RUN-201 |
 | 5 | HC-RUN-203 | Completed | Runtime Engine | HC-RUN-202 |
 | 6 | HC-PLAT-110 | Completed | Security And Release | HC-QA-101 |
-| 7 | HC-REL-ALPHA-8 | In Progress | Release Owner | HC-RUN-202, HC-RUN-203, HC-PLAT-110 |
+| 7 | HC-REL-ALPHA-8 | Completed | Release Owner | HC-RUN-202, HC-RUN-203, HC-PLAT-110 |
 
 HC-QA-101 established a real Electron responsive baseline. HC-RUN-201 introduces protocol-native assistant output and concurrency isolation. No new industrial domain module is authorized before HC-RUN-201 completes.
 
@@ -52,7 +52,7 @@ HC-PLAT-110 completed in the isolated `codex/security-release/hc-plat-110` workt
 
 The `0.6.0-alpha.7` candidate was integrated on `codex/release/0.6.0-alpha.7` from HC-RUN-201 commit `d36923bed32267a5bfb3433e4450307060cbda69`. Version metadata, backlog state, capability boundaries, migration notes, security review, E2E review, limitations, and release evidence passed the isolated candidate gate.
 
-HC-REL-ALPHA-8 is now active on `codex/release/0.6.0-alpha.8` from HC-PLAT-110 completion commit `265a69f`. It integrates only completed alpha.8 runtime replay, recovery, and Electron compatibility work. Formal tag, GitHub Release, signing, notarization, and public promotion remain approval-gated.
+The `0.6.0-alpha.8` candidate passed 13 isolated release commands on `codex/release/0.6.0-alpha.8` from HC-PLAT-110 completion commit `265a69f`. It integrates only completed runtime replay, recovery, and Electron compatibility work. The full-tree DoD scan found zero findings, real Electron E2E passed, and the unsigned macOS arm64 DMG was generated. Formal tag, GitHub Release, signing, notarization, and public promotion remain approval-gated.
 
 ## Current Product Truth
 
@@ -70,6 +70,7 @@ HC-REL-ALPHA-8 is now active on `codex/release/0.6.0-alpha.8` from HC-PLAT-110 c
 - Runtime store evidence: `reports/tasks/HC-RUN-202.md`, `reports/evidence/HC-RUN-202/manifest.json`
 - Turn recovery evidence: `reports/tasks/HC-RUN-203.md`, `reports/evidence/HC-RUN-203/manifest.json`
 - Electron compatibility evidence: `reports/tasks/HC-PLAT-110.md`, `reports/evidence/HC-PLAT-110/manifest.json`, `reports/evidence/HC-PLAT-110/ci-matrix.json`
+- Alpha.8 release evidence: `reports/tasks/HC-REL-ALPHA-8.md`, `reports/evidence/HC-REL-ALPHA-8/manifest.json`
 - Current risks: `reports/program/risks.json`
 - Historical final acceptance: `reports/final-acceptance-historical.md`
 - Historical audit policy: `reports/audit/README.md`
