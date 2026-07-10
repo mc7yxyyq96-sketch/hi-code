@@ -99,7 +99,7 @@ flowchart TB
 
 The target is implemented through compatibility layers:
 
-1. HC-RUN-201 injects `RuntimeEventSink` and emits assistant output without removing legacy events.
+1. HC-RUN-201 injects `RuntimeEventSink`, emits assistant output, and migrates Electron/CLI/TUI projections without removing legacy event fields.
 2. Runtime store tasks introduce typed store interfaces and import existing JSON/JSONL data.
 3. Desktop, CLI, and TUI migrate to protocol-derived projections one surface at a time.
 4. Provider and tool execution continue to use Job Center, worktree isolation, permission, and path boundaries.
@@ -113,6 +113,14 @@ The target is implemented through compatibility layers:
 - Tool output, approval requests, diffs, errors, and completion retain typed status and visibility.
 - Append failure is observable and cannot be reported as durable success.
 - Compatibility fields may remain during migration but cannot become a second authority.
+
+## Runtime Client Projection
+
+`RuntimeEventBus` is the in-process fan-out contract. Runtime persistence happens before delivery, so a failed UI subscriber cannot turn a durable event into a failed Agent turn. Subscribers may filter by session, turn, and event type; listener failures are isolated and reported without stopping other clients.
+
+`connectAssistantOutput(...)` is the typed client boundary. `connectAssistantTextOutput(...)` is the compatibility projection used by the three current clients. It renders deltas once, falls back to completed content for non-streaming providers, and never repeats full content after deltas.
+
+Electron keeps its existing `output` and `tool-event` IPC channels while changing their source to protocol projections. CLI and TUI instantiate private buses. The global desktop/TUI console bridges remain temporary command/tool compatibility paths only; they are not assistant message authorities.
 
 ## Security Architecture
 

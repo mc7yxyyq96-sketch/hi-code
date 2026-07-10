@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 import process from "node:process";
@@ -16,6 +17,9 @@ const results = [];
 const pageErrors = [];
 let electronApp;
 let userDataDir;
+let modelServer;
+let modelBaseURL = "";
+let modelServerRequests = 0;
 
 function safeElectronEnv(isolatedHome) {
   const allowed = [
@@ -30,10 +34,42 @@ function safeElectronEnv(isolatedHome) {
   env.HOME = isolatedHome;
   env.USERPROFILE = isolatedHome;
   env.HICODE_E2E = "1";
+  env.HICODE_BASE_URL = modelBaseURL;
+  env.HICODE_MODEL = "hicode-e2e-model";
+  env.HICODE_LEGACY_STDOUT_BRIDGE = "0";
   env.NO_COLOR = "1";
   env.FORCE_COLOR = "0";
   env.ELECTRON_DISABLE_SECURITY_WARNINGS = "true";
   return env;
+}
+
+async function startModelServer() {
+  modelServer = http.createServer((request, response) => {
+    if (request.method !== "POST" || !request.url?.endsWith("/chat/completions")) {
+      response.writeHead(404).end("not found");
+      return;
+    }
+    modelServerRequests++;
+    request.resume();
+    request.on("end", () => {
+      response.writeHead(200, {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+      });
+      response.write(`data: ${JSON.stringify({ choices: [{ delta: { content: "protocol-native " } }] })}\n\n`);
+      setTimeout(() => {
+        response.write(`data: ${JSON.stringify({ choices: [{ delta: { content: "desktop response" } }] })}\n\n`);
+        response.end("data: [DONE]\n\n");
+      }, 12);
+    });
+  });
+  await new Promise((resolve, reject) => {
+    modelServer.once("error", reject);
+    modelServer.listen(0, "127.0.0.1", resolve);
+  });
+  const address = modelServer.address();
+  assert.ok(address && typeof address === "object", "Model test server did not bind a TCP port");
+  modelBaseURL = `http://127.0.0.1:${address.port}/v1`;
 }
 
 function record(name, status, detail = "") {
@@ -161,6 +197,22 @@ async function openLocalChat(page) {
   await waitVisible(page, "#chatview");
 }
 
+async function verifyProtocolNativeDesktopTurn(page) {
+  await setContentSize(1024, baseline.height);
+  await returnHome(page);
+  const input = page.locator("#input");
+  await input.fill("render the protocol-native desktop response");
+  await page.locator("#send").click();
+  await waitVisible(page, "#chatview");
+  await page.waitForFunction(() => {
+    const messages = [...document.querySelectorAll(".msg.agent .agent-body")];
+    return messages.some((message) => message.textContent?.includes("protocol-native desktop response"));
+  }, undefined, { timeout: 8_000 });
+  const assistantText = await page.locator(".msg.agent .agent-body").allTextContents();
+  assert.ok(assistantText.some((text) => text.includes("protocol-native desktop response")), JSON.stringify(assistantText));
+  assert.equal(modelServerRequests, 1, "Desktop turn did not reach the isolated model server exactly once");
+}
+
 async function verifyResponsivePanels(page) {
   await setContentSize(1024, baseline.height);
   await openLocalChat(page);
@@ -194,6 +246,7 @@ async function main() {
   fs.rmSync(resultDir, { recursive: true, force: true });
   fs.mkdirSync(resultDir, { recursive: true, mode: 0o755 });
   userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), "hicode-electron-e2e-"));
+  await startModelServer();
 
   console.log("\n[electron-e2e] real Electron smoke");
   electronApp = await electron.launch({
@@ -219,11 +272,17 @@ async function main() {
     const environment = await electronApp.evaluate(() => ({
       home: process.env.HOME,
       userProfile: process.env.USERPROFILE,
+      legacyStdoutBridge: process.env.HICODE_LEGACY_STDOUT_BRIDGE,
       sensitiveKeys: Object.keys(process.env).filter((key) => /(?:^|_)(?:TOKEN|SECRET|PASSWORD|API_KEY|PRIVATE_KEY)$/i.test(key)),
     }));
     assert.equal(environment.home, userDataDir);
     assert.equal(environment.userProfile, userDataDir);
+    assert.equal(environment.legacyStdoutBridge, "0");
     assert.deepEqual(environment.sensitiveKeys, []);
+  });
+
+  await check("streams a desktop turn with the compatibility stdout bridge disabled", async () => {
+    await verifyProtocolNativeDesktopTurn(page);
   });
 
   const observed = {};
@@ -266,5 +325,6 @@ try {
   process.exitCode = 1;
 } finally {
   if (electronApp) await electronApp.close().catch(() => {});
+  if (modelServer) await new Promise((resolve) => modelServer.close(resolve));
   if (userDataDir) fs.rmSync(userDataDir, { recursive: true, force: true });
 }

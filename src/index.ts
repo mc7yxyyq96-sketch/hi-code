@@ -13,6 +13,8 @@ import { loadSession, latestSession } from "./session-store.js";
 import type { StoredSession } from "./session-store.js";
 import { createRuntime, buildSystemPrompt } from "./runtime.js";
 import { gitInfo } from "./git.js";
+import { RuntimeEventBus } from "./runtime-event-sink.js";
+import { connectAssistantTextOutput } from "./runtime-client-adapters.js";
 
 async function main() {
   const cfg = loadConfig();
@@ -84,11 +86,26 @@ async function main() {
   // One-shot mode: `vibe "do the thing"` runs once and exits. Prompts are
   // auto-denied (run with --yolo to allow mutations non-interactively).
   if (promptParts.length) {
-    const rt = createRuntime({ cfg, cwd, mode, systemPrompt, restored, ask: async () => "n" });
-    if (restored) ui.info(`  resumed session ${chalk.bold(restored.id)}`);
-    console.log(chalk.gray("─".repeat(48)));
-    await rt.handleInput(promptParts.join(" "));
-    rt.shutdown();
+    const eventBus = new RuntimeEventBus();
+    const disconnectAssistant = connectCliAssistantOutput(eventBus);
+    const rt = createRuntime({
+      cfg,
+      cwd,
+      mode,
+      systemPrompt,
+      restored,
+      ask: async () => "n",
+      eventSink: eventBus,
+      legacyAssistantOutput: false,
+    });
+    try {
+      if (restored) ui.info(`  resumed session ${chalk.bold(restored.id)}`);
+      console.log(chalk.gray("─".repeat(48)));
+      await rt.handleInput(promptParts.join(" "));
+    } finally {
+      disconnectAssistant();
+      rt.shutdown();
+    }
     return;
   }
 
@@ -142,7 +159,18 @@ async function runReadline(opts: {
   };
 
   const ask = (q: string): Promise<string> => new Promise((res) => rl.question(q, res));
-  const rt = createRuntime({ ...opts, ask });
+  const eventBus = new RuntimeEventBus();
+  const disconnectAssistant = connectCliAssistantOutput(eventBus);
+  const rt = createRuntime({
+    ...opts,
+    ask,
+    eventSink: eventBus,
+    legacyAssistantOutput: false,
+  });
+  const shutdown = () => {
+    disconnectAssistant();
+    rt.shutdown();
+  };
 
   rl.prompt();
   // Process input serially: readline can emit several buffered `line` events at once.
@@ -163,7 +191,7 @@ async function runReadline(opts: {
     }
     busy = false;
     if (exitWhenIdle) {
-      rt.shutdown();
+      shutdown();
       process.exit(0);
     }
     rl.prompt();
@@ -193,9 +221,16 @@ async function runReadline(opts: {
   rl.on("close", () => {
     if (busy || queue.length) exitWhenIdle = true;
     else {
-      rt.shutdown();
+      shutdown();
       process.exit(0);
     }
+  });
+}
+
+function connectCliAssistantOutput(eventBus: RuntimeEventBus): () => void {
+  return connectAssistantTextOutput(eventBus, {
+    write: (text) => process.stdout.write(text),
+    prefix: ({ label }) => `\n${chalk.green("● ")}${label ? chalk.dim(`[${label}] `) : ""}`,
   });
 }
 

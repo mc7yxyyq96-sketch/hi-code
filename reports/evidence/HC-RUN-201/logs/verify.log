@@ -1,0 +1,1421 @@
+$ npm run verify
+
+[verify] sync:version
+[version] 0.6.0-alpha.6 synchronized across package metadata, Electron app info, and renderer labels
+
+[verify] build
+
+[verify] check:syntax electron/main.mjs
+
+[verify] check:syntax electron/preload.cjs
+
+[verify] check:syntax renderer/renderer.js
+
+[verify] test:feature
+
+[1] fuzzy patch
+  ✓ fuzzy edit succeeded
+  ✓ content updated
+  ✓ original indentation (tab) preserved
+
+[1b] workspace path confinement
+  ✓ absolute read outside cwd denied
+  ✓ absolute write outside cwd denied
+  ✓ grep outside cwd denied
+  ✓ symlink escape denied
+  ✓ @absolute outside cwd not inlined
+
+[2] bash sandbox
+  ✓ write inside cwd allowed
+  ✓ write outside cwd blocked
+  ✓ read-only bash blocks workspace writes
+
+[2a] bash interrupt
+  ✓ bash abort returns interrupt code
+  ✓ bash abort returns quickly
+
+[2b] !cmd permission
+
+  ⚠ permission required
+  bash: touch raw-shell-denied.txt
+Denied by user.
+  ✓ !cmd prompts and respects deny
+  ✓ runtime emits turn start
+  ✓ runtime turn start keeps retry input
+  ✓ runtime emits denied turn done
+[?25l⠋ thinking  ⠙ thinking  ⠹ thinking  ⠸ thinking  ⠼ thinking  ⠴ thinking  ⠦ thinking  ⠧ thinking  ⠇ thinking  ⠏ thinking  ⠋ thinking  ⠙ thinking  ⠹ thinking  ⠸ thinking  [K[?25h✗ error: couldn't reach the model server at http://127.0.0.1:9. Is it running and on the same network? Check Settings (the gear icon).
+  ✓ runtime persists user turn before model failure
+  ✓ runtime startNewSession creates a fresh visible session id
+[?25l[K[?25h  ✓ runtime treats empty model response as visible error
+
+[2c] recoverable tasks
+  ✓ recoverableTasksFromEvents keeps failed retry input
+  ✓ readRecoverableTasksFromLogs ignores bad lines and returns interrupted task
+  ✓ recoverableTasksFromProtocolEvents restores interrupted protocol turn
+  ✓ mergeRecoverableTasks deduplicates legacy and protocol recovery rows
+
+[2e] safe child process env
+  ✓ safe env keeps basic runtime paths
+  ✓ safe env strips parent API keys and tokens
+  ✓ safe env allows explicit MCP server env
+  ✓ FreeCAD safe env allows output dir without parent secrets
+  ✓ sensitive extra env requires explicit allow
+  ✓ env logging redacts tokens and passwords
+  ✓ env key validator rejects sensitive names
+
+[2d] runtime job queue
+  ✓ RuntimeJobQueue runs jobs serially
+  ✓ RuntimeJobQueue reports queued state
+  ✓ RuntimeJobQueue continues after failed job
+  ✓ RuntimeJobQueue keeps recent history
+  ✓ RuntimeJobQueue restores persisted history
+  ✓ RuntimeJobQueue records canceled queued jobs
+
+[3] MCP client
+  ✓ server connected
+  ✓ tools discovered
+  ✓ tool namespaced
+  ✓ tool call works
+  ✓ MCP server receives explicit env without parent secrets
+
+⏺ mcp__demo__echo
+
+  ⚠ permission required
+  mcp: mcp__demo__echo {"text":"blocked"}
+  ✓ mcp tool prompts before execution
+
+[3b] structured tool events
+
+⏺ write_file  hello.txt
+  ┌─ hello.txt
+  │ + hello
+  └─
+
+  ⚠ permission required
+  write hello.txt
+  Created hello.txt (2 lines)
+  ✓ write_file emits tool start
+  ✓ write_file emits permission event
+  ✓ write_file emits diff payload
+  ✓ write_file records diff id for undo
+  ✓ tool done includes duration
+
+⏺ edit_file  hello.txt
+  ┌─ hello.txt
+  │ - hello
+  │ + hi
+  └─
+
+  ⚠ permission required
+  edit hello.txt
+  Edited hello.txt (1 replacement)
+  ✓ edit_file emits before/after diff
+  ✓ edit_file completes
+
+⏺ bash  printf 'one\n'; printf 'err\n' >&2
+
+  ⚠ permission required
+  bash: printf 'one\n'; printf 'err\n' >&2
+  │ /Users/jack/.profile: line 2: /Users/jack/Documents/Codex/2026-05-02/mac-comfyui-wan2-2-animate/.tools/bin/env: No such file or directory
+  │ one
+  │ err
+  ✓ bash emits streaming output events
+  ✓ bash done includes exit code and duration
+
+[3c] diff service accept/reject
+  ✓ reject restores existing file
+  ✓ reject deletes newly created file
+  ✓ reject outside workspace denied
+  ✓ accept marks diff archived
+  ✓ clear archived removes accepted/rejected only
+
+[4] interruptible generation
+  ✓ aborted request returns cleanly
+  ✓ no tool calls on abort
+
+[5] tab completion
+  ✓ slash command completes
+  ✓ role completes
+  ✓ @dir lists entries
+  ✓ @path prefix filters
+
+[6] git awareness
+  ✓ gitInfo detects repo + branch
+  ✓ gitInfo counts dirty files
+  ✓ gitInfo null outside repo
+  ✓ gitDiff shows the change
+  ✓ gitWorkflowStatus lists dirty file
+  ✓ gitStage stages file
+  ✓ gitWorkflowStatus counts staged file
+  ✓ gitFileDiff shows staged diff
+  ✓ gitGenerateCommitMessage uses staged files
+  ✓ gitUnstage unstages file
+  ✓ gitCommit commits staged files
+  ✓ gitWorkflowStatus clean after commit
+
+[7] image input
+  ✓ no image → plain string
+  ✓ image → content array
+  ✓ has text part
+  ✓ has image_url with data uri
+  ✓ text file still inlined alongside image
+
+=== 80 passed, 0 failed ===
+
+[verify] test:runtime-protocol
+
+[runtime-protocol] schema helpers
+  ✓ protocol event validates
+  ✓ protocol event keeps stable version
+  ✓ turn start maps to turn.started
+  ✓ validation rejects malformed event
+  ✓ kind mapper distinguishes failed turns
+  ✓ type guard accepts valid protocol event
+
+[runtime-protocol] runtime integration
+
+  ⚠ permission required
+  bash: touch should-not-run.txt
+Denied by user.
+  ✓ runtime emits protocol envelope on every event
+  ✓ runtime protocol sequence is monotonic
+  ✓ runtime protocol carries active session id
+  ✓ runtime protocol validates emitted events
+  ✓ permission request maps to approval kind
+  ✓ denied turn maps to turn.denied
+  ✓ runtime protocol events are appended to durable store
+  ✓ runtime replay keeps event order
+  ✓ runtime store reads valid protocol events
+  ✓ event-only runtime session appears in recent sessions
+  ✓ event-only runtime session replays user input
+  ✓ event-only runtime session explains replay-only recovery
+
+  ⚠ permission required
+  bash: touch resumed-should-not-run.txt
+Denied by user.
+  ✓ resumed runtime appends protocol events after prior sequence
+  ✓ resumed runtime did not execute denied command
+  ✓ CLI slash resume opens event-only sessions as read-only replay
+  ✓ runtime event store rejects path escape ids
+  ✓ runtime did not execute denied command
+
+=== 23 passed, 0 failed ===
+
+[verify] test:runtime-events
+
+[runtime-event-sink] subscriptions
+  ✓ emit returns the materialized event id
+  ✓ unfiltered subscriber receives both events
+  ✓ session filter prevents cross-session delivery
+  ✓ type filter receives only matching event
+  ✓ one listener failure does not stop other listeners
+  ✓ delivered event and nested protocol payload are immutable
+  ✓ unsubscribe is idempotent and stops delivery
+  ✓ invalid materialized events are rejected
+
+[runtime-event-sink] assistant protocol mapping
+  ✓ assistant delta maps to a chat-visible assistant protocol event
+  ✓ assistant completion maps to a durable assistant protocol event
+
+=== 10 passed, 0 failed ===
+
+[verify] test:runtime-concurrency
+
+[runtime-concurrency] protocol-native assistant output
+  ✓ two sessions interleave globally during real async streaming
+  ✓ alpha subscriber receives only alpha session events
+  ✓ beta subscriber receives only beta session events
+  ✓ alpha deltas preserve order without beta text
+  ✓ beta deltas preserve order without alpha text
+  ✓ completed events carry the full assistant message
+  ✓ every delivered event has the matching protocol envelope
+  ✓ session transcripts retain their own assistant response
+  ✓ assistant completions are durable in each append-only event store
+
+=== 9 passed, 0 failed ===
+
+[verify] test:runtime-clients
+
+[runtime-client-adapter] text projection
+  ✓ delta stream renders one prefix and no duplicate completion
+  ✓ completed-only providers still render their content
+  ✓ session filter blocks foreign output
+  ✓ disconnect stops text projection
+
+[runtime-client-adapter] structured projection
+  ✓ structured adapter exposes model and sequence
+  ✓ interrupted completion reports prior deltas without replaying content
+
+=== 6 passed, 0 failed ===
+
+[verify] test:services
+
+[services] ipc utils
+  ✓ ipc-utils registers success handler
+  ✓ ipc-utils normalizes failed handler
+  ✓ ipc-utils logs redacted errors
+
+[services] smoke
+  ✓ native open app parses explicit app alias
+  ✓ native open app parses Chinese app alias
+  ✓ native open app does not intercept run tests
+  ✓ native open app does not intercept npm commands
+  ✓ native open app does not intercept file inspection
+  ✓ queue service clears runtime queue
+  ✓ git service preserves cwd boundary
+  ✓ git service validates path arrays
+  ✓ runtime service links Runtime Queue to Job Center
+  ✓ register-ipc-handlers exposes runtime-queue:clear
+  ✓ register-ipc-handlers exposes auth-status
+  ✓ register-ipc-handlers exposes list-store
+  ✓ register-ipc-handlers exposes store:item
+  ✓ register-ipc-handlers exposes store:enable
+  ✓ register-ipc-handlers exposes store:disable
+  ✓ register-ipc-handlers exposes store:uninstall
+  ✓ register-ipc-handlers exposes job:create
+  ✓ register-ipc-handlers exposes job:list
+  ✓ register-ipc-handlers exposes job:get
+  ✓ register-ipc-handlers exposes job:cancel
+  ✓ register-ipc-handlers exposes job:retry
+  ✓ register-ipc-handlers exposes job:pause
+  ✓ register-ipc-handlers exposes job:resume
+  ✓ register-ipc-handlers exposes job:events
+  ✓ register-ipc-handlers exposes job:artifacts
+  ✓ register-ipc-handlers exposes job:artifact:preview
+  ✓ register-ipc-handlers exposes job:artifact:open
+  ✓ register-ipc-handlers exposes provider:list
+  ✓ register-ipc-handlers exposes provider:get
+  ✓ register-ipc-handlers exposes provider:configure
+  ✓ register-ipc-handlers exposes provider:run
+  ✓ register-ipc-handlers exposes provider:cancel
+  ✓ register-ipc-handlers exposes worktree:create
+  ✓ register-ipc-handlers exposes worktree:run
+  ✓ register-ipc-handlers exposes worktree:collectChanges
+  ✓ register-ipc-handlers exposes worktree:cleanup
+  ✓ register-ipc-handlers exposes arena:list
+  ✓ register-ipc-handlers exposes arena:get
+  ✓ register-ipc-handlers exposes arena:create
+  ✓ register-ipc-handlers exposes arena:acceptCandidate
+  ✓ register-ipc-handlers exposes arena:rejectCandidate
+  ✓ register-ipc-handlers exposes arena:mergeCandidate
+  ✓ register-ipc-handlers exposes arena:artifact:preview
+  ✓ register-ipc-handlers exposes arena:artifact:open
+  ✓ register-ipc-handlers exposes industrial-project:schema
+  ✓ register-ipc-handlers exposes industrial-project:get
+  ✓ register-ipc-handlers exposes industrial-project:validate
+  ✓ register-ipc-handlers exposes industrial-project:save
+  ✓ register-ipc-handlers exposes industrial-requirement:draft
+  ✓ register-ipc-handlers exposes industrial-requirement:add
+  ✓ register-ipc-handlers exposes industrial-requirement:criteria:update
+  ✓ register-ipc-handlers exposes industrial-requirement:artifact-plan
+  ✓ register-ipc-handlers exposes industrial-requirement:test-plan
+  ✓ register-ipc-handlers exposes industrial-requirement:spec-package
+  ✓ register-ipc-handlers exposes industrial-requirement:approve
+  ✓ register-ipc-handlers exposes industrial-project:artifact:add
+  ✓ register-ipc-handlers exposes industrial-project:traceability:add
+  ✓ register-ipc-handlers exposes industrial-project:gate:add
+  ✓ register-ipc-handlers exposes domain-pack:list
+  ✓ register-ipc-handlers exposes domain-pack:get
+  ✓ register-ipc-handlers exposes domain-pack:validate
+  ✓ register-ipc-handlers exposes domain-pack:install
+  ✓ register-ipc-handlers exposes domain-pack:update
+  ✓ register-ipc-handlers exposes domain-pack:enable
+  ✓ register-ipc-handlers exposes domain-pack:disable
+  ✓ register-ipc-handlers exposes domain-pack:uninstall
+  ✓ register-ipc-handlers exposes domain-pack:recommend
+  ✓ register-ipc-handlers exposes agent-team:profiles
+  ✓ register-ipc-handlers exposes agent-team:profile:get
+  ✓ register-ipc-handlers exposes agent-team:plan:create
+  ✓ register-ipc-handlers exposes agent-team:plan:list
+  ✓ register-ipc-handlers exposes agent-team:plan:get
+  ✓ register-ipc-handlers exposes agent-team:job:create
+  ✓ register-ipc-handlers exposes toolchain:list
+  ✓ register-ipc-handlers exposes toolchain:detect
+  ✓ register-ipc-handlers exposes toolchain:capabilities
+  ✓ register-ipc-handlers exposes toolchain:validate-adapter
+  ✓ register-ipc-handlers exposes toolchain:run
+  ✓ register-ipc-handlers exposes quality-gate:list
+  ✓ register-ipc-handlers exposes quality-gate:run
+  ✓ register-ipc-handlers exposes quality-gate:approve
+  ✓ register-ipc-handlers exposes release:readiness
+  ✓ register-ipc-handlers exposes release:build
+  ✓ register-ipc-handlers exposes release:open
+  ✓ register-ipc-handlers exposes sample:industrial-control-box:create
+  ✓ register-ipc-handlers exposes diffs:list
+  ✓ register-ipc-handlers exposes git:status
+  ✓ register-ipc-handlers exposes attach-image
+  ✓ register-ipc-handlers exposes read-file
+  ✓ register-ipc-handlers exposes read-session
+  ✓ register-ipc-handlers exposes new-session
+  ✓ register-ipc-handlers exposes app:info
+  ✓ register-ipc-handlers exposes app:open-data-dir
+  ✓ register-ipc-handlers exposes app:reveal-config
+  ✓ register-ipc-handlers exposes app:open-page
+  ✓ register-ipc-handlers exposes app:check-updates
+  ✓ register-ipc-handlers exposes usage:stats
+  ✓ register-ipc-handlers preserves input event
+  ✓ register-ipc-handlers preserves ask-response event
+  ✓ register-ipc-handlers preserves interrupt event
+
+[services] security
+  ✓ security-service allows paths inside roots
+  ✓ security-service rejects paths outside roots
+  ✓ security-service redacts sensitive fields
+
+[services] workspace attachments
+  ✓ workspace service stores pasted image attachments inside workspace
+  ✓ workspace service sanitizes attachment names
+  ✓ workspace service rejects non-image data URLs
+
+[services] app info
+  ✓ compareVersions orders patch releases
+  ✓ compareVersions handles v prefix and length
+  ✓ app info exposes version and data dir
+  ✓ app info exposes runtime versions
+  ✓ open data dir uses shell.openPath
+  ✓ open page rejects unknown targets
+  ✓ open page opens whitelisted repo url
+  ✓ check updates detects newer release
+  ✓ check updates reports up to date
+  ✓ check updates degrades gracefully offline
+  ✓ check updates maps rate limit to guidance
+
+[services] model test error copy
+  ✓ 401 maps to API key guidance
+  ✓ 403 maps to model access guidance
+  ✓ 404 maps to base URL / model name guidance
+  ✓ 429 maps to rate limit guidance
+  ✓ 5xx maps to upstream guidance
+  ✓ error copy keeps raw error for debugging
+  ✓ timeout maps to actionable copy
+  ✓ local ECONNREFUSED suggests starting local service
+  ✓ remote ECONNREFUSED suggests checking host/port
+  ✓ ENOTFOUND suggests checking spelling
+  ✓ generic fetch failed maps to network guidance
+  ✓ model capability marks vision-capable model names
+  ✓ model capability warns for text-only code models
+  ✓ model capability stays unknown for custom models
+
+[services] usage
+  ✓ usage service aggregates top tools from event logs
+
+=== 135 passed, 0 failed ===
+
+[verify] test:jobs
+
+[job-center] model and store
+  ✓ job statuses include required states
+  ✓ createJob creates queued job
+  ✓ getJob reads created job
+  ✓ listJobs returns created job
+  ✓ illegal queued -> succeeded transition rejected
+  ✓ updateJob transitions to running
+  ✓ appendJobEvent records event
+  ✓ addArtifact records artifact
+  ✓ addArtifact links task and step
+  ✓ artifact outside allowed roots rejected
+  ✓ addGateResult records gate result
+  ✓ running job can succeed
+  ✓ terminal job cannot be paused
+
+[job-center] control operations
+  ✓ pauseJob moves queued job to paused
+  ✓ resumeJob moves paused job to queued
+  ✓ cancelJob moves job to cancelled
+  ✓ retryJob requeues cancelled job
+  ✓ retryJob rejects non-terminal active job
+  ✓ failed status records error
+  ✓ retryJob requeues failed job
+
+[job-center] persistence and service
+  ✓ persisted job reloads from disk
+  ✓ job service creates job
+  ✓ job service lists jobs
+  ✓ job service returns events
+  ✓ job service returns artifacts
+  ✓ job service previews artifact
+  ✓ job service opens artifact location
+  ✓ job service pause/resume works
+
+=== 28 passed, 0 failed ===
+
+[verify] test:providers
+
+[providers] registry
+  ✓ registry lists registered provider
+  ✓ registry gets registered provider
+  ✓ registry validates provider config
+  ✓ disabled provider cannot run
+  ✓ enabled provider can run
+  ✓ missing config reports not_configured
+  ✓ validateProviderConfig reports missing config
+  ✓ missing config provider cannot run
+  ✓ configured reserved provider still does not report enabled
+
+[providers] service and internal provider
+  ✓ service lists internal provider
+  ✓ service lists reserved codex provider as not_configured
+  ✓ service can disable provider
+  ✓ disabled provider service run fails
+  ✓ missing config service run fails
+  ✓ internal provider run succeeds
+  ✓ internal provider creates Job
+  ✓ internal provider enqueues runtime job with Job Center id
+  ✓ internal provider defaults to isolated workspace
+  ✓ internal provider writes JobEvent logs
+  ✓ internal provider writes provider artifact
+  ✓ internal provider returns changed files
+
+[providers] failure handling
+  ✓ provider run failure returns failed result
+  ✓ provider run failure writes JobEvent
+  ✓ provider run failure writes gate result
+  ✓ provider run failure marks job failed
+
+=== 25 passed, 0 failed ===
+
+[verify] test:worktrees
+
+[worktree-runner] git worktree mode
+  ✓ git repo creates worktree
+  ✓ worktree manifest exists
+  ✓ runInIsolatedWorkspace executes command
+  ✓ collectChanges reports changed file
+  ✓ collectChanges writes patch
+  ✓ cleanup removes managed workspace
+  ✓ dirty workspace is rejected by default
+
+[worktree-runner] copy sandbox fallback
+  ✓ non-git source falls back to copy sandbox
+  ✓ copy sandbox patch includes modified file
+  ✓ copy sandbox patch includes new file
+
+[worktree-runner] safety
+  ✓ cleanup refuses unmanaged path
+  ✓ patch path escape is rejected
+  ✓ copy sandbox cleanup removes only managed workspace
+
+[worktree-runner] service and Job Center
+  ✓ worktree service creates Job
+  ✓ worktree service writes create event
+  ✓ worktree service writes command event
+  ✓ worktree service writes patch event
+  ✓ worktree service writes cleanup event
+  ✓ worktree service records patch artifact
+
+=== 19 passed, 0 failed ===
+
+[verify] test:arena
+
+[patch-arena] setup
+
+[patch-arena] create and collect candidate
+  ✓ creates arena run
+  ✓ creates internal provider candidate
+  ✓ collects patch artifact
+  ✓ writes gate results
+  ✓ writes skeleton detector gate
+  ✓ writes candidate artifacts
+  ✓ writes Job Center events
+  ✓ writes Job Center gate results
+
+[patch-arena] reject candidate
+  ✓ reject candidate records decision
+  ✓ reject candidate updates status
+
+[patch-arena] merge candidate
+  ✓ merge candidate succeeds on clean workspace
+  ✓ merge records decision
+  ✓ merge writes Job Center event
+
+[patch-arena] skeleton detector candidate risk
+  ✓ skeleton candidate is not marked ready
+  ✓ skeleton detector gate fails candidate
+  ✓ skeleton risk is visible in metadata and score
+
+[patch-arena] dirty merge protection
+  ✓ dirty workspace merge is rejected
+  ✓ failed merge preserves patch file
+  ✓ failed merge records decision
+
+[patch-arena] provider safety
+  ✓ not_configured provider cannot run
+
+=== 20 passed, 0 failed ===
+
+[verify] test:industrial
+
+[industrial-project] store and schema
+  ✓ project.json is created
+  ✓ project has required schema fields
+  ✓ schema validation accepts created project
+  ✓ project event records creation
+
+[industrial-project] requirement/spec builder core
+  ✓ requirement builder creates structured requirement
+  ✓ artifact plan is domain aware
+  ✓ test plan is domain aware
+  ✓ artifact add persists artifact
+  ✓ requirement add persists structured fields
+  ✓ acceptance criteria update persists
+  ✓ link artifact records requirement and traceability
+  ✓ requirement approval is persisted as project event
+  ✓ spec builder emits required documents
+  ✓ artifact path outside workspace rejected
+  ✓ traceability add persists link
+  ✓ gate result add persists gate
+  ✓ gate resultPath outside workspace rejected
+  ✓ illegal domain rejected
+
+[industrial-project] service and Job Center
+  ✓ service reads project
+  ✓ service exposes domains and artifact types
+  ✓ service exposes domain planning rules
+  ✓ service builds requirement draft
+  ✓ service adds requirement
+  ✓ service updates acceptance criteria
+  ✓ service generates artifact plan and files
+  ✓ artifact plan writes Job Center artifacts
+  ✓ service generates test plan
+  ✓ service generates spec package documents
+  ✓ service records approval in Job Center
+  ✓ approval job persists approval record
+  ✓ service adds artifact
+  ✓ service returns the upserted artifact instead of the last artifact
+  ✓ service rejects artifact path outside workspace
+  ✓ artifact add writes Job Center event
+  ✓ artifact add records project.json as Job artifact
+  ✓ service adds artifact -> test traceability
+  ✓ service adds gate result
+  ✓ gate result writes Job Center gate
+  ✓ service rejects illegal domain
+
+[industrial-project] IPC/API
+  ✓ IPC registers all industrial project channels
+  ✓ IPC schema exposes industrial domains
+  ✓ IPC save creates persisted project
+  ✓ IPC get reads persisted project
+  ✓ IPC builds requirement draft
+  ✓ IPC adds requirement
+  ✓ IPC updates requirement criteria
+  ✓ IPC generates artifact plan
+  ✓ IPC generates test plan
+  ✓ IPC generates spec package
+  ✓ IPC records approval
+  ✓ IPC artifact add persists through service
+  ✓ IPC validate rejects bad payload
+  ✓ IPC artifact path escape is rejected
+  ✓ IPC mutations enter Job Center
+
+=== 54 passed, 0 failed ===
+
+[verify] test:domain-packs
+
+[domain-packs] manifest model
+  ✓ built-in pack count matches Sprint 5A list
+  ✓ built-in manifests validate
+  ✓ manifest exposes required hicode.domain.json fields
+  ✓ manifest rejects automatic scripts
+  ✓ manifest rejects absolute template paths
+  ✓ remote manifest rejects sourcePath injection
+  ✓ tool requirements cannot define commands
+
+[domain-packs] manager persistence
+  ✓ install built-in pack writes hicode.domain.json
+  ✓ install writes template and checklist files
+  ✓ listDomainPacks marks installed pack
+  ✓ enableDomainPack persists enabled state
+  ✓ enabled state survives manager reload
+  ✓ disableDomainPack persists disabled state
+  ✓ remote install requires HTTPS
+  ✓ remote install rejects local path fields
+  ✓ remote install reserves hash or signature
+
+[domain-packs] project and Job Center integration
+  ✓ service installs pack
+  ✓ service enables pack and returns project
+  ✓ enabled pack adds standards to project
+  ✓ enabled pack adds quality gates to project
+  ✓ enabled pack stores templates and checklists metadata
+  ✓ pack operation writes project event
+  ✓ pack operation writes Job Center event
+  ✓ pack operation records manifest and project artifacts
+  ✓ service recommends packs from project domains
+  ✓ service disables pack and updates project metadata
+
+[domain-packs] IPC/API
+  ✓ registerDomainPackIpc exposes domain-pack:list
+  ✓ registerDomainPackIpc exposes domain-pack:get
+  ✓ registerDomainPackIpc exposes domain-pack:validate
+  ✓ registerDomainPackIpc exposes domain-pack:install
+  ✓ registerDomainPackIpc exposes domain-pack:update
+  ✓ registerDomainPackIpc exposes domain-pack:enable
+  ✓ registerDomainPackIpc exposes domain-pack:disable
+  ✓ registerDomainPackIpc exposes domain-pack:uninstall
+  ✓ registerDomainPackIpc exposes domain-pack:recommend
+  ✓ IPC list returns packs
+  ✓ IPC get returns selected pack
+  ✓ IPC validate returns schema result
+
+=== 38 passed, 0 failed ===
+
+[verify] test:agent-team
+
+[agent-team] profiles
+  ✓ built-in agent list covers required roles
+  ✓ profiles include responsibilities inputs outputs checklists escalation
+
+[agent-team] core planning
+  ✓ software project generates software agent plan
+  ✓ software task can enter Patch Arena
+  ✓ software plan has review chain and approvals
+  ✓ pcb/plc/cad project generates specialist agents
+  ✓ enabled domain packs participate in plan
+  ✓ disabled domain pack does not participate
+  ✓ industrial plan creates artifact checklist and dry-run tool plan
+  ✓ agent task model supports parallel groups
+
+[agent-team] service, persistence, Job Center
+  ✓ service creates persisted agent plan
+  ✓ service plan excludes disabled pack
+  ✓ service creates multi-agent job
+  ✓ job contains one task per agent
+  ✓ agent tasks include input output and review result
+  ✓ job writes assigned task events
+  ✓ job writes review chain gate result
+  ✓ job records approval points
+  ✓ job records generated artifacts
+  ✓ artifact files exist on disk
+  ✓ software route creates Patch Arena request
+  ✓ industrial route does not pretend tools executed
+
+[agent-team] IPC/API
+  ✓ registerAgentTeamIpc exposes agent-team:profiles
+  ✓ registerAgentTeamIpc exposes agent-team:profile:get
+  ✓ registerAgentTeamIpc exposes agent-team:plan:create
+  ✓ registerAgentTeamIpc exposes agent-team:plan:list
+  ✓ registerAgentTeamIpc exposes agent-team:plan:get
+  ✓ registerAgentTeamIpc exposes agent-team:job:create
+  ✓ IPC profiles returns built-in agents
+  ✓ IPC creates plan
+  ✓ IPC creates multi-agent job
+
+=== 31 passed, 0 failed ===
+
+[verify] test:industrial-tools
+
+[industrial-tools] registry
+  ✓ built-in adapters include open and commercial targets
+  ✓ FreeCAD exposes Sprint 6B capabilities
+  ✓ KiCad exposes Sprint 6C capabilities
+  ✓ OpenPLC exposes Sprint 6D capabilities
+  ✓ IfcOpenShell exposes Sprint 6E capabilities
+  ✓ SolidWorks exposes Sprint 6F bridge capabilities
+  ✓ AVEVA exposes Sprint 6G bridge capabilities
+  ✓ command exists detection marks installed
+  ✓ version command output is parsed
+  ✓ capability lookup returns adapter gates
+  ✓ invalid adapter config is rejected
+  ✓ FreeCAD manual executable path is detected
+  ✓ KiCad manual executable path is detected
+  ✓ OpenPLC manual compiler path is detected
+  ✓ IfcOpenShell manual Python path is detected by module probe
+  ✓ SolidWorks non-Windows platform is unsupported
+  ✓ SolidWorks Windows detection can find local executable evidence
+  ✓ AVEVA profile evidence is detected without claiming live connection
+
+[industrial-tools] missing tools and dry-run
+  ✓ missing tool detection does not pretend installed
+  ✓ FreeCAD missing detection returns not installed
+  ✓ OpenPLC missing detection returns not installed
+  ✓ SolidWorks missing or unsupported detection does not pretend installed
+  ✓ AVEVA missing connection profile does not pretend installed
+  ✓ KiCad dry-run succeeds without installed tool
+  ✓ KiCad dry-run artifacts are persisted inside workspace
+  ✓ KiCad dry-run artifact metadata marks simulation
+  ✓ KiCad command preview includes ERC DRC and Gerber flow
+  ✓ KiCad dry-run gates are simulated
+  ✓ KiCad .kicad_pro missing check is reported without fake pass
+  ✓ KiCad project path escape is rejected
+  ✓ KiCad output path must stay in project artifact directory
+  ✓ OpenPLC dry-run generates PLC engineering artifacts
+  ✓ OpenPLC ST file is fail-safe and not device-control logic
+  ✓ OpenPLC I/O map contains requested points
+  ✓ OpenPLC artifact metadata marks compile not_run
+  ✓ OpenPLC compile gate is not marked passed when dry-run
+  ✓ OpenPLC missing emergency stop produces safety warning gate
+  ✓ OpenPLC illegal point is rejected
+  ✓ OpenPLC output path must stay in project artifact directory
+  ✓ OpenPLC installed compiler path runs approved syntax check path
+  ✓ IfcOpenShell forced missing detection does not pretend installed
+  ✓ IfcOpenShell missing install writes dry-run BIM artifacts
+  ✓ IfcOpenShell dry-run artifact metadata marks simulation
+  ✓ IfcOpenShell command preview is generated
+  ✓ IfcOpenShell dry-run gates are simulated not passed
+  ✓ IfcOpenShell illegal IFC path is rejected
+  ✓ IfcOpenShell missing targetStandard produces warning
+  ✓ IfcOpenShell missing IFC file is warning in dry-run
+  ✓ SolidWorks missing install writes bridge dry-run artifacts
+  ✓ SolidWorks macro template is generated for manual bridge execution
+  ✓ SolidWorks metadata marks simulated external requirement
+  ✓ SolidWorks dry-run gates are not marked passed
+  ✓ SolidWorks output path escape is rejected
+  ✓ SolidWorks invalid dimensions are rejected
+  ✓ AVEVA unconfigured connection writes dry-run artifacts
+  ✓ AVEVA metadata marks external required manual approval
+  ✓ AVEVA data exchange schema includes engineering templates
+  ✓ AVEVA tag list template is generated
+  ✓ AVEVA dry-run gates are not marked passed
+  ✓ AVEVA plaintext password is rejected
+  ✓ AVEVA non-HTTPS endpoint produces warning
+  ✓ AVEVA invalid allowed operation is rejected
+  ✓ AVEVA output path escape is rejected
+  ✓ FreeCAD missing install writes dry-run plan files
+  ✓ FreeCAD dry-run artifact metadata marks simulation
+  ✓ FreeCAD invalid dimensions are rejected
+  ✓ FreeCAD output path escape is rejected
+  ✓ FreeCAD output path must stay in project artifact directory
+  ✓ artifactDir path escape is rejected
+  ✓ input artifact path escape is rejected
+  ✓ missing installed tool can only dry-run
+  ✓ installed tool execution requires explicit approval
+  ✓ generic non-specialized adapters still block real execution after approval
+  - skipped real FreeCAD execution: No command, executable path, or environment marker was found for FreeCAD.
+  ✓ real FreeCAD execution test skipped with reason when FreeCAD is absent
+  - skipped real KiCad execution: No command, executable path, or environment marker was found for KiCad.
+  ✓ real KiCad execution test skipped with reason when KiCad is absent
+  - skipped real OpenPLC/IEC execution: No command, executable path, or environment marker was found for OpenPLC / IEC 61131-3.
+  ✓ real OpenPLC execution test skipped with reason when compiler is absent
+  - skipped real IfcOpenShell execution: No IfcOpenShell Python module, CLI, executable path, or environment marker was found for IfcOpenShell / IFC.
+  ✓ real IfcOpenShell execution test skipped with reason when Python module is absent
+  - skipped real SolidWorks bridge execution: unsupported_platform: SolidWorks COM/API bridge requires Windows with a licensed local SolidWorks installation.
+  ✓ real SolidWorks execution remains external and skipped without licensed Windows bridge
+  - skipped real AVEVA connector execution: AVEVA connection is not configured: no connector profile, executable bridge, or approved environment marker was found.
+  ✓ real AVEVA execution remains external and skipped without enterprise connector
+
+[industrial-tools] service, job center, project, domain pack
+  ✓ service lists adapters and project/domain-pack requirements
+  ✓ tool detection writes JobEvents and GateResults
+  ✓ service dry-run writes Job artifact
+  ✓ service dry-run writes diagnostic gate
+  ✓ service OpenPLC dry-run writes Job artifact
+  ✓ service OpenPLC dry-run writes skipped compile gate
+  ✓ service IfcOpenShell dry-run writes Job artifact
+  ✓ service IfcOpenShell dry-run writes skipped BIM gate
+  ✓ service SolidWorks bridge dry-run writes Job artifact
+  ✓ service SolidWorks bridge dry-run writes skipped authorization gate
+  ✓ service AVEVA dry-run writes Job artifact
+  ✓ service AVEVA dry-run writes skipped approval gate
+
+[industrial-tools] IPC
+  ✓ IPC list returns adapters
+  ✓ IPC run calls real service path
+  ✓ IPC OpenPLC run calls real service path
+  ✓ IPC IfcOpenShell run calls real service path
+  ✓ IPC SolidWorks run calls real service path
+  ✓ IPC AVEVA run calls real service path
+
+=== 97 passed, 0 failed ===
+
+[verify] test:quality-gates
+
+[quality-gates] core runner
+  ✓ built-in gates include required gate types
+  ✓ command gate pass records evidence
+  ✓ command gate fail records stderr
+  ✓ file exists gate passes for workspace artifact
+  ✓ schema gate validates required fields
+  ✓ simulated adapter gate is not passed
+  ✓ human approval gate requires approval
+  ✓ invalid custom result cannot be used as gate
+  ✓ approved human gate passes
+
+[quality-gates] service, persistence, project
+  ✓ service run returns gate result
+  ✓ gate result writes to Job Center
+  ✓ gate result writes to Industrial Project
+  ✓ service approval reject writes failed result
+
+[quality-gates] IPC
+  ✓ IPC exposes quality-gate:list
+  ✓ IPC exposes quality-gate:run
+  ✓ IPC exposes quality-gate:approve
+  ✓ IPC list returns built-in gates
+  ✓ IPC run calls real service path
+
+=== 18 passed, 0 failed ===
+
+[verify] test:release-builder
+
+[release-builder] core package generation
+  ✓ readiness allows simulated gate but records warning
+  ✓ manifest is generated
+  ✓ manifest contains required release fields
+  ✓ checksum manifest is generated
+  ✓ artifact copy includes project artifacts
+  ✓ simulated gate is marked in release notes
+  ✓ package readiness shape is internally consistent
+
+[release-builder] blocking readiness
+  ✓ failed gate blocks release
+  ✓ build refuses failed gate
+
+[release-builder] service, Job Center, IPC
+  ✓ service returns readiness
+  ✓ service builds release package
+  ✓ release package artifact writes to Job Center
+  ✓ release build writes Job events and gate result
+  ✓ service opens release folder safely
+  ✓ IPC exposes release:readiness
+  ✓ IPC exposes release:build
+  ✓ IPC exposes release:open
+  ✓ IPC readiness calls real service path
+
+=== 18 passed, 0 failed ===
+
+[verify] test:samples
+
+[industrial-control-box] core sample generator
+  ✓ sample generator returns project and release package
+  ✓ all required sample files exist
+  ✓ project.json schema is valid
+  ✓ project enables industrial control box domains
+  ✓ domain pack alias mappings are explicit
+  ✓ requirements include required scenario items
+  ✓ requirements.json contains acceptance criteria
+  ✓ PLC artifacts are real files
+  ✓ PLC safety artifact mentions emergency stop and approval
+  ✓ system BOM contains required categories
+  ✓ CAD dry-run artifacts are generated and simulated
+  ✓ PCB dry-run artifacts are generated and simulated
+  ✓ gate results are generated for sample release
+  ✓ release package has manifest evidence checksums artifacts docs gates
+  ✓ release manifest includes sample artifacts and simulated risks
+  ✓ release notes visibly mark dry-run evidence
+
+[industrial-control-box] service and IPC
+  ✓ service creates sample through real core path
+  ✓ service writes Job Center events
+  ✓ service writes Job artifacts and gates
+  ✓ service enables sample domain packs
+  ✓ IPC exposes sample create channel
+  ✓ IPC create calls service and persists release
+  ✓ IPC rejects unsupported sample id
+
+=== 23 passed, 0 failed ===
+
+[verify] test:dod
+
+[definition-of-done] skeleton detector rules
+  ✓ detects empty files
+  ✓ detects TODO-only files
+  ✓ detects placeholder production content
+  ✓ detects mock-only production path
+  ✓ detects interface-only files
+  ✓ detects UI button without behavior
+  ✓ blocking skeleton findings fail detector
+
+[definition-of-done] project artifact and gate integrity
+  ✓ detects simulated artifact marked real
+  ✓ detects fake pass gates
+  ✓ DoD writes durable evidence
+  ✓ DoD fails simulated-as-real project
+
+[definition-of-done] release blocking
+  ✓ failed detector blocks release readiness
+  ✓ failed detector blocks release build
+
+[definition-of-done] Patch Arena candidate skeleton risk
+  ✓ Patch Arena skeleton candidate is failed
+  ✓ Patch Arena candidate records skeleton risk
+  ✓ Patch Arena writes skeleton evidence artifact
+
+=== 16 passed, 0 failed ===
+
+[verify] test:renderer
+
+[renderer] entrypoints
+  ✓ renderer.js is a thin module entry
+  ✓ index.html loads renderer as ES module
+  ✓ bootstrap uses API wrapper
+  ✓ bootstrap imports panel modules
+  ✓ settings opens usage tab by default
+  ✓ settings nav groups personal and coding sections
+  ✓ bootstrap applies shared user profile to sidebar and usage page
+  ✓ usage panel component renders profile dashboard
+  ✓ settings usage layout is responsive and locally scrollable
+  ✓ modal and settings content guard against small-window clipping
+  ✓ MCP config button opens MCP settings mode
+  ✓ busy session switch previews without resuming runtime
+  ✓ running conversation remains reachable after leaving chat
+  ✓ recent session click restores the active conversation instead of no-op
+  ✓ recent event-log sessions open as replay instead of fake resume
+  ✓ MCP settings validates mcpServers JSON
+  ✓ command sidebar opens visible command center
+  ✓ command center exposes real actions
+  ✓ Agent sidebar opens installed agent capability list
+  ✓ sidebar removes standalone conversation nav and keeps new chat
+  ✓ new chat creates a real runtime session instead of slash clear
+  ✓ sidebar menu collapse keeps only pinned navigation
+  ✓ sidebar collapsed hides project recent and account chrome
+  ✓ sidebar reserves macOS traffic-light safe area
+  ✓ sidebar brand keeps Hi Code visible with prerelease versions
+  ✓ about dialog shows full prerelease version instead of sidebar truncation
+  ✓ sidebar menu area scrolls vertically
+  ✓ sidebar scroll resets on init and collapse toggle
+  ✓ sidebar project row explains workspace switching
+  ✓ sidebar recent sessions use compact product list
+  ✓ workspace header keeps its brand and visible actions unclipped
+  ✓ responsive workbench exposes existing timeline and diff panels
+  ✓ responsive workbench drawer controls have real behavior
+  ✓ responsive drawer CSS preserves desktop panels and adds compact alternatives
+  ✓ real Electron E2E covers supported widths and interactions
+  ✓ CI runs the real Electron smoke under Xvfb
+  ✓ Git panel avoids clipped commit column on medium windows
+  ✓ Git commit controls remain visible in responsive layout
+  ✓ industrial workbench panels stack before they clip
+  ✓ capability pages expose Store-managed disable and uninstall actions
+  ✓ capability Store lookup is silent for missing local-only items
+  ✓ store detail exposes uninstall and local translation affordance
+  ✓ store detail re-translates mixed backend summaries
+  ✓ toast controller deduplicates and limits repeated errors
+  ✓ demo browser shim uses neutral paths
+  ✓ composer exposes real image attachment tray
+  ✓ composer attach button uses image attachment API
+  ✓ composer sends image attachments through workspace-relative refs
+  ✓ composer supports pasted and dropped images
+  ✓ run status keeps runtime output errors visible
+  ✓ model connection test surfaces vision capability hint
+  ✓ agent chat bubble never stays blank on empty model output
+
+[renderer] state
+  ✓ state get/set works
+  ✓ state subscribe works
+
+[renderer] api wrapper
+  ✓ api wrapper preserves successful result
+  ✓ api wrapper detects missing methods
+  ✓ api wrapper returns failed API result
+  ✓ api wrapper returns standardized missing-method error
+  ✓ api wrapper exposes image attachment bridge
+  ✓ api wrapper exposes new session bridge
+  ✓ industrial project API does not fake success when preload is missing
+  ✓ job center API list is callable
+  ✓ job center API get is callable
+  ✓ provider API list is callable
+  ✓ provider API run is callable
+  ✓ worktree API create is callable
+  ✓ worktree API collect is callable
+  ✓ patch arena API list is callable
+  ✓ patch arena API create is callable
+  ✓ industrial project API get is callable
+  ✓ industrial project API save is callable
+  ✓ requirement builder API draft is callable
+  ✓ requirement builder API add is callable
+  ✓ spec builder API package is callable
+  ✓ requirement approval API is callable
+  ✓ domain pack API list is callable
+  ✓ domain pack API install is callable
+  ✓ domain pack API enable is callable
+  ✓ agent team API profiles is callable
+  ✓ agent team API plan is callable
+  ✓ agent team API job is callable
+  ✓ toolchain API list is callable
+  ✓ toolchain API detect accepts manual executable path
+  ✓ toolchain API accepts KiCad manual executable path
+  ✓ toolchain API accepts OpenPLC manual executable path
+  ✓ toolchain API accepts IfcOpenShell manual executable path
+  ✓ toolchain API accepts SolidWorks manual executable path payload
+  ✓ toolchain API accepts AVEVA connector path payload
+  ✓ toolchain API dry-run is callable
+  ✓ quality gate API list is callable
+  ✓ quality gate API run is callable
+  ✓ quality gate API approval is callable
+  ✓ release readiness API is callable
+  ✓ release build API is callable
+  ✓ release open API is callable
+  ✓ sample project API is callable
+  ✓ store API list is callable
+  ✓ store API detail is callable
+  ✓ store API disable is callable
+  ✓ store API enable is callable
+  ✓ store API uninstall is callable
+  ✓ silent Store lookup returns failure without user toast
+  ✓ api wrapper preserves array fallback on error
+  ✓ api wrapper reports user-facing errors
+
+[renderer] components
+  ✓ diff renderer escapes HTML
+  ✓ diff status text reflects already-applied semantics
+  ✓ diff panel uses archive and rollback labels
+  ✓ store query options trim search
+  ✓ store Chinese summary translates English descriptions
+  ✓ store Chinese summary translates mixed Chinese-English descriptions
+  ✓ store Chinese summary truly translates Figma detail
+  ✓ store Chinese summary handles mixed English Chinese connectors
+  ✓ store install action shows disable for enabled item
+  ✓ store install action shows enable for disabled item
+  ✓ Agent capability metadata renders real agent entries
+  ✓ capability lifecycle exposes disable and uninstall for Store-managed items
+  ✓ capability lifecycle exposes enable for disabled Store-managed items
+  ✓ capability lifecycle marks unmanaged capabilities read-only
+  ✓ job center empty list renders
+  ✓ failed job renders readable error
+  ✓ failed job exposes retry action
+  ✓ artifact job renders artifact actions
+  ✓ job summary counts artifacts and failures
+  ✓ patch arena empty list renders
+  ✓ patch arena renders artifact actions
+  ✓ patch arena renders skeleton risk
+  ✓ patch arena summary counts candidates
+  ✓ industrial project empty state renders
+  ✓ industrial project renders requirements artifacts and gates
+  ✓ industrial project renders artifact completeness
+  ✓ industrial project summary counts traceability
+  ✓ domain pack list renders recommended pack
+  ✓ domain pack detail renders templates checklists and tools
+  ✓ domain pack summary counts enabled and templates
+  ✓ agent profile list renders roles
+  ✓ agent plan list renders selected plan
+  ✓ agent plan detail renders tasks reviews and tool plan
+  ✓ agent plan summary counts approvals
+  ✓ toolchain list renders installed state
+  ✓ toolchain detail renders KiCad action, inputs, and artifacts
+  ✓ toolchain summary counts missing tools and capabilities
+  ✓ quality gate list renders gates
+  ✓ quality gate detail renders evidence and approval actions
+  ✓ quality gate summary counts approvals
+  ✓ release center renders blocked readiness risks and package
+  ✓ release center renders Definition of Done checklist
+  ✓ release center summary counts gates artifacts approvals and DoD
+  ✓ sample project panel renders result summary
+  ✓ FreeCAD detail renders manual path and demo action
+  ✓ FreeCAD detail renders dry-run artifact and diagnostics
+  ✓ OpenPLC detail renders PLC controls and safety actions
+  ✓ OpenPLC detail renders ST FAT/SAT artifacts and diagnostics
+  ✓ IfcOpenShell detail renders BIM controls and inspection action
+  ✓ IfcOpenShell detail renders BIM dry-run artifacts and diagnostics
+  ✓ SolidWorks detail renders bridge controls and generation action
+  ✓ SolidWorks detail renders bridge artifacts and authorization boundary
+  ✓ AVEVA detail renders profile controls and dry-run action
+  ✓ AVEVA detail renders templates and risk checklist
+  ✓ router sets main class
+  ✓ router hides inactive views
+  ✓ router updates active nav
+
+=== 161 passed, 0 failed ===
+
+[verify] test:entrypoints
+
+[entrypoints] production entrypoint guard
+  ✓ package main points to electron/main.mjs
+  ✓ electron main exists
+  ✓ preload exists
+  ✓ renderer html exists
+  ✓ renderer js exists
+  ✓ root main.mjs moved out of active root
+  ✓ root renderer.js moved out of active root
+  ✓ root index.html moved out of active root
+  ✓ legacy v0.4 folder keeps old entrypoints
+  ✓ README documents true Electron main
+  ✓ handoff documents true renderer entry
+  ✓ engineering baseline forbids root legacy entrypoints
+
+=== 12 passed, 0 failed ===
+
+[verify] test:program
+
+[program-control] required artifacts
+  ✓ docs/program/PROGRAM.md exists and is non-empty
+  ✓ docs/program/ARCHITECTURE.md exists and is non-empty
+  ✓ docs/adr/README.md exists and is non-empty
+  ✓ docs/adr/ADR-0001-program-control-and-evidence.md exists and is non-empty
+  ✓ docs/adr/ADR-0002-runtime-protocol-authority-migration.md exists and is non-empty
+  ✓ planning/backlog.json exists and is non-empty
+  ✓ planning/release-board.json exists and is non-empty
+  ✓ reports/program/status.md exists and is non-empty
+  ✓ reports/program/risks.json exists and is non-empty
+  ✓ reports/tasks/HC-PROG-100.md exists and is non-empty
+  ✓ reports/tasks/HC-QA-101.md exists and is non-empty
+  ✓ reports/tasks/HC-RUN-201.md exists and is non-empty
+  ✓ reports/evidence/baseline/manifest.json exists and is non-empty
+  ✓ reports/evidence/HC-QA-101/manifest.json exists and is non-empty
+  ✓ reports/evidence/HC-RUN-201/manifest.json exists and is non-empty
+
+[program-control] board and evidence contract
+  ✓ backlog records immutable source commit
+  ✓ HC-PROG-100 is completed
+  ✓ release board keeps QA dependency
+  ✓ HC-QA-101 is completed with evidence
+  ✓ Electron responsive gate passed
+  ✓ release board keeps runtime dependency
+  ✓ HC-RUN-201 is completed with evidence
+  ✓ runtime event sink gate passed
+  ✓ risk register has active risks
+  ✓ baseline records source commit
+  ✓ baseline records every gate passing
+  ✓ baseline records no runtime product dirt
+  ✓ build log exists
+  ✓ build log hash matches
+  ✓ verify log exists
+  ✓ verify log hash matches
+  ✓ release-check log exists
+  ✓ release-check log hash matches
+  ✓ feature-tests log exists
+  ✓ feature-tests log hash matches
+  ✓ security-tests log exists
+  ✓ security-tests log hash matches
+  ✓ dod-tests log exists
+  ✓ dod-tests log hash matches
+  ✓ dod-scan log exists
+  ✓ dod-scan log hash matches
+  ✓ production-audit log exists
+  ✓ production-audit log hash matches
+  ✓ git-diff-check log exists
+  ✓ git-diff-check log hash matches
+  ✓ HC-QA-101 evidence records every command passing
+  ✓ HC-QA-101 build log exists
+  ✓ HC-QA-101 build log hash matches
+  ✓ HC-QA-101 verify log exists
+  ✓ HC-QA-101 verify log hash matches
+  ✓ HC-QA-101 release-check log exists
+  ✓ HC-QA-101 release-check log hash matches
+  ✓ HC-QA-101 feature-tests log exists
+  ✓ HC-QA-101 feature-tests log hash matches
+  ✓ HC-QA-101 security-tests log exists
+  ✓ HC-QA-101 security-tests log hash matches
+  ✓ HC-QA-101 dod-tests log exists
+  ✓ HC-QA-101 dod-tests log hash matches
+  ✓ HC-QA-101 dod-scan log exists
+  ✓ HC-QA-101 dod-scan log hash matches
+  ✓ HC-QA-101 production-audit log exists
+  ✓ HC-QA-101 production-audit log hash matches
+  ✓ HC-QA-101 electron-e2e log exists
+  ✓ HC-QA-101 electron-e2e log hash matches
+  ✓ HC-QA-101 git-diff-check log exists
+  ✓ HC-QA-101 git-diff-check log hash matches
+  ✓ HC-RUN-201 evidence records every command passing
+  ✓ HC-RUN-201 evidence is captured from its task branch
+  ✓ HC-RUN-201 captured build
+  ✓ HC-RUN-201 captured verify
+  ✓ HC-RUN-201 captured release-check
+  ✓ HC-RUN-201 captured feature-tests
+  ✓ HC-RUN-201 captured runtime-events
+  ✓ HC-RUN-201 captured runtime-concurrency
+  ✓ HC-RUN-201 captured runtime-clients
+  ✓ HC-RUN-201 captured security-tests
+  ✓ HC-RUN-201 captured dod-tests
+  ✓ HC-RUN-201 captured dod-scan
+  ✓ HC-RUN-201 captured production-audit
+  ✓ HC-RUN-201 captured electron-e2e
+  ✓ HC-RUN-201 captured git-diff-check
+  ✓ HC-RUN-201 build log exists
+  ✓ HC-RUN-201 build log hash matches
+  ✓ HC-RUN-201 verify log exists
+  ✓ HC-RUN-201 verify log hash matches
+  ✓ HC-RUN-201 release-check log exists
+  ✓ HC-RUN-201 release-check log hash matches
+  ✓ HC-RUN-201 feature-tests log exists
+  ✓ HC-RUN-201 feature-tests log hash matches
+  ✓ HC-RUN-201 runtime-events log exists
+  ✓ HC-RUN-201 runtime-events log hash matches
+  ✓ HC-RUN-201 runtime-concurrency log exists
+  ✓ HC-RUN-201 runtime-concurrency log hash matches
+  ✓ HC-RUN-201 runtime-clients log exists
+  ✓ HC-RUN-201 runtime-clients log hash matches
+  ✓ HC-RUN-201 security-tests log exists
+  ✓ HC-RUN-201 security-tests log hash matches
+  ✓ HC-RUN-201 dod-tests log exists
+  ✓ HC-RUN-201 dod-tests log hash matches
+  ✓ HC-RUN-201 dod-scan log exists
+  ✓ HC-RUN-201 dod-scan log hash matches
+  ✓ HC-RUN-201 production-audit log exists
+  ✓ HC-RUN-201 production-audit log hash matches
+  ✓ HC-RUN-201 electron-e2e log exists
+  ✓ HC-RUN-201 electron-e2e log hash matches
+  ✓ HC-RUN-201 git-diff-check log exists
+  ✓ HC-RUN-201 git-diff-check log hash matches
+  ✓ historical final acceptance is explicitly named
+  ✓ unmarked final acceptance path is absent
+  ✓ audit archive policy is present
+  ✓ production audit is package-manager independent
+
+[program-control] production audit helpers
+  ✓ production audit includes production packages
+  ✓ production audit excludes development packages
+  ✓ production audit preserves scoped transitive packages
+  ✓ high audit threshold blocks high advisories
+  ✓ production audit rejects insecure registry
+
+=== 116 passed, 0 failed ===
+
+[verify] test:security
+
+[security] runtime baseline
+  ✓ contextIsolation remains enabled
+  ✓ nodeIntegration remains disabled
+  ✓ renderer sandbox enabled
+  ✓ renderer CSP exists
+  ✓ CSP blocks remote script by default
+  ✓ desktop runtime disables slash-command process exit
+  ✓ native app launcher only intercepts known app aliases
+  ✓ desktop bridge filters terminal tool chrome from chat output
+  ✓ runtime emits versioned protocol envelopes
+  ✓ runtime protocol events are append-only persisted
+  ✓ app version is synced from package metadata
+  ✓ preload does not expose ipcRenderer
+  ✓ preload does not expose generic invoke
+  ✓ preload validates string parameters
+  ✓ preload normalizes object parameters
+  ✓ preload exposes bounded image attachment API
+  ✓ preload exposes Industrial Project API
+  ✓ preload normalizes Industrial Project payloads
+  ✓ preload exposes Domain Pack API
+  ✓ preload validates Domain Pack packId arguments
+  ✓ preload exposes Agent Team API
+  ✓ preload validates Agent Team id arguments
+  ✓ preload exposes Industrial Toolchain API
+  ✓ preload validates Industrial Toolchain adapter ids
+  ✓ preload exposes Quality Gate API
+  ✓ preload normalizes Quality Gate payloads
+  ✓ preload exposes Release Builder API
+  ✓ preload normalizes Release Builder payloads
+  ✓ preload exposes Sample Project API
+  ✓ IPC handlers use normalized wrapper
+  ✓ main process delegates IPC registration
+  ✓ workspace image attachments are confined to workspace
+  ✓ workspace image attachments restrict formats and size
+  ✓ model image rejection returns actionable guidance
+  ✓ main process wires Release Builder service
+  ✓ main process wires Sample Project service
+  ✓ no direct IPC handle registrations in main
+  ✓ bash tool filters inherited env
+  ✓ safe child env service denies inherited secrets by default
+  ✓ MCP server process uses safe child env
+  ✓ FreeCAD execution uses safe child env
+  ✓ Electron E2E isolates HOME and USERPROFILE
+  ✓ Electron E2E rejects inherited secret variables
+  ✓ Electron E2E enters chat through a local command
+  ✓ Store rejects remote local paths
+  ✓ Store rejects remote sourceRoot paths
+  ✓ Store rejects remote sourcePath paths
+  ✓ remote downloads require HTTPS
+  ✓ Store download filename is sanitized
+  ✓ Store download retries fallback mirrors
+  ✓ Store uninstall is restricted to store dir
+  ✓ disabled Store capabilities remain manageable
+  ✓ Store schema reserves sha256
+  ✓ Store schema reserves signature
+  ✓ unverified download requires confirmation
+  ✓ preload exposes managed Store actions
+  ✓ Domain Packs reject automatic scripts
+  ✓ Domain Packs require HTTPS for remote installs
+  ✓ Domain Packs reserve hash or signature
+  ✓ Domain Packs reject remote local paths
+  ✓ Domain Packs restrict install paths to safe root
+  ✓ Agent Team store restricts paths to safe root
+  ✓ Agent Team marks industrial tools as dry-run only
+  ✓ Industrial Tool adapters restrict artifact paths
+  ✓ Industrial Tool adapters require approval for execution
+  ✓ Industrial Tool adapters mark dry-run artifacts simulated
+  ✓ Industrial Tool adapters keep generic real execution blocked
+  ✓ Industrial Tool adapters include FreeCAD execution path
+  ✓ FreeCAD adapter writes dry-run plan artifacts
+  ✓ Industrial Tool adapters include KiCad execution path
+  ✓ KiCad adapter writes dry-run plan artifacts
+  ✓ KiCad adapter confines outputs to project artifacts
+  ✓ KiCad adapter records simulated dry-run gates
+  ✓ Industrial Tool adapters include OpenPLC execution path
+  ✓ OpenPLC adapter writes required engineering artifacts
+  ✓ OpenPLC adapter writes compile dry-run artifacts
+  ✓ OpenPLC adapter confines outputs to project artifacts
+  ✓ OpenPLC adapter requires approval and forbids device/network access
+  ✓ OpenPLC adapter keeps missing compiler gate not_run
+  ✓ Industrial Tool adapters include IfcOpenShell execution path
+  ✓ IfcOpenShell adapter writes BIM dry-run artifacts
+  ✓ IfcOpenShell adapter writes inspection report and summary
+  ✓ IfcOpenShell adapter confines outputs and IFC paths
+  ✓ IfcOpenShell adapter forbids code compliance conclusions
+  ✓ IfcOpenShell dry-run gates are simulated
+  ✓ Industrial Tool adapters include SolidWorks bridge path
+  ✓ SolidWorks bridge detects unsupported platforms
+  ✓ SolidWorks bridge writes required dry-run artifacts
+  ✓ SolidWorks bridge marks external artifacts explicitly
+  ✓ SolidWorks bridge confines outputs to project artifacts
+  ✓ SolidWorks bridge requires commercial authorization
+  ✓ SolidWorks bridge does not execute COM automatically
+  ✓ Industrial Tool adapters include AVEVA bridge path
+  ✓ AVEVA bridge rejects plaintext credentials
+  ✓ AVEVA bridge writes required dry-run templates
+  ✓ AVEVA bridge marks enterprise outputs explicitly
+  ✓ AVEVA bridge confines outputs to project artifacts
+  ✓ AVEVA bridge blocks real connector execution
+  ✓ AVEVA bridge checks HTTPS endpoint and allowed operations
+  ✓ Quality Gate Runner defines required gate types
+  ✓ Quality Gate Runner defines release gate statuses
+  ✓ Quality Gate command execution avoids shell syntax
+  ✓ Quality Gate Runner confines artifact paths
+  ✓ Quality Gate simulated adapter is not passed
+  ✓ Release Builder confines release and artifact paths
+  ✓ Release Builder writes required package files
+  ✓ Release Builder blocks failed and approval gates
+  ✓ Release Builder marks simulated without passing
+  ✓ Definition of Done detects skeleton delivery risks
+  ✓ Definition of Done writes durable evidence
+  ✓ Release Builder runs Definition of Done and blocks release
+  ✓ Patch Arena runs skeleton detector for candidates
+  ✓ Renderer exposes DoD, skeleton risk, and artifact completeness
+  ✓ Release Builder records Job-facing release package artifact path
+  ✓ Industrial Control Box sample confines paths to workspace
+  ✓ Industrial Control Box sample uses real adapters and Release Builder
+  ✓ Industrial Control Box sample writes required real artifacts
+  ✓ Industrial Control Box sample marks dry-run and not_run evidence
+  ✓ Sample Project service records Job Center artifact and gate evidence
+  ✓ release:check uses package-manager independent verifier
+  ✓ production audit uses package-lock and HTTPS registry
+  ✓ package version is on v0.6 alpha development line
+  ✓ verify script includes version sync
+  ✓ verify script includes build
+  ✓ verify script includes syntax check
+  ✓ verify script includes feature tests
+  ✓ verify script includes runtime protocol tests
+  ✓ verify script includes service tests
+  ✓ verify script includes job center tests
+  ✓ verify script includes provider tests
+  ✓ verify script includes worktree tests
+  ✓ verify script includes patch arena tests
+  ✓ verify script includes industrial project tests
+  ✓ verify script includes domain pack tests
+  ✓ verify script includes agent team tests
+  ✓ verify script includes industrial tool tests
+  ✓ verify script includes quality gate tests
+  ✓ verify script includes release builder tests
+  ✓ verify script includes sample project tests
+  ✓ verify script includes Definition of Done tests
+  ✓ verify script includes program control tests
+  ✓ verify script includes usage persistence tests
+
+=== 142 passed, 0 failed ===
+
+[verify] test:usage
+
+[usage] ledger persistence
+
+[usage] formatting
+  ✓ formatTokenCount uses K suffix
+  ✓ formatTokenCount uses M suffix
+  ✓ formatTokenCount uses B suffix
+  ✓ formatDuration renders hours
+  ✓ formatDuration renders minutes
+  ✓ recordUsage aggregates lifetime tokens
+  ✓ recordUsage tracks turns
+  ✓ recordUsage tracks longest task duration
+  ✓ getUsageStats returns heatmap cells
+  ✓ getUsageStats aggregates top models
+  ✓ getUsageStats aggregates reasoning levels
+
+=== 11 passed, 0 failed ===
+
+[verify] all checks passed
+
+$ node scripts/verify.mjs

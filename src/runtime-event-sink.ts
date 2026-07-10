@@ -105,8 +105,21 @@ function snapshotEvent(event: RuntimeEventEnvelope): Readonly<RuntimeEventEnvelo
     throw new TypeError("runtime event payload must be an object");
   }
 
-  const payload = event.payload ? Object.freeze({ ...event.payload }) : undefined;
+  let payload: Readonly<Record<string, unknown>> | undefined;
+  if (event.payload) {
+    try {
+      payload = deepFreeze(structuredClone(event.payload));
+    } catch {
+      throw new TypeError("runtime event payload must be structured-cloneable");
+    }
+  }
   return Object.freeze({ ...event, ...(payload ? { payload } : {}) });
+}
+
+function deepFreeze<T>(value: T): T {
+  if (!value || typeof value !== "object" || Object.isFrozen(value)) return value;
+  for (const child of Object.values(value as Record<string, unknown>)) deepFreeze(child);
+  return Object.freeze(value);
 }
 
 function validateRequiredId(value: unknown, field: string): asserts value is string {

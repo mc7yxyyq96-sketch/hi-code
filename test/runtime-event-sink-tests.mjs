@@ -27,7 +27,7 @@ function event(overrides = {}) {
     summary: "hello",
     status: "running",
     createdAt: 100,
-    payload: { messageId: "message-a", delta: "hello" },
+    payload: { messageId: "message-a", delta: "hello", runtimeProtocol: { sequence: 1 } },
     ...overrides,
   };
 }
@@ -63,7 +63,12 @@ check("unfiltered subscriber receives both events", allEvents.length === 2, JSON
 check("session filter prevents cross-session delivery", sessionEvents.length === 1 && sessionEvents[0].sessionId === "session-a");
 check("type filter receives only matching event", completedEvents.length === 1 && completedEvents[0].id === "event-2");
 check("one listener failure does not stop other listeners", listenerErrors.length === 2 && allEvents.length === 2);
-check("delivered event and payload are immutable", Object.isFrozen(allEvents[0]) && Object.isFrozen(allEvents[0].payload));
+check(
+  "delivered event and nested protocol payload are immutable",
+  Object.isFrozen(allEvents[0]) &&
+    Object.isFrozen(allEvents[0].payload) &&
+    Object.isFrozen(allEvents[0].payload.runtimeProtocol),
+);
 
 unsubscribeAll();
 bus.emit(event({ id: "event-3" }));

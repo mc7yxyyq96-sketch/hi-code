@@ -12,6 +12,7 @@ const testFiles = [
   ["test:runtime-protocol", "test/runtime-protocol-tests.mjs"],
   ["test:runtime-events", "test/runtime-event-sink-tests.mjs"],
   ["test:runtime-concurrency", "test/runtime-concurrency-tests.mjs"],
+  ["test:runtime-clients", "test/runtime-client-adapter-tests.mjs"],
   ["test:services", "test/main-process-services-tests.mjs"],
   ["test:jobs", "test/job-center-tests.mjs"],
   ["test:providers", "test/provider-tests.mjs"],

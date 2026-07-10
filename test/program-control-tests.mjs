@@ -42,8 +42,10 @@ const requiredFiles = [
   "reports/program/risks.json",
   "reports/tasks/HC-PROG-100.md",
   "reports/tasks/HC-QA-101.md",
+  "reports/tasks/HC-RUN-201.md",
   "reports/evidence/baseline/manifest.json",
   "reports/evidence/HC-QA-101/manifest.json",
+  "reports/evidence/HC-RUN-201/manifest.json",
 ];
 
 console.log("\n[program-control] required artifacts");
@@ -56,6 +58,7 @@ const board = readJson(root, "planning/release-board.json");
 const risks = readJson(root, "reports/program/risks.json");
 const manifest = readJson(root, "reports/evidence/baseline/manifest.json");
 const qaManifest = readJson(root, "reports/evidence/HC-QA-101/manifest.json");
+const runtimeManifest = readJson(root, "reports/evidence/HC-RUN-201/manifest.json");
 const packageJson = readJson(root, "package.json");
 const programTask = backlog.tasks.find((task) => task.id === "HC-PROG-100");
 const qaTask = board.tasks.find((task) => task.id === "HC-QA-101");
@@ -68,6 +71,12 @@ check("release board keeps QA dependency", qaTask?.dependencies?.includes("HC-PR
 check("HC-QA-101 is completed with evidence", qaTask?.status === "completed" && qaTask?.evidence === "reports/evidence/HC-QA-101/manifest.json");
 check("Electron responsive gate passed", board.gates?.find((gate) => gate.id === "electron-responsive-e2e")?.status === "passed");
 check("release board keeps runtime dependency", runtimeTask?.dependencies?.includes("HC-PROG-100"));
+check(
+  "HC-RUN-201 is completed with evidence",
+  runtimeTask?.status === "completed" && runtimeTask?.evidence === "reports/evidence/HC-RUN-201/manifest.json",
+  JSON.stringify(runtimeTask),
+);
+check("runtime event sink gate passed", board.gates?.find((gate) => gate.id === "runtime-event-sink")?.status === "passed");
 check("risk register has active risks", Array.isArray(risks.risks) && risks.risks.length > 0);
 check("baseline records source commit", manifest.source?.commit === backlog.sourceCommit);
 check("baseline records every gate passing", manifest.summary?.allPassed === true, JSON.stringify(manifest.summary));
@@ -82,6 +91,16 @@ for (const command of qaManifest.commands || []) {
   const absolute = path.join(root, command.logPath || "");
   check(`HC-QA-101 ${command.id} log exists`, Boolean(command.logPath) && fs.existsSync(absolute));
   if (fs.existsSync(absolute)) check(`HC-QA-101 ${command.id} log hash matches`, digest(absolute) === command.logSha256);
+}
+check("HC-RUN-201 evidence records every command passing", runtimeManifest.summary?.allPassed === true, JSON.stringify(runtimeManifest.summary));
+check("HC-RUN-201 evidence is captured from its task branch", runtimeManifest.source?.branch === "codex/runtime-engine/hc-run-201");
+for (const requiredCommand of ["build", "verify", "release-check", "feature-tests", "runtime-events", "runtime-concurrency", "runtime-clients", "security-tests", "dod-tests", "dod-scan", "production-audit", "electron-e2e", "git-diff-check"]) {
+  check(`HC-RUN-201 captured ${requiredCommand}`, runtimeManifest.commands?.some((command) => command.id === requiredCommand && command.status === "passed"));
+}
+for (const command of runtimeManifest.commands || []) {
+  const absolute = path.join(root, command.logPath || "");
+  check(`HC-RUN-201 ${command.id} log exists`, Boolean(command.logPath) && fs.existsSync(absolute));
+  if (fs.existsSync(absolute)) check(`HC-RUN-201 ${command.id} log hash matches`, digest(absolute) === command.logSha256);
 }
 check("historical final acceptance is explicitly named", fs.existsSync(path.join(root, "reports/final-acceptance-historical.md")));
 check("unmarked final acceptance path is absent", !fs.existsSync(path.join(root, "reports/final-acceptance.md")));

@@ -1,33 +1,42 @@
 # Runtime Protocol Foundation
 
-Date: 2026-07-08
+Date: 2026-07-10
 
 ## Purpose
 
 Hi Code needs a stable runtime protocol before it can grow to Codex / Claude Code scale. The protocol is the shared event envelope for desktop UI, CLI/TUI, future SDKs, Job Center, Patch Arena, and external agent adapters.
 
-This document describes the first v0.6 slice. It is intentionally compatible with the existing runtime event stream: current events still flow as before, and a versioned `payload.runtimeProtocol` envelope is attached to each emitted runtime event.
+This document describes the compatible v0.6 runtime stream. A materialized event is persisted first, delivered through `RuntimeEventSink`, and also carries a versioned `payload.runtimeProtocol` envelope for consumers migrating from legacy event fields.
 
 ## Current Implementation
 
 Core file:
 
 - `src/runtime-protocol.ts`
+- `src/events.ts`
+- `src/runtime-event-sink.ts`
+- `src/runtime-client-adapters.ts`
 
 Runtime integration:
 
-- `src/runtime.ts` calls `createRuntimeProtocolEvent(...)` for every emitted runtime event.
+- `src/runtime.ts` calls `createRuntimeProtocolEvent(...)` for every emitted runtime event and sends the materialized event to an injected `RuntimeEventSink`.
 - The generated envelope is attached as `event.payload.runtimeProtocol`.
+- `src/agent.ts` emits first-class `assistant:delta` and `assistant:completed` events. Completion includes the full message; empty and failed responses use `error`, never a fake completed state.
 - `src/runtime-event-store.ts` appends validated protocol events to `~/.hicode/runtime-events/<sessionId>.jsonl` for replay and crash recovery.
 - `src/session-store.ts` merges event-only sessions into Recent as replay-only entries when the full chat session JSON is missing.
 - `src/recovery.ts` reads recoverable failed/interrupted/denied turns from the append-only protocol store and merges them with legacy runtime logs so desktop recovery controls survive restart during the v0.6 migration.
 - CLI/TUI `/sessions` shows replay-only event sessions, and `/resume <id>` opens those sessions as read-only transcript replay instead of pretending they can continue model context.
 - Full saved session resume continues runtime protocol sequence numbers from the append-only event store, so resumed turns do not duplicate prior event sequences.
-- Existing renderer and Electron event consumers can continue to use the legacy event fields while new code migrates to the protocol envelope.
+- Electron, CLI, and TUI use `RuntimeEventBus` plus client adapters for assistant text. The legacy `emitEvent` callback remains compatible for one migration period.
+- The Electron stdout bridge is no longer an assistant transport. It remains an opt-out compatibility path for old command/tool console text and can be disabled with `HICODE_LEGACY_STDOUT_BRIDGE=0`.
 
 Tests:
 
 - `test/runtime-protocol-tests.mjs`
+- `test/runtime-event-sink-tests.mjs`
+- `test/runtime-concurrency-tests.mjs`
+- `test/runtime-client-adapter-tests.mjs`
+- `tests/electron-e2e/run.mjs`
 - Included in `npm run verify` and `npm run release:check`.
 
 Version sync:
@@ -39,13 +48,15 @@ Version sync:
 
 Desktop / Electron:
 
-- Main process emits existing `tool-event` IPC messages.
-- Each message now carries `payload.runtimeProtocol`.
-- Renderer panels can migrate one panel at a time without breaking legacy `type`, `status`, `title`, and `payload` reads.
+- Main process owns a process-local `RuntimeEventBus` and injects it into normal and isolated runtimes.
+- Assistant deltas project to the existing `output` IPC channel; completion and timeline events retain the existing `tool-event` channel. No renderer API break is required.
+- Assistant deltas are not duplicated into the legacy tool timeline/log. Their durable authority is the append-only protocol store.
+- Real Electron E2E runs a local streaming model with `HICODE_LEGACY_STDOUT_BRIDGE=0` and verifies the complete response in the chat view.
 
 CLI / TUI:
 
-- The shared `createRuntime(...)` path emits the same protocol envelope when an `emitEvent` callback is supplied.
+- Both clients inject their own `RuntimeEventBus`, disable direct assistant stdout rendering, and project typed assistant events with `connectAssistantTextOutput(...)`.
+- Console/stdout interception remains only for legacy command/tool framing in TUI; model text does not depend on it.
 - `/sessions` includes durable event-only sessions as `replay` entries.
 - `/resume <id>` resumes full saved sessions when session JSON exists.
 - `/resume <id>` opens event-only sessions as read-only replay with user turns, tool summaries, and completion status when only JSONL runtime events exist.
@@ -54,7 +65,7 @@ CLI / TUI:
 Future SDK / app-server:
 
 - SDK streaming should expose the `RuntimeProtocolEvent` envelope directly.
-- Legacy event fields may remain as compatibility metadata, but new automations should key off `schemaVersion`, `kind`, `status`, `sessionId`, `turnId`, and `sequence`.
+- Legacy event fields remain compatibility metadata, but new automations key off `schemaVersion`, `kind`, `status`, `sessionId`, `turnId`, and `sequence`.
 
 ## Event Shape
 
@@ -106,6 +117,8 @@ Initial protocol kinds:
 - `turn.failed`
 - `turn.denied`
 - `turn.interrupted`
+- `assistant.delta`
+- `assistant.completed`
 - `model.output`
 - `tool.started`
 - `tool.output`
@@ -141,7 +154,7 @@ The `visibility` array tells downstream consumers where an event is safe and use
 - `sdk`
 - `hidden`
 
-The first slice mostly routes tool events to timeline/job/sdk, diffs to diff/timeline/job/sdk, and approval requests to timeline/job/sdk.
+Assistant deltas route to chat/sdk; assistant completions route to chat/timeline/sdk. Tool events route to timeline/job/sdk, diffs to diff/timeline/job/sdk, and approval requests to timeline/job/sdk. `model.output` is retained as a reserved compatibility kind and is not the new assistant transport.
 
 ## Validation
 
@@ -158,12 +171,12 @@ The first slice mostly routes tool events to timeline/job/sdk, diffs to diff/tim
 
 ## Migration Plan
 
-1. Keep legacy runtime event fields intact.
-2. Attach protocol envelopes to every runtime event.
-3. Append protocol events to a durable JSONL event store.
-4. Make recent sessions replay from persisted protocol events. Event-only sessions are now visible as replay-only entries; full LLM context resume still requires the saved session JSON.
-5. Make CLI/TUI replay event-only sessions from the same persisted protocol stream.
-6. Feed desktop recoverable task controls from the protocol store while keeping legacy log fallback.
+1. Keep legacy runtime event fields intact. Completed.
+2. Attach protocol envelopes to every runtime event. Completed.
+3. Append protocol events to a durable JSONL event store. Completed.
+4. Emit assistant deltas/completions through an injected sink and migrate Electron/CLI/TUI. Completed in HC-RUN-201.
+5. Make recent sessions replay from persisted protocol events. Event-only sessions are visible as replay-only entries; full LLM context resume still requires saved session JSON.
+6. Reconstruct complete resumable context from typed stores. Planned in HC-RUN-202; not claimed by HC-RUN-201.
 7. Expose protocol streaming through a future local app-server and SDK.
 
 ## Guardrails

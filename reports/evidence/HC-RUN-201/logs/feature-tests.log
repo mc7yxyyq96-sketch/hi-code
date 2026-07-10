@@ -1,0 +1,150 @@
+$ /Applications/QClaw.app/Contents/Resources/node/node test/feature-tests.mjs
+
+[1] fuzzy patch
+  ✓ fuzzy edit succeeded
+  ✓ content updated
+  ✓ original indentation (tab) preserved
+
+[1b] workspace path confinement
+  ✓ absolute read outside cwd denied
+  ✓ absolute write outside cwd denied
+  ✓ grep outside cwd denied
+  ✓ symlink escape denied
+  ✓ @absolute outside cwd not inlined
+
+[2] bash sandbox
+  ✓ write inside cwd allowed
+  ✓ write outside cwd blocked
+  ✓ read-only bash blocks workspace writes
+
+[2a] bash interrupt
+  ✓ bash abort returns interrupt code
+  ✓ bash abort returns quickly
+
+[2b] !cmd permission
+
+  ⚠ permission required
+  bash: touch raw-shell-denied.txt
+Denied by user.
+  ✓ !cmd prompts and respects deny
+  ✓ runtime emits turn start
+  ✓ runtime turn start keeps retry input
+  ✓ runtime emits denied turn done
+[?25l⠋ thinking  ⠙ thinking  ⠹ thinking  ⠸ thinking  ⠼ thinking  ⠴ thinking  ⠦ thinking  ⠧ thinking  ⠇ thinking  ⠏ thinking  ⠋ thinking  ⠙ thinking  ⠹ thinking  ⠸ thinking  [K[?25h✗ error: couldn't reach the model server at http://127.0.0.1:9. Is it running and on the same network? Check Settings (the gear icon).
+  ✓ runtime persists user turn before model failure
+  ✓ runtime startNewSession creates a fresh visible session id
+[?25l[K[?25h  ✓ runtime treats empty model response as visible error
+
+[2c] recoverable tasks
+  ✓ recoverableTasksFromEvents keeps failed retry input
+  ✓ readRecoverableTasksFromLogs ignores bad lines and returns interrupted task
+  ✓ recoverableTasksFromProtocolEvents restores interrupted protocol turn
+  ✓ mergeRecoverableTasks deduplicates legacy and protocol recovery rows
+
+[2e] safe child process env
+  ✓ safe env keeps basic runtime paths
+  ✓ safe env strips parent API keys and tokens
+  ✓ safe env allows explicit MCP server env
+  ✓ FreeCAD safe env allows output dir without parent secrets
+  ✓ sensitive extra env requires explicit allow
+  ✓ env logging redacts tokens and passwords
+  ✓ env key validator rejects sensitive names
+
+[2d] runtime job queue
+  ✓ RuntimeJobQueue runs jobs serially
+  ✓ RuntimeJobQueue reports queued state
+  ✓ RuntimeJobQueue continues after failed job
+  ✓ RuntimeJobQueue keeps recent history
+  ✓ RuntimeJobQueue restores persisted history
+  ✓ RuntimeJobQueue records canceled queued jobs
+
+[3] MCP client
+  ✓ server connected
+  ✓ tools discovered
+  ✓ tool namespaced
+  ✓ tool call works
+  ✓ MCP server receives explicit env without parent secrets
+
+⏺ mcp__demo__echo
+
+  ⚠ permission required
+  mcp: mcp__demo__echo {"text":"blocked"}
+  ✓ mcp tool prompts before execution
+
+[3b] structured tool events
+
+⏺ write_file  hello.txt
+  ┌─ hello.txt
+  │ + hello
+  └─
+
+  ⚠ permission required
+  write hello.txt
+  Created hello.txt (2 lines)
+  ✓ write_file emits tool start
+  ✓ write_file emits permission event
+  ✓ write_file emits diff payload
+  ✓ write_file records diff id for undo
+  ✓ tool done includes duration
+
+⏺ edit_file  hello.txt
+  ┌─ hello.txt
+  │ - hello
+  │ + hi
+  └─
+
+  ⚠ permission required
+  edit hello.txt
+  Edited hello.txt (1 replacement)
+  ✓ edit_file emits before/after diff
+  ✓ edit_file completes
+
+⏺ bash  printf 'one\n'; printf 'err\n' >&2
+
+  ⚠ permission required
+  bash: printf 'one\n'; printf 'err\n' >&2
+  │ /Users/jack/.profile: line 2: /Users/jack/Documents/Codex/2026-05-02/mac-comfyui-wan2-2-animate/.tools/bin/env: No such file or directory
+  │ err
+  │ one
+  ✓ bash emits streaming output events
+  ✓ bash done includes exit code and duration
+
+[3c] diff service accept/reject
+  ✓ reject restores existing file
+  ✓ reject deletes newly created file
+  ✓ reject outside workspace denied
+  ✓ accept marks diff archived
+  ✓ clear archived removes accepted/rejected only
+
+[4] interruptible generation
+  ✓ aborted request returns cleanly
+  ✓ no tool calls on abort
+
+[5] tab completion
+  ✓ slash command completes
+  ✓ role completes
+  ✓ @dir lists entries
+  ✓ @path prefix filters
+
+[6] git awareness
+  ✓ gitInfo detects repo + branch
+  ✓ gitInfo counts dirty files
+  ✓ gitInfo null outside repo
+  ✓ gitDiff shows the change
+  ✓ gitWorkflowStatus lists dirty file
+  ✓ gitStage stages file
+  ✓ gitWorkflowStatus counts staged file
+  ✓ gitFileDiff shows staged diff
+  ✓ gitGenerateCommitMessage uses staged files
+  ✓ gitUnstage unstages file
+  ✓ gitCommit commits staged files
+  ✓ gitWorkflowStatus clean after commit
+
+[7] image input
+  ✓ no image → plain string
+  ✓ image → content array
+  ✓ has text part
+  ✓ has image_url with data uri
+  ✓ text file still inlined alongside image
+
+=== 80 passed, 0 failed ===

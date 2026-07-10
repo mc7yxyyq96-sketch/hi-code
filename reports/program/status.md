@@ -26,7 +26,7 @@ The final machine-captured evidence is written by `npm run program:baseline` to 
 | --- | --- | --- | --- | --- |
 | 1 | HC-PROG-100 | Completed | Program Director | None |
 | 2 | HC-QA-101 | Completed | Desktop UX | HC-PROG-100 |
-| 3 | HC-RUN-201 | In progress | Runtime Engine | HC-PROG-100 |
+| 3 | HC-RUN-201 | Completed | Runtime Engine | HC-PROG-100 |
 
 HC-QA-101 established a real Electron responsive baseline. HC-RUN-201 introduces protocol-native assistant output and concurrency isolation. No new industrial domain module is authorized before HC-RUN-201 completes.
 
@@ -34,20 +34,21 @@ HC-PROG-100 captured nine baseline commands with nine passes, zero failures, and
 
 HC-QA-101 captured ten acceptance commands with ten passes. The real production Electron entrypoint, preload, and renderer passed interaction checks at 720, 1024, and 1440 content widths. The E2E process isolates `HOME`, `USERPROFILE`, user data, and sensitive environment variables, and uses a local slash command instead of a model request. Reviewed PNG fixtures and hashed logs are recorded in `reports/evidence/HC-QA-101/manifest.json`.
 
-HC-RUN-201 is active in its isolated worktree. Its first independently reviewable slice defines materialized assistant delta/completed events and a session-filtered Runtime Event Bus; the focused build, protocol, and event-bus tests pass. Agent emission and client adapter migration remain in progress and the runtime risk stays open until stdout-independent desktop/CLI/TUI acceptance passes.
+HC-RUN-201 completed in its isolated worktree. Materialized assistant delta/completed events, a filtered Runtime Event Bus, real Agent emission, durable completion content, and Electron/CLI/TUI adapters are implemented. Thirteen machine-captured gates passed, including intentionally interleaved session tests and a real Electron model turn with the stdout bridge disabled. Full context reconstruction remains assigned to HC-RUN-202.
 
 ## Current Product Truth
 
 - Core Electron, CLI/TUI, runtime, tool, security, Job Center, Provider, Worktree, Arena, industrial, gate, sample, and release tests pass.
-- Runtime Protocol JSONL persistence is implemented, but assistant output is not yet fully sink-driven and full context resume still uses session JSON.
+- Runtime Protocol JSONL persistence and assistant output are sink-driven; full context resume still uses session JSON until HC-RUN-202.
 - External Codex/Claude providers are not configured production providers.
 - SolidWorks and AVEVA are bridge/external-required integrations, not automatic deep integrations.
-- Real Electron multi-width E2E now runs locally and in the Linux/Xvfb CI job; HC-RUN-201 is the next release task.
+- Real Electron multi-width and protocol-native output E2E now runs locally and in the Linux/Xvfb CI job.
 
 ## Evidence And Historical Material
 
 - Current baseline: `reports/evidence/baseline/manifest.json`
 - Current task reports: `reports/tasks/HC-PROG-100.md`, `reports/tasks/HC-QA-101.md`
+- Runtime task evidence: `reports/tasks/HC-RUN-201.md`, `reports/evidence/HC-RUN-201/manifest.json`
 - Current risks: `reports/program/risks.json`
 - Historical final acceptance: `reports/final-acceptance-historical.md`
 - Historical audit policy: `reports/audit/README.md`

@@ -1,5 +1,5 @@
 // Hi Code — Electron main process. Reuses the compiled agent core (dist/) and
-// bridges its terminal-style output to the renderer over IPC.
+// projects typed runtime events to the renderer over the existing IPC surface.
 process.env.FORCE_COLOR = "1"; // make chalk emit ANSI even without a TTY
 
 import { app, BrowserWindow, ipcMain, dialog, shell } from "electron";
@@ -52,6 +52,8 @@ import { createSecurityService, redactSensitive } from "./services/security-serv
 import { createAppInfoService } from "./services/app-info-service.mjs";
 import { createUsageService } from "./services/usage-service.mjs";
 import { recordUsage } from "../dist/usage-store.js";
+import { RuntimeEventBus } from "../dist/runtime-event-sink.js";
+import { connectAssistantTextOutput } from "../dist/runtime-client-adapters.js";
 import { openMacApp, parseOpenAppRequest } from "./services/native-open-service.mjs";
 import { BUILTIN_STORE_CATALOG } from "./store-catalog.mjs";
 
@@ -92,6 +94,21 @@ const jobStore = new JobStore({
   allowedArtifactRoots: [HICODE_DIR, () => cwd],
 });
 const MAX_TOOL_EVENTS = 500;
+const legacyStdoutBridgeEnabled = process.env.HICODE_LEGACY_STDOUT_BRIDGE !== "0";
+const runtimeEventBus = new RuntimeEventBus({
+  onListenerError: (error, event) => appendRuntimeLog({
+    id: `runtime-listener-${Date.now()}`,
+    type: "runtime-listener:error",
+    title: "Runtime event listener failed",
+    summary: error?.message || String(error),
+    payload: { sourceEventId: event.id, sourceEventType: event.type },
+    createdAt: Date.now(),
+  }),
+});
+runtimeEventBus.subscribe(handleRuntimeEvent);
+connectAssistantTextOutput(runtimeEventBus, {
+  write: (text) => send("output", text),
+});
 const storeItemCache = new Map();
 const runtimeJobStatusMirror = new Map();
 let activeRuntimeJobCenterId = null;
@@ -233,8 +250,12 @@ function handleRuntimeEvent(event) {
     if (id && status && diffService.updateStatus(id, status).ok) diffChanged = true;
   }
 
-  rememberToolEvent(normalized);
-  recordRuntimeEventForActiveJob(normalized);
+  // Deltas are already durable in the protocol store and project directly to
+  // chat. Keeping every token in the legacy timeline/log would duplicate data.
+  if (normalized.type !== "assistant:delta") {
+    rememberToolEvent(normalized);
+    recordRuntimeEventForActiveJob(normalized);
+  }
   if (normalized.type === "turn:done") {
     try {
       recordUsage({
@@ -2254,7 +2275,8 @@ async function runRuntimeInputInIsolatedCwd(text, executionCwd) {
     mode: "default",
     systemPrompt: buildSystemPrompt(executionCwd, p.model, cfg.reasoningLevel),
     ask,
-    emitEvent: handleRuntimeEvent,
+    eventSink: runtimeEventBus,
+    legacyAssistantOutput: false,
     allowProcessExit: false,
   });
   send("output", `\n[isolated] ${executionCwd}\n`);
@@ -2318,7 +2340,8 @@ function finalizeIsolatedRuntimeJob(job) {
   }
 }
 
-// Route the agent core's console/stdout output to the renderer.
+// Temporary compatibility path for slash commands and legacy tool framing.
+// Assistant model text always uses RuntimeEventBus, even when this is enabled.
 function installBridge() {
   setSpinnerEnabled(false);
   console.log = (...a) => forwardRuntimeOutput(a.map(String).join(" ") + "\n");
@@ -2385,7 +2408,8 @@ function buildRuntime() {
     mode: "default",
     systemPrompt: buildSystemPrompt(cwd, p.model, cfg.reasoningLevel),
     ask,
-    emitEvent: handleRuntimeEvent,
+    eventSink: runtimeEventBus,
+    legacyAssistantOutput: false,
     allowProcessExit: false,
   });
   send("ready", {
@@ -2462,7 +2486,8 @@ registerIpcHandlers({
 });
 
 app.whenReady().then(() => {
-  installBridge();
+  if (legacyStdoutBridgeEnabled) installBridge();
+  else setSpinnerEnabled(false);
   ensureMainWindow();
   app.on("activate", () => {
     ensureMainWindow();

@@ -18,9 +18,9 @@ The `0.6.0-alpha.6` source baseline already provides a working Electron applicat
 
 The current architecture is not yet the final target architecture:
 
-- Runtime Protocol envelopes are persisted, but assistant streaming output is not yet fully routed through an injected event sink.
+- Runtime Protocol envelopes and assistant streaming output now flow through an injected event sink; full model-context reconstruction from the event store remains planned.
 - Full model-context resume still depends on the legacy session JSON store.
-- Desktop behavior has extensive renderer unit/smoke coverage but no real Electron Playwright responsive baseline yet.
+- Desktop behavior has a real Electron Playwright baseline across 720/1024/1440 widths and a stdout-disabled protocol-native model turn.
 - External providers and commercial industrial systems remain disabled, dry-run, or bridge-only unless their real local execution path is explicitly supported and authorized.
 
 These gaps are planned work, not completed product claims.
@@ -73,8 +73,8 @@ Branch names use `codex/<lane>/<task-id-lowercase>`. Task worktrees live outside
 Current allocations:
 
 - HC-PROG-100: branch `codex/program-control/hc-prog-100` in the primary checkout because the imported bootstrap control files were already uncommitted there.
-- HC-QA-101: branch `codex/desktop-ux/hc-qa-101`, planned worktree `../worktrees/hi-code-hc-qa-101`.
-- HC-RUN-201: branch `codex/runtime-engine/hc-run-201`, planned worktree `../worktrees/hi-code-hc-run-201`.
+- HC-QA-101: branch `codex/desktop-ux/hc-qa-101`, completed worktree `../worktrees/hi-code-hc-qa-101`.
+- HC-RUN-201: branch `codex/runtime-engine/hc-run-201`, active worktree `../worktrees/hi-code-hc-run-201`.
 
 Only the task owner writes to a task worktree. Integration occurs after focused review and gate evidence. User changes and unrelated dirty files are never reset or overwritten.
 

@@ -23,6 +23,14 @@ Runtime Protocol will become the single execution and transcript authority throu
 
 Runtime status does not reinterpret industrial evidence. `simulated`, `not_run`, and `external_required` remain artifact/gate states and can never be mapped to a real passed execution.
 
+## HC-RUN-201 Implementation Status
+
+- `RuntimeEventBus` now provides validated, immutable, session-filtered delivery with listener fault isolation.
+- Agent streaming emits durable `assistant.delta` and `assistant.completed` protocol events with stable message/session/turn identity.
+- Electron, CLI, and TUI use client adapters rather than reading assistant text from global stdout.
+- The Electron compatibility stdout bridge remains enabled by default for legacy command/tool framing during migration and is disabled with `HICODE_LEGACY_STDOUT_BRIDGE=0` in real Electron acceptance.
+- Full context reconstruction remains deferred to HC-RUN-202; HC-RUN-201 does not mark event-only sessions fully resumable.
+
 ## Consequences
 
 Positive:

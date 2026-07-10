@@ -1,17 +1,17 @@
 {
   "schemaVersion": 1,
   "program": "Hi Code Product-Grade Desktop and Industrial Workbench",
-  "updatedAt": "2026-07-10T11:16:43Z",
+  "updatedAt": "2026-07-10T12:08:12Z",
   "risks": [
     {
       "id": "RISK-RUN-001",
       "severity": "high",
-      "status": "open",
+      "status": "mitigated",
       "owner": "runtime-engine",
       "title": "Assistant output is not yet fully protocol-native",
-      "evidence": ["src/runtime.ts", "src/runtime-event-sink.ts", "test/runtime-event-sink-tests.mjs", "HC-RUN-201"],
+      "evidence": ["src/runtime.ts", "src/runtime-event-sink.ts", "src/runtime-client-adapters.ts", "test/runtime-concurrency-tests.mjs", "reports/evidence/HC-RUN-201/manifest.json"],
       "impact": "Concurrent desktop sessions can remain coupled to compatibility output capture, limiting reliable replay and SDK parity.",
-      "mitigation": "Implement RuntimeEventSink, assistant delta/completed events, client adapters, and concurrency tests in HC-RUN-201.",
+      "mitigation": "RuntimeEventSink, assistant delta/completed events, Electron/CLI/TUI adapters, concurrency isolation, and stdout-disabled real Electron acceptance are implemented in HC-RUN-201.",
       "trigger": "Any output mixing, blank response, or transcript mismatch blocks release promotion."
     },
     {
