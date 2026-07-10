@@ -28,7 +28,19 @@ legacy/*
 !legacy/v0.4/main.mjs
 !legacy/v0.4/renderer.js
 !legacy/v0.4/index.html
-reports/
+# Most ad-hoc reports remain local. Program control, task evidence, and the
+# explicitly marked historical audit are release-governance artifacts.
+reports/*
+!reports/program/
+!reports/program/**
+!reports/evidence/
+!reports/evidence/**
+!reports/tasks/
+!reports/tasks/**
+!reports/audit/
+reports/audit/*
+!reports/audit/README.md
+!reports/final-acceptance-historical.md
 work/
 
 # editor / OS

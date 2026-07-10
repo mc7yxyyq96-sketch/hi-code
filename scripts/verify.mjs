@@ -25,6 +25,7 @@ const testFiles = [
   ["test:dod", "test/definition-of-done-tests.mjs"],
   ["test:renderer", "test/renderer-architecture-tests.mjs"],
   ["test:entrypoints", "test/entrypoint-tests.mjs"],
+  ["test:program", "test/program-control-tests.mjs"],
   ["test:security", "test/security-baseline.mjs"],
   ["test:usage", "test/usage-store-tests.mjs"],
 ];

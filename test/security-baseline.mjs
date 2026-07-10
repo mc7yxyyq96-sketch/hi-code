@@ -45,6 +45,7 @@ const solidWorksAdapter = fs.readFileSync(path.join(root, "src", "solidworks-bri
 const avevaAdapter = fs.readFileSync(path.join(root, "src", "aveva-bridge-adapter.ts"), "utf8");
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
 const verifyScript = fs.readFileSync(path.join(root, "scripts", "verify.mjs"), "utf8");
+const productionAuditScript = fs.readFileSync(path.join(root, "scripts", "audit-production.mjs"), "utf8");
 const syncVersionScript = fs.readFileSync(path.join(root, "scripts", "sync-version.mjs"), "utf8");
 const commands = fs.readFileSync(path.join(root, "src", "commands.ts"), "utf8");
 const runtime = fs.readFileSync(path.join(root, "src", "runtime.ts"), "utf8");
@@ -235,6 +236,7 @@ check("Industrial Control Box sample writes required real artifacts", ["requirem
 check("Industrial Control Box sample marks dry-run and not_run evidence", sampleProject.includes("result.simulated") && sampleProject.includes("artifact.simulated") && sampleProject.includes("\"not_run\""));
 check("Sample Project service records Job Center artifact and gate evidence", sampleProjectService.includes("jobStore.addArtifact") && sampleProjectService.includes("jobStore.addGateResult") && sampleProjectService.includes("sample.release.built"));
 check("release:check uses package-manager independent verifier", pkg.scripts["release:check"] === "node scripts/verify.mjs --release");
+check("production audit uses package-lock and HTTPS registry", pkg.scripts["audit:prod"] === "node scripts/audit-production.mjs --audit-level=high" && productionAuditScript.includes("package-lock.json") && productionAuditScript.includes('registry.protocol !== "https:"'));
 check("package version is on v0.6 alpha development line", /^0\.6\.0-alpha\.\d+$/.test(pkg.version));
 check("verify script includes version sync", verifyScript.includes('"sync:version"') && verifyScript.includes("scripts/sync-version.mjs"));
 check("verify script includes build", verifyScript.includes('run("build"'));
@@ -254,6 +256,7 @@ check("verify script includes quality gate tests", verifyScript.includes('"test:
 check("verify script includes release builder tests", verifyScript.includes('"test:release-builder"'));
 check("verify script includes sample project tests", verifyScript.includes('"test:samples"'));
 check("verify script includes Definition of Done tests", verifyScript.includes('"test:dod"'));
+check("verify script includes program control tests", verifyScript.includes('"test:program"') && verifyScript.includes("test/program-control-tests.mjs"));
 check("verify script includes usage persistence tests", verifyScript.includes('"test:usage"') && verifyScript.includes("test/usage-store-tests.mjs"));
 
 console.log(`\n=== ${pass} passed, ${fail} failed ===`);

@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "program": "Hi Code Product-Grade Desktop and Industrial Workbench",
+  "updatedAt": "2026-07-10T07:42:42Z",
+  "risks": [
+    {
+      "id": "RISK-RUN-001",
+      "severity": "high",
+      "status": "open",
+      "owner": "runtime-engine",
+      "title": "Assistant output is not yet fully protocol-native",
+      "evidence": ["src/runtime.ts", "docs/runtime-protocol.md", "HC-RUN-201"],
+      "impact": "Concurrent desktop sessions can remain coupled to compatibility output capture, limiting reliable replay and SDK parity.",
+      "mitigation": "Implement RuntimeEventSink, assistant delta/completed events, client adapters, and concurrency tests in HC-RUN-201.",
+      "trigger": "Any output mixing, blank response, or transcript mismatch blocks release promotion."
+    },
+    {
+      "id": "RISK-QA-001",
+      "severity": "high",
+      "status": "open",
+      "owner": "desktop-ux",
+      "title": "No real Electron responsive E2E baseline",
+      "evidence": ["test/renderer-architecture-tests.mjs", "HC-QA-101"],
+      "impact": "Unit and renderer smoke tests can miss clipping, unreachable controls, window lifecycle, and preload integration regressions.",
+      "mitigation": "Launch packaged-development Electron with Playwright and capture 720/1024/1440 fixtures in HC-QA-101.",
+      "trigger": "A core action hidden without an alternative or a failed real Electron launch blocks release."
+    },
+    {
+      "id": "RISK-PLAT-001",
+      "severity": "high",
+      "status": "open",
+      "owner": "security-release",
+      "title": "Electron compatibility line needs an isolated supported-version upgrade",
+      "evidence": ["package.json", "HC-PLAT-110"],
+      "impact": "Runtime support and Chromium security maintenance can age before stable release.",
+      "mitigation": "Upgrade only after HC-QA-101 provides startup and responsive regression coverage.",
+      "trigger": "Unsupported Electron status or a high production/runtime advisory blocks release."
+    },
+    {
+      "id": "RISK-REL-001",
+      "severity": "medium",
+      "status": "open",
+      "owner": "security-release",
+      "title": "Desktop installers are not commercially signed",
+      "evidence": ["package.json", "GitHub prerelease notes"],
+      "impact": "macOS Gatekeeper or Windows SmartScreen can warn users and weaken installation trust.",
+      "mitigation": "Keep artifacts prerelease-only, publish checksums, and require signing identities before stable promotion.",
+      "trigger": "Stable release or automatic update enablement requires valid signing and platform smoke evidence."
+    },
+    {
+      "id": "RISK-IND-001",
+      "severity": "medium",
+      "status": "open",
+      "owner": "industrial-platform",
+      "title": "Industrial bridge capabilities can be overstated",
+      "evidence": ["src/solidworks-bridge-adapter.ts", "src/aveva-bridge-adapter.ts"],
+      "impact": "Users could mistake plans or templates for licensed commercial-tool execution.",
+      "mitigation": "Preserve simulated, not_run, external_required, and manual approval evidence through UI, gates, and releases.",
+      "trigger": "Any bridge or dry-run result displayed as real/passed is a release blocker."
+    },
+    {
+      "id": "RISK-ENV-001",
+      "severity": "low",
+      "status": "open",
+      "owner": "developer-environment",
+      "title": "User shell profile references a removed ComfyUI environment",
+      "evidence": ["feature test bash output: /Users/jack/.profile line 2"],
+      "impact": "Bash test and user-command output contains a benign startup warning that can obscure relevant diagnostics.",
+      "mitigation": "Repair or guard the external profile entry outside the repository; do not change project tests to hide it.",
+      "trigger": "If the warning changes command exit status or masks tool output, treat it as a developer-environment blocker."
+    },
+    {
+      "id": "RISK-PROG-001",
+      "severity": "medium",
+      "status": "mitigated",
+      "owner": "program-director",
+      "title": "Program evidence was previously ignored or historical",
+      "evidence": [".gitignore", "reports/audit/README.md", "ADR-0001"],
+      "impact": "Old issue counts or untracked pass claims could be mistaken for current release evidence.",
+      "mitigation": "Track program/task/evidence paths, mark old audits historical, and capture hashed command logs.",
+      "trigger": "A release claim without source-linked committed evidence reopens this risk."
+    }
+  ]
+}

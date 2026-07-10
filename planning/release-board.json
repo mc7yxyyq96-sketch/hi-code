@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "program": "Hi Code Product-Grade Desktop and Industrial Workbench",
+  "updatedAt": "2026-07-10T08:27:46Z",
+  "status": "active",
+  "source": {
+    "version": "0.6.0-alpha.6",
+    "commit": "6ed9ed666bb817f8d1e863c76b0bf61b31c7b52d",
+    "branch": "codex/program-control/hc-prog-100"
+  },
+  "currentRelease": "0.6.0-alpha.7",
+  "releaseObjective": "Establish auditable program control, real Electron responsive smoke coverage, and protocol-native assistant output without a big-bang rewrite.",
+  "releaseExitCriteria": [
+    "HC-PROG-100, HC-QA-101, and HC-RUN-201 are completed with independent commits",
+    "all repository gates pass from the release candidate commit",
+    "real Electron smoke passes at 720, 1024, and 1440 viewport widths",
+    "parallel runtime sessions cannot mix assistant output",
+    "no blocking DoD or Skeleton Detector finding",
+    "no security boundary is weaker than the source baseline"
+  ],
+  "worktrees": [
+    {
+      "taskId": "HC-PROG-100",
+      "branch": "codex/program-control/hc-prog-100",
+      "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/work/Hi-Code",
+      "mode": "bootstrap-primary-checkout",
+      "reason": "Imported program-control files were already uncommitted in the primary checkout."
+    },
+    {
+      "taskId": "HC-QA-101",
+      "branch": "codex/desktop-ux/hc-qa-101",
+      "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-hc-qa-101",
+      "mode": "planned-worktree"
+    },
+    {
+      "taskId": "HC-RUN-201",
+      "branch": "codex/runtime-engine/hc-run-201",
+      "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-hc-run-201",
+      "mode": "planned-worktree"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "HC-PROG-100",
+      "owner": "program-director",
+      "priority": "P0",
+      "status": "completed",
+      "dependencies": [],
+      "branch": "codex/program-control/hc-prog-100",
+      "completedAt": "2026-07-10T08:27:46Z",
+      "evidence": "reports/tasks/HC-PROG-100.md"
+    },
+    {
+      "id": "HC-QA-101",
+      "owner": "desktop-ux",
+      "priority": "P0",
+      "status": "ready",
+      "dependencies": ["HC-PROG-100"],
+      "branch": "codex/desktop-ux/hc-qa-101"
+    },
+    {
+      "id": "HC-RUN-201",
+      "owner": "runtime-engine",
+      "priority": "P0",
+      "status": "planned",
+      "dependencies": ["HC-PROG-100"],
+      "branch": "codex/runtime-engine/hc-run-201"
+    }
+  ],
+  "gates": [
+    {
+      "id": "source-baseline",
+      "status": "passed",
+      "evidence": "6ed9ed666bb817f8d1e863c76b0bf61b31c7b52d"
+    },
+    {
+      "id": "automated-baseline",
+      "status": "passed",
+      "evidence": "reports/evidence/baseline/manifest.json"
+    },
+    {
+      "id": "electron-responsive-e2e",
+      "status": "not_run",
+      "owner": "HC-QA-101"
+    },
+    {
+      "id": "runtime-event-sink",
+      "status": "not_run",
+      "owner": "HC-RUN-201"
+    }
+  ],
+  "nextReleaseSlices": [
+    {
+      "release": "0.6.0-alpha.8",
+      "focus": "Typed stores, full replay/recovery, and Electron compatibility upgrade"
+    },
+    {
+      "release": "0.6.0-alpha.9",
+      "focus": "Provider adapters and durable isolated execution parity"
+    }
+  ]
+}
