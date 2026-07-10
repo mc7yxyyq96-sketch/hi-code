@@ -10,6 +10,7 @@ const node = process.execPath;
 const testFiles = [
   ["test:feature", "test/feature-tests.mjs"],
   ["test:runtime-protocol", "test/runtime-protocol-tests.mjs"],
+  ["test:runtime-events", "test/runtime-event-sink-tests.mjs"],
   ["test:services", "test/main-process-services-tests.mjs"],
   ["test:jobs", "test/job-center-tests.mjs"],
   ["test:providers", "test/provider-tests.mjs"],

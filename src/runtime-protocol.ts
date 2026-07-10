@@ -9,6 +9,8 @@ export const RUNTIME_PROTOCOL_KINDS = [
   "turn.failed",
   "turn.denied",
   "turn.interrupted",
+  "assistant.delta",
+  "assistant.completed",
   "model.output",
   "tool.started",
   "tool.output",
@@ -110,6 +112,8 @@ export function protocolKindFromLegacy(type: ToolEventType, status: RuntimeProto
     if (status === "interrupted") return "turn.interrupted";
     return "turn.completed";
   }
+  if (type === "assistant:delta") return "assistant.delta";
+  if (type === "assistant:completed") return "assistant.completed";
   if (type === "tool:start") return "tool.started";
   if (type === "tool:output") return "tool.output";
   if (type === "tool:done") {
@@ -154,6 +158,7 @@ function normalizeProtocolStatus(status: ToolEventStatus | undefined, type: Tool
 }
 
 function actorForLegacyEvent(type: ToolEventType): RuntimeProtocolEvent["actor"] {
+  if (type.startsWith("assistant:")) return "assistant";
   if (type.startsWith("tool:")) return "tool";
   if (type.startsWith("permission:")) return "system";
   if (type.startsWith("diff:")) return "tool";
@@ -165,6 +170,8 @@ function visibilityForKind(kind: RuntimeProtocolKind): RuntimeProtocolVisibility
   if (kind === "approval.requested") return ["timeline", "job", "sdk"];
   if (kind === "tool.output") return ["timeline", "sdk"];
   if (kind.startsWith("tool.")) return ["timeline", "job", "sdk"];
+  if (kind === "assistant.delta") return ["chat", "sdk"];
+  if (kind === "assistant.completed") return ["chat", "timeline", "sdk"];
   if (kind === "model.output") return ["chat", "timeline", "sdk"];
   return ["timeline", "job", "sdk"];
 }

@@ -24,6 +24,7 @@
     "test": "node test/feature-tests.mjs",
     "test:feature": "node test/feature-tests.mjs",
     "test:runtime-protocol": "node test/runtime-protocol-tests.mjs",
+    "test:runtime-events": "node test/runtime-event-sink-tests.mjs",
     "test:services": "node test/main-process-services-tests.mjs",
     "test:jobs": "node test/job-center-tests.mjs",
     "test:providers": "node test/provider-tests.mjs",

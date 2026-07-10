@@ -26,13 +26,15 @@ The final machine-captured evidence is written by `npm run program:baseline` to 
 | --- | --- | --- | --- | --- |
 | 1 | HC-PROG-100 | Completed | Program Director | None |
 | 2 | HC-QA-101 | Completed | Desktop UX | HC-PROG-100 |
-| 3 | HC-RUN-201 | Planned | Runtime Engine | HC-PROG-100 |
+| 3 | HC-RUN-201 | In progress | Runtime Engine | HC-PROG-100 |
 
 HC-QA-101 established a real Electron responsive baseline. HC-RUN-201 introduces protocol-native assistant output and concurrency isolation. No new industrial domain module is authorized before HC-RUN-201 completes.
 
 HC-PROG-100 captured nine baseline commands with nine passes, zero failures, and zero DoD findings. The manifest and individual log digests are committed with the task.
 
 HC-QA-101 captured ten acceptance commands with ten passes. The real production Electron entrypoint, preload, and renderer passed interaction checks at 720, 1024, and 1440 content widths. The E2E process isolates `HOME`, `USERPROFILE`, user data, and sensitive environment variables, and uses a local slash command instead of a model request. Reviewed PNG fixtures and hashed logs are recorded in `reports/evidence/HC-QA-101/manifest.json`.
+
+HC-RUN-201 is active in its isolated worktree. Its first independently reviewable slice defines materialized assistant delta/completed events and a session-filtered Runtime Event Bus; the focused build, protocol, and event-bus tests pass. Agent emission and client adapter migration remain in progress and the runtime risk stays open until stdout-independent desktop/CLI/TUI acceptance passes.
 
 ## Current Product Truth
 
