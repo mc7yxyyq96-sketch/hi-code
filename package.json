@@ -27,6 +27,7 @@
     "test:runtime-events": "node test/runtime-event-sink-tests.mjs",
     "test:runtime-concurrency": "node test/runtime-concurrency-tests.mjs",
     "test:runtime-clients": "node test/runtime-client-adapter-tests.mjs",
+    "test:runtime-stores": "node test/runtime-store-tests.mjs",
     "test:services": "node test/main-process-services-tests.mjs",
     "test:jobs": "node test/job-center-tests.mjs",
     "test:providers": "node test/provider-tests.mjs",

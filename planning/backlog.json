@@ -5,7 +5,7 @@
   "sourceCommit": "6ed9ed666bb817f8d1e863c76b0bf61b31c7b52d",
   "horizonDays": 90,
   "status": "active",
-  "updatedAt": "2026-07-10T13:56:17Z",
+  "updatedAt": "2026-07-10T14:15:23Z",
   "principles": [
     "Runtime Protocol is the single source of truth",
     "No big-bang rewrite",
@@ -72,7 +72,10 @@
       "dependencies": ["HC-RUN-201"],
       "deliverables": ["store interfaces", "full message/tool/approval/diff replay", "v1 importer", "recovery fixtures"],
       "acceptance": ["full conversation rebuilds without session JSON", "event-only session is resumable", "idempotent sequence handling"],
-      "status": "ready"
+      "status": "in_progress",
+      "startedAt": "2026-07-10T14:15:23Z",
+      "branch": "codex/runtime-engine/hc-run-202",
+      "taskManifest": "reports/tasks/HC-RUN-202.md"
     },
     {
       "id": "HC-RUN-203",
