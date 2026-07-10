@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "program": "Hi Code Product-Grade Desktop and Industrial Workbench",
-  "updatedAt": "2026-07-10T16:13:35Z",
+  "updatedAt": "2026-07-10T17:32:06Z",
   "status": "active",
   "source": {
     "version": "0.6.0-alpha.6",
@@ -62,7 +62,7 @@
       "taskId": "HC-RUN-203",
       "branch": "codex/runtime-engine/hc-run-203",
       "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-hc-run-203",
-      "mode": "active-worktree"
+      "mode": "completed-worktree"
     }
   ],
   "tasks": [
@@ -112,11 +112,12 @@
       "id": "HC-RUN-203",
       "owner": "runtime-engine",
       "priority": "P0",
-      "status": "in_progress",
+      "status": "completed",
       "dependencies": ["HC-RUN-202"],
       "branch": "codex/runtime-engine/hc-run-203",
       "startedAt": "2026-07-10T16:13:35Z",
-      "evidence": "reports/tasks/HC-RUN-203.md"
+      "completedAt": "2026-07-10T17:32:06Z",
+      "evidence": "reports/evidence/HC-RUN-203/manifest.json"
     }
   ],
   "gates": [
@@ -147,6 +148,12 @@
       "status": "passed",
       "owner": "HC-RUN-202",
       "evidence": "reports/evidence/HC-RUN-202/manifest.json"
+    },
+    {
+      "id": "runtime-turn-recovery",
+      "status": "passed",
+      "owner": "HC-RUN-203",
+      "evidence": "reports/evidence/HC-RUN-203/manifest.json"
     },
     {
       "id": "alpha-7-release-candidate",

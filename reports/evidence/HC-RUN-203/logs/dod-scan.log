@@ -1,0 +1,14 @@
+$ npm run scan:dod
+{
+  "ok": true,
+  "checkedAt": 1783705217154,
+  "summary": {
+    "total": 0,
+    "blocking": 0,
+    "warning": 0,
+    "info": 0
+  },
+  "findings": []
+}
+
+$ node scripts/scan-dod.mjs

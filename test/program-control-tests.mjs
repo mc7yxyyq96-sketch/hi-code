@@ -53,6 +53,7 @@ const requiredFiles = [
   "reports/evidence/HC-QA-101/manifest.json",
   "reports/evidence/HC-RUN-201/manifest.json",
   "reports/evidence/HC-RUN-202/manifest.json",
+  "reports/evidence/HC-RUN-203/manifest.json",
   "reports/evidence/HC-REL-ALPHA-7/manifest.json",
   "reports/releases/0.6.0-alpha.7/capability-matrix.md",
   "reports/releases/0.6.0-alpha.7/migration-report.md",
@@ -74,6 +75,7 @@ const manifest = readJson(root, "reports/evidence/baseline/manifest.json");
 const qaManifest = readJson(root, "reports/evidence/HC-QA-101/manifest.json");
 const runtimeManifest = readJson(root, "reports/evidence/HC-RUN-201/manifest.json");
 const runtimeStoreManifest = readJson(root, "reports/evidence/HC-RUN-202/manifest.json");
+const turnRecoveryManifest = readJson(root, "reports/evidence/HC-RUN-203/manifest.json");
 const releaseManifest = readJson(root, "reports/evidence/HC-REL-ALPHA-7/manifest.json");
 const packageJson = readJson(root, "package.json");
 const packageLock = readJson(root, "package-lock.json");
@@ -86,6 +88,7 @@ const uiShellTask = backlog.tasks.find((task) => task.id === "HC-UI-301");
 const qaTask = board.tasks.find((task) => task.id === "HC-QA-101");
 const runtimeTask = board.tasks.find((task) => task.id === "HC-RUN-201");
 const runtimeStoreTask = board.tasks.find((task) => task.id === "HC-RUN-202");
+const turnRecoveryTask = board.tasks.find((task) => task.id === "HC-RUN-203");
 
 console.log("\n[program-control] board and evidence contract");
 check("backlog records immutable source commit", /^[0-9a-f]{40}$/.test(backlog.sourceCommit || ""));
@@ -115,13 +118,17 @@ check(
 );
 check("runtime store replay gate passed", board.gates?.find((gate) => gate.id === "runtime-store-replay")?.status === "passed");
 check(
-  "HC-RUN-203 is active only after typed replay completion",
-  recoveryRuntimeTask?.status === "in_progress" &&
+  "HC-RUN-203 completed only after typed replay acceptance",
+  recoveryRuntimeTask?.status === "completed" &&
     recoveryRuntimeTask?.branch === "codex/runtime-engine/hc-run-203" &&
     recoveryRuntimeTask?.startedAt &&
+    recoveryRuntimeTask?.completedAt &&
+    recoveryRuntimeTask?.evidenceManifest === "reports/evidence/HC-RUN-203/manifest.json" &&
     recoveryRuntimeTask?.dependencies?.every((id) => backlog.tasks.find((task) => task.id === id)?.status === "completed"),
   JSON.stringify(recoveryRuntimeTask),
 );
+check("release board records HC-RUN-203 completion", turnRecoveryTask?.status === "completed" && turnRecoveryTask?.evidence === "reports/evidence/HC-RUN-203/manifest.json", JSON.stringify(turnRecoveryTask));
+check("turn recovery gate passed", board.gates?.find((gate) => gate.id === "runtime-turn-recovery")?.status === "passed");
 check("turn recovery test is part of the global verification matrix", packageJson.scripts["test:turn-recovery"] === "node test/turn-recovery-tests.mjs" && fs.readFileSync(path.join(root, "scripts/verify.mjs"), "utf8").includes("test/turn-recovery-tests.mjs"));
 check("HC-PLAT-110 is dependency-ready", platformTask?.status === "ready" && platformTask?.dependencies?.every((id) => backlog.tasks.find((task) => task.id === id)?.status === "completed"));
 check("HC-UI-301 is dependency-ready", uiShellTask?.status === "ready" && uiShellTask?.dependencies?.every((id) => backlog.tasks.find((task) => task.id === id)?.status === "completed"));
@@ -161,6 +168,16 @@ for (const command of runtimeStoreManifest.commands || []) {
   const absolute = path.join(root, command.logPath || "");
   check(`HC-RUN-202 ${command.id} log exists`, Boolean(command.logPath) && fs.existsSync(absolute));
   if (fs.existsSync(absolute)) check(`HC-RUN-202 ${command.id} log hash matches`, digest(absolute) === command.logSha256);
+}
+check("HC-RUN-203 evidence records every command passing", turnRecoveryManifest.summary?.allPassed === true && turnRecoveryManifest.summary?.total === 18, JSON.stringify(turnRecoveryManifest.summary));
+check("HC-RUN-203 evidence is captured from its task branch", turnRecoveryManifest.source?.branch === "codex/runtime-engine/hc-run-203");
+for (const requiredCommand of ["build", "verify", "release-check", "feature-tests", "runtime-protocol", "runtime-stores", "runtime-store-integration", "turn-recovery", "runtime-events", "runtime-concurrency", "runtime-clients", "renderer-tests", "security-tests", "dod-tests", "dod-scan", "production-audit", "electron-e2e", "git-diff-check"]) {
+  check(`HC-RUN-203 captured ${requiredCommand}`, turnRecoveryManifest.commands?.some((command) => command.id === requiredCommand && command.status === "passed"));
+}
+for (const command of turnRecoveryManifest.commands || []) {
+  const absolute = path.join(root, command.logPath || "");
+  check(`HC-RUN-203 ${command.id} log exists`, Boolean(command.logPath) && fs.existsSync(absolute));
+  if (fs.existsSync(absolute)) check(`HC-RUN-203 ${command.id} log hash matches`, digest(absolute) === command.logSha256);
 }
 check("alpha.7 evidence records every command passing", releaseManifest.summary?.allPassed === true && releaseManifest.summary?.total === 11, JSON.stringify(releaseManifest.summary));
 check("alpha.7 evidence is captured from its release branch", releaseManifest.source?.branch === "codex/release/0.6.0-alpha.7" && releaseManifest.source?.version === packageJson.version);

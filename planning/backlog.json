@@ -90,10 +90,13 @@
       "dependencies": ["HC-RUN-202"],
       "deliverables": ["turn state machine", "recovery planner", "partial output preservation", "approval recovery"],
       "acceptance": ["crash during stream recovers", "crash during tool run is diagnosed", "waiting approval resumes safely"],
-      "status": "in_progress",
       "startedAt": "2026-07-10T16:13:35Z",
       "branch": "codex/runtime-engine/hc-run-203",
-      "taskManifest": "reports/tasks/HC-RUN-203.md"
+      "taskManifest": "reports/tasks/HC-RUN-203.md",
+      "evidence": "reports/tasks/HC-RUN-203.md",
+      "evidenceManifest": "reports/evidence/HC-RUN-203/manifest.json",
+      "completedAt": "2026-07-10T17:32:06Z",
+      "status": "completed"
     },
     {
       "id": "HC-PLAT-110",

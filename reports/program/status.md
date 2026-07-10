@@ -30,7 +30,7 @@ The final machine-captured evidence is written by `npm run program:baseline` to 
 | 2 | HC-QA-101 | Completed | Desktop UX | HC-PROG-100 |
 | 3 | HC-RUN-201 | Completed | Runtime Engine | HC-PROG-100 |
 | 4 | HC-RUN-202 | Completed | Runtime Engine | HC-RUN-201 |
-| 5 | HC-RUN-203 | In progress | Runtime Engine | HC-RUN-202 |
+| 5 | HC-RUN-203 | Completed | Runtime Engine | HC-RUN-202 |
 
 HC-QA-101 established a real Electron responsive baseline. HC-RUN-201 introduces protocol-native assistant output and concurrency isolation. No new industrial domain module is authorized before HC-RUN-201 completes.
 
@@ -42,11 +42,11 @@ HC-RUN-201 completed in its isolated worktree. Materialized assistant delta/comp
 
 HC-RUN-202 completed in the isolated `codex/runtime-engine/hc-run-202` worktree from verified alpha.7 commit `b044fdcecf1a153393cce29d7267eb2205c99dec`. Typed thread/event/message stores, exact hidden model-message records, idempotent non-destructive migration, stale-snapshot recovery, complete model-context replay, and interrupted-turn diagnosis passed 16 machine-captured gates. Legacy session JSON and runtime JSONL remain intact for rollback.
 
-HC-RUN-203 started in the isolated `codex/runtime-engine/hc-run-203` worktree from HC-RUN-202 completion commit `9245a0a57f71b6e56157260c5bcb45776bfa0f96`. It owns the explicit turn state machine, partial output preservation, approval-aware recovery, and conservative side-effect policy. Unknown or completed mutating tool effects will not be auto-retried.
+HC-RUN-203 completed in the isolated `codex/runtime-engine/hc-run-203` worktree from HC-RUN-202 completion commit `9245a0a57f71b6e56157260c5bcb45776bfa0f96`. The explicit turn reducer preserves bounded partial output, pairs approval decisions, restores source sessions before safe retries, and blocks automatic replay for unknown or completed mutating tool effects. Eighteen machine-captured gates passed, including append-only crash fixtures and real Electron E2E.
 
 ## Release Integration
 
-The `0.6.0-alpha.7` candidate was integrated on `codex/release/0.6.0-alpha.7` from HC-RUN-201 commit `d36923bed32267a5bfb3433e4450307060cbda69`. Version metadata, backlog state, capability boundaries, migration notes, security review, E2E review, limitations, and release evidence passed the isolated candidate gate. The final manifest records 11 passing commands, real Electron acceptance, zero DoD findings, and zero high-or-critical production advisories. HC-RUN-202 is the next authorized implementation task.
+The `0.6.0-alpha.7` candidate was integrated on `codex/release/0.6.0-alpha.7` from HC-RUN-201 commit `d36923bed32267a5bfb3433e4450307060cbda69`. Version metadata, backlog state, capability boundaries, migration notes, security review, E2E review, limitations, and release evidence passed the isolated candidate gate. HC-RUN-202 and HC-RUN-203 are now complete on isolated task branches; promotion into the alpha.8 integration branch remains a separate release task.
 
 ## Current Product Truth
 
@@ -62,6 +62,7 @@ The `0.6.0-alpha.7` candidate was integrated on `codex/release/0.6.0-alpha.7` fr
 - Current task reports: `reports/tasks/HC-PROG-100.md`, `reports/tasks/HC-QA-101.md`
 - Runtime task evidence: `reports/tasks/HC-RUN-201.md`, `reports/evidence/HC-RUN-201/manifest.json`
 - Runtime store evidence: `reports/tasks/HC-RUN-202.md`, `reports/evidence/HC-RUN-202/manifest.json`
+- Turn recovery evidence: `reports/tasks/HC-RUN-203.md`, `reports/evidence/HC-RUN-203/manifest.json`
 - Current risks: `reports/program/risks.json`
 - Historical final acceptance: `reports/final-acceptance-historical.md`
 - Historical audit policy: `reports/audit/README.md`

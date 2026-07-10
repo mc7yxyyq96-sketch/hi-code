@@ -1,6 +1,6 @@
 # HC-RUN-203 Task Manifest
 
-Status: In progress
+Status: Completed
 
 Owner: Runtime Engine
 
@@ -11,6 +11,10 @@ Branch: `codex/runtime-engine/hc-run-203`
 Parent commit: `9245a0a57f71b6e56157260c5bcb45776bfa0f96`
 
 Started: `2026-07-10T16:13:35Z`
+
+Completed: `2026-07-10T17:32:06Z`
+
+Evidence: `reports/evidence/HC-RUN-203/manifest.json`
 
 ## Problem
 
@@ -68,6 +72,14 @@ Recovery cannot reuse approvals, execute an unknown tool, or auto-retry a turn a
 ## Rollback
 
 Revert HC-RUN-203 commits. Existing events remain protocol-valid except that older binaries ignore additive `approval:resolved` records. No session, event, message, artifact, or user file is deleted.
+
+## Result
+
+- Deterministic recovery states and actions are implemented in production code.
+- Approval request/resolution pairs preserve both protocol request identity and legacy timeline parent identity.
+- Append-only integration fixtures verify streamed partial output, unanswered approval, and unknown tool execution after process loss.
+- Renderer actions restore the source session and block replay-only or side-effect-unknown retries.
+- The evidence manifest records 18 passing commands, 23 hashed key artifacts, real Electron acceptance, and zero failed gates.
 
 ## Commit Plan
 
