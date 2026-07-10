@@ -30,3 +30,4 @@ The file name is `ADR-NNNN-short-title.md`. Numbers are never reused. An accepte
 | [ADR-0001](ADR-0001-program-control-and-evidence.md) | Accepted | Versioned program board and committed evidence are the delivery control plane |
 | [ADR-0002](ADR-0002-runtime-protocol-authority-migration.md) | Accepted | Runtime Protocol becomes authoritative through an injected sink and staged migration |
 | [ADR-0003](ADR-0003-typed-runtime-stores-and-idempotent-replay.md) | Accepted | Typed thread, event, and message stores provide additive, idempotent replay and migration |
+| [ADR-0004](ADR-0004-turn-state-and-conservative-recovery.md) | Accepted | Durable turn events derive conservative retry, approval, review, and tool-inspection actions |

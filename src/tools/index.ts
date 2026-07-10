@@ -1,10 +1,10 @@
 import type { ToolSchema } from "../llm.js";
 import type { VibeConfig } from "../config.js";
 import { ui } from "../ui.js";
-import { requestPermission, type PermissionState, type AskFn } from "../permissions.js";
+import { requestPermission, type Decision, type PermissionState, type AskFn } from "../permissions.js";
 import { type ToolContext, readFile, writeFile, editFile, planEdit, ls, glob, resolveWorkspacePath } from "./fs.js";
 import { runBash, grep, type BashOutputStream } from "./bash.js";
-import { newDiffId, type DiffEntry, type RuntimeEventDraft } from "../events.js";
+import { newDiffId, newEventId, type DiffEntry, type RuntimeEventDraft } from "../events.js";
 
 export interface ExecEnv {
   cfg: VibeConfig;
@@ -325,12 +325,13 @@ async function executeToolInner(
     }
     case "bash": {
       out.toolCall("bash", String(args.command ?? "").slice(0, 80));
-      emitPermissionRequested(env, "bash", `bash: ${args.command}`);
+      const approval = emitPermissionRequested(env, "bash", `bash: ${args.command}`);
       const decision = await requestPermission(
         env.perms,
         { tool: "bash", action: `bash: ${args.command}`, mutating: true },
         env.ask,
       );
+      emitPermissionResolved(env, approval, decision, "bash", `bash: ${args.command}`);
       if (decision === "deny") return { content: "Denied by user.", summary: "denied" };
       const res = await runBash(
         env.ctx,
@@ -353,12 +354,14 @@ async function executeToolInner(
       const { isMcpTool, callMcpTool } = await import("../mcp.js");
       if (isMcpTool(name)) {
         out.toolCall(name, "");
-        emitPermissionRequested(env, name, `mcp: ${name} ${summarizeArgs(args)}`);
+        const action = `mcp: ${name} ${summarizeArgs(args)}`;
+        const approval = emitPermissionRequested(env, name, action);
         const decision = await requestPermission(
           env.perms,
-          { tool: name, action: `mcp: ${name} ${summarizeArgs(args)}`, mutating: true },
+          { tool: name, action, mutating: true },
           env.ask,
         );
+        emitPermissionResolved(env, approval, decision, name, action);
         if (decision === "deny") return { content: "Denied by user.", summary: "denied" };
         const res = await callMcpTool(name, args);
         out.toolResult(res);
@@ -382,12 +385,14 @@ async function previewAndWrite(env: ExecEnv, args: { path: string; content: stri
   const existed = fs.existsSync(abs);
   const old = existed ? fs.readFileSync(abs, "utf8") : "";
   out.diff(old, args.content, args.path);
-  emitPermissionRequested(env, "write_file", `write ${args.path}`, args.path);
+  const action = `write ${args.path}`;
+  const approval = emitPermissionRequested(env, "write_file", action, args.path);
   const decision = await requestPermission(
     env.perms,
-    { tool: "write_file", action: `write ${args.path}`, mutating: true },
+    { tool: "write_file", action, mutating: true },
     env.ask,
   );
+  emitPermissionResolved(env, approval, decision, "write_file", action, args.path);
   if (decision === "deny") return { content: "Denied by user.", summary: "denied" };
   const r = writeFile(env.ctx, args);
   if ("error" in r) {
@@ -424,12 +429,14 @@ async function previewAndEdit(
     return { content: msg, summary: "no match" };
   }
   out.diff(plan.oldContent, plan.newContent, args.path);
-  emitPermissionRequested(env, "edit_file", `edit ${args.path}`, args.path);
+  const action = `edit ${args.path}`;
+  const approval = emitPermissionRequested(env, "edit_file", action, args.path);
   const decision = await requestPermission(
     env.perms,
-    { tool: "edit_file", action: `edit ${args.path}`, mutating: true },
+    { tool: "edit_file", action, mutating: true },
     env.ask,
   );
+  emitPermissionResolved(env, approval, decision, "edit_file", action, args.path);
   if (decision === "deny") return { content: "Denied by user.", summary: "denied" };
   const r = editFile(env.ctx, args);
   if ("error" in r) {
@@ -454,15 +461,34 @@ async function previewAndEdit(
   return { content: r.message, summary: r.filename };
 }
 
-function emitPermissionRequested(env: ExecEnv, tool: string, action: string, path?: string): void {
-  env.emitEvent?.({
+interface ApprovalRequestRef {
+  requestId: string;
+  eventId: string;
+}
+
+function emitPermissionRequested(env: ExecEnv, tool: string, action: string, path?: string): ApprovalRequestRef {
+  const requestId = newEventId("approval");
+  const eventId = env.emitEvent?.({
     type: "permission:requested",
     tool,
     title: "Permission required",
     summary: action,
     status: "waiting",
     path,
-    payload: { action },
+    payload: { approvalId: requestId, action, ...(path ? { path } : {}) },
+  }) || requestId;
+  return { requestId, eventId };
+}
+
+function emitPermissionResolved(env: ExecEnv, approval: ApprovalRequestRef, decision: Decision, tool: string, action: string, path?: string): void {
+  env.emitEvent?.({
+    type: "permission:resolved",
+    tool,
+    title: decision === "deny" ? "Permission denied" : "Permission granted",
+    summary: action,
+    status: decision === "deny" ? "denied" : "done",
+    path,
+    payload: { requestId: approval.requestId, parentId: approval.eventId, decision, action },
   });
 }
 

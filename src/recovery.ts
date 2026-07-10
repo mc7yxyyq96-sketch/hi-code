@@ -5,6 +5,13 @@ import {
   readRuntimeProtocolEvents,
 } from "./runtime-event-store.js";
 import type { RuntimeProtocolEvent } from "./runtime-protocol.js";
+import {
+  reduceTurnStates,
+  type ActiveToolState,
+  type PendingApprovalState,
+  type RecoveryAction,
+  type TurnLifecycleState,
+} from "./turn-state-machine.js";
 
 type RecoverableStatus = "error" | "interrupted" | "denied";
 
@@ -32,6 +39,15 @@ export interface RecoverableTask {
   createdAt: number;
   updatedAt?: number;
   durationMs?: number;
+  phase: TurnLifecycleState;
+  recoveryAction: RecoveryAction;
+  canRetry: boolean;
+  requiresApproval: boolean;
+  reason: string;
+  partialAssistantText?: string;
+  partialOutputTruncated?: boolean;
+  pendingTool?: ActiveToolState;
+  pendingApproval?: PendingApprovalState;
 }
 
 interface TurnRecord {
@@ -40,7 +56,6 @@ interface TurnRecord {
 }
 
 const RECOVERABLE_STATUSES = new Set<RecoverableStatus>(["error", "interrupted", "denied"]);
-const RECOVERABLE_PROTOCOL_DONE_KINDS = new Set(["turn.failed", "turn.denied", "turn.interrupted"]);
 
 export function recoverableTasksFromEvents(events: RuntimeLogEvent[], limit = 10): RecoverableTask[] {
   const records = new Map<string, TurnRecord>();
@@ -87,6 +102,13 @@ export function recoverableTasksFromEvents(events: RuntimeLogEvent[], limit = 10
       retryInput,
       createdAt,
       updatedAt,
+      phase: status === "denied" ? "denied" : status === "error" ? "failed" : "interrupted",
+      recoveryAction: status === "denied" ? "retry_with_approval" : "inspect_tool",
+      canRetry: status === "denied",
+      requiresApproval: status === "denied",
+      reason: status === "denied"
+        ? "legacy task was denied; retry must request a new human decision"
+        : "legacy task has no durable tool-side-effect evidence; inspect it before retrying",
       ...(durationMs === undefined ? {} : { durationMs }),
     });
   }
@@ -130,58 +152,29 @@ export function readRecoverableTasksFromLogs(logDir: string, limit = 10): Recove
 }
 
 export function recoverableTasksFromProtocolEvents(events: RuntimeProtocolEvent[], limit = 10): RecoverableTask[] {
-  const records = new Map<string, { start?: RuntimeProtocolEvent; done?: RuntimeProtocolEvent }>();
-
-  for (const event of events) {
-    if (!event || !event.kind.startsWith("turn.")) continue;
-    const key = event.turnId || event.id;
-    if (!key) continue;
-
-    const record = records.get(key) ?? {};
-    if (event.kind === "turn.started") {
-      if (!record.start || protocolEventTime(event) <= protocolEventTime(record.start)) record.start = event;
-      records.set(key, record);
-      continue;
-    }
-
-    if (RECOVERABLE_PROTOCOL_DONE_KINDS.has(event.kind)) {
-      if (!record.done || protocolEventTime(event) >= protocolEventTime(record.done)) record.done = event;
-      records.set(key, record);
-    }
-  }
-
-  const tasks: RecoverableTask[] = [];
-  for (const [id, record] of records) {
-    const done = record.done;
-    const start = record.start;
-    const status = done?.status ?? (start ? "interrupted" : undefined);
-    if (!isRecoverableStatus(status)) continue;
-
-    const retryInput =
-      getString(start?.payload?.retryInput) ||
-      getString(done?.payload?.retryInput) ||
-      getString(start?.payload?.input) ||
-      getString(done?.payload?.input);
-    if (!retryInput.trim()) continue;
-
-    const createdAt = numberOr(start?.createdAt, done?.createdAt, Date.now());
-    const updatedAt = numberOr(done?.updatedAt, done?.createdAt, start?.updatedAt, createdAt);
-    const durationMs = getFiniteNumber(done?.payload?.durationMs);
-    tasks.push({
-      id,
-      sessionId: start?.sessionId || done?.sessionId || "",
-      turnId: start?.turnId || done?.turnId || id,
-      title: start?.title || done?.title || "Recoverable task",
-      summary: done?.summary || (start && !done ? "interrupted by process restart" : start?.summary) || retryInput.slice(0, 80),
-      status,
-      retryInput,
-      createdAt,
-      updatedAt,
-      ...(durationMs === undefined ? {} : { durationMs }),
-    });
-  }
-
-  return tasks
+  return reduceTurnStates(events)
+    .filter((state) => state.recoveryAction !== "none")
+    .map((state): RecoverableTask => ({
+      id: state.turnId,
+      sessionId: state.sessionId,
+      turnId: state.turnId,
+      title: state.title || "Recoverable task",
+      summary: state.reason,
+      status: recoverableStatusForState(state.state),
+      retryInput: state.retryInput,
+      createdAt: state.createdAt,
+      updatedAt: state.updatedAt,
+      ...(state.durationMs === undefined ? {} : { durationMs: state.durationMs }),
+      phase: state.state,
+      recoveryAction: state.recoveryAction,
+      canRetry: state.canRetry,
+      requiresApproval: state.requiresApproval,
+      reason: state.reason,
+      ...(state.partialAssistantText ? { partialAssistantText: state.partialAssistantText } : {}),
+      ...(state.partialOutputTruncated ? { partialOutputTruncated: true } : {}),
+      ...(state.activeTool ? { pendingTool: state.activeTool } : {}),
+      ...(state.pendingApproval ? { pendingApproval: state.pendingApproval } : {}),
+    }))
     .sort((a, b) => (b.updatedAt || b.createdAt) - (a.updatedAt || a.createdAt))
     .slice(0, clampLimit(limit));
 }
@@ -248,8 +241,10 @@ function eventTime(event: RuntimeLogEvent): number {
   return numberOr(event.updatedAt, event.createdAt, 0);
 }
 
-function protocolEventTime(event: RuntimeProtocolEvent): number {
-  return numberOr(event.updatedAt, event.createdAt, 0);
+function recoverableStatusForState(state: TurnLifecycleState): RecoverableStatus {
+  if (state === "failed") return "error";
+  if (state === "denied") return "denied";
+  return "interrupted";
 }
 
 function clampLimit(limit: number): number {

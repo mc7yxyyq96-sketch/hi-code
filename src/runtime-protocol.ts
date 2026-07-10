@@ -20,6 +20,7 @@ export const RUNTIME_PROTOCOL_KINDS = [
   "tool.denied",
   "tool.interrupted",
   "approval.requested",
+  "approval.resolved",
   "diff.created",
   "diff.updated",
 ] as const;
@@ -125,6 +126,7 @@ export function protocolKindFromLegacy(type: ToolEventType, status: RuntimeProto
     return "tool.completed";
   }
   if (type === "permission:requested") return "approval.requested";
+  if (type === "permission:resolved") return "approval.resolved";
   if (type === "diff:created") return "diff.created";
   if (type === "diff:updated") return "diff.updated";
   return "turn.updated";
@@ -151,6 +153,12 @@ export function validateRuntimeProtocolEvent(event: unknown): { ok: true } | { o
       return { ok: false, error: "message.appended requires a valid messageId and message" };
     }
   }
+  if (value.kind === "approval.resolved") {
+    const payload = value.payload;
+    if (!payload || typeof payload.requestId !== "string" || !payload.requestId.trim() || !["allow", "always", "deny"].includes(String(payload.decision))) {
+      return { ok: false, error: "approval.resolved requires requestId and a valid decision" };
+    }
+  }
   return { ok: true };
 }
 
@@ -161,7 +169,7 @@ export function isRuntimeProtocolEvent(event: unknown): event is RuntimeProtocol
 function normalizeProtocolStatus(status: ToolEventStatus | undefined, type: ToolEventType): RuntimeProtocolStatus {
   if (status && RUNTIME_PROTOCOL_STATUSES.includes(status)) return status;
   if (type === "permission:requested") return "waiting";
-  if (type === "tool:done" || type === "turn:done" || type === "diff:created" || type === "diff:updated") return "done";
+  if (type === "permission:resolved" || type === "tool:done" || type === "turn:done" || type === "diff:created" || type === "diff:updated") return "done";
   return "running";
 }
 
@@ -182,7 +190,7 @@ function actorForSourceEvent(source: RuntimeProtocolSourceEvent): RuntimeProtoco
 
 function visibilityForKind(kind: RuntimeProtocolKind): RuntimeProtocolVisibility[] {
   if (kind.startsWith("diff.")) return ["timeline", "diff", "job", "sdk"];
-  if (kind === "approval.requested") return ["timeline", "job", "sdk"];
+  if (kind === "approval.requested" || kind === "approval.resolved") return ["timeline", "job", "sdk"];
   if (kind === "tool.output") return ["timeline", "sdk"];
   if (kind.startsWith("tool.")) return ["timeline", "job", "sdk"];
   if (kind === "assistant.delta") return ["chat", "sdk"];

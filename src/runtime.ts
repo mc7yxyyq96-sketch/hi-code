@@ -13,12 +13,13 @@ import { handleCommand, type CommandEnv } from "./commands.js";
 import { saveSession, loadSession, newSessionId, type StoredSession } from "./session-store.js";
 import { shutdownMcp } from "./mcp.js";
 import { gitInfo } from "./git.js";
-import type {
-  RuntimeEventDraft,
-  RuntimeEventEnvelope,
-  RuntimeEventSink,
-  RuntimeMessageAppendedPayload,
-  ToolEventStatus,
+import {
+  newEventId,
+  type RuntimeEventDraft,
+  type RuntimeEventEnvelope,
+  type RuntimeEventSink,
+  type RuntimeMessageAppendedPayload,
+  type ToolEventStatus,
 } from "./events.js";
 import { createRuntimeProtocolEvent } from "./runtime-protocol.js";
 import { appendRuntimeProtocolEvent, readRuntimeProtocolEvents } from "./runtime-event-store.js";
@@ -157,9 +158,9 @@ export function createRuntime(opts: RuntimeOpts): Runtime {
       sessionId,
       turnId,
     };
-    const sinkResult = safelyDispatchRuntimeEvent(() => opts.eventSink?.emit(envelope));
-    const legacyResult = safelyDispatchRuntimeEvent(() => opts.emitEvent?.(envelope));
-    return sinkResult ?? legacyResult ?? envelope.id;
+    safelyDispatchRuntimeEvent(() => opts.eventSink?.emit(envelope));
+    safelyDispatchRuntimeEvent(() => opts.emitEvent?.(envelope));
+    return envelope.id;
   };
 
   const execEnv: ExecEnv = {
@@ -345,19 +346,28 @@ export function createRuntime(opts: RuntimeOpts): Runtime {
           status: "running",
           payload: { command, startedAt: Date.now() },
         });
-        emitRuntimeEvent({
+        const approvalId = newEventId("approval");
+        const approvalEventId = emitRuntimeEvent({
           type: "permission:requested",
           tool: "bash",
           title: "Permission required",
           summary: `bash: ${command}`,
           status: "waiting",
-          payload: { action: `bash: ${command}` },
+          payload: { approvalId, action: `bash: ${command}` },
         });
         const decision = await requestPermission(
           perms,
           { tool: "bash", action: `bash: ${command}`, mutating: true },
           ask,
         );
+        emitRuntimeEvent({
+          type: "permission:resolved",
+          tool: "bash",
+          title: decision === "deny" ? "Permission denied" : "Permission granted",
+          summary: `bash: ${command}`,
+          status: decision === "deny" ? "denied" : "done",
+          payload: { requestId: approvalId, parentId: approvalEventId || approvalId, decision, action: `bash: ${command}` },
+        });
         if (decision === "deny") {
           finalStatus = "denied";
           finalSummary = "permission denied";

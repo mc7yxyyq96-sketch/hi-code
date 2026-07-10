@@ -51,6 +51,8 @@ const commands = fs.readFileSync(path.join(root, "src", "commands.ts"), "utf8");
 const runtime = fs.readFileSync(path.join(root, "src", "runtime.ts"), "utf8");
 const runtimeProtocol = fs.readFileSync(path.join(root, "src", "runtime-protocol.ts"), "utf8");
 const runtimeEventStore = fs.readFileSync(path.join(root, "src", "runtime-event-store.ts"), "utf8");
+const turnStateMachine = fs.readFileSync(path.join(root, "src", "turn-state-machine.ts"), "utf8");
+const recovery = fs.readFileSync(path.join(root, "src", "recovery.ts"), "utf8");
 const llm = fs.readFileSync(path.join(root, "src", "llm.ts"), "utf8");
 const workspaceService = fs.readFileSync(path.join(root, "electron", "services", "workspace-service.mjs"), "utf8");
 const electronE2e = fs.readFileSync(path.join(root, "tests", "electron-e2e", "run.mjs"), "utf8");
@@ -67,6 +69,9 @@ check("desktop bridge filters terminal tool chrome from chat output", main.inclu
 check("complete model context stays out of legacy timeline logs", main.includes('normalized.type !== "message:appended"') && main.includes("complete model context"));
 check("runtime emits versioned protocol envelopes", runtime.includes("createRuntimeProtocolEvent") && runtime.includes("runtimeProtocol") && runtimeProtocol.includes("RUNTIME_PROTOCOL_VERSION = 1") && runtimeProtocol.includes("validateRuntimeProtocolEvent"));
 check("runtime protocol events are append-only persisted", runtime.includes("appendRuntimeProtocolEvent") && runtimeEventStore.includes("RUNTIME_EVENT_STORE_DIR") && runtimeEventStore.includes("replayRuntimeProtocolEvents"));
+check("approval decisions are durably correlated", runtimeProtocol.includes('"approval.resolved"') && runtimeProtocol.includes("approval.resolved requires requestId") && runtime.includes("requestId: approvalId"));
+check("turn recovery blocks unknown side effects", turnStateMachine.includes('recoveryAction: "inspect_tool"') && turnStateMachine.includes("unknown completion or side effects") && recovery.includes("legacy task has no durable tool-side-effect evidence"));
+check("turn recovery never reuses prior approval", turnStateMachine.includes('recoveryAction: "retry_with_approval"') && turnStateMachine.includes("retry must request a new human decision"));
 check("app version is synced from package metadata", main.includes("version: app.getVersion()") && main.includes("getVersion: () => app.getVersion()") && syncVersionScript.includes("app.getVersion()") && syncVersionScript.includes("appVersionEl.textContent"));
 check("preload does not expose ipcRenderer", !/ipcRenderer[,}]/.test(preload) && !/ipcRenderer:\s*ipcRenderer/.test(preload));
 check("preload does not expose generic invoke", !/invoke:\s*\(/.test(preload));
@@ -250,6 +255,7 @@ check("verify script includes feature tests", verifyScript.includes('"test:featu
 check("verify script includes runtime protocol tests", verifyScript.includes('"test:runtime-protocol"') && verifyScript.includes("test/runtime-protocol-tests.mjs"));
 check("verify script includes typed runtime store tests", verifyScript.includes('"test:runtime-stores"') && verifyScript.includes("test/runtime-store-tests.mjs"));
 check("verify script includes runtime store integration tests", verifyScript.includes('"test:runtime-store-integration"') && verifyScript.includes("test/runtime-store-integration-tests.mjs"));
+check("verify script includes turn recovery tests", verifyScript.includes('"test:turn-recovery"') && verifyScript.includes("test/turn-recovery-tests.mjs"));
 check("verify script includes service tests", verifyScript.includes('"test:services"'));
 check("verify script includes job center tests", verifyScript.includes('"test:jobs"'));
 check("verify script includes provider tests", verifyScript.includes('"test:providers"'));

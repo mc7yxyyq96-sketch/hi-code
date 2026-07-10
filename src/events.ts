@@ -11,6 +11,7 @@ export const RUNTIME_EVENT_TYPES = [
   "tool:output",
   "tool:done",
   "permission:requested",
+  "permission:resolved",
   "diff:created",
   "diff:updated",
 ] as const;

@@ -37,6 +37,7 @@ const requiredFiles = [
   "docs/adr/ADR-0001-program-control-and-evidence.md",
   "docs/adr/ADR-0002-runtime-protocol-authority-migration.md",
   "docs/adr/ADR-0003-typed-runtime-stores-and-idempotent-replay.md",
+  "docs/adr/ADR-0004-turn-state-and-conservative-recovery.md",
   "docs/runtime-stores.md",
   "planning/backlog.json",
   "planning/release-board.json",
@@ -46,6 +47,7 @@ const requiredFiles = [
   "reports/tasks/HC-QA-101.md",
   "reports/tasks/HC-RUN-201.md",
   "reports/tasks/HC-RUN-202.md",
+  "reports/tasks/HC-RUN-203.md",
   "reports/tasks/HC-REL-ALPHA-7.md",
   "reports/evidence/baseline/manifest.json",
   "reports/evidence/HC-QA-101/manifest.json",
@@ -113,10 +115,14 @@ check(
 );
 check("runtime store replay gate passed", board.gates?.find((gate) => gate.id === "runtime-store-replay")?.status === "passed");
 check(
-  "HC-RUN-203 is dependency-ready after typed replay completion",
-  recoveryRuntimeTask?.status === "ready" && recoveryRuntimeTask?.dependencies?.every((id) => backlog.tasks.find((task) => task.id === id)?.status === "completed"),
+  "HC-RUN-203 is active only after typed replay completion",
+  recoveryRuntimeTask?.status === "in_progress" &&
+    recoveryRuntimeTask?.branch === "codex/runtime-engine/hc-run-203" &&
+    recoveryRuntimeTask?.startedAt &&
+    recoveryRuntimeTask?.dependencies?.every((id) => backlog.tasks.find((task) => task.id === id)?.status === "completed"),
   JSON.stringify(recoveryRuntimeTask),
 );
+check("turn recovery test is part of the global verification matrix", packageJson.scripts["test:turn-recovery"] === "node test/turn-recovery-tests.mjs" && fs.readFileSync(path.join(root, "scripts/verify.mjs"), "utf8").includes("test/turn-recovery-tests.mjs"));
 check("HC-PLAT-110 is dependency-ready", platformTask?.status === "ready" && platformTask?.dependencies?.every((id) => backlog.tasks.find((task) => task.id === id)?.status === "completed"));
 check("HC-UI-301 is dependency-ready", uiShellTask?.status === "ready" && uiShellTask?.dependencies?.every((id) => backlog.tasks.find((task) => task.id === id)?.status === "completed"));
 check("alpha.7 version is synchronized", packageJson.version === "0.6.0-alpha.7" && packageLock.version === packageJson.version && packageLock.packages?.[""]?.version === packageJson.version && fs.readFileSync(path.join(root, "VERSION"), "utf8").trim() === packageJson.version);

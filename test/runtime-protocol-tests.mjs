@@ -83,6 +83,27 @@ check(
   validateRuntimeProtocolEvent({ ...messageEnvelope, payload: { messageId: "msg-assistant-1" } }).ok === false,
 );
 
+const approvalResolvedEnvelope = createRuntimeProtocolEvent(
+  {
+    type: "permission:resolved",
+    title: "Permission granted",
+    status: "done",
+    sessionId: "session-a",
+    turnId: "session-a-turn-1",
+    payload: { requestId: "approval-1", parentId: "approval-1", decision: "allow" },
+  },
+  { sequence: 3, createdAt: 102 },
+);
+check(
+  "approval resolution maps and validates with request correlation",
+  approvalResolvedEnvelope.kind === "approval.resolved" && validateRuntimeProtocolEvent(approvalResolvedEnvelope).ok,
+  JSON.stringify(approvalResolvedEnvelope),
+);
+check(
+  "approval resolution rejects an unknown decision",
+  validateRuntimeProtocolEvent({ ...approvalResolvedEnvelope, payload: { requestId: "approval-1", decision: "later" } }).ok === false,
+);
+
 console.log("\n[runtime-protocol] runtime integration");
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "hicode-runtime-protocol-"));
@@ -142,6 +163,16 @@ check(
 check(
   "permission request maps to approval kind",
   protocolEvents.some((event) => event.kind === "approval.requested" && event.status === "waiting"),
+  JSON.stringify(protocolEvents),
+);
+const approvalRequest = protocolEvents.find((event) => event.kind === "approval.requested");
+const approvalResolution = protocolEvents.find((event) => event.kind === "approval.resolved");
+check(
+  "runtime persists paired approval request and decision",
+  approvalRequest?.payload?.approvalId &&
+    approvalResolution?.payload?.requestId === approvalRequest.payload.approvalId &&
+    approvalResolution.payload.parentId === approvalRequest.id &&
+    approvalResolution.payload.decision === "deny",
   JSON.stringify(protocolEvents),
 );
 check(

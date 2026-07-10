@@ -50,7 +50,7 @@ Root-level legacy `main.mjs`, `renderer.js`, and `index.html` are not production
 
 ### Protocol and persistence
 
-`src/runtime-protocol.ts` defines versioned event envelopes. `src/runtime-event-store.ts` preserves legacy JSONL while synchronizing validated events into the typed store. `src/runtime-stores.ts` owns typed thread, event, and normalized model-message contracts. `src/session-store.ts` remains the compatibility facade, while `src/recovery.ts` diagnoses incomplete turns across protocol and legacy records.
+`src/runtime-protocol.ts` defines versioned event envelopes. `src/runtime-event-store.ts` preserves legacy JSONL while synchronizing validated events into the typed store. `src/runtime-stores.ts` owns typed thread, event, and normalized model-message contracts. `src/session-store.ts` remains the compatibility facade. `src/turn-state-machine.ts` derives conservative crash, approval, and tool recovery from durable events; `src/recovery.ts` projects those plans through the compatibility IPC and treats evidence-poor legacy failures as inspection-only.
 
 HC-RUN-201 moved assistant text to first-class protocol events. HC-RUN-202 adds exact hidden `message.appended` records and reconstructs full system/user/assistant/tool context without session JSON. Streams created before normalized messages remain read-only rather than receiving guessed context.
 

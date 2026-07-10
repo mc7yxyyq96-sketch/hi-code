@@ -65,7 +65,7 @@ Approval and diff events remain in the event transcript for audit and UI project
 
 ## Recovery Boundary
 
-When a turn has a start event and no terminal event, replay reports it as `interrupted` and recoverable. HC-RUN-202 diagnoses and preserves that work; HC-RUN-203 owns the automatic turn state machine and retry/resume policy.
+When a turn has a start event and no terminal event, replay reports it as interrupted. HC-RUN-203 derives the recovery action from approval, tool, assistant-output, and terminal records. Model-only interruption can be retried after source-session restoration; unknown tool side effects require inspection; unanswered approvals require a new decision. Legacy logs without enough side-effect evidence never receive an automatic retry classification.
 
 ## Verification
 

@@ -20,8 +20,8 @@ function sseResponse(parts) {
   return new Response(body, { status: 200, headers: { "content-type": "text/event-stream" } });
 }
 
-function protocolEvent({ sessionId, turnId, sequence, id, kind, legacyType, status, title, payload = {}, actor = "runtime", visibility = ["timeline", "job", "sdk"] }) {
-  return { schemaVersion: 1, id, sessionId, turnId, sequence, kind, legacyType, status, actor, title, createdAt: 1000 + sequence, visibility, payload };
+function protocolEvent({ sessionId, turnId, sequence, id, kind, legacyType, status, title, payload = {}, actor = "runtime", tool, visibility = ["timeline", "job", "sdk"] }) {
+  return { schemaVersion: 1, id, sessionId, turnId, sequence, kind, legacyType, status, actor, ...(tool ? { tool } : {}), title, createdAt: 1000 + sequence, visibility, payload };
 }
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "hicode-runtime-store-integration-"));
@@ -272,6 +272,54 @@ try {
   });
   const recoverable = recovery.recoverableTasksFromProtocolEvents([running]);
   check("unterminated running turn becomes recoverable interrupted work", recoverable.length === 1 && recoverable[0].status === "interrupted" && recoverable[0].retryInput === "resume this work", JSON.stringify(recoverable));
+
+  const durableCrashEvents = [
+    running,
+    protocolEvent({
+      sessionId: "crashed-thread",
+      turnId: "crashed-thread-turn-1",
+      sequence: 2,
+      id: "rpe-partial-output",
+      kind: "assistant.delta",
+      legacyType: "assistant:delta",
+      status: "running",
+      actor: "assistant",
+      title: "Assistant output",
+      visibility: ["chat", "sdk"],
+      payload: { delta: "durable partial output" },
+    }),
+  ];
+  for (const event of durableCrashEvents) {
+    const appended = runtimeEventStore.appendRuntimeProtocolEvent(event);
+    check(`durable crash fixture appends ${event.id}`, appended.ok, JSON.stringify(appended));
+  }
+
+  const approvalSession = "approval-crash-thread";
+  const approvalCrashEvents = [
+    protocolEvent({ sessionId: approvalSession, turnId: `${approvalSession}-turn-1`, sequence: 1, id: "approval-turn-start", kind: "turn.started", legacyType: "turn:start", status: "running", title: "Approval crash", payload: { retryInput: "write configuration" } }),
+    protocolEvent({ sessionId: approvalSession, turnId: `${approvalSession}-turn-1`, sequence: 2, id: "approval-tool-start", kind: "tool.started", legacyType: "tool:start", status: "running", title: "Write configuration", actor: "tool", payload: {}, }),
+    protocolEvent({ sessionId: approvalSession, turnId: `${approvalSession}-turn-1`, sequence: 3, id: "approval-pending", kind: "approval.requested", legacyType: "permission:requested", status: "waiting", title: "Permission required", payload: { approvalId: "approval-pending", action: "write configuration" } }),
+  ];
+  for (const event of approvalCrashEvents) runtimeEventStore.appendRuntimeProtocolEvent(event);
+
+  const toolSession = "tool-crash-thread";
+  const toolCrashEvents = [
+    protocolEvent({ sessionId: toolSession, turnId: `${toolSession}-turn-1`, sequence: 1, id: "tool-turn-start", kind: "turn.started", legacyType: "turn:start", status: "running", title: "Tool crash", payload: { retryInput: "run build" } }),
+    protocolEvent({ sessionId: toolSession, turnId: `${toolSession}-turn-1`, sequence: 2, id: "unknown-tool-start", kind: "tool.started", legacyType: "tool:start", status: "running", title: "Run build", actor: "tool", tool: "bash", payload: {} }),
+  ];
+  for (const event of toolCrashEvents) runtimeEventStore.appendRuntimeProtocolEvent(event);
+
+  const durableRecovery = recovery.readRecoverableTasksFromRuntimeStore(10);
+  const streamedTask = durableRecovery.find((task) => task.sessionId === "crashed-thread");
+  const approvalTask = durableRecovery.find((task) => task.sessionId === approvalSession);
+  const toolTask = durableRecovery.find((task) => task.sessionId === toolSession);
+  check("durable stream crash preserves partial output and safe retry", streamedTask?.recoveryAction === "retry_turn" && streamedTask.canRetry && streamedTask.partialAssistantText === "durable partial output", JSON.stringify(streamedTask));
+  check("durable approval crash requires a new decision", approvalTask?.recoveryAction === "retry_with_approval" && approvalTask.requiresApproval && approvalTask.pendingApproval?.requestId === "approval-pending", JSON.stringify(approvalTask));
+  check("durable tool crash blocks automatic replay", toolTask?.recoveryAction === "inspect_tool" && toolTask.canRetry === false && toolTask.pendingTool?.tool === "bash", JSON.stringify(toolTask));
+
+  runtimeEventStore.deleteRuntimeProtocolEvents("crashed-thread");
+  runtimeEventStore.deleteRuntimeProtocolEvents(approvalSession);
+  runtimeEventStore.deleteRuntimeProtocolEvents(toolSession);
 
   sessionStore.deleteSession(sessionId);
 } finally {
