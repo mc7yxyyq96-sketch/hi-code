@@ -176,6 +176,7 @@
         "CLI/TUI replay-only session listing",
         "CLI/TUI read-only replay resume",
         "runtime protocol sequence continuation after resume",
+        "recoverable task list from runtime protocol store",
         "crash recovery tests"
       ]
     },

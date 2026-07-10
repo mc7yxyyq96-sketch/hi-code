@@ -4,6 +4,7 @@ export function createDiffIpcService({
   logDir,
   listToolEvents,
   readRecoverableTasksFromLogs,
+  readRecoverableTasks,
   listDiffs,
   acceptDiff,
   rejectDiff,
@@ -14,7 +15,9 @@ export function createDiffIpcService({
   return {
     listToolEvents,
     listRecoverableTasks(limit) {
-      return readRecoverableTasksFromLogs(logDir, ipcBoundedNumber(limit, 8, { min: 1, max: 100 }));
+      const boundedLimit = ipcBoundedNumber(limit, 8, { min: 1, max: 100 });
+      if (readRecoverableTasks) return readRecoverableTasks({ logDir, limit: boundedLimit });
+      return readRecoverableTasksFromLogs(logDir, boundedLimit);
     },
     listDiffs,
     acceptDiff(id) {

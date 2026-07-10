@@ -100,6 +100,7 @@ Current first slice:
 - Recent sessions now surface event-only sessions as replay-only recovery entries when the full chat JSON is unavailable.
 - CLI/TUI `/sessions` lists event-only replay entries, and `/resume <id>` opens them as read-only transcript replay instead of silently failing.
 - Saved session resume continues protocol event sequence numbers from the append-only store.
+- Desktop recoverable task listing now reads failed/interrupted/denied turns from the append-only protocol store and merges legacy runtime logs for migration safety.
 - `test/runtime-protocol-tests.mjs` verifies schema helpers and real runtime event emission.
 
 Build:

@@ -1,5 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
+import {
+  listRuntimeProtocolEventSessions,
+  readRuntimeProtocolEvents,
+} from "./runtime-event-store.js";
+import type { RuntimeProtocolEvent } from "./runtime-protocol.js";
 
 type RecoverableStatus = "error" | "interrupted" | "denied";
 
@@ -35,6 +40,7 @@ interface TurnRecord {
 }
 
 const RECOVERABLE_STATUSES = new Set<RecoverableStatus>(["error", "interrupted", "denied"]);
+const RECOVERABLE_PROTOCOL_DONE_KINDS = new Set(["turn.failed", "turn.denied", "turn.interrupted"]);
 
 export function recoverableTasksFromEvents(events: RuntimeLogEvent[], limit = 10): RecoverableTask[] {
   const records = new Map<string, TurnRecord>();
@@ -123,6 +129,101 @@ export function readRecoverableTasksFromLogs(logDir: string, limit = 10): Recove
   }
 }
 
+export function recoverableTasksFromProtocolEvents(events: RuntimeProtocolEvent[], limit = 10): RecoverableTask[] {
+  const records = new Map<string, { start?: RuntimeProtocolEvent; done?: RuntimeProtocolEvent }>();
+
+  for (const event of events) {
+    if (!event || !event.kind.startsWith("turn.")) continue;
+    const key = event.turnId || event.id;
+    if (!key) continue;
+
+    const record = records.get(key) ?? {};
+    if (event.kind === "turn.started") {
+      if (!record.start || protocolEventTime(event) <= protocolEventTime(record.start)) record.start = event;
+      records.set(key, record);
+      continue;
+    }
+
+    if (RECOVERABLE_PROTOCOL_DONE_KINDS.has(event.kind)) {
+      if (!record.done || protocolEventTime(event) >= protocolEventTime(record.done)) record.done = event;
+      records.set(key, record);
+    }
+  }
+
+  const tasks: RecoverableTask[] = [];
+  for (const [id, record] of records) {
+    const done = record.done;
+    const start = record.start;
+    const status = done?.status;
+    if (!isRecoverableStatus(status)) continue;
+
+    const retryInput =
+      getString(start?.payload?.retryInput) ||
+      getString(done?.payload?.retryInput) ||
+      getString(start?.payload?.input) ||
+      getString(done?.payload?.input);
+    if (!retryInput.trim()) continue;
+
+    const createdAt = numberOr(start?.createdAt, done?.createdAt, Date.now());
+    const updatedAt = numberOr(done?.updatedAt, done?.createdAt, start?.updatedAt, createdAt);
+    const durationMs = getFiniteNumber(done?.payload?.durationMs);
+    tasks.push({
+      id,
+      sessionId: start?.sessionId || done?.sessionId || "",
+      turnId: start?.turnId || done?.turnId || id,
+      title: start?.title || done?.title || "Recoverable task",
+      summary: done?.summary || start?.summary || retryInput.slice(0, 80),
+      status,
+      retryInput,
+      createdAt,
+      updatedAt,
+      ...(durationMs === undefined ? {} : { durationMs }),
+    });
+  }
+
+  return tasks
+    .sort((a, b) => (b.updatedAt || b.createdAt) - (a.updatedAt || a.createdAt))
+    .slice(0, clampLimit(limit));
+}
+
+export function readRecoverableTasksFromRuntimeStore(limit = 10): RecoverableTask[] {
+  const safeLimit = clampLimit(limit);
+  try {
+    const tasks: RecoverableTask[] = [];
+    for (const session of listRuntimeProtocolEventSessions().slice(0, 100)) {
+      try {
+        tasks.push(...recoverableTasksFromProtocolEvents(readRuntimeProtocolEvents(session.sessionId), safeLimit));
+      } catch {
+        // Ignore one unreadable protocol session; other sessions remain recoverable.
+      }
+    }
+    return mergeRecoverableTasks(tasks, safeLimit);
+  } catch {
+    return [];
+  }
+}
+
+export function readRecoverableTasks({ logDir, limit = 10 }: { logDir?: string; limit?: number } = {}): RecoverableTask[] {
+  const safeLimit = clampLimit(limit);
+  const tasks = [
+    ...readRecoverableTasksFromRuntimeStore(safeLimit),
+    ...(logDir ? readRecoverableTasksFromLogs(logDir, safeLimit) : []),
+  ];
+  return mergeRecoverableTasks(tasks, safeLimit);
+}
+
+export function mergeRecoverableTasks(tasks: RecoverableTask[], limit = 10): RecoverableTask[] {
+  const byKey = new Map<string, RecoverableTask>();
+  for (const task of tasks) {
+    const key = `${task.sessionId || ""}:${task.turnId || task.id}:${task.retryInput}`;
+    const previous = byKey.get(key);
+    if (!previous || (task.updatedAt || task.createdAt) >= (previous.updatedAt || previous.createdAt)) byKey.set(key, task);
+  }
+  return [...byKey.values()]
+    .sort((a, b) => (b.updatedAt || b.createdAt) - (a.updatedAt || a.createdAt))
+    .slice(0, clampLimit(limit));
+}
+
 function isRecoverableStatus(status: string | undefined): status is RecoverableStatus {
   return !!status && RECOVERABLE_STATUSES.has(status as RecoverableStatus);
 }
@@ -144,6 +245,10 @@ function numberOr(...values: unknown[]): number {
 }
 
 function eventTime(event: RuntimeLogEvent): number {
+  return numberOr(event.updatedAt, event.createdAt, 0);
+}
+
+function protocolEventTime(event: RuntimeProtocolEvent): number {
   return numberOr(event.updatedAt, event.createdAt, 0);
 }
 

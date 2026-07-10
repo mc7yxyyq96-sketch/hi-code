@@ -23,7 +23,12 @@ import {
 import { buildUserContent, createRuntime } from "../dist/runtime.js";
 import { DiffService } from "../dist/diff-service.js";
 import { deleteSession as deleteStoredSession, loadSession } from "../dist/session-store.js";
-import { recoverableTasksFromEvents, readRecoverableTasksFromLogs } from "../dist/recovery.js";
+import {
+  recoverableTasksFromEvents,
+  recoverableTasksFromProtocolEvents,
+  mergeRecoverableTasks,
+  readRecoverableTasksFromLogs,
+} from "../dist/recovery.js";
 import { RuntimeJobQueue } from "../dist/job-queue.js";
 import { buildSafeChildEnv, redactEnvForLogs, validateAllowedEnvKeys } from "../dist/process-env.js";
 import { spawnSync } from "node:child_process";
@@ -341,6 +346,64 @@ check(
     recoveredFromLog[0].status === "interrupted" &&
     recoveredFromLog[0].retryInput === "!npm run build",
   JSON.stringify(recoveredFromLog),
+);
+const protocolRecovered = recoverableTasksFromProtocolEvents([
+  {
+    schemaVersion: 1,
+    id: "rpe-start-1",
+    sessionId: "protocol-session",
+    turnId: "protocol-turn",
+    sequence: 1,
+    kind: "turn.started",
+    legacyType: "turn:start",
+    status: "running",
+    actor: "runtime",
+    title: "Run release check",
+    summary: "!npm run release:check",
+    createdAt: 500,
+    visibility: ["timeline", "job", "sdk"],
+    payload: { retryInput: "!npm run release:check" },
+  },
+  {
+    schemaVersion: 1,
+    id: "rpe-done-1",
+    sessionId: "protocol-session",
+    turnId: "protocol-turn",
+    sequence: 2,
+    kind: "turn.interrupted",
+    legacyType: "turn:done",
+    status: "interrupted",
+    actor: "runtime",
+    title: "Turn interrupted",
+    summary: "interrupted by restart",
+    createdAt: 650,
+    visibility: ["timeline", "job", "sdk"],
+    payload: { durationMs: 150 },
+  },
+]);
+check(
+  "recoverableTasksFromProtocolEvents restores interrupted protocol turn",
+  protocolRecovered.length === 1 &&
+    protocolRecovered[0].id === "protocol-turn" &&
+    protocolRecovered[0].sessionId === "protocol-session" &&
+    protocolRecovered[0].retryInput === "!npm run release:check" &&
+    protocolRecovered[0].durationMs === 150,
+  JSON.stringify(protocolRecovered),
+);
+const mergedRecovered = mergeRecoverableTasks([
+  { ...recoveredFromLog[0], turnId: "turn-log" },
+  {
+    ...recoveredFromLog[0],
+    id: "same-turn-newer",
+    turnId: "turn-log",
+    updatedAt: (recoveredFromLog[0].updatedAt || 0) + 1,
+  },
+  protocolRecovered[0],
+], 5);
+check(
+  "mergeRecoverableTasks deduplicates legacy and protocol recovery rows",
+  mergedRecovered.length === 2 && mergedRecovered.some((task) => task.id === "same-turn-newer"),
+  JSON.stringify(mergedRecovered),
 );
 
 // --- 2e. Safe child process env ---

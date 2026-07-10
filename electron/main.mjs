@@ -16,7 +16,7 @@ import { setSpinnerEnabled } from "../dist/ui.js";
 import { initMcp } from "../dist/mcp.js";
 import { listSessions, deleteSession, loadSession, replaySessionMessages } from "../dist/session-store.js";
 import { DiffService } from "../dist/diff-service.js";
-import { readRecoverableTasksFromLogs } from "../dist/recovery.js";
+import { readRecoverableTasks, readRecoverableTasksFromLogs } from "../dist/recovery.js";
 import { RuntimeJobQueue } from "../dist/job-queue.js";
 import { JobStore } from "../dist/job-center.js";
 import { WorktreeRunner } from "../dist/worktree-runner.js";
@@ -2532,6 +2532,7 @@ function createMainServices() {
       logDir: LOG_DIR,
       listToolEvents,
       readRecoverableTasksFromLogs,
+      readRecoverableTasks,
       listDiffs,
       acceptDiff,
       rejectDiff,

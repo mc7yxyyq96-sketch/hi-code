@@ -20,6 +20,7 @@ Runtime integration:
 - The generated envelope is attached as `event.payload.runtimeProtocol`.
 - `src/runtime-event-store.ts` appends validated protocol events to `~/.hicode/runtime-events/<sessionId>.jsonl` for replay and crash recovery.
 - `src/session-store.ts` merges event-only sessions into Recent as replay-only entries when the full chat session JSON is missing.
+- `src/recovery.ts` reads recoverable failed/interrupted/denied turns from the append-only protocol store and merges them with legacy runtime logs so desktop recovery controls survive restart during the v0.6 migration.
 - CLI/TUI `/sessions` shows replay-only event sessions, and `/resume <id>` opens those sessions as read-only transcript replay instead of pretending they can continue model context.
 - Full saved session resume continues runtime protocol sequence numbers from the append-only event store, so resumed turns do not duplicate prior event sequences.
 - Existing renderer and Electron event consumers can continue to use the legacy event fields while new code migrates to the protocol envelope.
@@ -31,7 +32,7 @@ Tests:
 
 Version sync:
 
-- `package.json` is now on the `0.6.0-alpha.5` development line.
+- `package.json` is now on the `0.6.0-alpha.6` development line.
 - `scripts/sync-version.mjs` checks that Electron `app.getVersion()` and renderer labels remain wired to package metadata instead of hard-coded version text.
 
 ## Transport Mapping
@@ -162,7 +163,8 @@ The first slice mostly routes tool events to timeline/job/sdk, diffs to diff/tim
 3. Append protocol events to a durable JSONL event store.
 4. Make recent sessions replay from persisted protocol events. Event-only sessions are now visible as replay-only entries; full LLM context resume still requires the saved session JSON.
 5. Make CLI/TUI replay event-only sessions from the same persisted protocol stream.
-6. Expose protocol streaming through a future local app-server and SDK.
+6. Feed desktop recoverable task controls from the protocol store while keeping legacy log fallback.
+7. Expose protocol streaming through a future local app-server and SDK.
 
 ## Guardrails
 
