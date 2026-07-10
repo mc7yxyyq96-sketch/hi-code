@@ -61,6 +61,8 @@ console.log("\n[security] runtime baseline");
 check("contextIsolation remains enabled", /contextIsolation:\s*true/.test(main));
 check("nodeIntegration remains disabled", /nodeIntegration:\s*false/.test(main));
 check("renderer sandbox enabled", /sandbox:\s*true/.test(main));
+check("renderer-created windows are denied", main.includes("setWindowOpenHandler") && main.includes('action: "deny"'));
+check("untrusted renderer navigation is blocked", main.includes('webContents.on("will-navigate"') && main.includes("event.preventDefault()"));
 check("renderer CSP exists", html.includes("Content-Security-Policy"));
 check("CSP blocks remote script by default", /script-src 'self'/.test(html));
 check("desktop runtime disables slash-command process exit", main.includes("allowProcessExit: false") && runtime.includes("allowProcessExit: opts.allowProcessExit !== false") && commands.includes("env.allowProcessExit === false"));
@@ -256,6 +258,7 @@ check("verify script includes runtime protocol tests", verifyScript.includes('"t
 check("verify script includes typed runtime store tests", verifyScript.includes('"test:runtime-stores"') && verifyScript.includes("test/runtime-store-tests.mjs"));
 check("verify script includes runtime store integration tests", verifyScript.includes('"test:runtime-store-integration"') && verifyScript.includes("test/runtime-store-integration-tests.mjs"));
 check("verify script includes turn recovery tests", verifyScript.includes('"test:turn-recovery"') && verifyScript.includes("test/turn-recovery-tests.mjs"));
+check("verify script includes Electron compatibility tests", verifyScript.includes('"test:electron-compatibility"') && verifyScript.includes("test/electron-compatibility-tests.mjs"));
 check("verify script includes service tests", verifyScript.includes('"test:services"'));
 check("verify script includes job center tests", verifyScript.includes('"test:jobs"'));
 check("verify script includes provider tests", verifyScript.includes('"test:providers"'));

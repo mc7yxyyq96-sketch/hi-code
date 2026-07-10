@@ -39,6 +39,7 @@ const requiredFiles = [
   "docs/adr/ADR-0003-typed-runtime-stores-and-idempotent-replay.md",
   "docs/adr/ADR-0004-turn-state-and-conservative-recovery.md",
   "docs/adr/ADR-0005-supported-electron-line.md",
+  "docs/electron-compatibility.md",
   "docs/runtime-stores.md",
   "planning/backlog.json",
   "planning/release-board.json",
@@ -57,6 +58,9 @@ const requiredFiles = [
   "reports/evidence/HC-RUN-202/manifest.json",
   "reports/evidence/HC-RUN-203/manifest.json",
   "reports/evidence/HC-REL-ALPHA-7/manifest.json",
+  "scripts/electron-compatibility.mjs",
+  "scripts/run-electron-builder.mjs",
+  "test/electron-compatibility-tests.mjs",
   "reports/releases/0.6.0-alpha.7/capability-matrix.md",
   "reports/releases/0.6.0-alpha.7/migration-report.md",
   "reports/releases/0.6.0-alpha.7/security-report.md",
@@ -142,6 +146,8 @@ check(
     platformBoardTask?.status === "in_progress",
   JSON.stringify(platformTask),
 );
+check("HC-PLAT-110 pins the supported Electron toolchain", packageJson.devDependencies?.electron === "43.1.0" && packageLock.packages?.["node_modules/electron"]?.version === "43.1.0" && packageJson.devDependencies?.["electron-builder"] === "26.15.3");
+check("Electron compatibility contract is part of global verification", packageJson.scripts["test:electron-compatibility"] === "node test/electron-compatibility-tests.mjs" && fs.readFileSync(path.join(root, "scripts/verify.mjs"), "utf8").includes("test/electron-compatibility-tests.mjs"));
 check("HC-UI-301 is dependency-ready", uiShellTask?.status === "ready" && uiShellTask?.dependencies?.every((id) => backlog.tasks.find((task) => task.id === id)?.status === "completed"));
 check("alpha.7 version is synchronized", packageJson.version === "0.6.0-alpha.7" && packageLock.version === packageJson.version && packageLock.packages?.[""]?.version === packageJson.version && fs.readFileSync(path.join(root, "VERSION"), "utf8").trim() === packageJson.version);
 check("alpha.7 release candidate gate passed", board.candidate?.version === packageJson.version && board.candidate?.status === "passed" && board.gates?.find((gate) => gate.id === "alpha-7-release-candidate")?.status === "passed");

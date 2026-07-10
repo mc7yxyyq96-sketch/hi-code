@@ -7,7 +7,7 @@ import path from "node:path";
 import os from "node:os";
 import fs from "node:fs";
 import crypto from "node:crypto";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
 
 import { loadConfig, defaultProfile, HICODE_DIR } from "../dist/config.js";
@@ -2435,6 +2435,8 @@ function makeRendererAsk() {
 }
 
 function createWindow() {
+  const rendererPath = path.join(__dirname, "..", "renderer", "index.html");
+  const rendererUrl = pathToFileURL(rendererPath).href;
   win = new BrowserWindow({
     width: 1040,
     height: 760,
@@ -2456,7 +2458,20 @@ function createWindow() {
   win.once("ready-to-show", () => {
     win?.show();
   });
-  win.loadFile(path.join(__dirname, "..", "renderer", "index.html"));
+  win.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+  win.webContents.on("will-navigate", (event, targetUrl) => {
+    try {
+      const target = new URL(targetUrl);
+      const trusted = new URL(rendererUrl);
+      target.hash = "";
+      trusted.hash = "";
+      if (target.href === trusted.href) return;
+    } catch {
+      // Invalid navigation targets are untrusted.
+    }
+    event.preventDefault();
+  });
+  win.loadFile(rendererPath);
   win.webContents.on("did-finish-load", async () => {
     buildRuntime();
     await mainServices?.mcp?.initializeConfiguredServers();

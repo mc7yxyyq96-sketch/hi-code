@@ -50,6 +50,7 @@
     "test:program": "node test/program-control-tests.mjs",
     "test:electron-e2e": "node tests/electron-e2e/run.mjs",
     "test:electron-e2e:update": "node tests/electron-e2e/run.mjs --update-fixtures",
+    "test:electron-compatibility": "node test/electron-compatibility-tests.mjs",
     "sync:version": "node scripts/sync-version.mjs",
     "scan:dod": "node scripts/scan-dod.mjs",
     "program:baseline": "node scripts/capture-program-baseline.mjs",
@@ -57,6 +58,7 @@
     "program:evidence:runtime": "node scripts/capture-task-evidence.mjs --task=HC-RUN-201",
     "program:evidence:runtime-store": "node scripts/capture-task-evidence.mjs --task=HC-RUN-202",
     "program:evidence:turn-recovery": "node scripts/capture-task-evidence.mjs --task=HC-RUN-203",
+    "program:evidence:electron": "node scripts/capture-task-evidence.mjs --task=HC-PLAT-110",
     "program:evidence:alpha7": "node scripts/capture-task-evidence.mjs --task=HC-REL-ALPHA-7",
     "store:export": "node scripts/export-store-catalog.mjs",
     "check:syntax": "node --check electron/main.mjs && node --check electron/preload.cjs && node --check renderer/renderer.js",
@@ -67,9 +69,9 @@
     "release:check": "node scripts/verify.mjs --release",
     "release:checksums": "node scripts/checksum-release.mjs",
     "app": "npm run build && electron .",
-    "dist:mac": "npm run build && electron-builder --mac dmg",
-    "dist:win": "npm run build && electron-builder --win --x64",
-    "dist:all": "npm run build && electron-builder --mac dmg --win --x64"
+    "dist:mac": "npm run build && node scripts/run-electron-builder.mjs --mac dmg",
+    "dist:win": "npm run build && node scripts/run-electron-builder.mjs --win --x64",
+    "dist:all": "npm run build && node scripts/run-electron-builder.mjs --mac dmg --win --x64"
   },
   "dependencies": {
     "chalk": "^5.3.0",
@@ -82,8 +84,9 @@
     "@types/diff": "^5.2.1",
     "@types/node": "^22.7.0",
     "@types/react": "^18.3.5",
-    "electron": "^31.7.7",
-    "electron-builder": "^24.13.3",
+    "electron": "43.1.0",
+    "electron-builder": "26.15.3",
+    "npm": "11.9.0",
     "playwright": "^1.61.1",
     "tsx": "^4.19.0",
     "typescript": "^5.6.0"
@@ -124,6 +127,6 @@
     }
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=22.12.0"
   }
 }

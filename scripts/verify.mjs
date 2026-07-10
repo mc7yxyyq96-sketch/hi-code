@@ -13,6 +13,7 @@ const testFiles = [
   ["test:runtime-stores", "test/runtime-store-tests.mjs"],
   ["test:runtime-store-integration", "test/runtime-store-integration-tests.mjs"],
   ["test:turn-recovery", "test/turn-recovery-tests.mjs"],
+  ["test:electron-compatibility", "test/electron-compatibility-tests.mjs"],
   ["test:runtime-events", "test/runtime-event-sink-tests.mjs"],
   ["test:runtime-concurrency", "test/runtime-concurrency-tests.mjs"],
   ["test:runtime-clients", "test/runtime-client-adapter-tests.mjs"],

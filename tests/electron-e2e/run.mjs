@@ -7,6 +7,7 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 import { _electron as electron } from "playwright";
+import { ELECTRON_COMPATIBILITY_TARGET } from "../../scripts/electron-compatibility.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const fixtureDir = path.join(root, "tests", "electron-e2e", "fixtures");
@@ -20,6 +21,7 @@ let userDataDir;
 let modelServer;
 let modelBaseURL = "";
 let modelServerRequests = 0;
+let embeddedRuntime = null;
 
 function safeElectronEnv(isolatedHome) {
   const allowed = [
@@ -258,6 +260,11 @@ async function main() {
   const page = await electronApp.firstWindow();
   page.on("pageerror", (error) => pageErrors.push(error.message));
   await page.waitForLoadState("domcontentloaded");
+  embeddedRuntime = await electronApp.evaluate(() => ({
+    electron: process.versions.electron,
+    chromium: process.versions.chrome,
+    node: process.versions.node,
+  }));
 
   if (await page.locator("#auth").isVisible()) await page.locator("#skipAuth").click();
   await waitVisible(page, "#app");
@@ -266,6 +273,12 @@ async function main() {
   await check("launches the real local Electron renderer", async () => {
     assert.ok(page.url().startsWith("file://"), `Unexpected renderer URL: ${page.url()}`);
     assert.equal(await page.title(), "Hi Code");
+  });
+
+  await check("runs the pinned Electron, Chromium, and Node baseline", async () => {
+    assert.equal(embeddedRuntime.electron, ELECTRON_COMPATIBILITY_TARGET.electron);
+    assert.equal(Number.parseInt(embeddedRuntime.chromium, 10), ELECTRON_COMPATIBILITY_TARGET.chromiumMajor);
+    assert.equal(Number.parseInt(embeddedRuntime.node, 10), ELECTRON_COMPATIBILITY_TARGET.embeddedNodeMajor);
   });
 
   await check("isolates user data and excludes parent-process secrets", async () => {
@@ -308,11 +321,25 @@ async function main() {
     assert.deepEqual(pageErrors, []);
   });
 
+  // Run navigation denial last: Chromium keeps a prevented navigation pending
+  // from Playwright's perspective even though the trusted document stays loaded.
+  await check("blocks untrusted renderer navigation and new windows", async () => {
+    const trustedUrl = page.url();
+    await page.evaluate(() => window.location.assign("https://navigation-blocked.invalid/"));
+    await page.waitForTimeout(120);
+    assert.equal(page.url(), trustedUrl);
+    await page.evaluate(() => window.open("https://window-blocked.invalid/", "_blank"));
+    await page.waitForTimeout(120);
+    const windowCount = await electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().length);
+    assert.equal(windowCount, 1);
+  });
+
   fs.writeFileSync(path.join(resultDir, "layout-observed.json"), `${JSON.stringify({
     schemaVersion: 1,
     checkedAt: new Date().toISOString(),
     platform: process.platform,
     architecture: process.arch,
+    embeddedRuntime,
     observed,
     results,
   }, null, 2)}\n`);

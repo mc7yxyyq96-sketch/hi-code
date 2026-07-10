@@ -22,6 +22,8 @@ The normal command never overwrites fixtures. Runtime screenshots and observed l
 At 720, 1024, and 1440 content widths the suite verifies:
 
 - the real Electron window and local file renderer launch;
+- the embedded Electron, Chromium, and Node versions match the pinned compatibility baseline;
+- untrusted renderer navigation and renderer-created windows are blocked;
 - the `Hi Code` brand remains fully visible;
 - the workspace breadcrumb remains a single line and every visible top action stays inside the header;
 - the root document has no horizontal overflow;
@@ -35,7 +37,7 @@ Screenshot files are review references, while DOM geometry and real interaction 
 
 ## CI
 
-The `electron-smoke` job in `.github/workflows/ci.yml` installs the Electron binary and runs the suite under `xvfb-run`. Test artifacts are uploaded even on failure. The regular unit-test job continues to skip the Electron binary download.
+The `electron-smoke` matrix in `.github/workflows/ci.yml` launches the same production entrypoint on Ubuntu, macOS, and Windows. Ubuntu runs under `xvfb-run`; macOS and Windows launch directly. Per-platform runtime evidence and screenshots are uploaded even on failure. The regular unit-test job does not launch Electron.
 
 ## Security And Isolation
 
