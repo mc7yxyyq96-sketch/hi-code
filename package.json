@@ -54,6 +54,7 @@
     "program:baseline": "node scripts/capture-program-baseline.mjs",
     "program:evidence:qa": "node scripts/capture-task-evidence.mjs --task=HC-QA-101",
     "program:evidence:runtime": "node scripts/capture-task-evidence.mjs --task=HC-RUN-201",
+    "program:evidence:runtime-store": "node scripts/capture-task-evidence.mjs --task=HC-RUN-202",
     "program:evidence:alpha7": "node scripts/capture-task-evidence.mjs --task=HC-REL-ALPHA-7",
     "store:export": "node scripts/export-store-catalog.mjs",
     "check:syntax": "node --check electron/main.mjs && node --check electron/preload.cjs && node --check renderer/renderer.js",

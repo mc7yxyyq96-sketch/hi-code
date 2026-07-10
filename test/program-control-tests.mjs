@@ -36,6 +36,8 @@ const requiredFiles = [
   "docs/adr/README.md",
   "docs/adr/ADR-0001-program-control-and-evidence.md",
   "docs/adr/ADR-0002-runtime-protocol-authority-migration.md",
+  "docs/adr/ADR-0003-typed-runtime-stores-and-idempotent-replay.md",
+  "docs/runtime-stores.md",
   "planning/backlog.json",
   "planning/release-board.json",
   "reports/program/status.md",
@@ -43,10 +45,12 @@ const requiredFiles = [
   "reports/tasks/HC-PROG-100.md",
   "reports/tasks/HC-QA-101.md",
   "reports/tasks/HC-RUN-201.md",
+  "reports/tasks/HC-RUN-202.md",
   "reports/tasks/HC-REL-ALPHA-7.md",
   "reports/evidence/baseline/manifest.json",
   "reports/evidence/HC-QA-101/manifest.json",
   "reports/evidence/HC-RUN-201/manifest.json",
+  "reports/evidence/HC-RUN-202/manifest.json",
   "reports/evidence/HC-REL-ALPHA-7/manifest.json",
   "reports/releases/0.6.0-alpha.7/capability-matrix.md",
   "reports/releases/0.6.0-alpha.7/migration-report.md",
@@ -67,16 +71,19 @@ const risks = readJson(root, "reports/program/risks.json");
 const manifest = readJson(root, "reports/evidence/baseline/manifest.json");
 const qaManifest = readJson(root, "reports/evidence/HC-QA-101/manifest.json");
 const runtimeManifest = readJson(root, "reports/evidence/HC-RUN-201/manifest.json");
+const runtimeStoreManifest = readJson(root, "reports/evidence/HC-RUN-202/manifest.json");
 const releaseManifest = readJson(root, "reports/evidence/HC-REL-ALPHA-7/manifest.json");
 const packageJson = readJson(root, "package.json");
 const packageLock = readJson(root, "package-lock.json");
 const programTask = backlog.tasks.find((task) => task.id === "HC-PROG-100");
 const runtimeBacklogTask = backlog.tasks.find((task) => task.id === "HC-RUN-201");
 const nextRuntimeTask = backlog.tasks.find((task) => task.id === "HC-RUN-202");
+const recoveryRuntimeTask = backlog.tasks.find((task) => task.id === "HC-RUN-203");
 const platformTask = backlog.tasks.find((task) => task.id === "HC-PLAT-110");
 const uiShellTask = backlog.tasks.find((task) => task.id === "HC-UI-301");
 const qaTask = board.tasks.find((task) => task.id === "HC-QA-101");
 const runtimeTask = board.tasks.find((task) => task.id === "HC-RUN-201");
+const runtimeStoreTask = board.tasks.find((task) => task.id === "HC-RUN-202");
 
 console.log("\n[program-control] board and evidence contract");
 check("backlog records immutable source commit", /^[0-9a-f]{40}$/.test(backlog.sourceCommit || ""));
@@ -93,11 +100,22 @@ check(
 check("runtime event sink gate passed", board.gates?.find((gate) => gate.id === "runtime-event-sink")?.status === "passed");
 check("HC-RUN-201 completion is reflected in backlog", runtimeBacklogTask?.status === "completed" && runtimeBacklogTask?.evidenceManifest === "reports/evidence/HC-RUN-201/manifest.json");
 check(
-  "HC-RUN-202 has satisfied dependencies before execution",
-  (nextRuntimeTask?.status === "ready" ||
-    (nextRuntimeTask?.status === "in_progress" && Boolean(nextRuntimeTask?.startedAt) && Boolean(nextRuntimeTask?.branch))) &&
-    nextRuntimeTask?.dependencies?.every((id) => backlog.tasks.find((task) => task.id === id)?.status === "completed"),
+  "HC-RUN-202 completed only after its dependency and evidence",
+  nextRuntimeTask?.status === "completed" &&
+    nextRuntimeTask?.dependencies?.every((id) => backlog.tasks.find((task) => task.id === id)?.status === "completed") &&
+    nextRuntimeTask?.evidenceManifest === "reports/evidence/HC-RUN-202/manifest.json",
   JSON.stringify(nextRuntimeTask),
+);
+check(
+  "release board records HC-RUN-202 completion",
+  runtimeStoreTask?.status === "completed" && runtimeStoreTask?.evidence === "reports/evidence/HC-RUN-202/manifest.json",
+  JSON.stringify(runtimeStoreTask),
+);
+check("runtime store replay gate passed", board.gates?.find((gate) => gate.id === "runtime-store-replay")?.status === "passed");
+check(
+  "HC-RUN-203 is dependency-ready after typed replay completion",
+  recoveryRuntimeTask?.status === "ready" && recoveryRuntimeTask?.dependencies?.every((id) => backlog.tasks.find((task) => task.id === id)?.status === "completed"),
+  JSON.stringify(recoveryRuntimeTask),
 );
 check("HC-PLAT-110 is dependency-ready", platformTask?.status === "ready" && platformTask?.dependencies?.every((id) => backlog.tasks.find((task) => task.id === id)?.status === "completed"));
 check("HC-UI-301 is dependency-ready", uiShellTask?.status === "ready" && uiShellTask?.dependencies?.every((id) => backlog.tasks.find((task) => task.id === id)?.status === "completed"));
@@ -127,6 +145,16 @@ for (const command of runtimeManifest.commands || []) {
   const absolute = path.join(root, command.logPath || "");
   check(`HC-RUN-201 ${command.id} log exists`, Boolean(command.logPath) && fs.existsSync(absolute));
   if (fs.existsSync(absolute)) check(`HC-RUN-201 ${command.id} log hash matches`, digest(absolute) === command.logSha256);
+}
+check("HC-RUN-202 evidence records every command passing", runtimeStoreManifest.summary?.allPassed === true && runtimeStoreManifest.summary?.total === 16, JSON.stringify(runtimeStoreManifest.summary));
+check("HC-RUN-202 evidence is captured from its task branch", runtimeStoreManifest.source?.branch === "codex/runtime-engine/hc-run-202");
+for (const requiredCommand of ["build", "verify", "release-check", "feature-tests", "runtime-protocol", "runtime-stores", "runtime-store-integration", "runtime-events", "runtime-concurrency", "runtime-clients", "security-tests", "dod-tests", "dod-scan", "production-audit", "electron-e2e", "git-diff-check"]) {
+  check(`HC-RUN-202 captured ${requiredCommand}`, runtimeStoreManifest.commands?.some((command) => command.id === requiredCommand && command.status === "passed"));
+}
+for (const command of runtimeStoreManifest.commands || []) {
+  const absolute = path.join(root, command.logPath || "");
+  check(`HC-RUN-202 ${command.id} log exists`, Boolean(command.logPath) && fs.existsSync(absolute));
+  if (fs.existsSync(absolute)) check(`HC-RUN-202 ${command.id} log hash matches`, digest(absolute) === command.logSha256);
 }
 check("alpha.7 evidence records every command passing", releaseManifest.summary?.allPassed === true && releaseManifest.summary?.total === 11, JSON.stringify(releaseManifest.summary));
 check("alpha.7 evidence is captured from its release branch", releaseManifest.source?.branch === "codex/release/0.6.0-alpha.7" && releaseManifest.source?.version === packageJson.version);

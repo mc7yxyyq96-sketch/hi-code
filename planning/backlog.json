@@ -5,7 +5,7 @@
   "sourceCommit": "6ed9ed666bb817f8d1e863c76b0bf61b31c7b52d",
   "horizonDays": 90,
   "status": "active",
-  "updatedAt": "2026-07-10T14:15:23Z",
+  "updatedAt": "2026-07-10T15:48:14Z",
   "principles": [
     "Runtime Protocol is the single source of truth",
     "No big-bang rewrite",
@@ -72,10 +72,13 @@
       "dependencies": ["HC-RUN-201"],
       "deliverables": ["store interfaces", "full message/tool/approval/diff replay", "v1 importer", "recovery fixtures"],
       "acceptance": ["full conversation rebuilds without session JSON", "event-only session is resumable", "idempotent sequence handling"],
-      "status": "in_progress",
+      "status": "completed",
       "startedAt": "2026-07-10T14:15:23Z",
+      "completedAt": "2026-07-10T15:48:14Z",
       "branch": "codex/runtime-engine/hc-run-202",
-      "taskManifest": "reports/tasks/HC-RUN-202.md"
+      "taskManifest": "reports/tasks/HC-RUN-202.md",
+      "evidence": "reports/tasks/HC-RUN-202.md",
+      "evidenceManifest": "reports/evidence/HC-RUN-202/manifest.json"
     },
     {
       "id": "HC-RUN-203",
@@ -87,7 +90,7 @@
       "dependencies": ["HC-RUN-202"],
       "deliverables": ["turn state machine", "recovery planner", "partial output preservation", "approval recovery"],
       "acceptance": ["crash during stream recovers", "crash during tool run is diagnosed", "waiting approval resumes safely"],
-      "status": "planned"
+      "status": "ready"
     },
     {
       "id": "HC-PLAT-110",

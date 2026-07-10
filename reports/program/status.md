@@ -4,7 +4,9 @@ Updated: 2026-07-10
 
 Program state: Active
 
-Current release slice: `0.6.0-alpha.7`
+Current verified release candidate: `0.6.0-alpha.7`
+
+Active development slice: `0.6.0-alpha.8`
 
 ## Source Baseline
 
@@ -27,6 +29,8 @@ The final machine-captured evidence is written by `npm run program:baseline` to 
 | 1 | HC-PROG-100 | Completed | Program Director | None |
 | 2 | HC-QA-101 | Completed | Desktop UX | HC-PROG-100 |
 | 3 | HC-RUN-201 | Completed | Runtime Engine | HC-PROG-100 |
+| 4 | HC-RUN-202 | Completed | Runtime Engine | HC-RUN-201 |
+| 5 | HC-RUN-203 | Ready | Runtime Engine | HC-RUN-202 |
 
 HC-QA-101 established a real Electron responsive baseline. HC-RUN-201 introduces protocol-native assistant output and concurrency isolation. No new industrial domain module is authorized before HC-RUN-201 completes.
 
@@ -36,7 +40,9 @@ HC-QA-101 captured ten acceptance commands with ten passes. The real production 
 
 HC-RUN-201 completed in its isolated worktree. Materialized assistant delta/completed events, a filtered Runtime Event Bus, real Agent emission, durable completion content, and Electron/CLI/TUI adapters are implemented. Thirteen machine-captured gates passed, including intentionally interleaved session tests and a real Electron model turn with the stdout bridge disabled. Full context reconstruction remains assigned to HC-RUN-202.
 
-HC-RUN-202 started in the isolated `codex/runtime-engine/hc-run-202` worktree from verified alpha.7 commit `b044fdcecf1a153393cce29d7267eb2205c99dec`. The task adds typed thread/event/message stores and idempotent replay while keeping legacy session JSON and runtime JSONL as non-destructive migration sources.
+HC-RUN-202 completed in the isolated `codex/runtime-engine/hc-run-202` worktree from verified alpha.7 commit `b044fdcecf1a153393cce29d7267eb2205c99dec`. Typed thread/event/message stores, exact hidden model-message records, idempotent non-destructive migration, stale-snapshot recovery, complete model-context replay, and interrupted-turn diagnosis passed 16 machine-captured gates. Legacy session JSON and runtime JSONL remain intact for rollback.
+
+HC-RUN-203 is now dependency-ready. It owns the explicit turn state machine and approval-aware crash recovery; HC-RUN-202 does not claim automatic retry or side-effect replay.
 
 ## Release Integration
 
@@ -45,7 +51,7 @@ The `0.6.0-alpha.7` candidate was integrated on `codex/release/0.6.0-alpha.7` fr
 ## Current Product Truth
 
 - Core Electron, CLI/TUI, runtime, tool, security, Job Center, Provider, Worktree, Arena, industrial, gate, sample, and release tests pass.
-- Runtime Protocol JSONL persistence and assistant output are sink-driven; full context resume still uses session JSON until HC-RUN-202.
+- Runtime Protocol output is sink-driven, and complete normalized event streams can rebuild resumable system/user/assistant/tool context without session JSON. Older incomplete streams remain read-only.
 - External Codex/Claude providers are not configured production providers.
 - SolidWorks and AVEVA are bridge/external-required integrations, not automatic deep integrations.
 - Real Electron multi-width and protocol-native output E2E now runs locally and in the Linux/Xvfb CI job.
@@ -55,6 +61,7 @@ The `0.6.0-alpha.7` candidate was integrated on `codex/release/0.6.0-alpha.7` fr
 - Current baseline: `reports/evidence/baseline/manifest.json`
 - Current task reports: `reports/tasks/HC-PROG-100.md`, `reports/tasks/HC-QA-101.md`
 - Runtime task evidence: `reports/tasks/HC-RUN-201.md`, `reports/evidence/HC-RUN-201/manifest.json`
+- Runtime store evidence: `reports/tasks/HC-RUN-202.md`, `reports/evidence/HC-RUN-202/manifest.json`
 - Current risks: `reports/program/risks.json`
 - Historical final acceptance: `reports/final-acceptance-historical.md`
 - Historical audit policy: `reports/audit/README.md`

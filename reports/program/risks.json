@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "program": "Hi Code Product-Grade Desktop and Industrial Workbench",
-  "updatedAt": "2026-07-10T12:08:12Z",
+  "updatedAt": "2026-07-10T15:48:14Z",
   "risks": [
     {
       "id": "RISK-RUN-001",
@@ -13,6 +13,28 @@
       "impact": "Concurrent desktop sessions can remain coupled to compatibility output capture, limiting reliable replay and SDK parity.",
       "mitigation": "RuntimeEventSink, assistant delta/completed events, Electron/CLI/TUI adapters, concurrency isolation, and stdout-disabled real Electron acceptance are implemented in HC-RUN-201.",
       "trigger": "Any output mixing, blank response, or transcript mismatch blocks release promotion."
+    },
+    {
+      "id": "RISK-RUN-002",
+      "severity": "high",
+      "status": "mitigated",
+      "owner": "runtime-engine",
+      "title": "Full model context depended on legacy session JSON",
+      "evidence": ["src/runtime-stores.ts", "src/runtime-event-store.ts", "src/session-store.ts", "test/runtime-store-integration-tests.mjs", "reports/evidence/HC-RUN-202/manifest.json"],
+      "impact": "A missing or stale legacy session snapshot could make a durable conversation read-only or silently lose assistant and tool context after a crash.",
+      "mitigation": "HC-RUN-202 persists exact hidden system/user/assistant/tool messages, reconstructs complete context from typed records or protocol JSONL, preserves legacy files, and verifies stale-snapshot crash recovery and idempotent import.",
+      "trigger": "Any resumable thread that loses tool-call semantics, duplicates records, or prefers a stale snapshot reopens this risk."
+    },
+    {
+      "id": "RISK-RUN-003",
+      "severity": "high",
+      "status": "open",
+      "owner": "runtime-engine",
+      "title": "Interrupted turns do not yet have an automatic recovery state machine",
+      "evidence": ["src/recovery.ts", "HC-RUN-203"],
+      "impact": "Hi Code can preserve and diagnose interrupted work but cannot yet safely decide whether to retry a model stream, tool execution, or waiting approval automatically.",
+      "mitigation": "HC-RUN-203 will add explicit turn states, recovery planning, partial-output policy, and approval-aware continuation on top of the HC-RUN-202 stores.",
+      "trigger": "Any automatic retry before HC-RUN-203 acceptance, or any interrupted turn presented as completed, blocks release promotion."
     },
     {
       "id": "RISK-QA-001",
