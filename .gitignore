@@ -1,5 +1,7 @@
 # dependencies
 node_modules/
+test-results/
+pnpm-lock.yaml
 
 # build output / artifacts
 dist/

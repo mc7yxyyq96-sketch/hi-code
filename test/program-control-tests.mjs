@@ -41,7 +41,9 @@ const requiredFiles = [
   "reports/program/status.md",
   "reports/program/risks.json",
   "reports/tasks/HC-PROG-100.md",
+  "reports/tasks/HC-QA-101.md",
   "reports/evidence/baseline/manifest.json",
+  "reports/evidence/HC-QA-101/manifest.json",
 ];
 
 console.log("\n[program-control] required artifacts");
@@ -53,6 +55,7 @@ const backlog = readJson(root, "planning/backlog.json");
 const board = readJson(root, "planning/release-board.json");
 const risks = readJson(root, "reports/program/risks.json");
 const manifest = readJson(root, "reports/evidence/baseline/manifest.json");
+const qaManifest = readJson(root, "reports/evidence/HC-QA-101/manifest.json");
 const packageJson = readJson(root, "package.json");
 const programTask = backlog.tasks.find((task) => task.id === "HC-PROG-100");
 const qaTask = board.tasks.find((task) => task.id === "HC-QA-101");
@@ -62,6 +65,8 @@ console.log("\n[program-control] board and evidence contract");
 check("backlog records immutable source commit", /^[0-9a-f]{40}$/.test(backlog.sourceCommit || ""));
 check("HC-PROG-100 is completed", programTask?.status === "completed", programTask?.status);
 check("release board keeps QA dependency", qaTask?.dependencies?.includes("HC-PROG-100"));
+check("HC-QA-101 is completed with evidence", qaTask?.status === "completed" && qaTask?.evidence === "reports/evidence/HC-QA-101/manifest.json");
+check("Electron responsive gate passed", board.gates?.find((gate) => gate.id === "electron-responsive-e2e")?.status === "passed");
 check("release board keeps runtime dependency", runtimeTask?.dependencies?.includes("HC-PROG-100"));
 check("risk register has active risks", Array.isArray(risks.risks) && risks.risks.length > 0);
 check("baseline records source commit", manifest.source?.commit === backlog.sourceCommit);
@@ -71,6 +76,12 @@ for (const command of manifest.commands || []) {
   const absolute = path.join(root, command.logPath || "");
   check(`${command.id} log exists`, Boolean(command.logPath) && fs.existsSync(absolute));
   if (fs.existsSync(absolute)) check(`${command.id} log hash matches`, digest(absolute) === command.logSha256);
+}
+check("HC-QA-101 evidence records every command passing", qaManifest.summary?.allPassed === true, JSON.stringify(qaManifest.summary));
+for (const command of qaManifest.commands || []) {
+  const absolute = path.join(root, command.logPath || "");
+  check(`HC-QA-101 ${command.id} log exists`, Boolean(command.logPath) && fs.existsSync(absolute));
+  if (fs.existsSync(absolute)) check(`HC-QA-101 ${command.id} log hash matches`, digest(absolute) === command.logSha256);
 }
 check("historical final acceptance is explicitly named", fs.existsSync(path.join(root, "reports/final-acceptance-historical.md")));
 check("unmarked final acceptance path is absent", !fs.existsSync(path.join(root, "reports/final-acceptance.md")));

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "program": "Hi Code Product-Grade Desktop and Industrial Workbench",
-  "updatedAt": "2026-07-10T08:27:46Z",
+  "updatedAt": "2026-07-10T10:14:14Z",
   "status": "active",
   "source": {
     "version": "0.6.0-alpha.6",
@@ -30,7 +30,7 @@
       "taskId": "HC-QA-101",
       "branch": "codex/desktop-ux/hc-qa-101",
       "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-hc-qa-101",
-      "mode": "planned-worktree"
+      "mode": "completed-worktree"
     },
     {
       "taskId": "HC-RUN-201",
@@ -54,9 +54,11 @@
       "id": "HC-QA-101",
       "owner": "desktop-ux",
       "priority": "P0",
-      "status": "ready",
+      "status": "completed",
       "dependencies": ["HC-PROG-100"],
-      "branch": "codex/desktop-ux/hc-qa-101"
+      "branch": "codex/desktop-ux/hc-qa-101",
+      "completedAt": "2026-07-10T10:14:14Z",
+      "evidence": "reports/evidence/HC-QA-101/manifest.json"
     },
     {
       "id": "HC-RUN-201",
@@ -80,8 +82,9 @@
     },
     {
       "id": "electron-responsive-e2e",
-      "status": "not_run",
-      "owner": "HC-QA-101"
+      "status": "passed",
+      "owner": "HC-QA-101",
+      "evidence": "reports/evidence/HC-QA-101/manifest.json"
     },
     {
       "id": "runtime-event-sink",

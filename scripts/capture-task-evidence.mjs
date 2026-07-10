@@ -1,0 +1,203 @@
+#!/usr/bin/env node
+import crypto from "node:crypto";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import process from "node:process";
+import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const npm = process.platform === "win32" ? "npm.cmd" : "npm";
+const node = process.execPath;
+
+const profiles = {
+  "HC-QA-101": {
+    evidenceType: "desktop-responsive-acceptance",
+    commands: [
+      { id: "build", command: npm, args: ["run", "build"] },
+      { id: "verify", command: npm, args: ["run", "verify"] },
+      { id: "release-check", command: npm, args: ["run", "release:check"] },
+      { id: "feature-tests", command: node, args: ["test/feature-tests.mjs"] },
+      { id: "security-tests", command: npm, args: ["run", "test:security"] },
+      { id: "dod-tests", command: npm, args: ["run", "test:dod"] },
+      { id: "dod-scan", command: npm, args: ["run", "scan:dod"] },
+      { id: "production-audit", command: npm, args: ["run", "audit:prod"] },
+      { id: "electron-e2e", command: npm, args: ["run", "test:electron-e2e"] },
+      { id: "git-diff-check", command: "git", args: ["diff", "--check"] },
+    ],
+    keyArtifacts: [
+      ".github/workflows/ci.yml",
+      "docs/electron-e2e.md",
+      "package.json",
+      "package-lock.json",
+      "pnpm-workspace.yaml",
+      "planning/backlog.json",
+      "planning/release-board.json",
+      "renderer/app/bootstrap.js",
+      "renderer/index.html",
+      "renderer/style.css",
+      "reports/program/risks.json",
+      "reports/program/status.md",
+      "reports/tasks/HC-QA-101.md",
+      "scripts/capture-task-evidence.mjs",
+      "test/program-control-tests.mjs",
+      "test/renderer-architecture-tests.mjs",
+      "test/security-baseline.mjs",
+      "tests/electron-e2e/run.mjs",
+      "tests/electron-e2e/fixtures/layout-baseline.json",
+      "tests/electron-e2e/fixtures/home-720.png",
+      "tests/electron-e2e/fixtures/home-1024.png",
+      "tests/electron-e2e/fixtures/home-1440.png",
+    ],
+  },
+};
+
+function safeProcessEnv() {
+  const allowed = [
+    "PATH", "HOME", "USER", "LOGNAME", "SHELL", "LANG", "LC_ALL", "LC_CTYPE",
+    "TMPDIR", "TMP", "TEMP", "SystemRoot", "USERPROFILE", "CI", "TERM",
+    "COLORTERM", "npm_config_registry", "HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY",
+    "DISPLAY", "XAUTHORITY", "DBUS_SESSION_BUS_ADDRESS", "XDG_RUNTIME_DIR",
+  ];
+  const env = {};
+  for (const key of allowed) {
+    if (typeof process.env[key] === "string") env[key] = process.env[key];
+  }
+  env.NO_COLOR = "1";
+  env.FORCE_COLOR = "0";
+  env.HICODE_TASK_EVIDENCE = "1";
+  return env;
+}
+
+function redact(value) {
+  return String(value || "")
+    .replace(/(authorization\s*:\s*bearer\s+)[^\s]+/gi, "$1[REDACTED]")
+    .replace(/((?:api[_-]?key|token|secret|password|private[_-]?key)\s*[=:]\s*)[^\s"']+/gi, "$1[REDACTED]")
+    .split("\n")
+    .map((line) => line.trimEnd())
+    .join("\n");
+}
+
+function digest(value) {
+  return crypto.createHash("sha256").update(value).digest("hex");
+}
+
+function git(args, options = {}) {
+  const result = spawnSync("git", args, { cwd: root, encoding: "utf8", env: safeProcessEnv() });
+  if (result.status !== 0) throw new Error(`git ${args.join(" ")} failed: ${redact(result.stderr).trim()}`);
+  return options.preserveLeadingWhitespace ? result.stdout.trimEnd() : result.stdout.trim();
+}
+
+function parseTaskId() {
+  const raw = process.argv.find((arg) => arg.startsWith("--task="))?.slice("--task=".length) || "";
+  if (!/^[A-Z0-9-]+$/.test(raw) || !profiles[raw]) {
+    throw new Error(`Unknown evidence task '${raw || "(missing)"}'`);
+  }
+  return raw;
+}
+
+function runCommand(spec, taskId, stagingLogDir) {
+  const startedAt = new Date();
+  const started = process.hrtime.bigint();
+  const result = spawnSync(spec.command, spec.args, {
+    cwd: root,
+    encoding: "utf8",
+    env: safeProcessEnv(),
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  const endedAt = new Date();
+  const durationMs = Number(process.hrtime.bigint() - started) / 1_000_000;
+  const exitCode = result.error ? 1 : (result.status ?? 1);
+  const display = [spec.command, ...spec.args].join(" ");
+  const output = `${redact([
+    `$ ${display}`,
+    result.stdout || "",
+    result.stderr || "",
+    result.error ? `[capture-error] ${result.error.message}` : "",
+  ].filter(Boolean).join("\n")).trimEnd()}\n`;
+  const logName = `${spec.id}.log`;
+  fs.writeFileSync(path.join(stagingLogDir, logName), output, { mode: 0o644 });
+  console.log(`[task:evidence] ${spec.id}: ${exitCode === 0 ? "pass" : "fail"} (${durationMs.toFixed(0)} ms)`);
+  return {
+    id: spec.id,
+    command: display,
+    startedAt: startedAt.toISOString(),
+    endedAt: endedAt.toISOString(),
+    durationMs: Math.round(durationMs),
+    exitCode,
+    status: exitCode === 0 ? "passed" : "failed",
+    logPath: path.posix.join("reports", "evidence", taskId, "logs", logName),
+    logSha256: digest(output),
+  };
+}
+
+function main() {
+  const taskId = parseTaskId();
+  const profile = profiles[taskId];
+  const evidenceDir = path.join(root, "reports", "evidence", taskId);
+  const logDir = path.join(evidenceDir, "logs");
+  const stagingLogDir = path.join(evidenceDir, ".logs-next");
+  fs.rmSync(stagingLogDir, { recursive: true, force: true });
+  fs.mkdirSync(stagingLogDir, { recursive: true, mode: 0o755 });
+
+  const startedAt = new Date();
+  const status = git(["status", "--short"], { preserveLeadingWhitespace: true });
+  const dirtyPaths = status.split("\n").filter(Boolean).map((line) => line.slice(3).replace(/^"|"$/g, ""));
+  const results = profile.commands.map((command) => runCommand(command, taskId, stagingLogDir));
+  const failed = results.filter((result) => result.status === "failed");
+  const packageJson = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
+  const artifacts = profile.keyArtifacts.map((relativePath) => {
+    const absolutePath = path.join(root, relativePath);
+    if (!fs.existsSync(absolutePath) || !fs.statSync(absolutePath).isFile()) {
+      throw new Error(`Evidence artifact is missing: ${relativePath}`);
+    }
+    const bytes = fs.readFileSync(absolutePath);
+    return { path: relativePath, bytes: bytes.length, sha256: digest(bytes) };
+  });
+  const manifest = {
+    schemaVersion: 1,
+    evidenceType: profile.evidenceType,
+    taskId,
+    source: {
+      version: packageJson.version,
+      parentCommit: git(["rev-parse", "HEAD"]),
+      branch: git(["branch", "--show-current"]),
+    },
+    capture: {
+      startedAt: startedAt.toISOString(),
+      completedAt: new Date().toISOString(),
+      workingTreeClean: dirtyPaths.length === 0,
+      dirtyPaths,
+      note: "Task evidence is captured before the task commit; artifact hashes bind the tested implementation and reviewed screenshots.",
+    },
+    environment: {
+      platform: process.platform,
+      architecture: process.arch,
+      osRelease: os.release(),
+      node: process.version,
+    },
+    artifacts,
+    commands: results,
+    summary: {
+      total: results.length,
+      passed: results.length - failed.length,
+      failed: failed.length,
+      allPassed: failed.length === 0,
+    },
+  };
+
+  fs.mkdirSync(evidenceDir, { recursive: true, mode: 0o755 });
+  fs.rmSync(logDir, { recursive: true, force: true });
+  fs.renameSync(stagingLogDir, logDir);
+  fs.writeFileSync(path.join(evidenceDir, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`, { mode: 0o644 });
+  console.log(`[task:evidence] manifest: reports/evidence/${taskId}/manifest.json`);
+  if (failed.length) process.exitCode = 1;
+}
+
+try {
+  main();
+} catch (error) {
+  console.error(`[task:evidence] ${error instanceof Error ? error.message : String(error)}`);
+  process.exitCode = 1;
+}

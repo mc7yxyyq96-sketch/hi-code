@@ -53,6 +53,7 @@ const runtimeProtocol = fs.readFileSync(path.join(root, "src", "runtime-protocol
 const runtimeEventStore = fs.readFileSync(path.join(root, "src", "runtime-event-store.ts"), "utf8");
 const llm = fs.readFileSync(path.join(root, "src", "llm.ts"), "utf8");
 const workspaceService = fs.readFileSync(path.join(root, "electron", "services", "workspace-service.mjs"), "utf8");
+const electronE2e = fs.readFileSync(path.join(root, "tests", "electron-e2e", "run.mjs"), "utf8");
 
 console.log("\n[security] runtime baseline");
 check("contextIsolation remains enabled", /contextIsolation:\s*true/.test(main));
@@ -155,6 +156,9 @@ check("bash tool filters inherited env", bash.includes("filterEnv(") && !/env:\s
 check("safe child env service denies inherited secrets by default", processEnvService.includes("SAFE_CHILD_ENV_KEYS") && processEnvService.includes("SENSITIVE_ENV_KEY_RE") && processEnvService.includes("redactEnvForLogs"));
 check("MCP server process uses safe child env", mcp.includes("buildSafeChildEnv") && !mcp.includes("...process.env"));
 check("FreeCAD execution uses safe child env", freeCadAdapter.includes("buildSafeChildEnv") && !freeCadAdapter.includes("...process.env, HICODE_FREECAD_OUTPUT_DIR"));
+check("Electron E2E isolates HOME and USERPROFILE", electronE2e.includes("safeElectronEnv(isolatedHome)") && electronE2e.includes("env.HOME = isolatedHome") && electronE2e.includes("env.USERPROFILE = isolatedHome") && !electronE2e.includes('"PATH", "HOME"'));
+check("Electron E2E rejects inherited secret variables", electronE2e.includes("sensitiveKeys") && electronE2e.includes("TOKEN|SECRET|PASSWORD|API_KEY|PRIVATE_KEY") && electronE2e.includes("assert.deepEqual(environment.sensitiveKeys, [])"));
+check("Electron E2E enters chat through a local command", electronE2e.includes('await input.fill("/help")') && !electronE2e.includes('await input.fill("Electron responsive smoke")'));
 check("Store rejects remote local paths", main.includes("validateLocalInstallPath") && main.includes("远程 catalog 不得引用本机路径"));
 check("Store rejects remote sourceRoot paths", main.includes("plugin manifest.sourceRoot") && main.includes("validateLocalInstallPath(item.install?.manifest?.sourceRoot"));
 check("Store rejects remote sourcePath paths", main.includes("skill.sourcePath") && main.includes("validateLocalInstallPath(item.install?.skill?.sourcePath"));

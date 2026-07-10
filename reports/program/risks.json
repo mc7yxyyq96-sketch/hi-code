@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "program": "Hi Code Product-Grade Desktop and Industrial Workbench",
-  "updatedAt": "2026-07-10T07:42:42Z",
+  "updatedAt": "2026-07-10T10:14:14Z",
   "risks": [
     {
       "id": "RISK-RUN-001",
@@ -17,12 +17,12 @@
     {
       "id": "RISK-QA-001",
       "severity": "high",
-      "status": "open",
+      "status": "mitigated",
       "owner": "desktop-ux",
       "title": "No real Electron responsive E2E baseline",
-      "evidence": ["test/renderer-architecture-tests.mjs", "HC-QA-101"],
+      "evidence": ["tests/electron-e2e/run.mjs", "tests/electron-e2e/fixtures", "reports/evidence/HC-QA-101/manifest.json"],
       "impact": "Unit and renderer smoke tests can miss clipping, unreachable controls, window lifecycle, and preload integration regressions.",
-      "mitigation": "Launch packaged-development Electron with Playwright and capture 720/1024/1440 fixtures in HC-QA-101.",
+      "mitigation": "Playwright now launches the production Electron entrypoint at 720/1024/1440 widths locally and under Linux/Xvfb CI, with real navigation, drawer, overflow, and page-error assertions.",
       "trigger": "A core action hidden without an alternative or a failed real Electron launch blocks release."
     },
     {

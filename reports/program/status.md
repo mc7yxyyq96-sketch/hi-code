@@ -25,12 +25,14 @@ The final machine-captured evidence is written by `npm run program:baseline` to 
 | Order | Task | State | Owner | Dependency |
 | --- | --- | --- | --- | --- |
 | 1 | HC-PROG-100 | Completed | Program Director | None |
-| 2 | HC-QA-101 | Ready | Desktop UX | HC-PROG-100 |
+| 2 | HC-QA-101 | Completed | Desktop UX | HC-PROG-100 |
 | 3 | HC-RUN-201 | Planned | Runtime Engine | HC-PROG-100 |
 
-HC-QA-101 establishes a real Electron responsive baseline. HC-RUN-201 introduces protocol-native assistant output and concurrency isolation. No new industrial domain module is authorized before HC-RUN-201 completes.
+HC-QA-101 established a real Electron responsive baseline. HC-RUN-201 introduces protocol-native assistant output and concurrency isolation. No new industrial domain module is authorized before HC-RUN-201 completes.
 
 HC-PROG-100 captured nine baseline commands with nine passes, zero failures, and zero DoD findings. The manifest and individual log digests are committed with the task.
+
+HC-QA-101 captured ten acceptance commands with ten passes. The real production Electron entrypoint, preload, and renderer passed interaction checks at 720, 1024, and 1440 content widths. The E2E process isolates `HOME`, `USERPROFILE`, user data, and sensitive environment variables, and uses a local slash command instead of a model request. Reviewed PNG fixtures and hashed logs are recorded in `reports/evidence/HC-QA-101/manifest.json`.
 
 ## Current Product Truth
 
@@ -38,12 +40,12 @@ HC-PROG-100 captured nine baseline commands with nine passes, zero failures, and
 - Runtime Protocol JSONL persistence is implemented, but assistant output is not yet fully sink-driven and full context resume still uses session JSON.
 - External Codex/Claude providers are not configured production providers.
 - SolidWorks and AVEVA are bridge/external-required integrations, not automatic deep integrations.
-- Real Electron multi-width E2E remains the next quality task.
+- Real Electron multi-width E2E now runs locally and in the Linux/Xvfb CI job; HC-RUN-201 is the next release task.
 
 ## Evidence And Historical Material
 
 - Current baseline: `reports/evidence/baseline/manifest.json`
-- Current task report: `reports/tasks/HC-PROG-100.md`
+- Current task reports: `reports/tasks/HC-PROG-100.md`, `reports/tasks/HC-QA-101.md`
 - Current risks: `reports/program/risks.json`
 - Historical final acceptance: `reports/final-acceptance-historical.md`
 - Historical audit policy: `reports/audit/README.md`

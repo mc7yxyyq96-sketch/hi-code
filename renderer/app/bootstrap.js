@@ -1285,6 +1285,7 @@ const projName = $("projName"), modelSide = $("modelNameSide"), appVersionEl = $
 const askBox = $("ask"), askQ = $("ask-q");
 const runStatus = $("runStatus"), runStatusDot = $("runStatusDot"), runStatusText = $("runStatusText"), runStatusMeta = $("runStatusMeta"), runStatusDetail = $("runStatusDetail");
 const timelineList = $("timelineList");
+const timelineDrawerBtn = $("timelineDrawerBtn"), diffDrawerBtn = $("diffDrawerBtn"), workbenchDrawerBackdrop = $("workbenchDrawerBackdrop");
 const recoveryPanel = $("recoveryPanel"), recoveryList = $("recoveryList"), recoveryRefresh = $("recoveryRefresh");
 const diffList = $("diffList"), diffView = $("diffView"), diffSummary = $("diffSummary");
 const diffAccept = $("diffAccept"), diffReject = $("diffReject");
@@ -1884,7 +1885,21 @@ const COMMAND_CATEGORIES = {
 
 /* ---------- view switching ---------- */
 function setActiveNav(id) {
+  closeWorkbenchDrawers();
   document.querySelectorAll(".nav-row").forEach((btn) => btn.classList.toggle("active", btn.id === id));
+}
+
+function setWorkbenchDrawer(name = "") {
+  const timelineOpen = name === "timeline";
+  const diffOpen = name === "diff";
+  document.body.classList.toggle("timeline-drawer-open", timelineOpen);
+  document.body.classList.toggle("diff-drawer-open", diffOpen);
+  timelineDrawerBtn?.setAttribute("aria-expanded", timelineOpen ? "true" : "false");
+  diffDrawerBtn?.setAttribute("aria-expanded", diffOpen ? "true" : "false");
+}
+
+function closeWorkbenchDrawers() {
+  setWorkbenchDrawer("");
 }
 
 function showChat() {
@@ -3418,6 +3433,9 @@ $("jobsTopBtn").onclick = () => showJobCenter();
 $("arenaTopBtn").onclick = showPatchArena;
 $("industrialTopBtn").onclick = showIndustrialProject;
 $("modelsBtn").onclick = () => openSettings("model");
+timelineDrawerBtn.onclick = () => setWorkbenchDrawer(document.body.classList.contains("timeline-drawer-open") ? "" : "timeline");
+diffDrawerBtn.onclick = () => setWorkbenchDrawer(document.body.classList.contains("diff-drawer-open") ? "" : "diff");
+workbenchDrawerBackdrop.onclick = closeWorkbenchDrawers;
 attachBtn.onclick = chooseImageAttachment;
 modelPill.onclick = (e) => {
   e.stopPropagation();
@@ -3426,7 +3444,10 @@ modelPill.onclick = (e) => {
 modelPicker.addEventListener("click", (e) => e.stopPropagation());
 document.addEventListener("click", () => hideModelPicker());
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape") hideModelPicker();
+  if (e.key === "Escape") {
+    hideModelPicker();
+    closeWorkbenchDrawers();
+  }
 });
 accessBtn.onclick = () => {
   yolo = !yolo;

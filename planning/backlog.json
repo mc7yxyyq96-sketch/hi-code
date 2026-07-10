@@ -5,7 +5,7 @@
   "sourceCommit": "6ed9ed666bb817f8d1e863c76b0bf61b31c7b52d",
   "horizonDays": 90,
   "status": "active",
-  "updatedAt": "2026-07-10T08:27:46Z",
+  "updatedAt": "2026-07-10T10:14:14Z",
   "principles": [
     "Runtime Protocol is the single source of truth",
     "No big-bang rewrite",
@@ -40,7 +40,11 @@
       "dependencies": ["HC-PROG-100"],
       "deliverables": ["tests/electron-e2e", "720/1024/1440 screenshot fixtures", "CI smoke job"],
       "acceptance": ["real Electron launch test", "brand is not truncated", "all core actions remain reachable", "test fails on hidden-without-alternative controls"],
-      "status": "planned"
+      "status": "completed",
+      "completedAt": "2026-07-10T10:14:14Z",
+      "branch": "codex/desktop-ux/hc-qa-101",
+      "evidence": "reports/tasks/HC-QA-101.md",
+      "evidenceManifest": "reports/evidence/HC-QA-101/manifest.json"
     },
     {
       "id": "HC-RUN-201",
