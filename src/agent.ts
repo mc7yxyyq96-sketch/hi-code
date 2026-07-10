@@ -6,7 +6,12 @@ import { mcpToolSchemas } from "./mcp.js";
 import { ui, startSpinner, stopSpinner } from "./ui.js";
 import { type Session, fullHistory, estimateTokens, compact } from "./context.js";
 import { recordUsage } from "./usage-store.js";
-import { newEventId, type AssistantCompletedPayload, type AssistantDeltaPayload } from "./events.js";
+import {
+  newEventId,
+  type AssistantCompletedPayload,
+  type AssistantDeltaPayload,
+  type RuntimeMessageAppendedPayload,
+} from "./events.js";
 
 export interface LoopOpts {
   /** Restrict the toolset (e.g. read-only tools for an architect subagent). */
@@ -148,7 +153,9 @@ export async function runLoop(
 
     // Cancelled mid-turn: record whatever streamed and stop cleanly.
     if (turn.aborted) {
-      session.messages.push({ role: "assistant", content: turn.content || "[interrupted]" });
+      const interruptedMessage: ChatMessage = { role: "assistant", content: turn.content || "[interrupted]" };
+      session.messages.push(interruptedMessage);
+      emitMessageAppended(env, messageId, interruptedMessage, { step, finishReason: "interrupted" });
       if (!quiet) {
         emitAssistantCompleted(env, {
           messageId,
@@ -177,6 +184,7 @@ export async function runLoop(
       tool_calls: turn.tool_calls.length ? turn.tool_calls : undefined,
     };
     session.messages.push(assistantMsg);
+    emitMessageAppended(env, messageId, assistantMsg, { step, finishReason: "completed" });
     if (turn.content) finalText = turn.content;
 
     if (!quiet) {
@@ -221,12 +229,14 @@ export async function runLoop(
         return finalText;
       }
       const outcome = await executeTool(env, call.function.name, call.function.arguments);
-      session.messages.push({
+      const toolMessage: ChatMessage = {
         role: "tool",
         tool_call_id: call.id,
         name: call.function.name,
         content: outcome.content,
-      });
+      };
+      session.messages.push(toolMessage);
+      emitMessageAppended(env, newEventId("msg-tool"), toolMessage, { step, sourceToolCallId: call.id });
     }
   }
 
@@ -263,10 +273,32 @@ export async function runTurn(
   signal?: AbortSignal,
   onUserMessageSaved?: () => void,
 ): Promise<void> {
-  session.messages.push({ role: "user", content: userInput });
+  const userMessage: ChatMessage = { role: "user", content: userInput };
+  session.messages.push(userMessage);
+  emitMessageAppended(env, newEventId("msg-user"), userMessage);
   onUserMessageSaved?.();
   const finalText = await runLoop(cfg, session, env, { signal });
   if (!signal?.aborted && !finalText.trim()) {
     throw new Error(`模型 ${defaultProfile(cfg).model} 返回了空内容。请重试，或在“接入 API”里切换到稳定的对话/视觉模型并测试连接。`);
   }
+}
+
+function emitMessageAppended(
+  env: ExecEnv,
+  messageId: string,
+  message: ChatMessage,
+  metadata: Record<string, unknown> = {},
+): void {
+  const payload: RuntimeMessageAppendedPayload = {
+    messageId,
+    message,
+    ...metadata,
+  };
+  env.emitEvent?.({
+    type: "message:appended",
+    tool: message.role === "tool" ? message.name : "agent",
+    title: `${message.role} message persisted`,
+    status: "done",
+    payload,
+  });
 }

@@ -6,6 +6,7 @@ export const RUNTIME_EVENT_TYPES = [
   "turn:done",
   "assistant:delta",
   "assistant:completed",
+  "message:appended",
   "tool:start",
   "tool:output",
   "tool:done",
@@ -29,6 +30,17 @@ export type AssistantCompletedPayload = Record<string, unknown> & {
   model?: string;
   step?: number;
   finishReason?: "completed" | "interrupted" | "error";
+};
+
+export type RuntimeMessageAppendedPayload = Record<string, unknown> & {
+  messageId: string;
+  message: {
+    role: "system" | "user" | "assistant" | "tool";
+    content: unknown;
+    tool_calls?: unknown[];
+    tool_call_id?: string;
+    name?: string;
+  };
 };
 
 export type DiffStatus = "pending" | "accepted" | "rejected" | "undone";

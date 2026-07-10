@@ -17,6 +17,7 @@ import type {
   RuntimeEventDraft,
   RuntimeEventEnvelope,
   RuntimeEventSink,
+  RuntimeMessageAppendedPayload,
   ToolEventStatus,
 } from "./events.js";
 import { createRuntimeProtocolEvent } from "./runtime-protocol.js";
@@ -308,6 +309,19 @@ export function createRuntime(opts: RuntimeOpts): Runtime {
     beginTurn();
     turnChanges = [];
     const turnStartedAt = Date.now();
+    if (protocolSequence === 0) {
+      const payload: RuntimeMessageAppendedPayload = {
+        messageId: `msg-system-${sessionId}`,
+        message: session.system,
+      };
+      emitRuntimeEvent({
+        type: "message:appended",
+        tool: "runtime",
+        title: "system message persisted",
+        status: "done",
+        payload,
+      });
+    }
     const turnStartId = emitRuntimeEvent({
       type: "turn:start",
       tool: "agent",

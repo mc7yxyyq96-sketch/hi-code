@@ -250,9 +250,10 @@ function handleRuntimeEvent(event) {
     if (id && status && diffService.updateStatus(id, status).ok) diffChanged = true;
   }
 
-  // Deltas are already durable in the protocol store and project directly to
-  // chat. Keeping every token in the legacy timeline/log would duplicate data.
-  if (normalized.type !== "assistant:delta") {
+  // Deltas and complete model context are already durable in the protocol
+  // store. Keeping either in legacy timeline/job logs would duplicate data and
+  // expose hidden replay context to surfaces that were designed for summaries.
+  if (normalized.type !== "assistant:delta" && normalized.type !== "message:appended") {
     rememberToolEvent(normalized);
     recordRuntimeEventForActiveJob(normalized);
   }

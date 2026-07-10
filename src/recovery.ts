@@ -68,7 +68,7 @@ export function recoverableTasksFromEvents(events: RuntimeLogEvent[], limit = 10
   for (const [id, record] of records) {
     const done = record.done;
     const start = record.start;
-    const status = done?.status;
+    const status = done?.status ?? (start ? "interrupted" : undefined);
     if (!isRecoverableStatus(status)) continue;
 
     const retryInput = getString(start?.payload?.retryInput) || getString(done?.payload?.retryInput);
@@ -154,7 +154,7 @@ export function recoverableTasksFromProtocolEvents(events: RuntimeProtocolEvent[
   for (const [id, record] of records) {
     const done = record.done;
     const start = record.start;
-    const status = done?.status;
+    const status = done?.status ?? (start ? "interrupted" : undefined);
     if (!isRecoverableStatus(status)) continue;
 
     const retryInput =
@@ -172,7 +172,7 @@ export function recoverableTasksFromProtocolEvents(events: RuntimeProtocolEvent[
       sessionId: start?.sessionId || done?.sessionId || "",
       turnId: start?.turnId || done?.turnId || id,
       title: start?.title || done?.title || "Recoverable task",
-      summary: done?.summary || start?.summary || retryInput.slice(0, 80),
+      summary: done?.summary || (start && !done ? "interrupted by process restart" : start?.summary) || retryInput.slice(0, 80),
       status,
       retryInput,
       createdAt,

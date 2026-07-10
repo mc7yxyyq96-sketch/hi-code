@@ -55,6 +55,8 @@ export interface RuntimeThreadRecord {
   messageIds: string[];
   contextComplete: boolean;
   lastEventSequence: number;
+  state: "active" | "completed" | "interrupted" | "unknown";
+  recoverableTurnIds: string[];
   migrationSources: Record<string, string>;
 }
 
@@ -95,6 +97,25 @@ export interface RuntimeStoreSyncResult {
   error?: string;
 }
 
+export interface RuntimeEventImportResult {
+  ok: boolean;
+  appendedEvents: number;
+  duplicateEvents: number;
+  appendedMessages: number;
+  duplicateMessages: number;
+  diagnostics: RuntimeStoreDiagnostic[];
+  thread?: RuntimeThreadRecord;
+  error?: string;
+}
+
+export interface RuntimeTranscript {
+  thread?: RuntimeThreadRecord;
+  messages: RuntimeMessageRecord[];
+  events: RuntimeProtocolEvent[];
+  diagnostics: RuntimeStoreDiagnostic[];
+  recoverableTurnIds: string[];
+}
+
 export interface ThreadStore {
   get(sessionId: string): RuntimeThreadRecord | undefined;
   list(): RuntimeThreadRecord[];
@@ -105,6 +126,7 @@ export interface ThreadStore {
 export interface EventStore {
   append(event: RuntimeProtocolEvent): RuntimeStoreWriteResult;
   list(sessionId: string): RuntimeStoreReadResult<RuntimeProtocolEvent>;
+  listSessionIds(): string[];
   pathFor(sessionId: string): string;
   delete(sessionId: string): boolean;
 }
@@ -215,6 +237,20 @@ export class FileEventStore implements EventStore {
     return readJsonLines(file, (value): value is RuntimeProtocolEvent => validateRuntimeProtocolEvent(value).ok);
   }
 
+  listSessionIds(): string[] {
+    if (!fs.existsSync(this.root)) return [];
+    const sessionIds: string[] = [];
+    for (const entry of fs.readdirSync(this.root, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      try {
+        if (fs.existsSync(this.pathFor(entry.name))) sessionIds.push(entry.name);
+      } catch {
+        // Ignore invalid directories in app data.
+      }
+    }
+    return sessionIds;
+  }
+
   delete(sessionId: string): boolean {
     return deleteFile(this.pathFor(sessionId));
   }
@@ -240,12 +276,6 @@ export class FileMessageStore implements MessageStore {
       return canonicalJson(sameId) === canonicalJson(message)
         ? { ok: true, status: "duplicate", path: this.pathFor(message.sessionId) }
         : conflictWrite("id_conflict", `message id '${message.id}' already exists with different content`);
-    }
-    const sameSequence = read.records.find((record) => record.sequence === message.sequence);
-    if (sameSequence) {
-      return canonicalJson(sameSequence) === canonicalJson(message)
-        ? { ok: true, status: "duplicate", path: this.pathFor(message.sessionId) }
-        : conflictWrite("sequence_conflict", `message sequence ${message.sequence} already belongs to '${sameSequence.id}'`);
     }
     try {
       const file = this.pathFor(message.sessionId);
@@ -284,8 +314,9 @@ export class FileRuntimeStore {
     if (validation) return { ok: false, appendedMessages: 0, duplicateMessages: 0, diagnostics: [], error: validation };
 
     const existing = this.threads.get(snapshot.id);
+    const sessionCreatedAt = existing?.createdAt ?? snapshot.createdAt;
     const orderedMessages = [snapshot.systemMessage, ...snapshot.messages];
-    const records = orderedMessages.map((message, index) => messageRecordFromSnapshot(snapshot.id, message, index + 1, snapshot.updatedAt, source));
+    const records = orderedMessages.map((message, index) => messageRecordFromSnapshot(snapshot.id, message, index + 1, sessionCreatedAt + index + 1, source));
     let appendedMessages = 0;
     let duplicateMessages = 0;
     for (const record of records) {
@@ -307,6 +338,8 @@ export class FileRuntimeStore {
       ...(existing?.migrationSources ?? {}),
       [source]: digestJson(snapshot),
     };
+    const storedEvents = this.events.list(snapshot.id).records;
+    const turnState = threadStateFromEvents(storedEvents);
     const thread: RuntimeThreadRecord = {
       schemaVersion: RUNTIME_STORE_SCHEMA_VERSION,
       id: snapshot.id,
@@ -319,7 +352,9 @@ export class FileRuntimeStore {
       totalCompletionTokens: snapshot.totalCompletionTokens,
       messageIds: records.map((record) => record.id),
       contextComplete: true,
-      lastEventSequence: Math.max(existing?.lastEventSequence ?? 0, this.events.list(snapshot.id).records.at(-1)?.sequence ?? 0),
+      lastEventSequence: Math.max(existing?.lastEventSequence ?? 0, storedEvents.at(-1)?.sequence ?? 0),
+      state: turnState.state,
+      recoverableTurnIds: turnState.recoverableTurnIds,
       migrationSources,
     };
     const threadResult = this.threads.upsert(thread);
@@ -359,6 +394,115 @@ export class FileRuntimeStore {
     };
   }
 
+  importEvents(sessionId: string, events: RuntimeProtocolEvent[]): RuntimeEventImportResult {
+    validateSessionId(sessionId);
+    let appendedEvents = 0;
+    let duplicateEvents = 0;
+    let appendedMessages = 0;
+    let duplicateMessages = 0;
+    for (const event of events) {
+      if (event.sessionId !== sessionId) {
+        return { ok: false, appendedEvents, duplicateEvents, appendedMessages, duplicateMessages, diagnostics: [], error: "event session id does not match import target" };
+      }
+      const result = this.events.append(event);
+      if (!result.ok) {
+        return { ok: false, appendedEvents, duplicateEvents, appendedMessages, duplicateMessages, diagnostics: this.events.list(sessionId).diagnostics, error: result.error };
+      }
+      if (result.status === "appended") appendedEvents++;
+      else if (result.status === "duplicate") duplicateEvents++;
+    }
+
+    const eventRead = this.events.list(sessionId);
+    if (!eventRead.records.length && !this.threads.get(sessionId)) {
+      return { ok: true, appendedEvents, duplicateEvents, appendedMessages, duplicateMessages, diagnostics: eventRead.diagnostics };
+    }
+    const messageEvents = eventRead.records.filter((event) => event.kind === "message.appended");
+    const messageIds: string[] = [];
+    for (const event of messageEvents) {
+      const record = messageRecordFromEvent(event);
+      if (!record) continue;
+      const result = this.messages.append(record);
+      if (!result.ok) {
+        return {
+          ok: false,
+          appendedEvents,
+          duplicateEvents,
+          appendedMessages,
+          duplicateMessages,
+          diagnostics: [...eventRead.diagnostics, ...this.messages.list(sessionId).diagnostics],
+          error: result.error,
+        };
+      }
+      messageIds.push(record.id);
+      if (result.status === "appended") appendedMessages++;
+      else if (result.status === "duplicate") duplicateMessages++;
+    }
+
+    const existing = this.threads.get(sessionId);
+    const messageRead = this.messages.list(sessionId);
+    const byId = new Map(messageRead.records.map((record) => [record.id, record]));
+    const eventMessages = messageIds.map((id) => byId.get(id)).filter((record): record is RuntimeMessageRecord => Boolean(record));
+    const eventContextComplete = completeMessageChain(eventMessages);
+    const latestMessageSequence = messageEvents.at(-1)?.sequence ?? 0;
+    const eventContextAdvanced = latestMessageSequence > (existing?.lastEventSequence ?? 0);
+    const useEventContext = eventContextComplete && (!existing?.contextComplete || eventContextAdvanced);
+    const preserveCompleteSnapshot = existing?.contextComplete === true && existing.messageIds.length > 0 && !useEventContext;
+    const activeMessageIds = useEventContext ? messageIds : preserveCompleteSnapshot ? existing.messageIds : messageIds;
+    const first = eventRead.records[0];
+    const latest = eventRead.records.at(-1) ?? first;
+    const runtimeContext = runtimeContextFromEvents(eventRead.records);
+    const firstUser = eventMessages.find((record) => record.role === "user");
+    const state = threadStateFromEvents(eventRead.records);
+    const thread: RuntimeThreadRecord = {
+      schemaVersion: RUNTIME_STORE_SCHEMA_VERSION,
+      id: sessionId,
+      cwd: existing?.cwd || runtimeContext.cwd || process.cwd(),
+      model: existing?.model || runtimeContext.model || "",
+      createdAt: existing?.createdAt ?? first?.createdAt ?? Date.now(),
+      updatedAt: Math.max(existing?.updatedAt ?? 0, Number(latest?.updatedAt ?? latest?.createdAt ?? Date.now())),
+      firstPrompt: existing?.firstPrompt || oneLine(chatMessageText(firstUser?.message), 80) || first?.summary || first?.title || "Runtime session",
+      totalPromptTokens: existing?.totalPromptTokens ?? 0,
+      totalCompletionTokens: existing?.totalCompletionTokens ?? 0,
+      messageIds: activeMessageIds,
+      contextComplete: preserveCompleteSnapshot || useEventContext,
+      lastEventSequence: latest?.sequence ?? existing?.lastEventSequence ?? 0,
+      state: state.state,
+      recoverableTurnIds: state.recoverableTurnIds,
+      migrationSources: {
+        ...(existing?.migrationSources ?? {}),
+        "runtime-events": digestJson(eventRead.records),
+      },
+    };
+    const threadResult = this.threads.upsert(thread);
+    if (!threadResult.ok) {
+      return { ok: false, appendedEvents, duplicateEvents, appendedMessages, duplicateMessages, diagnostics: eventRead.diagnostics, error: threadResult.error };
+    }
+    return {
+      ok: true,
+      appendedEvents,
+      duplicateEvents,
+      appendedMessages,
+      duplicateMessages,
+      diagnostics: [...eventRead.diagnostics, ...messageRead.diagnostics],
+      thread,
+    };
+  }
+
+  loadTranscript(sessionId: string): RuntimeTranscript {
+    validateSessionId(sessionId);
+    const eventRead = this.events.list(sessionId);
+    const messageRead = this.messages.list(sessionId);
+    const thread = this.threads.get(sessionId);
+    const activeIds = new Set(thread?.messageIds ?? []);
+    return {
+      thread,
+      messages: messageRead.records.filter((record) => activeIds.has(record.id)),
+      events: eventRead.records,
+      diagnostics: [...eventRead.diagnostics, ...messageRead.diagnostics],
+      recoverableTurnIds: thread?.recoverableTurnIds ?? threadStateFromEvents(eventRead.records).recoverableTurnIds,
+    };
+  }
+
   deleteSession(sessionId: string): boolean {
     const directory = sessionDirectory(this.root, sessionId);
     if (!fs.existsSync(directory)) return false;
@@ -385,6 +529,86 @@ function messageRecordFromSnapshot(
     createdAt,
     source,
   };
+}
+
+function messageRecordFromEvent(event: RuntimeProtocolEvent): RuntimeMessageRecord | null {
+  const message = event.payload?.message;
+  if (!isChatMessage(message)) return null;
+  const cloned = cloneMessage(message);
+  const declaredId = typeof event.payload?.messageId === "string" ? event.payload.messageId : "";
+  return {
+    schemaVersion: RUNTIME_STORE_SCHEMA_VERSION,
+    id: `rmsg-${digestJson({ sessionId: event.sessionId, eventId: event.id, declaredId, message: cloned }).slice(0, 24)}`,
+    sessionId: event.sessionId,
+    sequence: event.sequence,
+    role: cloned.role,
+    message: cloned,
+    createdAt: event.createdAt,
+    source: "runtime-event",
+    turnId: event.turnId,
+    sourceEventId: event.id,
+  };
+}
+
+function completeMessageChain(records: RuntimeMessageRecord[]): boolean {
+  if (!records.length || records[0].role !== "system" || !records.some((record) => record.role === "user")) return false;
+  const requestedToolCalls = new Set<string>();
+  const completedToolCalls = new Set<string>();
+  for (const record of records) {
+    for (const call of record.message.tool_calls ?? []) requestedToolCalls.add(call.id);
+    if (record.role === "tool" && record.message.tool_call_id) completedToolCalls.add(record.message.tool_call_id);
+  }
+  for (const callId of requestedToolCalls) {
+    if (!completedToolCalls.has(callId)) return false;
+  }
+  for (const callId of completedToolCalls) {
+    if (!requestedToolCalls.has(callId)) return false;
+  }
+  return true;
+}
+
+function runtimeContextFromEvents(events: RuntimeProtocolEvent[]): { cwd?: string; model?: string } {
+  for (const event of events) {
+    const context = event.payload?.runtimeContext;
+    if (!context || typeof context !== "object" || Array.isArray(context)) continue;
+    const value = context as Record<string, unknown>;
+    const cwd = typeof value.cwd === "string" && path.isAbsolute(value.cwd) ? value.cwd : undefined;
+    const model = typeof value.model === "string" ? value.model : undefined;
+    if (cwd || model) return { cwd, model };
+  }
+  return {};
+}
+
+function threadStateFromEvents(events: RuntimeProtocolEvent[]): {
+  state: RuntimeThreadRecord["state"];
+  recoverableTurnIds: string[];
+} {
+  if (!events.length) return { state: "active", recoverableTurnIds: [] };
+  const starts = new Map<string, RuntimeProtocolEvent>();
+  const terminals = new Map<string, RuntimeProtocolEvent>();
+  for (const event of events) {
+    if (event.kind === "turn.started") starts.set(event.turnId, event);
+    if (event.kind === "turn.completed" || event.kind === "turn.failed" || event.kind === "turn.denied" || event.kind === "turn.interrupted") {
+      terminals.set(event.turnId, event);
+    }
+  }
+  const recoverableTurnIds = [...starts.keys()].filter((turnId) => !terminals.has(turnId));
+  if (recoverableTurnIds.length) return { state: "interrupted", recoverableTurnIds };
+  const lastTerminal = [...terminals.values()].sort((a, b) => a.sequence - b.sequence).at(-1);
+  if (!lastTerminal) return { state: "unknown", recoverableTurnIds: [] };
+  if (lastTerminal.status === "done") return { state: "completed", recoverableTurnIds: [] };
+  return { state: "interrupted", recoverableTurnIds: [lastTerminal.turnId] };
+}
+
+function chatMessageText(message: ChatMessage | undefined): string {
+  if (!message || message.content === null) return "";
+  if (typeof message.content === "string") return message.content;
+  return message.content.map((part) => part.type === "text" ? part.text : "[image]").join(" ");
+}
+
+function oneLine(value: string, limit: number): string {
+  const text = value.replace(/\s+/g, " ").trim();
+  return text.length > limit ? `${text.slice(0, limit)}…` : text;
 }
 
 function validateSessionSnapshot(snapshot: RuntimeSessionSnapshot): string | null {
@@ -420,6 +644,8 @@ function validateThreadRecord(value: unknown): value is RuntimeThreadRecord {
     Array.isArray(record.messageIds) && record.messageIds.every((id) => typeof id === "string" && id.length > 0) &&
     typeof record.contextComplete === "boolean" &&
     Number.isInteger(record.lastEventSequence) && Number(record.lastEventSequence) >= 0 &&
+    (record.state === "active" || record.state === "completed" || record.state === "interrupted" || record.state === "unknown") &&
+    Array.isArray(record.recoverableTurnIds) && record.recoverableTurnIds.every((id) => typeof id === "string" && id.length > 0) &&
     Boolean(record.migrationSources) && typeof record.migrationSources === "object" && !Array.isArray(record.migrationSources);
 }
 
@@ -534,7 +760,11 @@ function atomicWriteJson(file: string, value: unknown): void {
   } finally {
     fs.closeSync(fd);
   }
-  fs.renameSync(temp, file);
+  try {
+    fs.renameSync(temp, file);
+  } finally {
+    if (fs.existsSync(temp)) fs.unlinkSync(temp);
+  }
   try { fs.chmodSync(file, 0o600); } catch {}
 }
 

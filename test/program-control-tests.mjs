@@ -92,7 +92,13 @@ check(
 );
 check("runtime event sink gate passed", board.gates?.find((gate) => gate.id === "runtime-event-sink")?.status === "passed");
 check("HC-RUN-201 completion is reflected in backlog", runtimeBacklogTask?.status === "completed" && runtimeBacklogTask?.evidenceManifest === "reports/evidence/HC-RUN-201/manifest.json");
-check("HC-RUN-202 is dependency-ready", nextRuntimeTask?.status === "ready" && nextRuntimeTask?.dependencies?.every((id) => backlog.tasks.find((task) => task.id === id)?.status === "completed"));
+check(
+  "HC-RUN-202 has satisfied dependencies before execution",
+  (nextRuntimeTask?.status === "ready" ||
+    (nextRuntimeTask?.status === "in_progress" && Boolean(nextRuntimeTask?.startedAt) && Boolean(nextRuntimeTask?.branch))) &&
+    nextRuntimeTask?.dependencies?.every((id) => backlog.tasks.find((task) => task.id === id)?.status === "completed"),
+  JSON.stringify(nextRuntimeTask),
+);
 check("HC-PLAT-110 is dependency-ready", platformTask?.status === "ready" && platformTask?.dependencies?.every((id) => backlog.tasks.find((task) => task.id === id)?.status === "completed"));
 check("HC-UI-301 is dependency-ready", uiShellTask?.status === "ready" && uiShellTask?.dependencies?.every((id) => backlog.tasks.find((task) => task.id === id)?.status === "completed"));
 check("alpha.7 version is synchronized", packageJson.version === "0.6.0-alpha.7" && packageLock.version === packageJson.version && packageLock.packages?.[""]?.version === packageJson.version && fs.readFileSync(path.join(root, "VERSION"), "utf8").trim() === packageJson.version);

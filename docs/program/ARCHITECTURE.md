@@ -2,7 +2,7 @@
 
 Status: Current-state map plus accepted migration target
 
-Baseline: `0.6.0-alpha.6` at `6ed9ed666bb817f8d1e863c76b0bf61b31c7b52d`
+Baseline: verified `0.6.0-alpha.7` candidate at `b044fdcecf1a153393cce29d7267eb2205c99dec`
 
 ## Architectural Objective
 
@@ -22,7 +22,8 @@ flowchart LR
   R --> X["Permission-gated tools"]
   X --> F["Workspace, Git, Bash, MCP"]
   R --> RP["Runtime Protocol envelope"]
-  RP --> ES["Append-only JSONL event store"]
+  RP --> ES["Legacy append-only JSONL"]
+  RP --> TS["Typed Thread / Event / Message stores"]
   S --> J["Job Center and domain services"]
   J --> A["Artifacts, gates, and releases"]
 ```
@@ -49,9 +50,9 @@ Root-level legacy `main.mjs`, `renderer.js`, and `index.html` are not production
 
 ### Protocol and persistence
 
-`src/runtime-protocol.ts` defines versioned event envelopes. `src/runtime-event-store.ts` appends valid events to JSONL. `src/session-store.ts` retains full legacy conversation state, while `src/recovery.ts` merges protocol and legacy recovery information during migration.
+`src/runtime-protocol.ts` defines versioned event envelopes. `src/runtime-event-store.ts` preserves legacy JSONL while synchronizing validated events into the typed store. `src/runtime-stores.ts` owns typed thread, event, and normalized model-message contracts. `src/session-store.ts` remains the compatibility facade, while `src/recovery.ts` diagnoses incomplete turns across protocol and legacy records.
 
-Current limitation: protocol events do not yet carry first-class assistant delta/completed content for every client. Desktop still depends on compatibility output bridging for part of the transcript. Full model-context resume still depends on session JSON. HC-RUN-201 and later runtime-store tasks close these gaps incrementally.
+HC-RUN-201 moved assistant text to first-class protocol events. HC-RUN-202 adds exact hidden `message.appended` records and reconstructs full system/user/assistant/tool context without session JSON. Streams created before normalized messages remain read-only rather than receiving guessed context.
 
 ### Electron shell
 
@@ -72,8 +73,9 @@ The Job Center is the durable execution record. Providers, isolated worktrees, P
 | Data | Current location | Authority today | Migration direction |
 | --- | --- | --- | --- |
 | User config and credentials | Hi Code app data / config files with restricted permissions | Config service | Move secret material to platform secure storage |
-| Full chat sessions | Local session JSON | Required for full context resume | Rebuild from typed event/message stores |
-| Runtime events | `~/.hicode/runtime-events/<session>.jsonl` | Append-only recovery and replay evidence | Become authoritative transcript/execution stream |
+| Full chat sessions | Local session JSON plus typed message snapshots | Compatibility write plus complete resume source | Remove legacy authority only after a later verified migration |
+| Runtime events | Legacy `~/.hicode/runtime-events/<session>.jsonl` plus typed event records | Append-only execution authority with non-destructive import | Retain legacy source for rollback during v0.6 |
+| Typed runtime context | `~/.hicode/runtime-store-v2/<session>/` | Thread metadata, exact model messages, normalized events | Backend remains replaceable behind interfaces |
 | Job Center | App-data Job Store | Job execution and artifact audit | Retain with protocol references |
 | Industrial project | Workspace `.hicode/project.json` | Project artifact and traceability model | Retain with schema migrations |
 | Generated artifacts | Workspace `.hicode/artifacts`, generated docs, releases | File plus metadata/evidence | Retain; strengthen checksums and provenance |

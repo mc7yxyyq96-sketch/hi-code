@@ -23,7 +23,9 @@ Runtime integration:
 - The generated envelope is attached as `event.payload.runtimeProtocol`.
 - `src/agent.ts` emits first-class `assistant:delta` and `assistant:completed` events. Completion includes the full message; empty and failed responses use `error`, never a fake completed state.
 - `src/runtime-event-store.ts` appends validated protocol events to `~/.hicode/runtime-events/<sessionId>.jsonl` for replay and crash recovery.
-- `src/session-store.ts` merges event-only sessions into Recent as replay-only entries when the full chat session JSON is missing.
+- `src/runtime-stores.ts` implements typed `ThreadStore`, `EventStore`, and `MessageStore` contracts under `~/.hicode/runtime-store-v2/`.
+- `src/agent.ts` emits hidden `message.appended` records for exact user, assistant, and tool messages; `src/runtime.ts` emits the system message once when a new model-backed session begins.
+- `src/session-store.ts` reconstructs complete resumable sessions from typed records or normalized protocol events when legacy session JSON is missing. Older incomplete event streams remain explicitly replay-only.
 - `src/recovery.ts` reads recoverable failed/interrupted/denied turns from the append-only protocol store and merges them with legacy runtime logs so desktop recovery controls survive restart during the v0.6 migration.
 - CLI/TUI `/sessions` shows replay-only event sessions, and `/resume <id>` opens those sessions as read-only transcript replay instead of pretending they can continue model context.
 - Full saved session resume continues runtime protocol sequence numbers from the append-only event store, so resumed turns do not duplicate prior event sequences.
@@ -33,6 +35,8 @@ Runtime integration:
 Tests:
 
 - `test/runtime-protocol-tests.mjs`
+- `test/runtime-store-tests.mjs`
+- `test/runtime-store-integration-tests.mjs`
 - `test/runtime-event-sink-tests.mjs`
 - `test/runtime-concurrency-tests.mjs`
 - `test/runtime-client-adapter-tests.mjs`
@@ -51,16 +55,17 @@ Desktop / Electron:
 - Main process owns a process-local `RuntimeEventBus` and injects it into normal and isolated runtimes.
 - Assistant deltas project to the existing `output` IPC channel; completion and timeline events retain the existing `tool-event` channel. No renderer API break is required.
 - Assistant deltas are not duplicated into the legacy tool timeline/log. Their durable authority is the append-only protocol store.
+- Hidden `message.appended` events never enter legacy timeline or Job logs; they are local replay context for typed stores and SDK consumers.
 - Real Electron E2E runs a local streaming model with `HICODE_LEGACY_STDOUT_BRIDGE=0` and verifies the complete response in the chat view.
 
 CLI / TUI:
 
 - Both clients inject their own `RuntimeEventBus`, disable direct assistant stdout rendering, and project typed assistant events with `connectAssistantTextOutput(...)`.
 - Console/stdout interception remains only for legacy command/tool framing in TUI; model text does not depend on it.
-- `/sessions` includes durable event-only sessions as `replay` entries.
+- `/sessions` includes complete normalized event sessions as resumable entries and older incomplete event sessions as `replay` entries.
 - `/resume <id>` resumes full saved sessions when session JSON exists.
-- `/resume <id>` opens event-only sessions as read-only replay with user turns, tool summaries, and completion status when only JSONL runtime events exist.
-- Event-only replay is intentionally not loaded into model context; users can copy the useful replay summary into a new prompt when they want to continue.
+- `/resume <id>` reconstructs complete model context from normalized system, user, assistant, and tool message records when only protocol JSONL exists.
+- Event-only streams created before normalized message records remain read-only; human-readable summaries are never promoted into model context.
 
 Future SDK / app-server:
 
@@ -119,6 +124,7 @@ Initial protocol kinds:
 - `turn.interrupted`
 - `assistant.delta`
 - `assistant.completed`
+- `message.appended`
 - `model.output`
 - `tool.started`
 - `tool.output`
@@ -154,7 +160,7 @@ The `visibility` array tells downstream consumers where an event is safe and use
 - `sdk`
 - `hidden`
 
-Assistant deltas route to chat/sdk; assistant completions route to chat/timeline/sdk. Tool events route to timeline/job/sdk, diffs to diff/timeline/job/sdk, and approval requests to timeline/job/sdk. `model.output` is retained as a reserved compatibility kind and is not the new assistant transport.
+Assistant deltas route to chat/sdk; assistant completions route to chat/timeline/sdk. Exact `message.appended` records route only to hidden/sdk consumers. Tool events route to timeline/job/sdk, diffs to diff/timeline/job/sdk, and approval requests to timeline/job/sdk. `model.output` is retained as a reserved compatibility kind and is not the new assistant transport.
 
 ## Validation
 
@@ -166,6 +172,7 @@ Assistant deltas route to chat/sdk; assistant completions route to chat/timeline
 - unknown kind
 - unknown status
 - invalid visibility
+- `message.appended` without a non-empty message ID and valid system/user/assistant/tool message
 
 `isRuntimeProtocolEvent(event)` is the type guard for future consumers.
 
@@ -175,8 +182,8 @@ Assistant deltas route to chat/sdk; assistant completions route to chat/timeline
 2. Attach protocol envelopes to every runtime event. Completed.
 3. Append protocol events to a durable JSONL event store. Completed.
 4. Emit assistant deltas/completions through an injected sink and migrate Electron/CLI/TUI. Completed in HC-RUN-201.
-5. Make recent sessions replay from persisted protocol events. Event-only sessions are visible as replay-only entries; full LLM context resume still requires saved session JSON.
-6. Reconstruct complete resumable context from typed stores. Planned in HC-RUN-202; not claimed by HC-RUN-201.
+5. Make recent sessions replay from persisted protocol events. Completed with backward-compatible replay-only handling for incomplete v1 streams.
+6. Reconstruct complete resumable context from typed stores and normalized message events. Implemented in HC-RUN-202; final release evidence remains the promotion gate.
 7. Expose protocol streaming through a future local app-server and SDK.
 
 ## Guardrails

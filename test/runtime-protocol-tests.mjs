@@ -56,6 +56,33 @@ check("validation rejects malformed event", validateRuntimeProtocolEvent({ ...en
 check("kind mapper distinguishes failed turns", protocolKindFromLegacy("turn:done", "error") === "turn.failed");
 check("type guard accepts valid protocol event", isRuntimeProtocolEvent(envelope));
 
+const messageEnvelope = createRuntimeProtocolEvent(
+  {
+    type: "message:appended",
+    title: "assistant message persisted",
+    status: "done",
+    sessionId: "session-a",
+    turnId: "session-a-turn-1",
+    payload: {
+      messageId: "msg-assistant-1",
+      message: { role: "assistant", content: "Typed context" },
+    },
+  },
+  { sequence: 2, createdAt: 101 },
+);
+check(
+  "normalized message event is hidden and valid",
+  validateRuntimeProtocolEvent(messageEnvelope).ok &&
+    messageEnvelope.kind === "message.appended" &&
+    messageEnvelope.actor === "assistant" &&
+    messageEnvelope.visibility.includes("hidden"),
+  JSON.stringify(messageEnvelope),
+);
+check(
+  "message event validation rejects missing model context",
+  validateRuntimeProtocolEvent({ ...messageEnvelope, payload: { messageId: "msg-assistant-1" } }).ok === false,
+);
+
 console.log("\n[runtime-protocol] runtime integration");
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "hicode-runtime-protocol-"));

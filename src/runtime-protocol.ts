@@ -11,6 +11,7 @@ export const RUNTIME_PROTOCOL_KINDS = [
   "turn.interrupted",
   "assistant.delta",
   "assistant.completed",
+  "message.appended",
   "model.output",
   "tool.started",
   "tool.output",
@@ -92,7 +93,7 @@ export function createRuntimeProtocolEvent(
     kind,
     legacyType: source.type,
     status,
-    actor: actorForLegacyEvent(source.type),
+    actor: actorForSourceEvent(source),
     tool: source.tool,
     title: requiredString(source.title, "title"),
     summary: source.summary,
@@ -114,6 +115,7 @@ export function protocolKindFromLegacy(type: ToolEventType, status: RuntimeProto
   }
   if (type === "assistant:delta") return "assistant.delta";
   if (type === "assistant:completed") return "assistant.completed";
+  if (type === "message:appended") return "message.appended";
   if (type === "tool:start") return "tool.started";
   if (type === "tool:output") return "tool.output";
   if (type === "tool:done") {
@@ -143,6 +145,12 @@ export function validateRuntimeProtocolEvent(event: unknown): { ok: true } | { o
   for (const entry of value.visibility) {
     if (!RUNTIME_PROTOCOL_VISIBILITY.includes(entry as RuntimeProtocolVisibility)) return { ok: false, error: "unknown visibility value" };
   }
+  if (value.kind === "message.appended") {
+    const payload = value.payload;
+    if (!payload || typeof payload.messageId !== "string" || !payload.messageId.trim() || !validProtocolMessage(payload.message)) {
+      return { ok: false, error: "message.appended requires a valid messageId and message" };
+    }
+  }
   return { ok: true };
 }
 
@@ -157,7 +165,14 @@ function normalizeProtocolStatus(status: ToolEventStatus | undefined, type: Tool
   return "running";
 }
 
-function actorForLegacyEvent(type: ToolEventType): RuntimeProtocolEvent["actor"] {
+function actorForSourceEvent(source: RuntimeProtocolSourceEvent): RuntimeProtocolEvent["actor"] {
+  const type = source.type;
+  if (type === "message:appended") {
+    const role = source.payload?.message && typeof source.payload.message === "object"
+      ? (source.payload.message as Record<string, unknown>).role
+      : undefined;
+    if (role === "user" || role === "assistant" || role === "tool" || role === "system") return role;
+  }
   if (type.startsWith("assistant:")) return "assistant";
   if (type.startsWith("tool:")) return "tool";
   if (type.startsWith("permission:")) return "system";
@@ -172,6 +187,7 @@ function visibilityForKind(kind: RuntimeProtocolKind): RuntimeProtocolVisibility
   if (kind.startsWith("tool.")) return ["timeline", "job", "sdk"];
   if (kind === "assistant.delta") return ["chat", "sdk"];
   if (kind === "assistant.completed") return ["chat", "timeline", "sdk"];
+  if (kind === "message.appended") return ["hidden", "sdk"];
   if (kind === "model.output") return ["chat", "timeline", "sdk"];
   return ["timeline", "job", "sdk"];
 }
@@ -180,6 +196,17 @@ function stripProtocolPayload(payload: Record<string, unknown> | undefined): Rec
   if (!payload) return {};
   const { runtimeProtocol: _runtimeProtocol, ...rest } = payload;
   return rest;
+}
+
+function validProtocolMessage(value: unknown): boolean {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const message = value as Record<string, unknown>;
+  if (message.role !== "system" && message.role !== "user" && message.role !== "assistant" && message.role !== "tool") return false;
+  if (message.content !== null && typeof message.content !== "string" && !Array.isArray(message.content)) return false;
+  if (message.tool_calls !== undefined && !Array.isArray(message.tool_calls)) return false;
+  if (message.tool_call_id !== undefined && typeof message.tool_call_id !== "string") return false;
+  if (message.name !== undefined && typeof message.name !== "string") return false;
+  return true;
 }
 
 function requiredString(value: unknown, field: string): string {
