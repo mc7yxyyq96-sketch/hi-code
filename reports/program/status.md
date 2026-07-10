@@ -32,6 +32,7 @@ The final machine-captured evidence is written by `npm run program:baseline` to 
 | 4 | HC-RUN-202 | Completed | Runtime Engine | HC-RUN-201 |
 | 5 | HC-RUN-203 | Completed | Runtime Engine | HC-RUN-202 |
 | 6 | HC-PLAT-110 | Completed | Security And Release | HC-QA-101 |
+| 7 | HC-REL-ALPHA-8 | In Progress | Release Owner | HC-RUN-202, HC-RUN-203, HC-PLAT-110 |
 
 HC-QA-101 established a real Electron responsive baseline. HC-RUN-201 introduces protocol-native assistant output and concurrency isolation. No new industrial domain module is authorized before HC-RUN-201 completes.
 
@@ -49,7 +50,9 @@ HC-PLAT-110 completed in the isolated `codex/security-release/hc-plat-110` workt
 
 ## Release Integration
 
-The `0.6.0-alpha.7` candidate was integrated on `codex/release/0.6.0-alpha.7` from HC-RUN-201 commit `d36923bed32267a5bfb3433e4450307060cbda69`. Version metadata, backlog state, capability boundaries, migration notes, security review, E2E review, limitations, and release evidence passed the isolated candidate gate. HC-RUN-202 and HC-RUN-203 are now complete on isolated task branches; promotion into the alpha.8 integration branch remains a separate release task.
+The `0.6.0-alpha.7` candidate was integrated on `codex/release/0.6.0-alpha.7` from HC-RUN-201 commit `d36923bed32267a5bfb3433e4450307060cbda69`. Version metadata, backlog state, capability boundaries, migration notes, security review, E2E review, limitations, and release evidence passed the isolated candidate gate.
+
+HC-REL-ALPHA-8 is now active on `codex/release/0.6.0-alpha.8` from HC-PLAT-110 completion commit `265a69f`. It integrates only completed alpha.8 runtime replay, recovery, and Electron compatibility work. Formal tag, GitHub Release, signing, notarization, and public promotion remain approval-gated.
 
 ## Current Product Truth
 

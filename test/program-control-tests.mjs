@@ -51,6 +51,7 @@ const requiredFiles = [
   "reports/tasks/HC-RUN-202.md",
   "reports/tasks/HC-RUN-203.md",
   "reports/tasks/HC-PLAT-110.md",
+  "reports/tasks/HC-REL-ALPHA-8.md",
   "reports/tasks/HC-REL-ALPHA-7.md",
   "reports/evidence/baseline/manifest.json",
   "reports/evidence/HC-QA-101/manifest.json",
@@ -94,12 +95,14 @@ const runtimeBacklogTask = backlog.tasks.find((task) => task.id === "HC-RUN-201"
 const nextRuntimeTask = backlog.tasks.find((task) => task.id === "HC-RUN-202");
 const recoveryRuntimeTask = backlog.tasks.find((task) => task.id === "HC-RUN-203");
 const platformTask = backlog.tasks.find((task) => task.id === "HC-PLAT-110");
+const alpha8ReleaseTask = backlog.tasks.find((task) => task.id === "HC-REL-ALPHA-8");
 const uiShellTask = backlog.tasks.find((task) => task.id === "HC-UI-301");
 const qaTask = board.tasks.find((task) => task.id === "HC-QA-101");
 const runtimeTask = board.tasks.find((task) => task.id === "HC-RUN-201");
 const runtimeStoreTask = board.tasks.find((task) => task.id === "HC-RUN-202");
 const turnRecoveryTask = board.tasks.find((task) => task.id === "HC-RUN-203");
 const platformBoardTask = board.tasks.find((task) => task.id === "HC-PLAT-110");
+const alpha8ReleaseBoardTask = board.tasks.find((task) => task.id === "HC-REL-ALPHA-8");
 
 console.log("\n[program-control] board and evidence contract");
 check("backlog records immutable source commit", /^[0-9a-f]{40}$/.test(backlog.sourceCommit || ""));
@@ -169,6 +172,14 @@ for (const command of platformManifest.commands || []) {
 for (const platform of ["ubuntu-latest", "macos-latest", "windows-latest"]) {
   check(`HC-PLAT-110 ${platform} Electron smoke passed`, platformCiEvidence.jobs?.some((job) => job.name === `Electron smoke (${platform})` && job.conclusion === "success" && job.artifactUpload === "success"));
 }
+check(
+  "HC-REL-ALPHA-8 is active only after all candidate dependencies",
+  alpha8ReleaseTask?.status === "in_progress" &&
+    alpha8ReleaseTask?.branch === "codex/release/0.6.0-alpha.8" &&
+    alpha8ReleaseTask?.dependencies?.every((id) => backlog.tasks.find((task) => task.id === id)?.status === "completed") &&
+    alpha8ReleaseBoardTask?.status === "in_progress",
+  JSON.stringify(alpha8ReleaseTask),
+);
 check("HC-UI-301 is dependency-ready", uiShellTask?.status === "ready" && uiShellTask?.dependencies?.every((id) => backlog.tasks.find((task) => task.id === id)?.status === "completed"));
 check("alpha.7 version is synchronized", packageJson.version === "0.6.0-alpha.7" && packageLock.version === packageJson.version && packageLock.packages?.[""]?.version === packageJson.version && fs.readFileSync(path.join(root, "VERSION"), "utf8").trim() === packageJson.version);
 check("alpha.7 release candidate gate passed", board.candidate?.version === packageJson.version && board.candidate?.status === "passed" && board.gates?.find((gate) => gate.id === "alpha-7-release-candidate")?.status === "passed");

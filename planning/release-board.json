@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "program": "Hi Code Product-Grade Desktop and Industrial Workbench",
-  "updatedAt": "2026-07-10T19:01:57Z",
+  "updatedAt": "2026-07-10T19:25:33Z",
   "status": "active",
   "source": {
     "version": "0.6.0-alpha.6",
@@ -69,6 +69,12 @@
       "branch": "codex/security-release/hc-plat-110",
       "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-hc-plat-110",
       "mode": "completed-worktree"
+    },
+    {
+      "taskId": "HC-REL-ALPHA-8",
+      "branch": "codex/release/0.6.0-alpha.8",
+      "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-release-alpha-8",
+      "mode": "release-integration-worktree"
     }
   ],
   "tasks": [
@@ -135,6 +141,16 @@
       "startedAt": "2026-07-10T17:48:41Z",
       "completedAt": "2026-07-10T19:01:57Z",
       "evidence": "reports/evidence/HC-PLAT-110/manifest.json"
+    },
+    {
+      "id": "HC-REL-ALPHA-8",
+      "owner": "security-release",
+      "priority": "P0",
+      "status": "in_progress",
+      "dependencies": ["HC-RUN-202", "HC-RUN-203", "HC-PLAT-110"],
+      "branch": "codex/release/0.6.0-alpha.8",
+      "startedAt": "2026-07-10T19:25:33Z",
+      "evidence": "reports/tasks/HC-REL-ALPHA-8.md"
     }
   ],
   "gates": [
@@ -183,6 +199,12 @@
       "status": "passed",
       "owner": "HC-REL-ALPHA-7",
       "evidence": "reports/evidence/HC-REL-ALPHA-7/manifest.json"
+    },
+    {
+      "id": "alpha-8-release-candidate",
+      "status": "in_progress",
+      "owner": "HC-REL-ALPHA-8",
+      "evidence": "reports/tasks/HC-REL-ALPHA-8.md"
     }
   ],
   "nextReleaseSlices": [
