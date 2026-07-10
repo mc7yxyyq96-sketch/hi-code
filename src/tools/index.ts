@@ -24,6 +24,8 @@ export interface ExecEnv {
   turnId?: string;
   /** Abort signal for the active turn; long-running tools should stop when it fires. */
   signal?: AbortSignal;
+  /** Temporary terminal renderer used while clients migrate to structured assistant events. */
+  legacyAssistantOutput?: boolean;
   /** Emits structured runtime events for desktop/UI surfaces. */
   emitEvent?: (event: RuntimeEventDraft) => string | void;
   /** Records a file's prior content before a mutation, for /undo. null = file didn't exist. */

@@ -13,7 +13,12 @@ import { handleCommand, type CommandEnv } from "./commands.js";
 import { saveSession, loadSession, newSessionId, type StoredSession } from "./session-store.js";
 import { shutdownMcp } from "./mcp.js";
 import { gitInfo } from "./git.js";
-import type { RuntimeEventDraft, ToolEventStatus } from "./events.js";
+import type {
+  RuntimeEventDraft,
+  RuntimeEventEnvelope,
+  RuntimeEventSink,
+  ToolEventStatus,
+} from "./events.js";
 import { createRuntimeProtocolEvent } from "./runtime-protocol.js";
 import { appendRuntimeProtocolEvent, readRuntimeProtocolEvents } from "./runtime-event-store.js";
 
@@ -67,7 +72,12 @@ export interface RuntimeOpts {
   systemPrompt: string;
   ask: AskFn;
   restored?: StoredSession;
+  /** Primary structured event destination for desktop, CLI, TUI, and SDK clients. */
+  eventSink?: RuntimeEventSink;
+  /** @deprecated Compatibility callback; migrate clients to eventSink. */
   emitEvent?: (event: RuntimeEventDraft & { sessionId: string; turnId: string }) => string | void;
+  /** Keep direct terminal assistant rendering while clients migrate to eventSink. */
+  legacyAssistantOutput?: boolean;
   allowProcessExit?: boolean;
   persistRuntimeEvents?: boolean;
 }
@@ -135,15 +145,20 @@ export function createRuntime(opts: RuntimeOpts): Runtime {
       const stored = appendRuntimeProtocolEvent(runtimeProtocol);
       if (!stored.ok && process.env.VIBE_DEBUG) console.error(`[hicode] runtime event persistence failed: ${stored.error}`);
     }
-    return opts.emitEvent?.({
+    const envelope: RuntimeEventEnvelope = {
       ...event,
+      id: runtimeProtocol.id,
+      createdAt: runtimeProtocol.createdAt,
       payload: {
         ...(event.payload || {}),
         runtimeProtocol,
       },
       sessionId,
       turnId,
-    });
+    };
+    const sinkResult = safelyDispatchRuntimeEvent(() => opts.eventSink?.emit(envelope));
+    const legacyResult = safelyDispatchRuntimeEvent(() => opts.emitEvent?.(envelope));
+    return sinkResult ?? legacyResult ?? envelope.id;
   };
 
   const execEnv: ExecEnv = {
@@ -154,6 +169,7 @@ export function createRuntime(opts: RuntimeOpts): Runtime {
     depth: 0,
     sessionId,
     turnId: currentTurnId,
+    legacyAssistantOutput: opts.legacyAssistantOutput !== false,
     emitEvent: emitRuntimeEvent,
     recordChange: (file, before, diffId) => turnChanges.push({ file, before, diffId }),
   };
@@ -466,6 +482,16 @@ export function createRuntime(opts: RuntimeOpts): Runtime {
         .filter((m) => m.text.length > 0 && !m.text.startsWith("[Earlier conversation summary]"));
     },
   };
+}
+
+function safelyDispatchRuntimeEvent(deliver: () => string | void | undefined): string | void {
+  try {
+    return deliver();
+  } catch (error) {
+    if (process.env.VIBE_DEBUG) {
+      console.error(`[hicode] runtime event delivery failed: ${(error as Error).message}`);
+    }
+  }
 }
 
 function lastProtocolSequenceForSession(sessionId: string): number {

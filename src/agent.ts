@@ -6,6 +6,7 @@ import { mcpToolSchemas } from "./mcp.js";
 import { ui, startSpinner, stopSpinner } from "./ui.js";
 import { type Session, fullHistory, estimateTokens, compact } from "./context.js";
 import { recordUsage } from "./usage-store.js";
+import { newEventId, type AssistantCompletedPayload, type AssistantDeltaPayload } from "./events.js";
 
 export interface LoopOpts {
   /** Restrict the toolset (e.g. read-only tools for an architect subagent). */
@@ -37,6 +38,7 @@ export async function runLoop(
   const maxSteps = opts.maxSteps ?? 50;
   const p = opts.profile ?? defaultProfile(cfg);
   const quiet = env.quiet === true;
+  const legacyOutput = !quiet && env.legacyAssistantOutput !== false;
   let finalText = "";
 
   for (let step = 0; step < maxSteps; step++) {
@@ -51,14 +53,14 @@ export async function runLoop(
           status: "running",
           payload: { phase: "compacting", estimatedTokens: est, contextWindow: p.contextWindow },
         });
-        if (!quiet) startSpinner("compacting context");
+        if (legacyOutput) startSpinner("compacting context");
         const removed = await compact(p, session).catch(() => 0);
-        if (!quiet) stopSpinner();
-        if (removed > 0 && !quiet) ui.info(`  ↳ compacted ${removed} messages to stay within context`);
+        if (legacyOutput) stopSpinner();
+        if (removed > 0 && legacyOutput) ui.info(`  ↳ compacted ${removed} messages to stay within context`);
       }
     }
 
-    if (!quiet) startSpinner(opts.label ? `${opts.label} thinking` : "thinking");
+    if (legacyOutput) startSpinner(opts.label ? `${opts.label} thinking` : "thinking");
     env.emitEvent?.({
       type: "turn:update",
       tool: "agent",
@@ -68,6 +70,8 @@ export async function runLoop(
       payload: { phase: "thinking", step, model: p.model },
     });
     let started = false;
+    const messageId = newEventId("msg");
+    let deltaSequence = 0;
     const ensurePrefix = () => {
       if (!started) {
         stopSpinner();
@@ -86,21 +90,50 @@ export async function runLoop(
           onText: quiet
             ? undefined
             : (delta) => {
-                ensurePrefix();
-                process.stdout.write(delta);
+                const payload: AssistantDeltaPayload = {
+                  messageId,
+                  delta,
+                  model: p.model,
+                  step,
+                  sequence: ++deltaSequence,
+                  ...(opts.label ? { label: opts.label } : {}),
+                };
+                env.emitEvent?.({
+                  type: "assistant:delta",
+                  tool: "agent",
+                  title: opts.label ? `${opts.label} response` : "Assistant response",
+                  summary: summarizeAssistantText(delta),
+                  status: "running",
+                  payload,
+                });
+                if (legacyOutput) {
+                  ensurePrefix();
+                  process.stdout.write(delta);
+                }
               },
-          onToolCallStart: quiet ? undefined : () => stopSpinner(),
+          onToolCallStart: legacyOutput ? () => stopSpinner() : undefined,
         },
         opts.signal,
       );
     } catch (e) {
-      if (!quiet) stopSpinner();
+      if (legacyOutput) stopSpinner();
       const msg = `error: ${(e as Error).message}`;
-      if (!quiet) ui.error(msg);
+      if (!quiet) {
+        emitAssistantCompleted(env, {
+          messageId,
+          content: "",
+          model: p.model,
+          step,
+          finishReason: "error",
+          error: summarizeAssistantText((e as Error).message),
+          ...(opts.label ? { label: opts.label } : {}),
+        }, "error");
+      }
+      if (legacyOutput) ui.error(msg);
       throw e;
     }
-    if (!quiet) stopSpinner();
-    if (started) ui.newline();
+    if (legacyOutput) stopSpinner();
+    if (legacyOutput && started) ui.newline();
 
     if (turn.usage) {
       session.totalPromptTokens += turn.usage.prompt_tokens ?? 0;
@@ -116,6 +149,16 @@ export async function runLoop(
     // Cancelled mid-turn: record whatever streamed and stop cleanly.
     if (turn.aborted) {
       session.messages.push({ role: "assistant", content: turn.content || "[interrupted]" });
+      if (!quiet) {
+        emitAssistantCompleted(env, {
+          messageId,
+          content: turn.content,
+          model: p.model,
+          step,
+          finishReason: "interrupted",
+          ...(opts.label ? { label: opts.label } : {}),
+        }, "interrupted");
+      }
       env.emitEvent?.({
         type: "turn:update",
         tool: "agent",
@@ -124,7 +167,7 @@ export async function runLoop(
         status: "interrupted",
         payload: { phase: "interrupted", step },
       });
-      if (!quiet) ui.warn("  ⏹ interrupted");
+      if (legacyOutput) ui.warn("  ⏹ interrupted");
       return turn.content || finalText;
     }
 
@@ -135,6 +178,18 @@ export async function runLoop(
     };
     session.messages.push(assistantMsg);
     if (turn.content) finalText = turn.content;
+
+    if (!quiet) {
+      emitAssistantCompleted(env, {
+        messageId,
+        content: turn.content,
+        model: p.model,
+        step,
+        finishReason: turn.content || turn.tool_calls.length ? "completed" : "error",
+        toolCallCount: turn.tool_calls.length,
+        ...(opts.label ? { label: opts.label } : {}),
+      }, turn.content || turn.tool_calls.length ? "done" : "error");
+    }
 
     if (!turn.tool_calls.length) return finalText;
 
@@ -162,7 +217,7 @@ export async function runLoop(
           status: "interrupted",
           payload: { phase: "interrupted", step },
         });
-        if (!quiet) ui.warn("  ⏹ interrupted");
+        if (legacyOutput) ui.warn("  ⏹ interrupted");
         return finalText;
       }
       const outcome = await executeTool(env, call.function.name, call.function.arguments);
@@ -175,8 +230,28 @@ export async function runLoop(
     }
   }
 
-  ui.warn(`  ↳ stopped after ${maxSteps} tool steps (possible loop)`);
+  if (legacyOutput) ui.warn(`  ↳ stopped after ${maxSteps} tool steps (possible loop)`);
   return finalText;
+}
+
+function emitAssistantCompleted(
+  env: ExecEnv,
+  payload: AssistantCompletedPayload,
+  status: "done" | "error" | "interrupted",
+): void {
+  env.emitEvent?.({
+    type: "assistant:completed",
+    tool: "agent",
+    title: status === "error" ? "Assistant response failed" : status === "interrupted" ? "Assistant response interrupted" : "Assistant response complete",
+    summary: summarizeAssistantText(payload.content) || (status === "error" ? "empty or failed response" : status),
+    status,
+    payload,
+  });
+}
+
+function summarizeAssistantText(value: string): string {
+  const text = value.replace(/\s+/g, " ").trim();
+  return text.length > 160 ? `${text.slice(0, 157)}...` : text;
 }
 
 /** Interactive single user turn (the REPL entry point). */
