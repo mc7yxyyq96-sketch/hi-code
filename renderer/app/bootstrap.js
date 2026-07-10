@@ -524,10 +524,17 @@ if (!window.hicode) {
     listRecoverableTasks: async () => [
       {
         id: "demo-recovery-1",
+        sessionId: "demo-1",
+        turnId: "demo-1-turn-1",
         title: "Run npm test",
-        summary: "exit 1",
+        summary: "模型输出中断，可以从原会话安全重试",
         status: "error",
         retryInput: "!npm test",
+        phase: "streaming",
+        recoveryAction: "retry_turn",
+        canRetry: true,
+        requiresApproval: false,
+        reason: "模型输出中断，可以从原会话安全重试",
         createdAt: Date.now() - 1000 * 60 * 7,
         updatedAt: Date.now() - 1000 * 60 * 7,
         durationMs: 12_400,
@@ -2469,17 +2476,45 @@ function renderRecoverableTasks() {
         <span class="recovery-title"></span>
         <span class="recovery-meta"></span>
       </span>
-      <button class="timeline-action recovery-retry" type="button">Retry</button>
+      <button class="timeline-action recovery-retry" type="button"></button>
     `;
     row.querySelector(".recovery-status").textContent = statusText(task.status);
-    row.querySelector(".recovery-title").textContent = task.summary || task.title || "可恢复任务";
+    row.querySelector(".recovery-title").textContent = task.title || task.summary || "可恢复任务";
     row.querySelector(".recovery-meta").textContent = recoveryMeta(task);
-    row.querySelector(".recovery-retry").onclick = () => {
-      if (busy) return addSystemNote("当前任务还在执行，稍后再重试。");
-      runLine(String(task.retryInput || ""));
-    };
+    const action = row.querySelector(".recovery-retry");
+    action.textContent = recoveryActionLabel(task);
+    action.onclick = () => handleRecoverableTask(task);
     recoveryList.appendChild(row);
   }
+}
+
+async function handleRecoverableTask(task) {
+  if (busy) return addSystemNote("当前任务还在执行，稍后再处理恢复任务。");
+  if (!task?.sessionId) return addSystemNote("恢复记录缺少原会话标识，已阻止在当前会话中执行。");
+  await openSession(task.sessionId);
+  if (currentSessionId !== task.sessionId) return addSystemNote("未能恢复原会话，已阻止重试。");
+
+  const action = task.recoveryAction || "inspect_tool";
+  if ((action === "retry_turn" || action === "retry_with_approval") && task.canRetry === true) {
+    if (sessionMetaById(task.sessionId)?.replayOnly) {
+      return addSystemNote("该会话目前只能回放，无法安全恢复运行时；请检查记录后手动创建新任务。");
+    }
+    const retryInput = String(task.retryInput || "").trim();
+    if (!retryInput) return addSystemNote("恢复记录缺少原始输入，已阻止空任务重试。");
+    if (action === "retry_with_approval") addSystemNote("已恢复原会话；本次重试会重新请求人工审批。");
+    return runLine(retryInput);
+  }
+
+  addSystemNote(task.reason || "已打开原会话。请先检查未完成输出和工具副作用，再决定后续操作。");
+}
+
+function recoveryActionLabel(task) {
+  return {
+    retry_turn: "重试",
+    retry_with_approval: "重新确认",
+    review_output: "查看输出",
+    inspect_tool: "检查状态",
+  }[task?.recoveryAction] || "检查状态";
 }
 
 function renderTimeline() {
@@ -2549,7 +2584,18 @@ function recoveryMeta(task) {
   if (when) bits.push(new Date(when).toLocaleString());
   const duration = formatDuration(task.durationMs);
   if (duration) bits.push(duration);
-  if (task.title && task.title !== task.summary) bits.push(task.title);
+  const phase = {
+    running_model: "模型运行中断",
+    streaming: "流式输出中断",
+    waiting_approval: "等待审批",
+    tool_running: "工具状态未知",
+    failed: "执行失败",
+    denied: "审批已拒绝",
+    interrupted: "任务已中断",
+  }[task.phase];
+  if (phase) bits.push(phase);
+  if (task.partialAssistantText) bits.push(`保留 ${task.partialAssistantText.length} 字输出${task.partialOutputTruncated ? "（已截断）" : ""}`);
+  if (task.reason) bits.push(task.reason);
   return bits.filter(Boolean).join(" · ");
 }
 
