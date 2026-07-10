@@ -1,0 +1,283 @@
+{
+  "schemaVersion": 1,
+  "evidenceType": "release-candidate-acceptance",
+  "taskId": "HC-REL-ALPHA-7",
+  "source": {
+    "version": "0.6.0-alpha.7",
+    "parentCommit": "d36923bed32267a5bfb3433e4450307060cbda69",
+    "branch": "codex/release/0.6.0-alpha.7"
+  },
+  "capture": {
+    "startedAt": "2026-07-10T14:07:47.771Z",
+    "completedAt": "2026-07-10T14:08:15.461Z",
+    "workingTreeClean": false,
+    "dirtyPaths": [
+      ".gitignore",
+      "VERSION",
+      "docs/runtime-protocol.md",
+      "package-lock.json",
+      "package.json",
+      "planning/backlog.json",
+      "planning/release-board.json",
+      "reports/program/status.md",
+      "scripts/capture-task-evidence.mjs",
+      "test/program-control-tests.mjs",
+      "reports/evidence/HC-REL-ALPHA-7/",
+      "reports/releases/",
+      "reports/tasks/HC-REL-ALPHA-7.md"
+    ],
+    "note": "Task evidence is captured before the task commit; artifact hashes bind the tested implementation and reviewed screenshots."
+  },
+  "environment": {
+    "platform": "darwin",
+    "architecture": "arm64",
+    "osRelease": "25.5.0",
+    "node": "v22.16.0"
+  },
+  "artifacts": [
+    {
+      "path": "VERSION",
+      "bytes": 14,
+      "sha256": "ebe20439d8124bdfb8d2a62f39a666d682f14d9d9b2c1e3309b5de3b9dc12f37"
+    },
+    {
+      "path": "package.json",
+      "bytes": 4796,
+      "sha256": "da02960adce7ba3b340fa9c786e083ea8c30b80dadafdafa10110b8a5fbb0007"
+    },
+    {
+      "path": "package-lock.json",
+      "bytes": 197176,
+      "sha256": "1d9df76085fe5bbd8077c66d6da1b9d9557f4dd3f2391decf7758f3e06a7ee91"
+    },
+    {
+      "path": "planning/backlog.json",
+      "bytes": 14183,
+      "sha256": "2c826386edf0f7a3f9cd53f8bb766b5ff9d4ab1748651b4850b35437fea202e4"
+    },
+    {
+      "path": "planning/release-board.json",
+      "bytes": 4331,
+      "sha256": "1f205a2b70cc977803019b0e2f03add106fe99e6ba7913b42c41b5bd8795953d"
+    },
+    {
+      "path": "reports/program/status.md",
+      "bytes": 4168,
+      "sha256": "8070dd7374175fb824be06ac000edf90184d118748bbc4eebabc1d423d3a7152"
+    },
+    {
+      "path": "reports/program/risks.json",
+      "bytes": 4813,
+      "sha256": "f0b451d90848cb3970075a7074e5d092d4f4d7c8ed9e4888d8223a050dfbd716"
+    },
+    {
+      "path": "reports/releases/0.6.0-alpha.7/capability-matrix.md",
+      "bytes": 2012,
+      "sha256": "b01d9676b8d75a2caa4e70a12e3373663c576bfef1be062fad4ef1aac74e7664"
+    },
+    {
+      "path": "reports/releases/0.6.0-alpha.7/migration-report.md",
+      "bytes": 1311,
+      "sha256": "b4022c8009dc7870fa0072ab1cdde6e9fc12bc7f8c24c80731bd07a34f40b131"
+    },
+    {
+      "path": "reports/releases/0.6.0-alpha.7/security-report.md",
+      "bytes": 1404,
+      "sha256": "5148e627a128abeeb947b8a796ad97260802116bf728b74572056944a8cb0e05"
+    },
+    {
+      "path": "reports/releases/0.6.0-alpha.7/e2e-report.md",
+      "bytes": 974,
+      "sha256": "da957d2d50f259a95d63aa1dba4a1004a54aef1f75170dde19c800d89f9ea966"
+    },
+    {
+      "path": "reports/releases/0.6.0-alpha.7/known-limitations.md",
+      "bytes": 957,
+      "sha256": "70dbc6b74b183699a96865f3e349f85381be7bca34774467ea5054cedcd2b132"
+    },
+    {
+      "path": "reports/releases/0.6.0-alpha.7/release-evidence.md",
+      "bytes": 1043,
+      "sha256": "d4cf44b2a7495ba38d320ae2eb61b0835ca83e8c5353c671ec60fa2196d0c109"
+    },
+    {
+      "path": "reports/tasks/HC-PROG-100.md",
+      "bytes": 3301,
+      "sha256": "4f269520cb4aba3563c281bd2da26d4acc1d8b6fd5f7a1c6acbfbbfc0eadf539"
+    },
+    {
+      "path": "reports/tasks/HC-QA-101.md",
+      "bytes": 2851,
+      "sha256": "5cdb12b6b3e1c825662a3f38e225476aff0f72a2dc5b4df6e79106b5113413fa"
+    },
+    {
+      "path": "reports/tasks/HC-RUN-201.md",
+      "bytes": 3404,
+      "sha256": "c02b5192cedcbb377baa3e06866e7159d6f921dbec94446bbc45942280902565"
+    },
+    {
+      "path": "reports/tasks/HC-REL-ALPHA-7.md",
+      "bytes": 1794,
+      "sha256": "d0d4a38cf8930cd3e6b7054afba312c7a7a8190e01081d40fbe508eea030d735"
+    },
+    {
+      "path": "reports/evidence/baseline/manifest.json",
+      "bytes": 6551,
+      "sha256": "b550963f4d5f72fc4728002cafb5e60c0119301a64388e4a2a0acd94bebf4c24"
+    },
+    {
+      "path": "reports/evidence/HC-QA-101/manifest.json",
+      "bytes": 9091,
+      "sha256": "4ee9c6cd8dc4f9d818185e29290ac0bb8f8582d6e4745a2488afdbeb3242f95b"
+    },
+    {
+      "path": "reports/evidence/HC-RUN-201/manifest.json",
+      "bytes": 10889,
+      "sha256": "e4e45f75854cc182d0d78089149c247b12d85dd19fc0dc05bd25bca039f3cf78"
+    },
+    {
+      "path": "docs/runtime-protocol.md",
+      "bytes": 7478,
+      "sha256": "4cf585edb1312b0fb7fa9b336bf35b428c109c19f6124183ac9ab4ede39d68f7"
+    },
+    {
+      "path": "scripts/capture-task-evidence.mjs",
+      "bytes": 11683,
+      "sha256": "466d6bff6766c62d6f79b4475ea99f4cd4c57f1a80e8fc1a5bed16e501ac2166"
+    },
+    {
+      "path": "test/program-control-tests.mjs",
+      "bytes": 10869,
+      "sha256": "0be59a8f34a52d8fb852dddd5688244d16b40eb55854e052f4b67c4572d6b525"
+    }
+  ],
+  "commands": [
+    {
+      "id": "build",
+      "command": "npm run build",
+      "startedAt": "2026-07-10T14:07:47.784Z",
+      "endedAt": "2026-07-10T14:07:48.844Z",
+      "durationMs": 1060,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-REL-ALPHA-7/logs/build.log",
+      "logSha256": "17e6624484486c543e9a3e4f9007c750423ba27af0634a3bf3474f0a0ce9d36c"
+    },
+    {
+      "id": "verify",
+      "command": "npm run verify",
+      "startedAt": "2026-07-10T14:07:48.845Z",
+      "endedAt": "2026-07-10T14:07:56.467Z",
+      "durationMs": 7622,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-REL-ALPHA-7/logs/verify.log",
+      "logSha256": "338220ffd8cc05345057200be7fa2cf0754a129b7e801b46e46c26e4f611a754"
+    },
+    {
+      "id": "release-check",
+      "command": "npm run release:check",
+      "startedAt": "2026-07-10T14:07:56.468Z",
+      "endedAt": "2026-07-10T14:08:05.632Z",
+      "durationMs": 9164,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-REL-ALPHA-7/logs/release-check.log",
+      "logSha256": "b2b67dc931171a64b0d9073395cd0aeac3bd0b49aef56232e6347e99285b5db6"
+    },
+    {
+      "id": "feature-tests",
+      "command": "/Applications/QClaw.app/Contents/Resources/node/node test/feature-tests.mjs",
+      "startedAt": "2026-07-10T14:08:05.633Z",
+      "endedAt": "2026-07-10T14:08:07.461Z",
+      "durationMs": 1828,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-REL-ALPHA-7/logs/feature-tests.log",
+      "logSha256": "e58ffdb75e4f22f322c47e1b8f4a404d9ed125898e6ee4a6ff2c7fe78a621d5b"
+    },
+    {
+      "id": "security-tests",
+      "command": "npm run test:security",
+      "startedAt": "2026-07-10T14:08:07.461Z",
+      "endedAt": "2026-07-10T14:08:07.651Z",
+      "durationMs": 190,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-REL-ALPHA-7/logs/security-tests.log",
+      "logSha256": "9cd66b32eb8c28b4d946ccb5b11d44c9453980066211e65bed845750f00bb60e"
+    },
+    {
+      "id": "dod-tests",
+      "command": "npm run test:dod",
+      "startedAt": "2026-07-10T14:08:07.651Z",
+      "endedAt": "2026-07-10T14:08:07.987Z",
+      "durationMs": 336,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-REL-ALPHA-7/logs/dod-tests.log",
+      "logSha256": "7b930c4c653e5308cdf9d7214d261a7f56c846fe9e4b5abc8ddc1ea52d5e1de0"
+    },
+    {
+      "id": "dod-scan",
+      "command": "npm run scan:dod",
+      "startedAt": "2026-07-10T14:08:07.987Z",
+      "endedAt": "2026-07-10T14:08:08.262Z",
+      "durationMs": 275,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-REL-ALPHA-7/logs/dod-scan.log",
+      "logSha256": "43cb6195cdbe03bd825d6f612ecac56f4b560729cd8f454e0a14b129c9e6e7d3"
+    },
+    {
+      "id": "production-audit",
+      "command": "npm run audit:prod",
+      "startedAt": "2026-07-10T14:08:08.262Z",
+      "endedAt": "2026-07-10T14:08:09.562Z",
+      "durationMs": 1300,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-REL-ALPHA-7/logs/production-audit.log",
+      "logSha256": "906907c650e2e56216501e3c86b5a1793c95580e8f99bb271a8a3f2abba3349e"
+    },
+    {
+      "id": "electron-e2e",
+      "command": "npm run test:electron-e2e",
+      "startedAt": "2026-07-10T14:08:09.563Z",
+      "endedAt": "2026-07-10T14:08:15.232Z",
+      "durationMs": 5669,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-REL-ALPHA-7/logs/electron-e2e.log",
+      "logSha256": "5358e1e2b0b9218a3d8a2c09a273edb34516028cc99e1c43c1b51efc89a2eeb9"
+    },
+    {
+      "id": "program-control",
+      "command": "npm run test:program",
+      "startedAt": "2026-07-10T14:08:15.233Z",
+      "endedAt": "2026-07-10T14:08:15.435Z",
+      "durationMs": 202,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-REL-ALPHA-7/logs/program-control.log",
+      "logSha256": "a9646a0516173f765eb4c789c4e661f2ecd31efc76a0d094ee0c64f73a593d44"
+    },
+    {
+      "id": "git-diff-check",
+      "command": "git diff --check",
+      "startedAt": "2026-07-10T14:08:15.435Z",
+      "endedAt": "2026-07-10T14:08:15.447Z",
+      "durationMs": 12,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-REL-ALPHA-7/logs/git-diff-check.log",
+      "logSha256": "3d4d50cd32af92c6d4df37c1df74a96622fca8cfb5643a155c91f034a42f2068"
+    }
+  ],
+  "summary": {
+    "total": 11,
+    "passed": 11,
+    "failed": 0,
+    "allPassed": true
+  }
+}

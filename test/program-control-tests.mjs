@@ -43,9 +43,17 @@ const requiredFiles = [
   "reports/tasks/HC-PROG-100.md",
   "reports/tasks/HC-QA-101.md",
   "reports/tasks/HC-RUN-201.md",
+  "reports/tasks/HC-REL-ALPHA-7.md",
   "reports/evidence/baseline/manifest.json",
   "reports/evidence/HC-QA-101/manifest.json",
   "reports/evidence/HC-RUN-201/manifest.json",
+  "reports/evidence/HC-REL-ALPHA-7/manifest.json",
+  "reports/releases/0.6.0-alpha.7/capability-matrix.md",
+  "reports/releases/0.6.0-alpha.7/migration-report.md",
+  "reports/releases/0.6.0-alpha.7/security-report.md",
+  "reports/releases/0.6.0-alpha.7/e2e-report.md",
+  "reports/releases/0.6.0-alpha.7/known-limitations.md",
+  "reports/releases/0.6.0-alpha.7/release-evidence.md",
 ];
 
 console.log("\n[program-control] required artifacts");
@@ -59,8 +67,14 @@ const risks = readJson(root, "reports/program/risks.json");
 const manifest = readJson(root, "reports/evidence/baseline/manifest.json");
 const qaManifest = readJson(root, "reports/evidence/HC-QA-101/manifest.json");
 const runtimeManifest = readJson(root, "reports/evidence/HC-RUN-201/manifest.json");
+const releaseManifest = readJson(root, "reports/evidence/HC-REL-ALPHA-7/manifest.json");
 const packageJson = readJson(root, "package.json");
+const packageLock = readJson(root, "package-lock.json");
 const programTask = backlog.tasks.find((task) => task.id === "HC-PROG-100");
+const runtimeBacklogTask = backlog.tasks.find((task) => task.id === "HC-RUN-201");
+const nextRuntimeTask = backlog.tasks.find((task) => task.id === "HC-RUN-202");
+const platformTask = backlog.tasks.find((task) => task.id === "HC-PLAT-110");
+const uiShellTask = backlog.tasks.find((task) => task.id === "HC-UI-301");
 const qaTask = board.tasks.find((task) => task.id === "HC-QA-101");
 const runtimeTask = board.tasks.find((task) => task.id === "HC-RUN-201");
 
@@ -77,6 +91,12 @@ check(
   JSON.stringify(runtimeTask),
 );
 check("runtime event sink gate passed", board.gates?.find((gate) => gate.id === "runtime-event-sink")?.status === "passed");
+check("HC-RUN-201 completion is reflected in backlog", runtimeBacklogTask?.status === "completed" && runtimeBacklogTask?.evidenceManifest === "reports/evidence/HC-RUN-201/manifest.json");
+check("HC-RUN-202 is dependency-ready", nextRuntimeTask?.status === "ready" && nextRuntimeTask?.dependencies?.every((id) => backlog.tasks.find((task) => task.id === id)?.status === "completed"));
+check("HC-PLAT-110 is dependency-ready", platformTask?.status === "ready" && platformTask?.dependencies?.every((id) => backlog.tasks.find((task) => task.id === id)?.status === "completed"));
+check("HC-UI-301 is dependency-ready", uiShellTask?.status === "ready" && uiShellTask?.dependencies?.every((id) => backlog.tasks.find((task) => task.id === id)?.status === "completed"));
+check("alpha.7 version is synchronized", packageJson.version === "0.6.0-alpha.7" && packageLock.version === packageJson.version && packageLock.packages?.[""]?.version === packageJson.version && fs.readFileSync(path.join(root, "VERSION"), "utf8").trim() === packageJson.version);
+check("alpha.7 release candidate gate passed", board.candidate?.version === packageJson.version && board.candidate?.status === "passed" && board.gates?.find((gate) => gate.id === "alpha-7-release-candidate")?.status === "passed");
 check("risk register has active risks", Array.isArray(risks.risks) && risks.risks.length > 0);
 check("baseline records source commit", manifest.source?.commit === backlog.sourceCommit);
 check("baseline records every gate passing", manifest.summary?.allPassed === true, JSON.stringify(manifest.summary));
@@ -102,6 +122,17 @@ for (const command of runtimeManifest.commands || []) {
   check(`HC-RUN-201 ${command.id} log exists`, Boolean(command.logPath) && fs.existsSync(absolute));
   if (fs.existsSync(absolute)) check(`HC-RUN-201 ${command.id} log hash matches`, digest(absolute) === command.logSha256);
 }
+check("alpha.7 evidence records every command passing", releaseManifest.summary?.allPassed === true && releaseManifest.summary?.total === 11, JSON.stringify(releaseManifest.summary));
+check("alpha.7 evidence is captured from its release branch", releaseManifest.source?.branch === "codex/release/0.6.0-alpha.7" && releaseManifest.source?.version === packageJson.version);
+for (const requiredCommand of ["build", "verify", "release-check", "feature-tests", "security-tests", "dod-tests", "dod-scan", "production-audit", "electron-e2e", "program-control", "git-diff-check"]) {
+  check(`alpha.7 captured ${requiredCommand}`, releaseManifest.commands?.some((command) => command.id === requiredCommand && command.status === "passed"));
+}
+for (const command of releaseManifest.commands || []) {
+  const absolute = path.join(root, command.logPath || "");
+  check(`alpha.7 ${command.id} log exists`, Boolean(command.logPath) && fs.existsSync(absolute));
+  if (fs.existsSync(absolute)) check(`alpha.7 ${command.id} log hash matches`, digest(absolute) === command.logSha256);
+}
+check("alpha.7 capability report does not claim event-only resume", fs.readFileSync(path.join(root, "reports/releases/0.6.0-alpha.7/capability-matrix.md"), "utf8").includes("Full event-only context reconstruction | Not delivered"));
 check("historical final acceptance is explicitly named", fs.existsSync(path.join(root, "reports/final-acceptance-historical.md")));
 check("unmarked final acceptance path is absent", !fs.existsSync(path.join(root, "reports/final-acceptance.md")));
 check("audit archive policy is present", fs.readFileSync(path.join(root, "reports/audit/README.md"), "utf8").includes("not current release status"));

@@ -5,7 +5,7 @@
   "sourceCommit": "6ed9ed666bb817f8d1e863c76b0bf61b31c7b52d",
   "horizonDays": 90,
   "status": "active",
-  "updatedAt": "2026-07-10T10:14:14Z",
+  "updatedAt": "2026-07-10T13:56:17Z",
   "principles": [
     "Runtime Protocol is the single source of truth",
     "No big-bang rewrite",
@@ -56,7 +56,11 @@
       "dependencies": ["HC-PROG-100"],
       "deliverables": ["RuntimeEventSink", "assistant delta/completed events", "desktop/CLI/TUI adapters", "concurrency tests"],
       "acceptance": ["model output is emitted through protocol", "parallel sessions do not mix output", "desktop turn works with stdout bridge disabled"],
-      "status": "planned"
+      "status": "completed",
+      "completedAt": "2026-07-10T12:08:12Z",
+      "branch": "codex/runtime-engine/hc-run-201",
+      "evidence": "reports/tasks/HC-RUN-201.md",
+      "evidenceManifest": "reports/evidence/HC-RUN-201/manifest.json"
     },
     {
       "id": "HC-RUN-202",
@@ -68,7 +72,7 @@
       "dependencies": ["HC-RUN-201"],
       "deliverables": ["store interfaces", "full message/tool/approval/diff replay", "v1 importer", "recovery fixtures"],
       "acceptance": ["full conversation rebuilds without session JSON", "event-only session is resumable", "idempotent sequence handling"],
-      "status": "planned"
+      "status": "ready"
     },
     {
       "id": "HC-RUN-203",
@@ -92,7 +96,7 @@
       "dependencies": ["HC-QA-101"],
       "deliverables": ["supported Electron version", "native dependency rebuild plan", "three-platform startup smoke"],
       "acceptance": ["all existing tests pass", "Electron E2E passes", "security settings unchanged or stronger"],
-      "status": "planned"
+      "status": "ready"
     },
     {
       "id": "HC-PROV-210",
@@ -152,7 +156,7 @@
       "dependencies": ["HC-RUN-201", "HC-QA-101"],
       "deliverables": ["new app shell", "legacy panel adapter", "routing/state boundaries"],
       "acceptance": ["no big-bang rewrite", "existing views remain available", "720-1920 layouts pass"],
-      "status": "planned"
+      "status": "ready"
     },
     {
       "id": "HC-UI-302",

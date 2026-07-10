@@ -96,6 +96,47 @@ const profiles = {
       "tests/electron-e2e/run.mjs"
     ],
   },
+  "HC-REL-ALPHA-7": {
+    evidenceType: "release-candidate-acceptance",
+    commands: [
+      { id: "build", command: npm, args: ["run", "build"] },
+      { id: "verify", command: npm, args: ["run", "verify"] },
+      { id: "release-check", command: npm, args: ["run", "release:check"] },
+      { id: "feature-tests", command: node, args: ["test/feature-tests.mjs"] },
+      { id: "security-tests", command: npm, args: ["run", "test:security"] },
+      { id: "dod-tests", command: npm, args: ["run", "test:dod"] },
+      { id: "dod-scan", command: npm, args: ["run", "scan:dod"] },
+      { id: "production-audit", command: npm, args: ["run", "audit:prod"] },
+      { id: "electron-e2e", command: npm, args: ["run", "test:electron-e2e"] },
+      { id: "program-control", command: npm, args: ["run", "test:program"] },
+      { id: "git-diff-check", command: "git", args: ["diff", "--check"] },
+    ],
+    keyArtifacts: [
+      "VERSION",
+      "package.json",
+      "package-lock.json",
+      "planning/backlog.json",
+      "planning/release-board.json",
+      "reports/program/status.md",
+      "reports/program/risks.json",
+      "reports/releases/0.6.0-alpha.7/capability-matrix.md",
+      "reports/releases/0.6.0-alpha.7/migration-report.md",
+      "reports/releases/0.6.0-alpha.7/security-report.md",
+      "reports/releases/0.6.0-alpha.7/e2e-report.md",
+      "reports/releases/0.6.0-alpha.7/known-limitations.md",
+      "reports/releases/0.6.0-alpha.7/release-evidence.md",
+      "reports/tasks/HC-PROG-100.md",
+      "reports/tasks/HC-QA-101.md",
+      "reports/tasks/HC-RUN-201.md",
+      "reports/tasks/HC-REL-ALPHA-7.md",
+      "reports/evidence/baseline/manifest.json",
+      "reports/evidence/HC-QA-101/manifest.json",
+      "reports/evidence/HC-RUN-201/manifest.json",
+      "docs/runtime-protocol.md",
+      "scripts/capture-task-evidence.mjs",
+      "test/program-control-tests.mjs"
+    ],
+  },
 };
 
 function safeProcessEnv() {

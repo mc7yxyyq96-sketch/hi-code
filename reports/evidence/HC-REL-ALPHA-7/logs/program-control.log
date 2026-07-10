@@ -1,0 +1,177 @@
+$ npm run test:program
+
+[program-control] required artifacts
+  ✓ docs/program/PROGRAM.md exists and is non-empty
+  ✓ docs/program/ARCHITECTURE.md exists and is non-empty
+  ✓ docs/adr/README.md exists and is non-empty
+  ✓ docs/adr/ADR-0001-program-control-and-evidence.md exists and is non-empty
+  ✓ docs/adr/ADR-0002-runtime-protocol-authority-migration.md exists and is non-empty
+  ✓ planning/backlog.json exists and is non-empty
+  ✓ planning/release-board.json exists and is non-empty
+  ✓ reports/program/status.md exists and is non-empty
+  ✓ reports/program/risks.json exists and is non-empty
+  ✓ reports/tasks/HC-PROG-100.md exists and is non-empty
+  ✓ reports/tasks/HC-QA-101.md exists and is non-empty
+  ✓ reports/tasks/HC-RUN-201.md exists and is non-empty
+  ✓ reports/tasks/HC-REL-ALPHA-7.md exists and is non-empty
+  ✓ reports/evidence/baseline/manifest.json exists and is non-empty
+  ✓ reports/evidence/HC-QA-101/manifest.json exists and is non-empty
+  ✓ reports/evidence/HC-RUN-201/manifest.json exists and is non-empty
+  ✓ reports/evidence/HC-REL-ALPHA-7/manifest.json exists and is non-empty
+  ✓ reports/releases/0.6.0-alpha.7/capability-matrix.md exists and is non-empty
+  ✓ reports/releases/0.6.0-alpha.7/migration-report.md exists and is non-empty
+  ✓ reports/releases/0.6.0-alpha.7/security-report.md exists and is non-empty
+  ✓ reports/releases/0.6.0-alpha.7/e2e-report.md exists and is non-empty
+  ✓ reports/releases/0.6.0-alpha.7/known-limitations.md exists and is non-empty
+  ✓ reports/releases/0.6.0-alpha.7/release-evidence.md exists and is non-empty
+
+[program-control] board and evidence contract
+  ✓ backlog records immutable source commit
+  ✓ HC-PROG-100 is completed
+  ✓ release board keeps QA dependency
+  ✓ HC-QA-101 is completed with evidence
+  ✓ Electron responsive gate passed
+  ✓ release board keeps runtime dependency
+  ✓ HC-RUN-201 is completed with evidence
+  ✓ runtime event sink gate passed
+  ✓ HC-RUN-201 completion is reflected in backlog
+  ✓ HC-RUN-202 is dependency-ready
+  ✓ HC-PLAT-110 is dependency-ready
+  ✓ HC-UI-301 is dependency-ready
+  ✓ alpha.7 version is synchronized
+  ✓ alpha.7 release candidate gate passed
+  ✓ risk register has active risks
+  ✓ baseline records source commit
+  ✓ baseline records every gate passing
+  ✓ baseline records no runtime product dirt
+  ✓ build log exists
+  ✓ build log hash matches
+  ✓ verify log exists
+  ✓ verify log hash matches
+  ✓ release-check log exists
+  ✓ release-check log hash matches
+  ✓ feature-tests log exists
+  ✓ feature-tests log hash matches
+  ✓ security-tests log exists
+  ✓ security-tests log hash matches
+  ✓ dod-tests log exists
+  ✓ dod-tests log hash matches
+  ✓ dod-scan log exists
+  ✓ dod-scan log hash matches
+  ✓ production-audit log exists
+  ✓ production-audit log hash matches
+  ✓ git-diff-check log exists
+  ✓ git-diff-check log hash matches
+  ✓ HC-QA-101 evidence records every command passing
+  ✓ HC-QA-101 build log exists
+  ✓ HC-QA-101 build log hash matches
+  ✓ HC-QA-101 verify log exists
+  ✓ HC-QA-101 verify log hash matches
+  ✓ HC-QA-101 release-check log exists
+  ✓ HC-QA-101 release-check log hash matches
+  ✓ HC-QA-101 feature-tests log exists
+  ✓ HC-QA-101 feature-tests log hash matches
+  ✓ HC-QA-101 security-tests log exists
+  ✓ HC-QA-101 security-tests log hash matches
+  ✓ HC-QA-101 dod-tests log exists
+  ✓ HC-QA-101 dod-tests log hash matches
+  ✓ HC-QA-101 dod-scan log exists
+  ✓ HC-QA-101 dod-scan log hash matches
+  ✓ HC-QA-101 production-audit log exists
+  ✓ HC-QA-101 production-audit log hash matches
+  ✓ HC-QA-101 electron-e2e log exists
+  ✓ HC-QA-101 electron-e2e log hash matches
+  ✓ HC-QA-101 git-diff-check log exists
+  ✓ HC-QA-101 git-diff-check log hash matches
+  ✓ HC-RUN-201 evidence records every command passing
+  ✓ HC-RUN-201 evidence is captured from its task branch
+  ✓ HC-RUN-201 captured build
+  ✓ HC-RUN-201 captured verify
+  ✓ HC-RUN-201 captured release-check
+  ✓ HC-RUN-201 captured feature-tests
+  ✓ HC-RUN-201 captured runtime-events
+  ✓ HC-RUN-201 captured runtime-concurrency
+  ✓ HC-RUN-201 captured runtime-clients
+  ✓ HC-RUN-201 captured security-tests
+  ✓ HC-RUN-201 captured dod-tests
+  ✓ HC-RUN-201 captured dod-scan
+  ✓ HC-RUN-201 captured production-audit
+  ✓ HC-RUN-201 captured electron-e2e
+  ✓ HC-RUN-201 captured git-diff-check
+  ✓ HC-RUN-201 build log exists
+  ✓ HC-RUN-201 build log hash matches
+  ✓ HC-RUN-201 verify log exists
+  ✓ HC-RUN-201 verify log hash matches
+  ✓ HC-RUN-201 release-check log exists
+  ✓ HC-RUN-201 release-check log hash matches
+  ✓ HC-RUN-201 feature-tests log exists
+  ✓ HC-RUN-201 feature-tests log hash matches
+  ✓ HC-RUN-201 runtime-events log exists
+  ✓ HC-RUN-201 runtime-events log hash matches
+  ✓ HC-RUN-201 runtime-concurrency log exists
+  ✓ HC-RUN-201 runtime-concurrency log hash matches
+  ✓ HC-RUN-201 runtime-clients log exists
+  ✓ HC-RUN-201 runtime-clients log hash matches
+  ✓ HC-RUN-201 security-tests log exists
+  ✓ HC-RUN-201 security-tests log hash matches
+  ✓ HC-RUN-201 dod-tests log exists
+  ✓ HC-RUN-201 dod-tests log hash matches
+  ✓ HC-RUN-201 dod-scan log exists
+  ✓ HC-RUN-201 dod-scan log hash matches
+  ✓ HC-RUN-201 production-audit log exists
+  ✓ HC-RUN-201 production-audit log hash matches
+  ✓ HC-RUN-201 electron-e2e log exists
+  ✓ HC-RUN-201 electron-e2e log hash matches
+  ✓ HC-RUN-201 git-diff-check log exists
+  ✓ HC-RUN-201 git-diff-check log hash matches
+  ✓ alpha.7 evidence records every command passing
+  ✓ alpha.7 evidence is captured from its release branch
+  ✓ alpha.7 captured build
+  ✓ alpha.7 captured verify
+  ✓ alpha.7 captured release-check
+  ✓ alpha.7 captured feature-tests
+  ✓ alpha.7 captured security-tests
+  ✓ alpha.7 captured dod-tests
+  ✓ alpha.7 captured dod-scan
+  ✓ alpha.7 captured production-audit
+  ✓ alpha.7 captured electron-e2e
+  ✓ alpha.7 captured program-control
+  ✓ alpha.7 captured git-diff-check
+  ✓ alpha.7 build log exists
+  ✓ alpha.7 build log hash matches
+  ✓ alpha.7 verify log exists
+  ✓ alpha.7 verify log hash matches
+  ✓ alpha.7 release-check log exists
+  ✓ alpha.7 release-check log hash matches
+  ✓ alpha.7 feature-tests log exists
+  ✓ alpha.7 feature-tests log hash matches
+  ✓ alpha.7 security-tests log exists
+  ✓ alpha.7 security-tests log hash matches
+  ✓ alpha.7 dod-tests log exists
+  ✓ alpha.7 dod-tests log hash matches
+  ✓ alpha.7 dod-scan log exists
+  ✓ alpha.7 dod-scan log hash matches
+  ✓ alpha.7 production-audit log exists
+  ✓ alpha.7 production-audit log hash matches
+  ✓ alpha.7 electron-e2e log exists
+  ✓ alpha.7 electron-e2e log hash matches
+  ✓ alpha.7 program-control log exists
+  ✓ alpha.7 program-control log hash matches
+  ✓ alpha.7 git-diff-check log exists
+  ✓ alpha.7 git-diff-check log hash matches
+  ✓ alpha.7 capability report does not claim event-only resume
+  ✓ historical final acceptance is explicitly named
+  ✓ unmarked final acceptance path is absent
+  ✓ audit archive policy is present
+  ✓ production audit is package-manager independent
+
+[program-control] production audit helpers
+  ✓ production audit includes production packages
+  ✓ production audit excludes development packages
+  ✓ production audit preserves scoped transitive packages
+  ✓ high audit threshold blocks high advisories
+  ✓ production audit rejects insecure registry
+
+=== 166 passed, 0 failed ===
+
+$ node test/program-control-tests.mjs

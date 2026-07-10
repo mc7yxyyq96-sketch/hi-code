@@ -41,7 +41,7 @@ Tests:
 
 Version sync:
 
-- `package.json` is now on the `0.6.0-alpha.6` development line.
+- `package.json` is now on the `0.6.0-alpha.7` release-candidate line.
 - `scripts/sync-version.mjs` checks that Electron `app.getVersion()` and renderer labels remain wired to package metadata instead of hard-coded version text.
 
 ## Transport Mapping

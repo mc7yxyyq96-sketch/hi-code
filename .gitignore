@@ -39,6 +39,8 @@ reports/*
 !reports/evidence/**
 !reports/tasks/
 !reports/tasks/**
+!reports/releases/
+!reports/releases/**
 !reports/audit/
 reports/audit/*
 !reports/audit/README.md

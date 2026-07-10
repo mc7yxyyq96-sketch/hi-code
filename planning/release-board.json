@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "program": "Hi Code Product-Grade Desktop and Industrial Workbench",
-  "updatedAt": "2026-07-10T12:08:12Z",
+  "updatedAt": "2026-07-10T13:56:17Z",
   "status": "active",
   "source": {
     "version": "0.6.0-alpha.6",
@@ -10,6 +10,14 @@
   },
   "currentRelease": "0.6.0-alpha.7",
   "releaseObjective": "Establish auditable program control, real Electron responsive smoke coverage, and protocol-native assistant output without a big-bang rewrite.",
+  "candidate": {
+    "version": "0.6.0-alpha.7",
+    "parentCommit": "d36923bed32267a5bfb3433e4450307060cbda69",
+    "branch": "codex/release/0.6.0-alpha.7",
+    "status": "passed",
+    "verifiedAt": "2026-07-10T13:56:17Z",
+    "evidence": "reports/evidence/HC-REL-ALPHA-7/manifest.json"
+  },
   "releaseExitCriteria": [
     "HC-PROG-100, HC-QA-101, and HC-RUN-201 are completed with independent commits",
     "all repository gates pass from the release candidate commit",
@@ -37,6 +45,12 @@
       "branch": "codex/runtime-engine/hc-run-201",
       "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-hc-run-201",
       "mode": "completed-worktree"
+    },
+    {
+      "taskId": "HC-REL-ALPHA-7",
+      "branch": "codex/release/0.6.0-alpha.7",
+      "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-release-alpha-7",
+      "mode": "release-integration-worktree"
     }
   ],
   "tasks": [
@@ -94,6 +108,12 @@
       "status": "passed",
       "owner": "HC-RUN-201",
       "evidence": "reports/evidence/HC-RUN-201/manifest.json"
+    },
+    {
+      "id": "alpha-7-release-candidate",
+      "status": "passed",
+      "owner": "HC-REL-ALPHA-7",
+      "evidence": "reports/evidence/HC-REL-ALPHA-7/manifest.json"
     }
   ],
   "nextReleaseSlices": [
