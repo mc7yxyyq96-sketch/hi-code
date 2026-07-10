@@ -52,6 +52,7 @@ const requiredFiles = [
   "reports/tasks/HC-RUN-203.md",
   "reports/tasks/HC-PLAT-110.md",
   "reports/tasks/HC-REL-ALPHA-8.md",
+  "reports/tasks/HC-PROV-210.md",
   "reports/tasks/HC-REL-ALPHA-7.md",
   "reports/evidence/baseline/manifest.json",
   "reports/evidence/HC-QA-101/manifest.json",
@@ -104,6 +105,7 @@ const nextRuntimeTask = backlog.tasks.find((task) => task.id === "HC-RUN-202");
 const recoveryRuntimeTask = backlog.tasks.find((task) => task.id === "HC-RUN-203");
 const platformTask = backlog.tasks.find((task) => task.id === "HC-PLAT-110");
 const alpha8ReleaseTask = backlog.tasks.find((task) => task.id === "HC-REL-ALPHA-8");
+const modelProviderTask = backlog.tasks.find((task) => task.id === "HC-PROV-210");
 const uiShellTask = backlog.tasks.find((task) => task.id === "HC-UI-301");
 const qaTask = board.tasks.find((task) => task.id === "HC-QA-101");
 const runtimeTask = board.tasks.find((task) => task.id === "HC-RUN-201");
@@ -111,6 +113,7 @@ const runtimeStoreTask = board.tasks.find((task) => task.id === "HC-RUN-202");
 const turnRecoveryTask = board.tasks.find((task) => task.id === "HC-RUN-203");
 const platformBoardTask = board.tasks.find((task) => task.id === "HC-PLAT-110");
 const alpha8ReleaseBoardTask = board.tasks.find((task) => task.id === "HC-REL-ALPHA-8");
+const modelProviderBoardTask = board.tasks.find((task) => task.id === "HC-PROV-210");
 
 console.log("\n[program-control] board and evidence contract");
 check("backlog records immutable source commit", /^[0-9a-f]{40}$/.test(backlog.sourceCommit || ""));
@@ -195,6 +198,15 @@ check("HC-UI-301 is dependency-ready", uiShellTask?.status === "ready" && uiShel
 check("alpha.8 version is synchronized", packageJson.version === "0.6.0-alpha.8" && packageLock.version === packageJson.version && packageLock.packages?.[""]?.version === packageJson.version && fs.readFileSync(path.join(root, "VERSION"), "utf8").trim() === packageJson.version);
 check("alpha.8 release candidate gate passed", board.currentRelease === packageJson.version && board.candidate?.version === packageJson.version && board.candidate?.branch === "codex/release/0.6.0-alpha.8" && board.candidate?.status === "passed" && board.candidate?.evidence === "reports/evidence/HC-REL-ALPHA-8/manifest.json" && board.gates?.find((gate) => gate.id === "alpha-8-release-candidate")?.status === "passed");
 check("historical alpha.7 release candidate gate remains passed", board.gates?.find((gate) => gate.id === "alpha-7-release-candidate")?.status === "passed");
+check(
+  "HC-PROV-210 is active only after typed runtime store completion",
+  modelProviderTask?.status === "in_progress" &&
+    modelProviderTask?.branch === "codex/runtime-engine/hc-prov-210" &&
+    modelProviderTask?.dependencies?.every((id) => backlog.tasks.find((task) => task.id === id)?.status === "completed") &&
+    modelProviderBoardTask?.status === "in_progress" &&
+    board.gates?.find((gate) => gate.id === "model-provider-v2")?.status === "in_progress",
+  JSON.stringify(modelProviderTask),
+);
 check("risk register has active risks", Array.isArray(risks.risks) && risks.risks.length > 0);
 check("baseline records source commit", manifest.source?.commit === backlog.sourceCommit);
 check("baseline records every gate passing", manifest.summary?.allPassed === true, JSON.stringify(manifest.summary));

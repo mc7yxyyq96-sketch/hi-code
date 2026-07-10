@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "program": "Hi Code Product-Grade Desktop and Industrial Workbench",
-  "updatedAt": "2026-07-10T19:55:25Z",
+  "updatedAt": "2026-07-10T23:40:52Z",
   "risks": [
     {
       "id": "RISK-RUN-001",
@@ -68,6 +68,17 @@
       "impact": "macOS Gatekeeper or Windows SmartScreen can warn users and weaken installation trust.",
       "mitigation": "Keep artifacts prerelease-only, publish checksums, and require signing identities before stable promotion.",
       "trigger": "Stable release or automatic update enablement requires valid signing and platform smoke evidence."
+    },
+    {
+      "id": "RISK-PROV-001",
+      "severity": "high",
+      "status": "open",
+      "owner": "runtime-engine",
+      "title": "Model transport lacks an explicit capability contract",
+      "evidence": ["src/llm.ts", "src/config.ts", "src/agent-provider.ts", "reports/tasks/HC-PROV-210.md"],
+      "impact": "A model request can reach the network before Hi Code discovers that images, tool streaming, structured output, reasoning, or token limits are unsupported, and provider-specific errors lose stable semantics.",
+      "mitigation": "HC-PROV-210 introduces a separate Model Provider Adapter registry, fail-fast capability negotiation, normalized events/errors/usage, and a tested compatibility migration for current model profiles.",
+      "trigger": "Any unsupported requirement sent to a provider, silent capability downgrade, or provider event that cannot be normalized blocks alpha.9."
     },
     {
       "id": "RISK-IND-001",

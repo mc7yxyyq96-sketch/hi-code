@@ -33,6 +33,7 @@ The final machine-captured evidence is written by `npm run program:baseline` to 
 | 5 | HC-RUN-203 | Completed | Runtime Engine | HC-RUN-202 |
 | 6 | HC-PLAT-110 | Completed | Security And Release | HC-QA-101 |
 | 7 | HC-REL-ALPHA-8 | Completed | Release Owner | HC-RUN-202, HC-RUN-203, HC-PLAT-110 |
+| 8 | HC-PROV-210 | In Progress | Runtime Engine | HC-RUN-202, HC-REL-ALPHA-8 integration base |
 
 HC-QA-101 established a real Electron responsive baseline. HC-RUN-201 introduces protocol-native assistant output and concurrency isolation. No new industrial domain module is authorized before HC-RUN-201 completes.
 
@@ -53,6 +54,8 @@ HC-PLAT-110 completed in the isolated `codex/security-release/hc-plat-110` workt
 The `0.6.0-alpha.7` candidate was integrated on `codex/release/0.6.0-alpha.7` from HC-RUN-201 commit `d36923bed32267a5bfb3433e4450307060cbda69`. Version metadata, backlog state, capability boundaries, migration notes, security review, E2E review, limitations, and release evidence passed the isolated candidate gate.
 
 The `0.6.0-alpha.8` candidate passed 13 isolated release commands on `codex/release/0.6.0-alpha.8` from HC-PLAT-110 completion commit `265a69f`. It integrates only completed runtime replay, recovery, and Electron compatibility work. The full-tree DoD scan found zero findings, real Electron E2E passed, and the unsigned macOS arm64 DMG was generated. Formal tag, GitHub Release, signing, notarization, and public promotion remain approval-gated.
+
+HC-PROV-210 is active on `codex/runtime-engine/hc-prov-210` from alpha.8 completion commit `80e6b83`. It separates Model Provider Adapter contracts from the existing external Agent Provider registry, adds pre-request capability negotiation and normalized provider events, and migrates legacy model profiles through a compatibility adapter. Concrete OpenAI Responses, Anthropic, and Ollama transports remain assigned to HC-PROV-211/212.
 
 ## Current Product Truth
 
