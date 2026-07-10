@@ -5,7 +5,7 @@
   "sourceCommit": "6ed9ed666bb817f8d1e863c76b0bf61b31c7b52d",
   "horizonDays": 90,
   "status": "active",
-  "updatedAt": "2026-07-10T16:13:35Z",
+  "updatedAt": "2026-07-10T17:54:05Z",
   "principles": [
     "Runtime Protocol is the single source of truth",
     "No big-bang rewrite",
@@ -108,7 +108,10 @@
       "dependencies": ["HC-QA-101"],
       "deliverables": ["supported Electron version", "native dependency rebuild plan", "three-platform startup smoke"],
       "acceptance": ["all existing tests pass", "Electron E2E passes", "security settings unchanged or stronger"],
-      "status": "ready"
+      "status": "in_progress",
+      "startedAt": "2026-07-10T17:48:41Z",
+      "branch": "codex/security-release/hc-plat-110",
+      "taskManifest": "reports/tasks/HC-PLAT-110.md"
     },
     {
       "id": "HC-PROV-210",
