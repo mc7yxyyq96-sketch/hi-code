@@ -38,6 +38,7 @@ The final machine-captured evidence is written by `npm run program:baseline` to 
 | 10 | HC-PROV-212 | Completed | Runtime Engine | HC-PROV-210, HC-PROV-211 |
 | 11 | HC-RUN-220 | Completed | Runtime Engine | HC-PROV-210 |
 | 12 | HC-UI-301 | Completed | Desktop UX | HC-RUN-201, HC-QA-101 |
+| 13 | HC-UI-302 | In progress | Desktop UX | HC-UI-301, HC-RUN-202 |
 
 HC-QA-101 established a real Electron responsive baseline. HC-RUN-201 introduces protocol-native assistant output and concurrency isolation. No new industrial domain module is authorized before HC-RUN-201 completes.
 
@@ -68,6 +69,8 @@ HC-PROV-212 completed in the isolated `codex/runtime-engine/hc-prov-212` worktre
 HC-RUN-220 completed in the isolated `codex/runtime-engine/hc-run-220` worktree from HC-PROV-212 completion commit `12ff24e`. App-data attachment records and content-addressed blobs now survive restart without modifying the workspace; Runtime persists opaque references, verifies hashes, and materializes supported image/text content only after capability negotiation. Unsupported PDF/file transport fails visibly before network I/O. One Command Registry resolves shell, slash, native, and agent input across Runtime and Electron with alias/conflict rejection. Twenty-four machine-captured gates passed, including real Runtime/provider materialization, Electron IPC/Renderer coverage, security, DoD, production audit, and Electron E2E.
 
 HC-UI-301 completed in the isolated `codex/desktop-ux/hc-ui-301` worktree from HC-RUN-220 completion commit `fd46ac7`. A production React 18/TypeScript/Vite App Shell now owns the typed route and compact-navigation boundary while the Legacy Panel Adapter preserves every existing panel and invokes its real trigger. Thirteen machine-captured gates passed, including build, verify, release check, security, DoD, production audit, and real Electron navigation at 720, 1024, 1440, and 1920 widths. Business panels remain on the compatibility path for incremental migration in HC-UI-302 and later tasks.
+
+HC-UI-302 is active in the isolated `codex/desktop-ux/hc-ui-302` worktree from HC-UI-301 completion commit `35754d0`. It incrementally migrates Session Sidebar, Conversation, Timeline, and Diff Inspector to one typed React workspace store while preserving the existing session, Runtime, attachment, approval, and Diff APIs. Completion requires bounded long-session rendering, real saved/live session switching, keyboard-complete drawers, and multi-width Electron evidence.
 
 ## Current Product Truth
 

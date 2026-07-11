@@ -66,6 +66,22 @@
       "trigger": "Any route with two state owners, any legacy view without a reachable route, or any 720-1920 clipping failure blocks HC-UI-301 completion."
     },
     {
+      "id": "RISK-UI-003",
+      "severity": "high",
+      "status": "open",
+      "owner": "desktop-ux",
+      "title": "React workbench migration can duplicate live conversation state or degrade long sessions",
+      "evidence": [
+        "renderer/app/bootstrap.js",
+        "renderer/app-shell/workspace/",
+        "test/workspace-shell-tests.ts",
+        "tests/electron-e2e/run.mjs"
+      ],
+      "impact": "A second transcript owner can lose streaming output, open the wrong session, hide approval/diff actions, or render thousands of messages synchronously.",
+      "mitigation": "Use one typed workspace store, register the existing production handlers as the only action callbacks, window long transcripts, preserve durable session APIs, and verify saved/live session switching plus keyboard drawers in real Electron.",
+      "trigger": "Any duplicated persistence path, unbounded long-session DOM, hidden action without an alternative, lost live output, or keyboard trap blocks HC-UI-302 completion."
+    },
+    {
       "id": "RISK-PLAT-001",
       "severity": "high",
       "status": "mitigated",
