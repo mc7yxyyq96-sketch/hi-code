@@ -63,7 +63,7 @@ This task does not implement app preview, Git/PR/CI orchestration, industrial ad
 
 ## Final Evidence
 
-`reports/evidence/HC-UI-311/manifest.json` records 18/18 passing gates from clean source commit `cdf7bd956feb28fca4754bf45c8c0eb25faf6a87`. It includes focused terminal, service, App Shell, renderer, compatibility, security, build, verify, release, feature, DoD, production-audit, real Electron, macOS package, packaged-terminal, program-control, and diff-check evidence with hashed logs. The full-tree DoD scan reports zero findings. Cross-platform native behavior remains enforced by the existing macOS/Linux/Windows CI matrix before merge; local native acceptance is macOS arm64.
+`reports/evidence/HC-UI-311/manifest.json` records 18/18 passing gates from clean source commit `d9703672325345e3e92924aaf9abe52ec29fe714`. It includes focused terminal, service, App Shell, renderer, compatibility, security, build, verify, release, feature, DoD, production-audit, real Electron, macOS package, packaged-terminal, program-control, and diff-check evidence with hashed logs. The full-tree DoD scan reports zero findings. Cross-platform native behavior is enforced by the macOS/Linux/Windows CI matrix on every pull request target; local native acceptance is macOS arm64.
 
 ## Rollback
 

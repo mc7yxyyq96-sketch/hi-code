@@ -341,7 +341,7 @@ check(
 check("Integrated terminal policy gate passed with committed evidence", board.gates?.find((gate) => gate.id === "integrated-terminal-policy")?.status === "passed" && board.gates?.find((gate) => gate.id === "integrated-terminal-policy")?.evidence === "reports/evidence/HC-UI-311/manifest.json");
 check("HC-UI-311 policy and lifecycle risk is evidence-backed and mitigated", risks.risks?.some((risk) => risk.id === "RISK-UI-005" && risk.status === "mitigated" && risk.evidence?.includes("reports/evidence/HC-UI-311/manifest.json")));
 check("HC-UI-311 evidence records every command passing from a clean tree", terminalManifest.summary?.allPassed === true && terminalManifest.summary?.total === 18 && terminalManifest.capture?.workingTreeClean === true, JSON.stringify(terminalManifest.summary));
-check("HC-UI-311 evidence is captured from its isolated branch", terminalManifest.source?.branch === "codex/desktop-ux/hc-ui-311" && terminalManifest.source?.parentCommit === "cdf7bd956feb28fca4754bf45c8c0eb25faf6a87");
+check("HC-UI-311 evidence is captured from its isolated branch", terminalManifest.source?.branch === "codex/desktop-ux/hc-ui-311" && terminalManifest.source?.parentCommit === "d9703672325345e3e92924aaf9abe52ec29fe714");
 for (const requiredCommand of ["build", "terminal-tests", "service-tests", "app-shell-tests", "renderer-tests", "electron-compatibility", "security-tests", "verify", "release-check", "feature-tests", "dod-tests", "dod-scan", "production-audit", "electron-e2e", "mac-package", "terminal-package", "program-control", "git-diff-check"]) {
   check(`HC-UI-311 captured ${requiredCommand}`, terminalManifest.commands?.some((command) => command.id === requiredCommand && command.status === "passed"));
 }

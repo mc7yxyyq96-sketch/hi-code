@@ -19,7 +19,7 @@ renderer/generated/hi-code.css                         5.24 kB │ gzip:   1.92 
 renderer/generated/app-shell.js                      272.27 kB │ gzip:  68.87 kB
 renderer/generated/chunks/xterm-runtime-DOnvTC-9.js  414.54 kB │ gzip:  92.86 kB
 renderer/generated/chunks/code-editor-oiW-xu-R.js    772.97 kB │ gzip: 232.99 kB
-✓ built in 714ms
+✓ built in 708ms
 
 [verify] build
 
@@ -336,6 +336,7 @@ Denied by user.
   ✓ node-pty-asar-unpack
   ✓ node-pty-host-prebuild
   ✓ three-platform-ci-matrix
+  ✓ stacked-pr-ci
   ✓ linux-xvfb-smoke
   ✓ native-desktop-smoke
   ✓ ci-evidence-run
@@ -343,7 +344,7 @@ Denied by user.
   ✓ current production graph contains only the reviewed PTY native module
   ✓ complete compatibility report passes
 
-=== 29 passed, 0 failed ===
+=== 30 passed, 0 failed ===
 
 [verify] test:runtime-events
 
@@ -1718,9 +1719,11 @@ Denied by user.
   ✓ docs/adr/ADR-0010-gradual-react-app-shell.md exists and is non-empty
   ✓ docs/adr/ADR-0011-typed-session-workbench.md exists and is non-empty
   ✓ docs/adr/ADR-0012-conflict-safe-integrated-editor.md exists and is non-empty
+  ✓ docs/adr/ADR-0013-policy-bound-integrated-terminal.md exists and is non-empty
   ✓ docs/app-shell.md exists and is non-empty
   ✓ docs/session-workbench.md exists and is non-empty
   ✓ docs/code-editor.md exists and is non-empty
+  ✓ docs/integrated-terminal.md exists and is non-empty
   ✓ docs/attachments-and-command-registry.md exists and is non-empty
   ✓ docs/anthropic-ollama-adapters.md exists and is non-empty
   ✓ docs/model-provider-adapters.md exists and is non-empty
@@ -1745,6 +1748,7 @@ Denied by user.
   ✓ reports/tasks/HC-UI-301.md exists and is non-empty
   ✓ reports/tasks/HC-UI-302.md exists and is non-empty
   ✓ reports/tasks/HC-UI-310.md exists and is non-empty
+  ✓ reports/tasks/HC-UI-311.md exists and is non-empty
   ✓ reports/tasks/HC-REL-ALPHA-7.md exists and is non-empty
   ✓ reports/evidence/baseline/manifest.json exists and is non-empty
   ✓ reports/evidence/HC-QA-101/manifest.json exists and is non-empty
@@ -1762,6 +1766,7 @@ Denied by user.
   ✓ reports/evidence/HC-UI-301/manifest.json exists and is non-empty
   ✓ reports/evidence/HC-UI-302/manifest.json exists and is non-empty
   ✓ reports/evidence/HC-UI-310/manifest.json exists and is non-empty
+  ✓ reports/evidence/HC-UI-311/manifest.json exists and is non-empty
   ✓ scripts/electron-compatibility.mjs exists and is non-empty
   ✓ scripts/run-electron-builder.mjs exists and is non-empty
   ✓ test/electron-compatibility-tests.mjs exists and is non-empty
@@ -1985,6 +1990,65 @@ Denied by user.
   ✓ HC-UI-310 program-control log hash matches
   ✓ HC-UI-310 git-diff-check log exists
   ✓ HC-UI-310 git-diff-check log hash matches
+  ✓ HC-UI-311 completed only after its dependencies and evidence
+  ✓ Integrated terminal policy gate passed with committed evidence
+  ✓ HC-UI-311 policy and lifecycle risk is evidence-backed and mitigated
+  ✓ HC-UI-311 evidence records every command passing from a clean tree
+  ✓ HC-UI-311 evidence is captured from its isolated branch
+  ✓ HC-UI-311 captured build
+  ✓ HC-UI-311 captured terminal-tests
+  ✓ HC-UI-311 captured service-tests
+  ✓ HC-UI-311 captured app-shell-tests
+  ✓ HC-UI-311 captured renderer-tests
+  ✓ HC-UI-311 captured electron-compatibility
+  ✓ HC-UI-311 captured security-tests
+  ✓ HC-UI-311 captured verify
+  ✓ HC-UI-311 captured release-check
+  ✓ HC-UI-311 captured feature-tests
+  ✓ HC-UI-311 captured dod-tests
+  ✓ HC-UI-311 captured dod-scan
+  ✓ HC-UI-311 captured production-audit
+  ✓ HC-UI-311 captured electron-e2e
+  ✓ HC-UI-311 captured mac-package
+  ✓ HC-UI-311 captured terminal-package
+  ✓ HC-UI-311 captured program-control
+  ✓ HC-UI-311 captured git-diff-check
+  ✓ HC-UI-311 build log exists
+  ✓ HC-UI-311 build log hash matches
+  ✓ HC-UI-311 terminal-tests log exists
+  ✓ HC-UI-311 terminal-tests log hash matches
+  ✓ HC-UI-311 service-tests log exists
+  ✓ HC-UI-311 service-tests log hash matches
+  ✓ HC-UI-311 app-shell-tests log exists
+  ✓ HC-UI-311 app-shell-tests log hash matches
+  ✓ HC-UI-311 renderer-tests log exists
+  ✓ HC-UI-311 renderer-tests log hash matches
+  ✓ HC-UI-311 electron-compatibility log exists
+  ✓ HC-UI-311 electron-compatibility log hash matches
+  ✓ HC-UI-311 security-tests log exists
+  ✓ HC-UI-311 security-tests log hash matches
+  ✓ HC-UI-311 verify log exists
+  ✓ HC-UI-311 verify log hash matches
+  ✓ HC-UI-311 release-check log exists
+  ✓ HC-UI-311 release-check log hash matches
+  ✓ HC-UI-311 feature-tests log exists
+  ✓ HC-UI-311 feature-tests log hash matches
+  ✓ HC-UI-311 dod-tests log exists
+  ✓ HC-UI-311 dod-tests log hash matches
+  ✓ HC-UI-311 dod-scan log exists
+  ✓ HC-UI-311 dod-scan log hash matches
+  ✓ HC-UI-311 production-audit log exists
+  ✓ HC-UI-311 production-audit log hash matches
+  ✓ HC-UI-311 electron-e2e log exists
+  ✓ HC-UI-311 electron-e2e log hash matches
+  ✓ HC-UI-311 mac-package log exists
+  ✓ HC-UI-311 mac-package log hash matches
+  ✓ HC-UI-311 terminal-package log exists
+  ✓ HC-UI-311 terminal-package log hash matches
+  ✓ HC-UI-311 program-control log exists
+  ✓ HC-UI-311 program-control log hash matches
+  ✓ HC-UI-311 git-diff-check log exists
+  ✓ HC-UI-311 git-diff-check log hash matches
   ✓ alpha.8 version is synchronized
   ✓ alpha.8 release candidate gate passed
   ✓ historical alpha.7 release candidate gate remains passed
@@ -2001,6 +2065,8 @@ Denied by user.
   ✓ Typed Session Workbench evidence capture is reproducible
   ✓ Integrated editor tests are part of global verification
   ✓ Integrated editor evidence capture is reproducible
+  ✓ Integrated terminal tests are part of global verification
+  ✓ Integrated terminal evidence capture is reproducible
   ✓ Task evidence commands cannot be shadowed by a project-local npm binary
   ✓ Task evidence executes the locked npm CLI with the current Node runtime
   ✓ HC-PROV-211 completed only after Model Provider v2 completion and evidence
@@ -2533,7 +2599,7 @@ Denied by user.
   ✓ high audit threshold blocks high advisories
   ✓ production audit rejects insecure registry
 
-=== 825 passed, 0 failed ===
+=== 890 passed, 0 failed ===
 
 [verify] test:security
 

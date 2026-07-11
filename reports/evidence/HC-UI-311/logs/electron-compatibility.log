@@ -28,6 +28,7 @@ $ npm run test:electron-compatibility
   ✓ node-pty-asar-unpack
   ✓ node-pty-host-prebuild
   ✓ three-platform-ci-matrix
+  ✓ stacked-pr-ci
   ✓ linux-xvfb-smoke
   ✓ native-desktop-smoke
   ✓ ci-evidence-run
@@ -35,4 +36,4 @@ $ npm run test:electron-compatibility
   ✓ current production graph contains only the reviewed PTY native module
   ✓ complete compatibility report passes
 
-=== 29 passed, 0 failed ===
+=== 30 passed, 0 failed ===
