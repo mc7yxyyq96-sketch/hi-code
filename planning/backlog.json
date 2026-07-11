@@ -5,7 +5,7 @@
   "sourceCommit": "6ed9ed666bb817f8d1e863c76b0bf61b31c7b52d",
   "horizonDays": 90,
   "status": "active",
-  "updatedAt": "2026-07-11T00:38:19Z",
+  "updatedAt": "2026-07-11T00:59:32Z",
   "principles": [
     "Runtime Protocol is the single source of truth",
     "No big-bang rewrite",
@@ -160,7 +160,10 @@
       "dependencies": ["HC-PROV-210"],
       "deliverables": ["Responses adapter", "legacy adapter", "streaming/tool/usage tests"],
       "acceptance": ["text, tool calls, images, interruption, usage work", "legacy endpoint remains supported"],
-      "status": "planned"
+      "status": "in_progress",
+      "startedAt": "2026-07-11T00:51:02Z",
+      "branch": "codex/runtime-engine/hc-prov-211",
+      "taskManifest": "reports/tasks/HC-PROV-211.md"
     },
     {
       "id": "HC-PROV-212",

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "program": "Hi Code Product-Grade Desktop and Industrial Workbench",
-  "updatedAt": "2026-07-11T00:38:19Z",
+  "updatedAt": "2026-07-11T00:59:32Z",
   "status": "active",
   "source": {
     "version": "0.6.0-alpha.6",
@@ -81,6 +81,12 @@
       "taskId": "HC-PROV-210",
       "branch": "codex/runtime-engine/hc-prov-210",
       "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-hc-prov-210",
+      "mode": "completed-worktree"
+    },
+    {
+      "taskId": "HC-PROV-211",
+      "branch": "codex/runtime-engine/hc-prov-211",
+      "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-hc-prov-211",
       "mode": "active-worktree"
     }
   ],
@@ -170,6 +176,16 @@
       "startedAt": "2026-07-10T23:40:52Z",
       "completedAt": "2026-07-11T00:38:19Z",
       "evidence": "reports/evidence/HC-PROV-210/manifest.json"
+    },
+    {
+      "id": "HC-PROV-211",
+      "owner": "runtime-engine",
+      "priority": "P1",
+      "status": "in_progress",
+      "dependencies": ["HC-PROV-210"],
+      "branch": "codex/runtime-engine/hc-prov-211",
+      "startedAt": "2026-07-11T00:51:02Z",
+      "evidence": "reports/tasks/HC-PROV-211.md"
     }
   ],
   "gates": [
@@ -230,6 +246,12 @@
       "status": "passed",
       "owner": "HC-PROV-210",
       "evidence": "reports/evidence/HC-PROV-210/manifest.json"
+    },
+    {
+      "id": "openai-responses-adapter",
+      "status": "in_progress",
+      "owner": "HC-PROV-211",
+      "evidence": "reports/tasks/HC-PROV-211.md"
     }
   ],
   "nextReleaseSlices": [

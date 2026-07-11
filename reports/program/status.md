@@ -34,6 +34,7 @@ The final machine-captured evidence is written by `npm run program:baseline` to 
 | 6 | HC-PLAT-110 | Completed | Security And Release | HC-QA-101 |
 | 7 | HC-REL-ALPHA-8 | Completed | Release Owner | HC-RUN-202, HC-RUN-203, HC-PLAT-110 |
 | 8 | HC-PROV-210 | Completed | Runtime Engine | HC-RUN-202, HC-REL-ALPHA-8 integration base |
+| 9 | HC-PROV-211 | In progress | Runtime Engine | HC-PROV-210 |
 
 HC-QA-101 established a real Electron responsive baseline. HC-RUN-201 introduces protocol-native assistant output and concurrency isolation. No new industrial domain module is authorized before HC-RUN-201 completes.
 
@@ -56,6 +57,8 @@ The `0.6.0-alpha.7` candidate was integrated on `codex/release/0.6.0-alpha.7` fr
 The `0.6.0-alpha.8` candidate passed 13 isolated release commands on `codex/release/0.6.0-alpha.8` from HC-PLAT-110 completion commit `265a69f`. It integrates only completed runtime replay, recovery, and Electron compatibility work. The full-tree DoD scan found zero findings, real Electron E2E passed, and the unsigned macOS arm64 DMG was generated. Formal tag, GitHub Release, signing, notarization, and public promotion remain approval-gated.
 
 HC-PROV-210 completed on `codex/runtime-engine/hc-prov-210` from alpha.8 completion commit `80e6b83`. It separates Model Provider Adapter contracts from the existing external Agent Provider registry, rejects unsupported capabilities before transport execution, normalizes text/tool/usage/error semantics, records correlated provider events in Runtime Protocol, and migrates legacy model profiles through a real OpenAI-compatible adapter. Sixteen machine-captured gates passed with zero DoD findings. Concrete OpenAI Responses, Anthropic, and Ollama transports remain assigned to HC-PROV-211/212.
+
+HC-PROV-211 is active in the isolated `codex/runtime-engine/hc-prov-211` worktree from HC-PROV-210 completion commit `06dd676`. Its boundary is a real OpenAI Responses transport, explicit protocol selection, and preservation of the current Chat Completions compatibility path. The unmodified parent passed build, verify, release check, and all 80 feature assertions before task-control changes.
 
 ## Current Product Truth
 

@@ -55,6 +55,7 @@ const requiredFiles = [
   "reports/tasks/HC-PLAT-110.md",
   "reports/tasks/HC-REL-ALPHA-8.md",
   "reports/tasks/HC-PROV-210.md",
+  "reports/tasks/HC-PROV-211.md",
   "reports/tasks/HC-REL-ALPHA-7.md",
   "reports/evidence/baseline/manifest.json",
   "reports/evidence/HC-QA-101/manifest.json",
@@ -110,6 +111,7 @@ const recoveryRuntimeTask = backlog.tasks.find((task) => task.id === "HC-RUN-203
 const platformTask = backlog.tasks.find((task) => task.id === "HC-PLAT-110");
 const alpha8ReleaseTask = backlog.tasks.find((task) => task.id === "HC-REL-ALPHA-8");
 const modelProviderTask = backlog.tasks.find((task) => task.id === "HC-PROV-210");
+const openAIResponsesTask = backlog.tasks.find((task) => task.id === "HC-PROV-211");
 const uiShellTask = backlog.tasks.find((task) => task.id === "HC-UI-301");
 const qaTask = board.tasks.find((task) => task.id === "HC-QA-101");
 const runtimeTask = board.tasks.find((task) => task.id === "HC-RUN-201");
@@ -118,6 +120,7 @@ const turnRecoveryTask = board.tasks.find((task) => task.id === "HC-RUN-203");
 const platformBoardTask = board.tasks.find((task) => task.id === "HC-PLAT-110");
 const alpha8ReleaseBoardTask = board.tasks.find((task) => task.id === "HC-REL-ALPHA-8");
 const modelProviderBoardTask = board.tasks.find((task) => task.id === "HC-PROV-210");
+const openAIResponsesBoardTask = board.tasks.find((task) => task.id === "HC-PROV-211");
 
 console.log("\n[program-control] board and evidence contract");
 check("backlog records immutable source commit", /^[0-9a-f]{40}$/.test(backlog.sourceCommit || ""));
@@ -215,6 +218,17 @@ check(
   JSON.stringify(modelProviderTask),
 );
 check("Model Provider focused tests are part of global verification", packageJson.scripts["test:model-providers"] === "node test/model-provider-tests.mjs" && fs.readFileSync(path.join(root, "scripts/verify.mjs"), "utf8").includes("test/model-provider-tests.mjs"));
+check(
+  "HC-PROV-211 starts only after Model Provider v2 completion",
+  openAIResponsesTask?.status === "in_progress" &&
+    openAIResponsesTask?.branch === "codex/runtime-engine/hc-prov-211" &&
+    Boolean(openAIResponsesTask?.startedAt) &&
+    openAIResponsesTask?.taskManifest === "reports/tasks/HC-PROV-211.md" &&
+    openAIResponsesTask?.dependencies?.every((id) => backlog.tasks.find((task) => task.id === id)?.status === "completed") &&
+    openAIResponsesBoardTask?.status === "in_progress" &&
+    board.gates?.find((gate) => gate.id === "openai-responses-adapter")?.status === "in_progress",
+  JSON.stringify(openAIResponsesTask),
+);
 check("HC-PROV-210 evidence records every command passing", modelProviderManifest.summary?.allPassed === true && modelProviderManifest.summary?.total === 16, JSON.stringify(modelProviderManifest.summary));
 check("HC-PROV-210 evidence is captured from its task branch", modelProviderManifest.source?.branch === "codex/runtime-engine/hc-prov-210" && modelProviderManifest.source?.parentCommit === "a0f4025addf0de92192011632d194878bb7b0d3c");
 for (const requiredCommand of ["build", "verify", "release-check", "feature-tests", "model-provider-tests", "runtime-protocol", "runtime-events", "runtime-concurrency", "runtime-clients", "security-tests", "dod-tests", "dod-scan", "production-audit", "electron-e2e", "program-control", "git-diff-check"]) {
