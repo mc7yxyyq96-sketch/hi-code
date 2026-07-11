@@ -73,6 +73,7 @@ const requiredFiles = [
   "reports/evidence/HC-REL-ALPHA-8/manifest.json",
   "reports/evidence/HC-PROV-210/manifest.json",
   "reports/evidence/HC-PROV-211/manifest.json",
+  "reports/evidence/HC-PROV-212/manifest.json",
   "scripts/electron-compatibility.mjs",
   "scripts/run-electron-builder.mjs",
   "test/electron-compatibility-tests.mjs",
@@ -109,6 +110,7 @@ const releaseManifest = readJson(root, "reports/evidence/HC-REL-ALPHA-7/manifest
 const alpha8ReleaseManifest = readJson(root, "reports/evidence/HC-REL-ALPHA-8/manifest.json");
 const modelProviderManifest = readJson(root, "reports/evidence/HC-PROV-210/manifest.json");
 const openAIResponsesManifest = readJson(root, "reports/evidence/HC-PROV-211/manifest.json");
+const anthropicOllamaManifest = readJson(root, "reports/evidence/HC-PROV-212/manifest.json");
 const packageJson = readJson(root, "package.json");
 const packageLock = readJson(root, "package-lock.json");
 const programTask = backlog.tasks.find((task) => task.id === "HC-PROG-100");
@@ -256,17 +258,31 @@ for (const command of openAIResponsesManifest.commands || []) {
   if (fs.existsSync(absolute)) check(`HC-PROV-211 ${command.id} log hash matches`, digest(absolute) === command.logSha256);
 }
 check(
-  "HC-PROV-212 starts only after the provider transport foundation",
-  anthropicOllamaTask?.status === "in_progress" &&
+  "HC-PROV-212 completed only after both provider transport dependencies and evidence",
+  anthropicOllamaTask?.status === "completed" &&
     anthropicOllamaTask?.branch === "codex/runtime-engine/hc-prov-212" &&
     Boolean(anthropicOllamaTask?.startedAt) &&
+    Boolean(anthropicOllamaTask?.completedAt) &&
     anthropicOllamaTask?.taskManifest === "reports/tasks/HC-PROV-212.md" &&
+    anthropicOllamaTask?.evidenceManifest === "reports/evidence/HC-PROV-212/manifest.json" &&
     anthropicOllamaTask?.dependencies?.includes("HC-PROV-211") &&
     anthropicOllamaTask?.dependencies?.every((id) => backlog.tasks.find((task) => task.id === id)?.status === "completed") &&
-    anthropicOllamaBoardTask?.status === "in_progress" &&
-    board.gates?.find((gate) => gate.id === "anthropic-ollama-adapters")?.status === "in_progress",
+    anthropicOllamaBoardTask?.status === "completed" &&
+    anthropicOllamaBoardTask?.evidence === "reports/evidence/HC-PROV-212/manifest.json" &&
+    board.gates?.find((gate) => gate.id === "anthropic-ollama-adapters")?.status === "passed" &&
+    board.gates?.find((gate) => gate.id === "anthropic-ollama-adapters")?.evidence === "reports/evidence/HC-PROV-212/manifest.json",
   JSON.stringify(anthropicOllamaTask),
 );
+check("HC-PROV-212 evidence records every command passing", anthropicOllamaManifest.summary?.allPassed === true && anthropicOllamaManifest.summary?.total === 20, JSON.stringify(anthropicOllamaManifest.summary));
+check("HC-PROV-212 evidence is captured from its isolated branch", anthropicOllamaManifest.source?.branch === "codex/runtime-engine/hc-prov-212" && anthropicOllamaManifest.source?.parentCommit === "e40f45d29a1a964fc4b50b1f8ec3e476809e149a");
+for (const requiredCommand of ["build", "verify", "release-check", "feature-tests", "anthropic-ollama-tests", "model-provider-tests", "openai-responses-tests", "service-tests", "runtime-protocol", "runtime-events", "runtime-concurrency", "runtime-clients", "renderer-tests", "security-tests", "dod-tests", "dod-scan", "production-audit", "electron-e2e", "program-control", "git-diff-check"]) {
+  check(`HC-PROV-212 captured ${requiredCommand}`, anthropicOllamaManifest.commands?.some((command) => command.id === requiredCommand && command.status === "passed"));
+}
+for (const command of anthropicOllamaManifest.commands || []) {
+  const absolute = path.join(root, command.logPath || "");
+  check(`HC-PROV-212 ${command.id} log exists`, Boolean(command.logPath) && fs.existsSync(absolute));
+  if (fs.existsSync(absolute)) check(`HC-PROV-212 ${command.id} log hash matches`, digest(absolute) === command.logSha256);
+}
 check("HC-PROV-210 evidence records every command passing", modelProviderManifest.summary?.allPassed === true && modelProviderManifest.summary?.total === 16, JSON.stringify(modelProviderManifest.summary));
 check("HC-PROV-210 evidence is captured from its task branch", modelProviderManifest.source?.branch === "codex/runtime-engine/hc-prov-210" && modelProviderManifest.source?.parentCommit === "a0f4025addf0de92192011632d194878bb7b0d3c");
 for (const requiredCommand of ["build", "verify", "release-check", "feature-tests", "model-provider-tests", "runtime-protocol", "runtime-events", "runtime-concurrency", "runtime-clients", "security-tests", "dod-tests", "dod-scan", "production-audit", "electron-e2e", "program-control", "git-diff-check"]) {

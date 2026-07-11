@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "program": "Hi Code Product-Grade Desktop and Industrial Workbench",
-  "updatedAt": "2026-07-11T02:40:19Z",
+  "updatedAt": "2026-07-11T04:18:59Z",
   "risks": [
     {
       "id": "RISK-RUN-001",
@@ -94,12 +94,12 @@
     {
       "id": "RISK-PROV-003",
       "severity": "high",
-      "status": "open",
+      "status": "mitigated",
       "owner": "runtime-engine",
       "title": "Anthropic and Ollama wire semantics can be silently flattened",
-      "evidence": ["reports/tasks/HC-PROV-212.md"],
+      "evidence": ["src/anthropic-messages-provider.ts", "src/ollama-chat-provider.ts", "src/provider-http-transport.ts", "test/anthropic-ollama-provider-tests.mjs", "reports/evidence/HC-PROV-212/manifest.json"],
       "impact": "Tool identities, image encoding, stop reasons, usage, interruption, or provider-specific reasoning metadata could be lost or misreported when mapped into the shared runtime.",
-      "mitigation": "Implement dedicated adapters with explicit profile protocols, real loopback stream fixtures, capability preflight, strict event ordering, and unchanged legacy defaults.",
+      "mitigation": "HC-PROV-212 implements dedicated adapters with explicit profile protocols, bounded real loopback stream fixtures, capability preflight, strict event ordering, unchanged legacy defaults, and a reviewed boundary that discards raw thinking instead of relabeling it.",
       "trigger": "Any implicit protocol switch, untyped provider field, duplicate tool completion, false terminal state, or unsupported capability sent over the network blocks HC-PROV-212 completion."
     },
     {

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "program": "Hi Code Product-Grade Desktop and Industrial Workbench",
-  "updatedAt": "2026-07-11T00:59:32Z",
+  "updatedAt": "2026-07-11T04:18:59Z",
   "status": "active",
   "source": {
     "version": "0.6.0-alpha.6",
@@ -93,7 +93,7 @@
       "taskId": "HC-PROV-212",
       "branch": "codex/runtime-engine/hc-prov-212",
       "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-hc-prov-212",
-      "mode": "active-worktree"
+      "mode": "completed-worktree"
     }
   ],
   "tasks": [
@@ -198,11 +198,12 @@
       "id": "HC-PROV-212",
       "owner": "runtime-engine",
       "priority": "P1",
-      "status": "in_progress",
+      "status": "completed",
       "dependencies": ["HC-PROV-210", "HC-PROV-211"],
       "branch": "codex/runtime-engine/hc-prov-212",
       "startedAt": "2026-07-11T02:40:19Z",
-      "evidence": "reports/tasks/HC-PROV-212.md"
+      "completedAt": "2026-07-11T04:18:59Z",
+      "evidence": "reports/evidence/HC-PROV-212/manifest.json"
     }
   ],
   "gates": [
@@ -272,9 +273,10 @@
     },
     {
       "id": "anthropic-ollama-adapters",
-      "status": "in_progress",
+      "status": "passed",
       "owner": "HC-PROV-212",
-      "evidence": "reports/tasks/HC-PROV-212.md"
+      "verifiedAt": "2026-07-11T04:18:59Z",
+      "evidence": "reports/evidence/HC-PROV-212/manifest.json"
     }
   ],
   "nextReleaseSlices": [

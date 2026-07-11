@@ -1,6 +1,6 @@
 # HC-PROV-212 Task Manifest
 
-Status: In progress
+Status: Completed
 
 Owner: Runtime Engine
 
@@ -11,6 +11,8 @@ Branch: `codex/runtime-engine/hc-prov-212`
 Parent commit: `7f91c76`
 
 Started: `2026-07-11T02:40:19Z`
+
+Completed: `2026-07-11T04:18:59Z`
 
 ## Problem
 
@@ -68,10 +70,25 @@ On the unmodified HC-PROV-211 parent, `npm run build`, `npm run verify`, `npm ru
 
 Revert HC-PROV-212 commits. Reset profiles that explicitly selected the new protocols to their prior value. No user-data migration is required.
 
-## Commit Plan
+## Delivered Implementation
 
-1. Record task boundary, dependency, baseline, and risk.
-2. Add failure-first Anthropic and Ollama wire-contract tests.
-3. Implement dedicated adapters and explicit protocol selection.
-4. Prove shared Runtime compatibility and unchanged legacy paths.
-5. Capture all evidence, complete program state, commit, push, and open a draft review.
+- `src/anthropic-messages-provider.ts` implements production JSON and named-SSE Messages transport, image conversion, `tool_use` correlation, usage, cancellation, and strict terminal validation.
+- `src/ollama-chat-provider.ts` implements production `/api/chat` JSON and NDJSON transport, native image/tool mapping, deterministic run-local tool identities, usage, cancellation, and `done: true` validation.
+- `src/provider-http-transport.ts` centralizes secure endpoint parsing, loopback-only HTTP, retry/timeout behavior, bounded JSON/SSE/NDJSON reads, and normalized transport failures.
+- Model profiles, Electron connection tests, and renderer presets select `anthropic_messages` or `ollama_chat` explicitly. Existing profiles keep their original protocol.
+- `test/anthropic-ollama-provider-tests.mjs` covers both real loopback wire formats and completes a two-request Runtime tool loop for each provider.
+
+## Acceptance Result
+
+- Provider-specific tool streaming is normalized without duplicate or incomplete tool completion.
+- Reasoning summaries remain typed as unsupported; raw `thinking` is never presented or persisted as a summary.
+- Unsupported capabilities, insecure remote endpoints, malformed streams, and missing terminal records fail closed without silent downgrade.
+- Chat Completions and OpenAI Responses regression suites remain green.
+
+## Evidence
+
+`reports/evidence/HC-PROV-212/manifest.json` records 20 of 20 commands passing from implementation commit `e40f45d29a1a964fc4b50b1f8ec3e476809e149a`. The set includes build, verify, release check, feature tests, all provider/runtime/renderer/security/DoD checks, production audit, real Electron E2E, program control, and diff validation. Logs are content-hashed in the manifest.
+
+## Remaining Limits
+
+Provider-hosted files, structured-output negotiation, model discovery/pull, external Claude Code/Codex execution, and persisted reasoning summaries remain out of scope and are not claimed by this task.

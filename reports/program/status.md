@@ -35,7 +35,7 @@ The final machine-captured evidence is written by `npm run program:baseline` to 
 | 7 | HC-REL-ALPHA-8 | Completed | Release Owner | HC-RUN-202, HC-RUN-203, HC-PLAT-110 |
 | 8 | HC-PROV-210 | Completed | Runtime Engine | HC-RUN-202, HC-REL-ALPHA-8 integration base |
 | 9 | HC-PROV-211 | Completed | Runtime Engine | HC-PROV-210 |
-| 10 | HC-PROV-212 | In progress | Runtime Engine | HC-PROV-210, HC-PROV-211 |
+| 10 | HC-PROV-212 | Completed | Runtime Engine | HC-PROV-210, HC-PROV-211 |
 
 HC-QA-101 established a real Electron responsive baseline. HC-RUN-201 introduces protocol-native assistant output and concurrency isolation. No new industrial domain module is authorized before HC-RUN-201 completes.
 
@@ -61,7 +61,7 @@ HC-PROV-210 completed on `codex/runtime-engine/hc-prov-210` from alpha.8 complet
 
 HC-PROV-211 completed in the isolated `codex/runtime-engine/hc-prov-211` worktree from HC-PROV-210 completion commit `06dd676`. A real OpenAI Responses HTTPS/SSE transport now preserves text, image, function-call `call_id`, tool result, usage, interruption, incomplete, and failed semantics through the shared Runtime. Existing profiles remain on Chat Completions unless `protocol: "responses"` is explicit. Nineteen machine-captured gates passed, including a real two-request Runtime tool loop, Electron config routing, security, DoD, production audit, and Electron E2E.
 
-HC-PROV-212 is active in the isolated `codex/runtime-engine/hc-prov-212` worktree from HC-PROV-211 completion commit `7f91c76`. It is limited to dedicated Anthropic Messages and Ollama native/compatible transports, capability and error conformance, and unchanged legacy defaults. The parent passed build, verify, release check, and all 80 feature assertions before task-control changes.
+HC-PROV-212 completed in the isolated `codex/runtime-engine/hc-prov-212` worktree from HC-PROV-211 completion commit `7f91c76`. Dedicated Anthropic Messages SSE and Ollama native NDJSON transports now preserve text, images, tool correlation, usage, interruption, native terminal states, and normalized errors through the shared Runtime. Profiles opt in explicitly; current Chat Completions and Responses profiles are unchanged. Raw provider thinking is neither displayed nor persisted. Twenty machine-captured gates passed, including both two-request Runtime tool loops, legacy transport regressions, Electron config routing, security, DoD, production audit, and real Electron E2E.
 
 ## Current Product Truth
 
@@ -82,6 +82,7 @@ HC-PROV-212 is active in the isolated `codex/runtime-engine/hc-prov-212` worktre
 - Alpha.8 release evidence: `reports/tasks/HC-REL-ALPHA-8.md`, `reports/evidence/HC-REL-ALPHA-8/manifest.json`
 - Model Provider v2 evidence: `reports/tasks/HC-PROV-210.md`, `reports/evidence/HC-PROV-210/manifest.json`
 - OpenAI Responses evidence: `reports/tasks/HC-PROV-211.md`, `reports/evidence/HC-PROV-211/manifest.json`
+- Anthropic and Ollama evidence: `reports/tasks/HC-PROV-212.md`, `reports/evidence/HC-PROV-212/manifest.json`
 - Current risks: `reports/program/risks.json`
 - Historical final acceptance: `reports/final-acceptance-historical.md`
 - Historical audit policy: `reports/audit/README.md`

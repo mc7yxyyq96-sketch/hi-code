@@ -5,7 +5,7 @@
   "sourceCommit": "6ed9ed666bb817f8d1e863c76b0bf61b31c7b52d",
   "horizonDays": 90,
   "status": "active",
-  "updatedAt": "2026-07-11T00:59:32Z",
+  "updatedAt": "2026-07-11T04:18:59Z",
   "principles": [
     "Runtime Protocol is the single source of truth",
     "No big-bang rewrite",
@@ -177,10 +177,12 @@
       "dependencies": ["HC-PROV-210", "HC-PROV-211"],
       "deliverables": ["Anthropic adapter", "Ollama adapter", "capability/error fixtures"],
       "acceptance": ["provider-specific tool streaming is normalized", "reasoning summaries are optional and typed", "no silent downgrade"],
-      "status": "in_progress",
+      "status": "completed",
       "startedAt": "2026-07-11T02:40:19Z",
       "branch": "codex/runtime-engine/hc-prov-212",
-      "taskManifest": "reports/tasks/HC-PROV-212.md"
+      "taskManifest": "reports/tasks/HC-PROV-212.md",
+      "completedAt": "2026-07-11T04:18:59Z",
+      "evidenceManifest": "reports/evidence/HC-PROV-212/manifest.json"
     },
     {
       "id": "HC-RUN-220",
