@@ -62,6 +62,10 @@ Sprint 1A splits Electron main-process IPC registration into service modules wit
 - `electron/services/workspace-service.mjs`
   - Workspace folder selection, file preview, session operations, config save/load, and model connection test
   - Imports image, PDF, text, and file attachments into the injected app-data `FileAttachmentStore`; returns opaque IDs and display metadata without source paths
+- `electron/services/editor-service.mjs`
+  - Workspace-confined UTF-8 file snapshots and saves for the integrated editor
+  - Enforces a 2 MiB bound, SHA-256 expected revisions, conflict refusal, sibling temporary writes, fsync, and atomic rename
+  - Force overwrite remains an explicit Renderer confirmation; the service never retries a stale normal save automatically
 - `electron/services/security-service.mjs`
   - Auth IPC registration
   - Path guard and sensitive log redaction utilities
@@ -99,6 +103,7 @@ The normalized error path redacts API keys, bearer tokens, password-like fields,
 - Renderer still has no raw `ipcRenderer`.
 - Preload validates parameter shape before invoking main-process channels.
 - Workspace file reads use the existing workspace path confinement.
+- Integrated editor open/save uses the same workspace path authority. It rejects symlink escapes, binary or invalid UTF-8 content, oversized files, and stale normal saves. A force save is available only through an explicit typed request after visible user confirmation.
 - Attachment records and content-addressed blobs stay under app data, use owner permissions, and are revalidated on read. Attachment IDs are session-owned and bounded before Runtime queueing.
 - Store install validation continues to block remote `sourcePath` and `sourceRoot`.
 - Remote downloads continue to require HTTPS.
@@ -134,6 +139,7 @@ Renderer and preload channels are unchanged:
 - `tool-events:list`, `recoverable-tasks:list`
 - `diffs:list`, `diffs:accept`, `diffs:reject`, `diffs:accept-all`, `diffs:reject-all`, `diffs:clear-archived`
 - `git:status`, `git:diff`, `git:stage`, `git:unstage`, `git:commit-message`, `git:commit`
+- `editor:file:open`, `editor:file:save`
 - `pick-folder`, `get-cwd`, `list-dir`, `read-file`
 - `attach-file`, `attach-image`, `attachments:list`, `attachment:remove`
 - `list-sessions`, `resume-session`, `delete-session`
@@ -154,6 +160,7 @@ npm run build
 npm run verify
 node test/feature-tests.mjs
 node test/main-process-services-tests.mjs
+npm run test:editor-workbench
 node test/patch-arena-tests.mjs
 node test/industrial-project-tests.mjs
 node test/domain-pack-tests.mjs

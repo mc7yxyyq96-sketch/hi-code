@@ -38,3 +38,4 @@ The file name is `ADR-NNNN-short-title.md`. Numbers are never reused. An accepte
 | [ADR-0009](ADR-0009-durable-attachments-and-command-routing.md) | Accepted | Persist app-data attachment references and resolve all command routes through one deterministic registry |
 | [ADR-0010](ADR-0010-gradual-react-app-shell.md) | Accepted | Mount a typed React/Vite shell and preserve existing panels through one validated compatibility adapter |
 | [ADR-0011](ADR-0011-typed-session-workbench.md) | Accepted | Migrate the session workbench behind one typed store with bounded long-conversation rendering |
+| [ADR-0012](ADR-0012-conflict-safe-integrated-editor.md) | Accepted | Use workspace-confined revision tokens and atomic replacement, then route line review comments through the existing Runtime |
