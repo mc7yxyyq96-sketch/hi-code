@@ -61,6 +61,7 @@ Sprint 1A splits Electron main-process IPC registration into service modules wit
   - Existing tool events, recoverable tasks, and diff accept/reject channels
 - `electron/services/workspace-service.mjs`
   - Workspace folder selection, file preview, session operations, config save/load, and model connection test
+  - Imports image, PDF, text, and file attachments into the injected app-data `FileAttachmentStore`; returns opaque IDs and display metadata without source paths
 - `electron/services/security-service.mjs`
   - Auth IPC registration
   - Path guard and sensitive log redaction utilities
@@ -98,6 +99,7 @@ The normalized error path redacts API keys, bearer tokens, password-like fields,
 - Renderer still has no raw `ipcRenderer`.
 - Preload validates parameter shape before invoking main-process channels.
 - Workspace file reads use the existing workspace path confinement.
+- Attachment records and content-addressed blobs stay under app data, use owner permissions, and are revalidated on read. Attachment IDs are session-owned and bounded before Runtime queueing.
 - Store install validation continues to block remote `sourcePath` and `sourceRoot`.
 - Remote downloads continue to require HTTPS.
 - Domain Pack installation is confined to `~/.vibe/domain-packs`, remote pack URLs require HTTPS, local path references are rejected for remote manifests, and pack manifests cannot define automatic scripts or executable commands.
@@ -133,6 +135,7 @@ Renderer and preload channels are unchanged:
 - `diffs:list`, `diffs:accept`, `diffs:reject`, `diffs:accept-all`, `diffs:reject-all`, `diffs:clear-archived`
 - `git:status`, `git:diff`, `git:stage`, `git:unstage`, `git:commit-message`, `git:commit`
 - `pick-folder`, `get-cwd`, `list-dir`, `read-file`
+- `attach-file`, `attach-image`, `attachments:list`, `attachment:remove`
 - `list-sessions`, `resume-session`, `delete-session`
 - `get-config`, `save-config`, `test-model`
 
