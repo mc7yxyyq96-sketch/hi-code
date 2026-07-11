@@ -39,6 +39,38 @@ function runtimeInput(value) {
   return { ok: true, value: { text, attachmentIds: [...attachmentIds] } };
 }
 
+function editorOpenRequest(value) {
+  const data = optionalObject(value);
+  const checkedPath = requireString(data.path, "path");
+  if (!checkedPath.ok || !checkedPath.value.trim() || checkedPath.value.length > 4096 || checkedPath.value.includes("\0")) {
+    return { ok: false, error: "path must be a non-empty bounded string" };
+  }
+  return { ok: true, value: { path: checkedPath.value } };
+}
+
+function editorSaveRequest(value) {
+  const opened = editorOpenRequest(value);
+  if (!opened.ok) return opened;
+  const data = optionalObject(value);
+  const content = requireString(data.content, "content");
+  if (!content.ok || content.value.length > 2 * 1024 * 1024 || content.value.includes("\0")) {
+    return { ok: false, error: "content must be bounded UTF-8 text" };
+  }
+  const revision = requireString(data.expectedRevision, "expectedRevision");
+  if (!revision.ok || !/^sha256:[a-f0-9]{64}$/.test(revision.value)) {
+    return { ok: false, error: "expectedRevision must be a valid SHA-256 revision" };
+  }
+  return {
+    ok: true,
+    value: {
+      path: opened.value.path,
+      content: content.value,
+      expectedRevision: revision.value,
+      force: data.force === true,
+    },
+  };
+}
+
 contextBridge.exposeInMainWorld("hicode", {
   onOutput: (cb) => typeof cb === "function" && ipcRenderer.on("output", (_e, s) => cb(String(s || ""))),
   onReady: (cb) => typeof cb === "function" && ipcRenderer.on("ready", (_e, d) => cb(optionalObject(d))),
@@ -98,6 +130,14 @@ contextBridge.exposeInMainWorld("hicode", {
   getCwd: () => safeInvoke("get-cwd"),
   listDir: (dir) => checkedInvoke("list-dir", dir, "dir"),
   readFile: (p) => checkedInvoke("read-file", p, "path"),
+  openEditorFile: (payload) => {
+    const checked = editorOpenRequest(payload);
+    return checked.ok ? safeInvoke("editor:file:open", checked.value) : Promise.resolve(checked);
+  },
+  saveEditorFile: (payload) => {
+    const checked = editorSaveRequest(payload);
+    return checked.ok ? safeInvoke("editor:file:save", checked.value) : Promise.resolve(checked);
+  },
   listSessions: () => safeInvoke("list-sessions"),
   resumeSession: (id) => checkedInvoke("resume-session", id, "sessionId"),
   newSession: () => safeInvoke("new-session"),

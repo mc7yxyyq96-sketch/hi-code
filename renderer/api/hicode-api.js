@@ -73,6 +73,8 @@ export function createHiCodeApi(rawApi = window.hicode, { onError = null } = {})
     getCwd: () => call("getCwd", [], ""),
     listDir: (dir) => call("listDir", [dir], []),
     readFile: (filePath) => call("readFile", [filePath], { error: "读取文件失败", content: "" }),
+    openEditorFile: (payload) => call("openEditorFile", [payload], { ok: false, error: "文件打开失败" }),
+    saveEditorFile: (payload) => call("saveEditorFile", [payload], { ok: false, error: "文件保存失败" }),
     listSessions: () => call("listSessions", [], []),
     resumeSession: (id) => call("resumeSession", [id], []),
     newSession: () => call("newSession", [], { ok: false, error: "新对话创建失败" }),
