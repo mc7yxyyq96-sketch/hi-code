@@ -1,4 +1,5 @@
 import type { ModelProfile } from "./config.js";
+import type { AttachmentReferencePart } from "./attachment-store.js";
 
 // ---- Wire types (OpenAI Chat Completions, the stable lingua franca) ----
 
@@ -11,7 +12,8 @@ export interface ToolCall {
 /** A multimodal content part (OpenAI vision format). */
 export type ContentPart =
   | { type: "text"; text: string }
-  | { type: "image_url"; image_url: { url: string } };
+  | { type: "image_url"; image_url: { url: string } }
+  | AttachmentReferencePart;
 
 export interface ChatMessage {
   role: "system" | "user" | "assistant" | "tool";
@@ -66,6 +68,7 @@ export async function streamChat(
   handlers: StreamHandlers = {},
   signal?: AbortSignal,
 ): Promise<AssistantTurn> {
+  assertNoAttachmentReferences(messages);
   const url = p.baseURL.replace(/\/$/, "") + "/chat/completions";
   const body: Record<string, unknown> = {
     model: p.model,
@@ -287,6 +290,7 @@ export async function complete(
   messages: ChatMessage[],
   temperature = 0.3,
 ): Promise<string> {
+  assertNoAttachmentReferences(messages);
   const url = p.baseURL.replace(/\/$/, "") + "/chat/completions";
   const body: Record<string, unknown> = { model: p.model, messages, stream: false };
   if (!shouldOmitTemperature(p)) body.temperature = temperature;
@@ -318,4 +322,10 @@ export async function complete(
 function shouldOmitTemperature(p: ModelProfile): boolean {
   const baseURL = p.baseURL.toLowerCase();
   return baseURL.includes("moonshot.") || baseURL.includes("api.kimi.com");
+}
+
+function assertNoAttachmentReferences(messages: ChatMessage[]): void {
+  if (messages.some((message) => Array.isArray(message.content) && message.content.some((part) => part.type === "attachment_ref"))) {
+    throw new Error("Attachment references must be materialized before model transport.");
+  }
 }

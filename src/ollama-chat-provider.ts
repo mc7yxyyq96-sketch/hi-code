@@ -155,6 +155,9 @@ function messageContent(message: ChatMessage): { content: string; images: string
       text.push(part.text);
       continue;
     }
+    if (part.type === "attachment_ref") {
+      throw providerWireError("provider_attachment_unmaterialized", "Attachment references must be materialized before Ollama transport", "validation");
+    }
     if (message.role !== "user") {
       throw providerWireError("provider_image_role_invalid", "Ollama image input must use the user role", "validation");
     }

@@ -154,7 +154,7 @@ throwsCode(
   "missing attachment is reported instead of silently ignored",
   () => materializeAttachmentMessages([{ role: "user", content: [{
     type: "attachment_ref",
-    attachment: { ...attachmentReference(text).attachment, id: "att-missing" },
+    attachment: { ...attachmentReference(text).attachment, id: "att-00000000-0000-4000-8000-000000000000" },
   }] }], store, responseProfile),
   "attachment_not_found",
 );

@@ -7,7 +7,7 @@ export function contentText(content: ChatMessage["content"]): string {
   if (content == null) return "";
   if (typeof content === "string") return content;
   return content
-    .map((p) => (p.type === "text" ? p.text : "[image]"))
+    .map((p) => p.type === "text" ? p.text : p.type === "image_url" ? "[image]" : `[attachment: ${p.attachment.name}]`)
     .join(" ");
 }
 
@@ -18,6 +18,7 @@ export function estimateTokens(messages: ChatMessage[]): number {
     chars += contentText(m.content).length;
     // Images dominate token cost; approximate each at ~1000 tokens (4000 chars).
     if (Array.isArray(m.content)) chars += m.content.filter((p) => p.type === "image_url").length * 4000;
+    if (Array.isArray(m.content)) chars += m.content.filter((p) => p.type === "attachment_ref").reduce((sum, p) => sum + Math.min(p.attachment.size, 4000), 0);
     if (m.tool_calls) for (const tc of m.tool_calls) chars += tc.function.arguments.length + tc.function.name.length;
     chars += 8;
   }

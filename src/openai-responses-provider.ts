@@ -159,7 +159,9 @@ function toResponsesContent(role: "system" | "user" | "assistant", content: Chat
     if (part.type === "image_url") {
       if (role !== "user") throw wireError("provider_image_role_invalid", "Responses image input must use the user role", "validation");
       output.push({ type: "input_image", image_url: requiredText(part.image_url?.url, "image_url"), detail: "auto" });
+      continue;
     }
+    throw wireError("provider_attachment_unmaterialized", "Attachment references must be materialized before Responses transport", "validation");
   }
   return output;
 }

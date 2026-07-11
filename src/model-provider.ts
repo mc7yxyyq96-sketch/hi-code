@@ -430,6 +430,12 @@ export function deriveModelProviderRequirements(
   for (const message of messages || []) {
     if (!Array.isArray(message.content)) continue;
     if (message.content.some((part) => part.type === "image_url")) capabilities.add("input.image");
+    for (const part of message.content) {
+      if (part.type !== "attachment_ref") continue;
+      if (part.attachment.kind === "image") capabilities.add("input.image");
+      else if (part.attachment.kind === "pdf") capabilities.add("input.pdf");
+      else if (part.attachment.kind === "file") capabilities.add("input.file");
+    }
   }
   if (tools?.length) {
     capabilities.add("tool.calling");

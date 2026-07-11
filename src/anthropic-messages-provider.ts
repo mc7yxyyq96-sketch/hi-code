@@ -188,6 +188,9 @@ function toAnthropicContent(role: "user" | "assistant", content: ChatMessage["co
       if (part.text) output.push({ type: "text", text: part.text });
       continue;
     }
+    if (part.type === "attachment_ref") {
+      throw providerWireError("provider_attachment_unmaterialized", "Attachment references must be materialized before Anthropic transport", "validation");
+    }
     if (role !== "user") {
       throw providerWireError("provider_image_role_invalid", "Anthropic image input must use the user role", "validation");
     }
@@ -199,9 +202,13 @@ function toAnthropicContent(role: "user" | "assistant", content: ChatMessage["co
 function toAnthropicToolResultContent(content: ChatMessage["content"]): AnthropicToolResultContent {
   if (typeof content === "string") return content;
   if (!Array.isArray(content)) return "";
-  return content.map((part) => part.type === "text"
-    ? { type: "text" as const, text: part.text }
-    : { type: "image" as const, source: toAnthropicImage(part.image_url?.url) });
+  return content.map((part) => {
+    if (part.type === "text") return { type: "text" as const, text: part.text };
+    if (part.type === "attachment_ref") {
+      throw providerWireError("provider_attachment_unmaterialized", "Attachment references must be materialized before Anthropic transport", "validation");
+    }
+    return { type: "image" as const, source: toAnthropicImage(part.image_url?.url) };
+  });
 }
 
 function toAnthropicImage(value: unknown): AnthropicImageSource {
