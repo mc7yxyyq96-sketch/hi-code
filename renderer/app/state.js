@@ -1,6 +1,6 @@
 const initialState = {
   busy: false,
-  agentBody: null,
+  activeAssistantMessageId: null,
   agentRaw: "",
   yolo: false,
   cwd: "",

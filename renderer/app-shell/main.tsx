@@ -2,12 +2,16 @@ import { createRoot, type Root } from "react-dom/client";
 import { AppShell } from "./AppShell.tsx";
 import { LegacyPanelAdapter, type AppliedLegacyRoute, type LegacyRouteRequest } from "./legacy-panel-adapter.ts";
 import { createShellStore } from "./store.ts";
+import { createWorkspaceBridge, WorkspaceController, type WorkspaceBridge } from "./workspace/controller.ts";
+import { createWorkspaceStore } from "./workspace/store.ts";
+import { WorkspacePortals } from "./workspace/WorkspacePortals.tsx";
 
 export interface HiCodeAppShellBridge {
   readonly ownsNavigation: true;
   applyLegacyRoute(request: LegacyRouteRequest): AppliedLegacyRoute;
   requestRoute(routeId: string): void;
   setDrawerOpen(open: boolean): void;
+  readonly workspace: WorkspaceBridge;
 }
 
 declare global {
@@ -26,16 +30,25 @@ export function mountHiCodeAppShell() {
   const store = createShellStore({ activeRouteId: "home", activeNavId: "newChat" });
   const adapter = new LegacyPanelAdapter({ document, store });
   adapter.validate();
+  const workspaceStore = createWorkspaceStore();
+  const workspaceController = new WorkspaceController(workspaceStore);
+  const workspace = createWorkspaceBridge(workspaceStore, workspaceController);
 
   window.hicodeAppShell = Object.freeze({
     ownsNavigation: true as const,
     applyLegacyRoute: (request: LegacyRouteRequest) => adapter.applyLegacyRoute(request),
     requestRoute: (routeId: string) => adapter.requestRoute(routeId),
     setDrawerOpen: (open: boolean) => store.setDrawerOpen(open),
+    workspace,
   });
 
   mountedRoot = createRoot(mount);
-  mountedRoot.render(<AppShell adapter={adapter} store={store} />);
+  mountedRoot.render(
+    <>
+      <AppShell adapter={adapter} store={store} />
+      <WorkspacePortals controller={workspaceController} store={workspaceStore} />
+    </>,
+  );
   adapter.applyLegacyRoute({ route: "home", mainClass: "home", activeNav: "newChat" });
   mount.dataset.appShell = "react-typescript-vite";
 
