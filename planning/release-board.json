@@ -298,7 +298,8 @@
       "startedAt": "2026-07-11T17:58:50Z",
       "completedAt": "2026-07-11T20:35:56Z",
       "taskManifest": "reports/tasks/HC-UI-311.md",
-      "evidence": "reports/evidence/HC-UI-311/manifest.json"
+      "evidence": "reports/evidence/HC-UI-311/manifest.json",
+      "ciEvidence": "reports/evidence/HC-UI-311/ci-matrix.json"
     }
   ],
   "gates": [
@@ -406,7 +407,8 @@
       "status": "passed",
       "owner": "HC-UI-311",
       "verifiedAt": "2026-07-11T20:35:56Z",
-      "evidence": "reports/evidence/HC-UI-311/manifest.json"
+      "evidence": "reports/evidence/HC-UI-311/manifest.json",
+      "ciEvidence": "reports/evidence/HC-UI-311/ci-matrix.json"
     }
   ],
   "nextReleaseSlices": [

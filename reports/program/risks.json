@@ -113,10 +113,11 @@
         "test/terminal-service-tests.mjs",
         "test/terminal-workbench-tests.ts",
         "tests/electron-e2e/run.mjs",
-        "reports/evidence/HC-UI-311/manifest.json"
+        "reports/evidence/HC-UI-311/manifest.json",
+        "reports/evidence/HC-UI-311/ci-matrix.json"
       ],
       "impact": "An unrestricted PTY can inherit credentials, execute without explicit policy, retain hidden child processes, or continue producing output after the UI closes.",
-      "mitigation": "HC-UI-311 uses a centralized owner-scoped PTY service, explicit Runtime-policy authorization, trusted profile-free shells, minimal child environments, bounded non-persisted output, resize validation, stale-start cancellation, and verified descendant/process-group termination. Real Electron and packaged macOS checks passed; the existing three-platform CI matrix remains required before merge.",
+      "mitigation": "HC-UI-311 uses a centralized owner-scoped PTY service, explicit Runtime-policy authorization, trusted profile-free shells, minimal child environments, bounded non-persisted output, resize validation, stale-start cancellation, and verified descendant/process-group termination. Local real Electron and packaged macOS checks passed; GitHub Actions run 29167924876 also passed real Electron smoke on Ubuntu, macOS, and Windows.",
       "trigger": "Any PTY spawn without policy approval, inherited secret, unbounded transcript, cross-workspace session, or surviving process tree blocks HC-UI-311 completion."
     },
     {

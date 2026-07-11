@@ -267,7 +267,8 @@
       "branch": "codex/desktop-ux/hc-ui-311",
       "taskManifest": "reports/tasks/HC-UI-311.md",
       "completedAt": "2026-07-11T20:35:56Z",
-      "evidenceManifest": "reports/evidence/HC-UI-311/manifest.json"
+      "evidenceManifest": "reports/evidence/HC-UI-311/manifest.json",
+      "ciEvidence": "reports/evidence/HC-UI-311/ci-matrix.json"
     },
     {
       "id": "HC-UI-312",

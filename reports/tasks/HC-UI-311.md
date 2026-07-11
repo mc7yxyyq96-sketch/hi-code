@@ -65,6 +65,8 @@ This task does not implement app preview, Git/PR/CI orchestration, industrial ad
 
 `reports/evidence/HC-UI-311/manifest.json` records 18/18 passing gates from clean source commit `d9703672325345e3e92924aaf9abe52ec29fe714`. It includes focused terminal, service, App Shell, renderer, compatibility, security, build, verify, release, feature, DoD, production-audit, real Electron, macOS package, packaged-terminal, program-control, and diff-check evidence with hashed logs. The full-tree DoD scan reports zero findings. Cross-platform native behavior is enforced by the macOS/Linux/Windows CI matrix on every pull request target; local native acceptance is macOS arm64.
 
+`reports/evidence/HC-UI-311/ci-matrix.json` records GitHub Actions run `29167924876` for Draft PR #15 at commit `55d9ede7f5a3cde4ebc8841feb9ba32a0296b673`. The general test job and real Electron smoke jobs on `ubuntu-latest`, `macos-latest`, and `windows-latest` all completed successfully and uploaded their smoke artifacts.
+
 ## Rollback
 
 Revert the HC-UI-311 implementation commits. The existing command tool, Runtime, editor, conversation, Diff Inspector, and legacy panels remain unchanged and continue to provide the pre-terminal workflow.

@@ -94,6 +94,7 @@ const requiredFiles = [
   "reports/evidence/HC-UI-302/manifest.json",
   "reports/evidence/HC-UI-310/manifest.json",
   "reports/evidence/HC-UI-311/manifest.json",
+  "reports/evidence/HC-UI-311/ci-matrix.json",
   "scripts/electron-compatibility.mjs",
   "scripts/run-electron-builder.mjs",
   "test/electron-compatibility-tests.mjs",
@@ -136,6 +137,7 @@ const uiShellManifest = readJson(root, "reports/evidence/HC-UI-301/manifest.json
 const uiWorkbenchManifest = readJson(root, "reports/evidence/HC-UI-302/manifest.json");
 const editorWorkbenchManifest = readJson(root, "reports/evidence/HC-UI-310/manifest.json");
 const terminalManifest = readJson(root, "reports/evidence/HC-UI-311/manifest.json");
+const terminalCiEvidence = readJson(root, "reports/evidence/HC-UI-311/ci-matrix.json");
 const packageJson = readJson(root, "package.json");
 const packageLock = readJson(root, "package-lock.json");
 const programTask = backlog.tasks.find((task) => task.id === "HC-PROG-100");
@@ -332,16 +334,29 @@ check(
     Boolean(terminalTask?.completedAt) &&
     terminalTask?.taskManifest === "reports/tasks/HC-UI-311.md" &&
     terminalTask?.evidenceManifest === "reports/evidence/HC-UI-311/manifest.json" &&
+    terminalTask?.ciEvidence === "reports/evidence/HC-UI-311/ci-matrix.json" &&
     terminalTask?.dependencies?.every((id) => backlog.tasks.find((task) => task.id === id)?.status === "completed") &&
     terminalBoardTask?.status === "completed" &&
     terminalBoardTask?.taskManifest === "reports/tasks/HC-UI-311.md" &&
-    terminalBoardTask?.evidence === "reports/evidence/HC-UI-311/manifest.json",
+    terminalBoardTask?.evidence === "reports/evidence/HC-UI-311/manifest.json" &&
+    terminalBoardTask?.ciEvidence === "reports/evidence/HC-UI-311/ci-matrix.json",
   JSON.stringify(terminalTask),
 );
-check("Integrated terminal policy gate passed with committed evidence", board.gates?.find((gate) => gate.id === "integrated-terminal-policy")?.status === "passed" && board.gates?.find((gate) => gate.id === "integrated-terminal-policy")?.evidence === "reports/evidence/HC-UI-311/manifest.json");
-check("HC-UI-311 policy and lifecycle risk is evidence-backed and mitigated", risks.risks?.some((risk) => risk.id === "RISK-UI-005" && risk.status === "mitigated" && risk.evidence?.includes("reports/evidence/HC-UI-311/manifest.json")));
+check("Integrated terminal policy gate passed with committed evidence", board.gates?.find((gate) => gate.id === "integrated-terminal-policy")?.status === "passed" && board.gates?.find((gate) => gate.id === "integrated-terminal-policy")?.evidence === "reports/evidence/HC-UI-311/manifest.json" && board.gates?.find((gate) => gate.id === "integrated-terminal-policy")?.ciEvidence === "reports/evidence/HC-UI-311/ci-matrix.json");
+check("HC-UI-311 policy and lifecycle risk is evidence-backed and mitigated", risks.risks?.some((risk) => risk.id === "RISK-UI-005" && risk.status === "mitigated" && risk.evidence?.includes("reports/evidence/HC-UI-311/manifest.json") && risk.evidence?.includes("reports/evidence/HC-UI-311/ci-matrix.json")));
 check("HC-UI-311 evidence records every command passing from a clean tree", terminalManifest.summary?.allPassed === true && terminalManifest.summary?.total === 18 && terminalManifest.capture?.workingTreeClean === true, JSON.stringify(terminalManifest.summary));
 check("HC-UI-311 evidence is captured from its isolated branch", terminalManifest.source?.branch === "codex/desktop-ux/hc-ui-311" && terminalManifest.source?.parentCommit === "d9703672325345e3e92924aaf9abe52ec29fe714");
+check(
+  "HC-UI-311 CI passed general tests and real Electron smoke on every target platform",
+  terminalCiEvidence.event === "pull_request" &&
+    terminalCiEvidence.pullRequest === 15 &&
+    terminalCiEvidence.status === "completed" &&
+    terminalCiEvidence.conclusion === "success" &&
+    terminalCiEvidence.headSha === "55d9ede7f5a3cde4ebc8841feb9ba32a0296b673" &&
+    ["ubuntu-latest", "macos-latest", "windows-latest"].every((platform) => terminalCiEvidence.jobs?.some((job) => job.platform === platform && job.name === `Electron smoke (${platform})` && job.conclusion === "success" && job.electronSmoke === "success" && job.artifactUpload === "success")) &&
+    terminalCiEvidence.jobs?.some((job) => job.name === "test" && job.conclusion === "success" && job.testSuites === "success" && job.dodScan === "success"),
+  JSON.stringify(terminalCiEvidence),
+);
 for (const requiredCommand of ["build", "terminal-tests", "service-tests", "app-shell-tests", "renderer-tests", "electron-compatibility", "security-tests", "verify", "release-check", "feature-tests", "dod-tests", "dod-scan", "production-audit", "electron-e2e", "mac-package", "terminal-package", "program-control", "git-diff-check"]) {
   check(`HC-UI-311 captured ${requiredCommand}`, terminalManifest.commands?.some((command) => command.id === requiredCommand && command.status === "passed"));
 }
