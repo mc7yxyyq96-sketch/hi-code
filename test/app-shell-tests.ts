@@ -204,7 +204,9 @@ await check("production HTML provides a dedicated App Shell mount", () => {
 await check("the generated bundle exists after a production build", () => {
   const output = path.resolve("renderer/generated/app-shell.js");
   assert.ok(fs.existsSync(output), `${output} was not generated`);
-  assert.ok(fs.statSync(output).size > 1_000, "App Shell bundle is unexpectedly empty");
+  const size = fs.statSync(output).size;
+  assert.ok(size > 1_000, "App Shell bundle is unexpectedly empty");
+  assert.ok(size < 300_000, `App Shell production bundle includes unexpected development weight: ${size} bytes`);
 });
 
 await check("real Electron acceptance includes the full 720-1920 range", () => {
