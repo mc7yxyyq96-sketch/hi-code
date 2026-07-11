@@ -481,7 +481,7 @@ export function createLegacyOpenAICompatibleAdapter(
       "tool.calling": { support: "supported" },
       "tool.streaming": { support: "supported" },
       "reasoning.summary": { support: "unsupported", reason: "reasoning summaries require a provider-specific adapter" },
-      "output.structured": { support: "unsupported", reason: "structured output negotiation is not implemented by the compatibility transport" },
+      "output.structured": { support: "unsupported", reason: "structured output negotiation requires a dedicated adapter and is not advertised by this compatibility transport" },
       usage: { support: "conditional", reason: "the endpoint may omit stream usage" },
       interruption: { support: "supported" },
     },
