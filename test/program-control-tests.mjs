@@ -42,6 +42,8 @@ const requiredFiles = [
   "docs/adr/ADR-0006-model-provider-adapter-v2.md",
   "docs/adr/ADR-0007-explicit-openai-responses-transport.md",
   "docs/adr/ADR-0008-explicit-anthropic-ollama-transports.md",
+  "docs/adr/ADR-0009-durable-attachments-and-command-routing.md",
+  "docs/attachments-and-command-registry.md",
   "docs/anthropic-ollama-adapters.md",
   "docs/model-provider-adapters.md",
   "docs/openai-responses-adapter.md",
@@ -61,6 +63,7 @@ const requiredFiles = [
   "reports/tasks/HC-PROV-210.md",
   "reports/tasks/HC-PROV-211.md",
   "reports/tasks/HC-PROV-212.md",
+  "reports/tasks/HC-RUN-220.md",
   "reports/tasks/HC-REL-ALPHA-7.md",
   "reports/evidence/baseline/manifest.json",
   "reports/evidence/HC-QA-101/manifest.json",
@@ -74,6 +77,7 @@ const requiredFiles = [
   "reports/evidence/HC-PROV-210/manifest.json",
   "reports/evidence/HC-PROV-211/manifest.json",
   "reports/evidence/HC-PROV-212/manifest.json",
+  "reports/evidence/HC-RUN-220/manifest.json",
   "scripts/electron-compatibility.mjs",
   "scripts/run-electron-builder.mjs",
   "test/electron-compatibility-tests.mjs",
@@ -111,6 +115,7 @@ const alpha8ReleaseManifest = readJson(root, "reports/evidence/HC-REL-ALPHA-8/ma
 const modelProviderManifest = readJson(root, "reports/evidence/HC-PROV-210/manifest.json");
 const openAIResponsesManifest = readJson(root, "reports/evidence/HC-PROV-211/manifest.json");
 const anthropicOllamaManifest = readJson(root, "reports/evidence/HC-PROV-212/manifest.json");
+const attachmentCommandManifest = readJson(root, "reports/evidence/HC-RUN-220/manifest.json");
 const packageJson = readJson(root, "package.json");
 const packageLock = readJson(root, "package-lock.json");
 const programTask = backlog.tasks.find((task) => task.id === "HC-PROG-100");
@@ -122,6 +127,7 @@ const alpha8ReleaseTask = backlog.tasks.find((task) => task.id === "HC-REL-ALPHA
 const modelProviderTask = backlog.tasks.find((task) => task.id === "HC-PROV-210");
 const openAIResponsesTask = backlog.tasks.find((task) => task.id === "HC-PROV-211");
 const anthropicOllamaTask = backlog.tasks.find((task) => task.id === "HC-PROV-212");
+const attachmentCommandTask = backlog.tasks.find((task) => task.id === "HC-RUN-220");
 const uiShellTask = backlog.tasks.find((task) => task.id === "HC-UI-301");
 const qaTask = board.tasks.find((task) => task.id === "HC-QA-101");
 const runtimeTask = board.tasks.find((task) => task.id === "HC-RUN-201");
@@ -132,6 +138,7 @@ const alpha8ReleaseBoardTask = board.tasks.find((task) => task.id === "HC-REL-AL
 const modelProviderBoardTask = board.tasks.find((task) => task.id === "HC-PROV-210");
 const openAIResponsesBoardTask = board.tasks.find((task) => task.id === "HC-PROV-211");
 const anthropicOllamaBoardTask = board.tasks.find((task) => task.id === "HC-PROV-212");
+const attachmentCommandBoardTask = board.tasks.find((task) => task.id === "HC-RUN-220");
 
 console.log("\n[program-control] board and evidence contract");
 check("backlog records immutable source commit", /^[0-9a-f]{40}$/.test(backlog.sourceCommit || ""));
@@ -231,8 +238,10 @@ check(
 check("Model Provider focused tests are part of global verification", packageJson.scripts["test:model-providers"] === "node test/model-provider-tests.mjs" && fs.readFileSync(path.join(root, "scripts/verify.mjs"), "utf8").includes("test/model-provider-tests.mjs"));
 check("OpenAI Responses focused tests are part of global verification", packageJson.scripts["test:openai-responses"] === "node test/openai-responses-provider-tests.mjs" && fs.readFileSync(path.join(root, "scripts/verify.mjs"), "utf8").includes("test/openai-responses-provider-tests.mjs"));
 check("Anthropic and Ollama focused tests are part of global verification", packageJson.scripts["test:anthropic-ollama"] === "node test/anthropic-ollama-provider-tests.mjs" && fs.readFileSync(path.join(root, "scripts/verify.mjs"), "utf8").includes("test/anthropic-ollama-provider-tests.mjs"));
+check("Attachment and command routing tests are part of global verification", packageJson.scripts["test:attachment-command"] === "node test/attachment-command-registry-tests.mjs" && fs.readFileSync(path.join(root, "scripts/verify.mjs"), "utf8").includes("test/attachment-command-registry-tests.mjs"));
 check("OpenAI Responses evidence capture is reproducible", packageJson.scripts["program:evidence:openai-responses"] === "node scripts/capture-task-evidence.mjs --task=HC-PROV-211" && fs.readFileSync(path.join(root, "scripts/capture-task-evidence.mjs"), "utf8").includes('"HC-PROV-211"'));
 check("Anthropic and Ollama evidence capture is reproducible", packageJson.scripts["program:evidence:anthropic-ollama"] === "node scripts/capture-task-evidence.mjs --task=HC-PROV-212" && fs.readFileSync(path.join(root, "scripts/capture-task-evidence.mjs"), "utf8").includes('"HC-PROV-212"'));
+check("Attachment and command evidence capture is reproducible", packageJson.scripts["program:evidence:attachment-command"] === "node scripts/capture-task-evidence.mjs --task=HC-RUN-220" && fs.readFileSync(path.join(root, "scripts/capture-task-evidence.mjs"), "utf8").includes('"HC-RUN-220"'));
 check(
   "HC-PROV-211 completed only after Model Provider v2 completion and evidence",
   openAIResponsesTask?.status === "completed" &&
@@ -282,6 +291,33 @@ for (const command of anthropicOllamaManifest.commands || []) {
   const absolute = path.join(root, command.logPath || "");
   check(`HC-PROV-212 ${command.id} log exists`, Boolean(command.logPath) && fs.existsSync(absolute));
   if (fs.existsSync(absolute)) check(`HC-PROV-212 ${command.id} log hash matches`, digest(absolute) === command.logSha256);
+}
+check(
+  "HC-RUN-220 completed only after its runtime dependency and evidence",
+  attachmentCommandTask?.status === "completed" &&
+    attachmentCommandTask?.branch === "codex/runtime-engine/hc-run-220" &&
+    Boolean(attachmentCommandTask?.startedAt) &&
+    Boolean(attachmentCommandTask?.completedAt) &&
+    attachmentCommandTask?.taskManifest === "reports/tasks/HC-RUN-220.md" &&
+    attachmentCommandTask?.evidenceManifest === "reports/evidence/HC-RUN-220/manifest.json" &&
+    attachmentCommandTask?.dependencies?.every((id) => backlog.tasks.find((task) => task.id === id)?.status === "completed") &&
+    attachmentCommandBoardTask?.status === "completed" &&
+    attachmentCommandBoardTask?.branch === "codex/runtime-engine/hc-run-220" &&
+    attachmentCommandBoardTask?.evidence === "reports/evidence/HC-RUN-220/manifest.json" &&
+    board.gates?.find((gate) => gate.id === "attachment-command-registry")?.status === "passed" &&
+    board.gates?.find((gate) => gate.id === "attachment-command-registry")?.evidence === "reports/evidence/HC-RUN-220/manifest.json",
+  JSON.stringify(attachmentCommandTask),
+);
+check("HC-RUN-220 risk is evidence-backed and mitigated", risks.risks?.some((risk) => risk.id === "RISK-RUN-004" && risk.status === "mitigated" && risk.evidence?.includes("reports/evidence/HC-RUN-220/manifest.json")));
+check("HC-RUN-220 evidence records every command passing", attachmentCommandManifest.summary?.allPassed === true && attachmentCommandManifest.summary?.total === 24, JSON.stringify(attachmentCommandManifest.summary));
+check("HC-RUN-220 evidence is captured from its isolated branch", attachmentCommandManifest.source?.branch === "codex/runtime-engine/hc-run-220" && attachmentCommandManifest.source?.parentCommit === "a5008b9edd0802ccbf50d3bd75ad73a9c95107bd");
+for (const requiredCommand of ["build", "verify", "release-check", "feature-tests", "attachment-command-tests", "model-provider-tests", "openai-responses-tests", "anthropic-ollama-tests", "service-tests", "runtime-protocol", "runtime-stores", "runtime-store-integration", "turn-recovery", "runtime-events", "runtime-concurrency", "runtime-clients", "renderer-tests", "security-tests", "dod-tests", "dod-scan", "production-audit", "electron-e2e", "program-control", "git-diff-check"]) {
+  check(`HC-RUN-220 captured ${requiredCommand}`, attachmentCommandManifest.commands?.some((command) => command.id === requiredCommand && command.status === "passed"));
+}
+for (const command of attachmentCommandManifest.commands || []) {
+  const absolute = path.join(root, command.logPath || "");
+  check(`HC-RUN-220 ${command.id} log exists`, Boolean(command.logPath) && fs.existsSync(absolute));
+  if (fs.existsSync(absolute)) check(`HC-RUN-220 ${command.id} log hash matches`, digest(absolute) === command.logSha256);
 }
 check("HC-PROV-210 evidence records every command passing", modelProviderManifest.summary?.allPassed === true && modelProviderManifest.summary?.total === 16, JSON.stringify(modelProviderManifest.summary));
 check("HC-PROV-210 evidence is captured from its task branch", modelProviderManifest.source?.branch === "codex/runtime-engine/hc-prov-210" && modelProviderManifest.source?.parentCommit === "a0f4025addf0de92192011632d194878bb7b0d3c");

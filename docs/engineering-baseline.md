@@ -73,6 +73,9 @@ The current script also runs entrypoint/security tests and production dependency
 - Model profiles must select non-default wire protocols explicitly. Omitted `protocol` remains `chat_completions`; only `protocol: "responses"` may route to `/responses`.
 - Remote Responses endpoints must use HTTPS. Loopback HTTP is permitted only for local services and tests; credentials must not enter provider events or logs.
 - File previews and diff operations must stay confined to the selected workspace.
+- Desktop attachments must use the app-data `attachments-v2` store. Renderer and queue payloads carry bounded opaque IDs, source paths are not persisted, and each blob read must pass size and SHA-256 verification.
+- Unsupported PDF or general-file transport must fail before provider network I/O and must not be reported as processed.
+- Input classification must use the shared Command Registry. Unknown slash commands and ambiguous native matchers fail closed; ordinary coding requests must remain on the agent route.
 - Bash, MCP servers, and industrial adapters must not inherit the whole host environment. Bash uses the allowlist in `src/tools/bash.ts`; MCP/tool adapters use `src/process-env.ts` and only receive explicitly configured extra env.
 - Store installs must write only into app data directories such as `~/.vibe/store`.
 - Remote catalog entries must not read local `sourcePath` or `sourceRoot`.

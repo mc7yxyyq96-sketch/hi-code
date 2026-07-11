@@ -605,6 +605,10 @@ if (!window.hicode) {
     gitCommitMessage: async () => ({ ok: true, message: "Update Hi Code workspace" }),
     gitCommit: async () => ({ ok: true, hash: "demo123", output: "Committed demo123" }),
     pickFolder: async () => "/demo/hicode-project",
+    attachFile: async () => ({ ok: true, id: "att-00000000-0000-4000-8000-000000000001", name: "demo-notes.txt", kind: "text", mimeType: "text/plain", size: 32, sha256: "0".repeat(64) }),
+    attachImage: async () => ({ ok: true, id: "att-00000000-0000-4000-8000-000000000002", name: "demo-image.png", kind: "image", mimeType: "image/png", size: 68, sha256: "1".repeat(64) }),
+    listAttachments: async () => [],
+    removeAttachment: async () => ({ ok: true }),
     getCwd: async () => "/demo/hicode-project",
     listDir: async (dir) => demoFiles[dir || "/demo/hicode-project"] || [],
     readFile: async (p) => ({ path: p, content: `// ${p}\n\nexport function demo() {\n  return "Hi Code";\n}\n` }),
@@ -2072,11 +2076,8 @@ async function showIndustrialProject() {
 /* ---------- chat rendering ---------- */
 const atBottom = () => chat.scrollHeight - chat.scrollTop - chat.clientHeight < 90;
 const scrollDown = () => (chat.scrollTop = chat.scrollHeight);
-function inputTextWithAttachments(text, attachments = []) {
-  const refs = attachments
-    .map((attachment) => attachment?.relativePath ? `@${attachment.relativePath}` : "")
-    .filter(Boolean);
-  return refs.length ? `${text}\n${refs.join("\n")}` : text;
+function attachmentKindLabel(attachment) {
+  return { image: "图片", pdf: "PDF", text: "文本", file: "文件" }[attachment?.kind] || "附件";
 }
 function renderPendingAttachments() {
   if (!attachmentTray) return;
@@ -2085,14 +2086,19 @@ function renderPendingAttachments() {
   pendingAttachments.forEach((attachment, index) => {
     const chip = document.createElement("span");
     chip.className = "attachment-chip";
-    chip.title = attachment.relativePath || attachment.name || "图片附件";
+    chip.title = attachment.name || "附件";
     const label = document.createElement("span");
-    label.textContent = `图片：${attachment.name || "image"}`;
+    label.textContent = `${attachmentKindLabel(attachment)}：${attachment.name || "attachment"}`;
     const remove = document.createElement("button");
     remove.type = "button";
-    remove.title = "移除图片";
+    remove.title = "移除附件";
     remove.textContent = "×";
-    remove.onclick = () => {
+    remove.onclick = async () => {
+      const result = await api.removeAttachment(attachment.id);
+      if (result?.ok === false) {
+        toast.error(result.error || "附件移除失败");
+        return;
+      }
       pendingAttachments.splice(index, 1);
       syncState({ pendingAttachments });
       renderPendingAttachments();
@@ -2106,13 +2112,26 @@ function clearPendingAttachments() {
   syncState({ pendingAttachments });
   renderPendingAttachments();
 }
+async function discardPendingAttachments() {
+  const discarded = pendingAttachments.slice();
+  if (!discarded.length) return;
+  const failed = [];
+  for (const attachment of discarded) {
+    const result = await api.removeAttachment(attachment.id);
+    if (result?.ok === false) failed.push(attachment.name || "attachment");
+  }
+  clearPendingAttachments();
+  if (failed.length) toast.info(`已切换会话；${failed.length} 个旧附件将在会话清理时移除。`);
+}
 function appendPendingAttachment(result) {
-  if (!result?.ok || !result.relativePath) return false;
+  if (!result?.ok || !result.id) return false;
   pendingAttachments.push({
-    name: result.name || result.relativePath.split("/").pop() || "image",
-    relativePath: result.relativePath,
-    mime: result.mime || "image/*",
+    id: result.id,
+    name: result.name || "attachment",
+    kind: result.kind || "file",
+    mimeType: result.mimeType || result.mime || "application/octet-stream",
     size: result.size || 0,
+    sha256: result.sha256 || "",
   });
   syncState({ pendingAttachments });
   renderPendingAttachments();
@@ -2132,7 +2151,7 @@ function addUserMessage(text, attachments = []) {
       const chip = document.createElement("span");
       chip.className = "attachment-chip";
       const label = document.createElement("span");
-      label.textContent = `图片：${attachment.name || attachment.relativePath || "image"}`;
+      label.textContent = `${attachmentKindLabel(attachment)}：${attachment.name || "attachment"}`;
       chip.appendChild(label);
       tray.appendChild(chip);
     }
@@ -2205,7 +2224,7 @@ function setBusy(v) {
 }
 function runLine(text, options = {}) {
   if (!text) return;
-  if (busy) return enqueueInput(text);
+  if (busy) return enqueueInput(text, options);
   showChat();
   beginRunStatus(text);
   addUserMessage(options.displayText || text, options.attachments || []); startAgentMessage(); setBusy(true);
@@ -2213,23 +2232,30 @@ function runLine(text, options = {}) {
   if (runningSessionId && !currentSessionId) currentSessionId = runningSessionId;
   liveSessionSnapshot = null;
   renderSessions(searchInput.value.trim());
-  api.send(text);
+  const attachmentIds = (options.attachments || []).map((attachment) => attachment.id).filter(Boolean);
+  const payload = attachmentIds.length ? { text, attachmentIds } : text;
+  void api.send(payload).then((result) => {
+    if (result?.ok === false) {
+      toast.error(result.error || "消息发送失败");
+      finishAgentMessageIfEmpty("error", result.error || "消息发送失败");
+      setBusy(false);
+    }
+  });
 }
 function submit() {
   const text = input.value.trim();
   if (!text && !pendingAttachments.length) return;
   const attachments = pendingAttachments.slice();
-  const displayText = text || "请识别这张图片。";
-  const payload = inputTextWithAttachments(displayText, attachments);
+  const displayText = text || "请分析这些附件。";
   input.value = "";
   input.style.height = "auto";
   clearPendingAttachments();
   hideMenu();
-  runLine(payload, { displayText, attachments });
+  runLine(displayText, { displayText, attachments });
 }
 
-function enqueueInput(text) {
-  queuedInputs.push(text);
+function enqueueInput(text, options = {}) {
+  queuedInputs.push({ text, options: { ...options, attachments: [...(options.attachments || [])] } });
   syncState({ queuedInputs });
   renderQueueStatus();
   updateRunStatus({
@@ -2244,7 +2270,7 @@ function runNextQueuedInput() {
   const next = queuedInputs.shift();
   syncState({ queuedInputs });
   renderQueueStatus();
-  if (next) runLine(next);
+  if (next?.text) runLine(next.text, next.options || {});
 }
 
 function renderQueueStatus() {
@@ -2258,7 +2284,7 @@ function renderQueueStatus() {
   if (queuedInputs.length) labels.push(`待发送 ${queuedInputs.length} 条`);
   if (runtimeQueued.length) labels.push(`主队列 ${runtimeQueued.length} 条`);
   queueCount.textContent = labels.join(" · ") || "没有排队任务";
-  const preview = runtimeRunning?.summary || queuedInputs[0] || runtimeQueued[0]?.summary || "";
+  const preview = runtimeRunning?.summary || queuedInputs[0]?.text || runtimeQueued[0]?.summary || "";
   queuePreview.textContent = preview.slice(0, 90);
   const jobCenterId = runtimeRunning?.jobCenterId || runtimeQueued.find((job) => job.jobCenterId)?.jobCenterId || "";
   if (queueOpenJob) {
@@ -3118,7 +3144,7 @@ function renderChatFromMessages(msgs) {
   chat.innerHTML = "";
   showChat();
   for (const m of msgs) {
-    if (m.role === "user") addUserMessage(m.text);
+    if (m.role === "user") addUserMessage(m.text, m.attachments || []);
     else { startAgentMessage(); agentBody.textContent = m.text; }
   }
   agentBody = null;
@@ -3170,6 +3196,8 @@ async function openSession(id) {
     scrollDown();
     return;
   }
+
+  await discardPendingAttachments();
 
   if (meta?.replayOnly) {
     const msgs = await api.readSession(id).catch(() => []);
@@ -3224,6 +3252,7 @@ async function startNewConversation() {
     renderSessions(searchInput.value.trim());
     return;
   }
+  await discardPendingAttachments();
   const result = api.has("newSession") ? await api.newSession() : { ok: false };
   if (result?.ok && result.sessionId) {
     activeRuntimeSessionId = result.sessionId;
@@ -3431,19 +3460,23 @@ async function pickFolder() {
     if (inChat) addSystemNote("已切换到 " + dir);
   }
 }
-async function chooseImageAttachment() {
-  const result = await api.attachImage({});
+async function chooseAttachment() {
+  const result = await api.attachFile({});
   if (result?.canceled) return;
   if (!appendPendingAttachment(result)) {
-    toast.error(result?.error || "图片附件失败");
+    toast.error(result?.error || "附件添加失败");
     return;
   }
-  const message = visionCapabilityNotice();
-  if (currentModel.capabilities?.vision?.status === "supported") toast.ok(message);
-  else toast.info(message);
+  if (result.kind === "image") {
+    const message = visionCapabilityNotice();
+    if (currentModel.capabilities?.vision?.status === "supported") toast.ok(message);
+    else toast.info(message);
+  } else {
+    toast.ok(`已添加${attachmentKindLabel(result)}，发送前会检查当前模型能力。`);
+  }
 }
 async function attachImageDataUrl(dataUrl, name = "pasted-image.png") {
-  const result = await api.attachImage({ dataUrl, name });
+  const result = await api.attachFile({ dataUrl, name });
   if (!appendPendingAttachment(result)) {
     toast.error(result?.error || "图片附件失败");
     return false;
@@ -3494,7 +3527,7 @@ $("modelsBtn").onclick = () => openSettings("model");
 timelineDrawerBtn.onclick = () => setWorkbenchDrawer(document.body.classList.contains("timeline-drawer-open") ? "" : "timeline");
 diffDrawerBtn.onclick = () => setWorkbenchDrawer(document.body.classList.contains("diff-drawer-open") ? "" : "diff");
 workbenchDrawerBackdrop.onclick = closeWorkbenchDrawers;
-attachBtn.onclick = chooseImageAttachment;
+attachBtn.onclick = chooseAttachment;
 modelPill.onclick = (e) => {
   e.stopPropagation();
   toggleModelPicker();

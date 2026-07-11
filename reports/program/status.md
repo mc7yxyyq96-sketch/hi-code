@@ -36,6 +36,7 @@ The final machine-captured evidence is written by `npm run program:baseline` to 
 | 8 | HC-PROV-210 | Completed | Runtime Engine | HC-RUN-202, HC-REL-ALPHA-8 integration base |
 | 9 | HC-PROV-211 | Completed | Runtime Engine | HC-PROV-210 |
 | 10 | HC-PROV-212 | Completed | Runtime Engine | HC-PROV-210, HC-PROV-211 |
+| 11 | HC-RUN-220 | Completed | Runtime Engine | HC-PROV-210 |
 
 HC-QA-101 established a real Electron responsive baseline. HC-RUN-201 introduces protocol-native assistant output and concurrency isolation. No new industrial domain module is authorized before HC-RUN-201 completes.
 
@@ -63,6 +64,8 @@ HC-PROV-211 completed in the isolated `codex/runtime-engine/hc-prov-211` worktre
 
 HC-PROV-212 completed in the isolated `codex/runtime-engine/hc-prov-212` worktree from HC-PROV-211 completion commit `7f91c76`. Dedicated Anthropic Messages SSE and Ollama native NDJSON transports now preserve text, images, tool correlation, usage, interruption, native terminal states, and normalized errors through the shared Runtime. Profiles opt in explicitly; current Chat Completions and Responses profiles are unchanged. Raw provider thinking is neither displayed nor persisted. Twenty machine-captured gates passed, including both two-request Runtime tool loops, legacy transport regressions, Electron config routing, security, DoD, production audit, and real Electron E2E.
 
+HC-RUN-220 completed in the isolated `codex/runtime-engine/hc-run-220` worktree from HC-PROV-212 completion commit `12ff24e`. App-data attachment records and content-addressed blobs now survive restart without modifying the workspace; Runtime persists opaque references, verifies hashes, and materializes supported image/text content only after capability negotiation. Unsupported PDF/file transport fails visibly before network I/O. One Command Registry resolves shell, slash, native, and agent input across Runtime and Electron with alias/conflict rejection. Twenty-four machine-captured gates passed, including real Runtime/provider materialization, Electron IPC/Renderer coverage, security, DoD, production audit, and Electron E2E.
+
 ## Current Product Truth
 
 - Core Electron, CLI/TUI, runtime, tool, security, Job Center, Provider, Worktree, Arena, industrial, gate, sample, and release tests pass.
@@ -83,6 +86,7 @@ HC-PROV-212 completed in the isolated `codex/runtime-engine/hc-prov-212` worktre
 - Model Provider v2 evidence: `reports/tasks/HC-PROV-210.md`, `reports/evidence/HC-PROV-210/manifest.json`
 - OpenAI Responses evidence: `reports/tasks/HC-PROV-211.md`, `reports/evidence/HC-PROV-211/manifest.json`
 - Anthropic and Ollama evidence: `reports/tasks/HC-PROV-212.md`, `reports/evidence/HC-PROV-212/manifest.json`
+- Attachment and command routing evidence: `reports/tasks/HC-RUN-220.md`, `reports/evidence/HC-RUN-220/manifest.json`
 - Current risks: `reports/program/risks.json`
 - Historical final acceptance: `reports/final-acceptance-historical.md`
 - Historical audit policy: `reports/audit/README.md`

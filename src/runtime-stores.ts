@@ -603,7 +603,7 @@ function threadStateFromEvents(events: RuntimeProtocolEvent[]): {
 function chatMessageText(message: ChatMessage | undefined): string {
   if (!message || message.content === null) return "";
   if (typeof message.content === "string") return message.content;
-  return message.content.map((part) => part.type === "text" ? part.text : "[image]").join(" ");
+  return message.content.map((part) => part.type === "text" ? part.text : part.type === "image_url" ? "[image]" : `[attachment: ${part.attachment.name}]`).join(" ");
 }
 
 function oneLine(value: string, limit: number): string {
@@ -686,6 +686,16 @@ function isContentPart(value: unknown): boolean {
   if (!value || typeof value !== "object") return false;
   const part = value as Record<string, unknown>;
   if (part.type === "text") return typeof part.text === "string";
+  if (part.type === "attachment_ref") {
+    if (!part.attachment || typeof part.attachment !== "object" || Array.isArray(part.attachment)) return false;
+    const attachment = part.attachment as Record<string, unknown>;
+    return typeof attachment.id === "string" && /^att-[a-f0-9-]{36}$/.test(attachment.id) &&
+      typeof attachment.name === "string" && attachment.name.length > 0 && attachment.name.length <= 180 &&
+      (attachment.kind === "image" || attachment.kind === "pdf" || attachment.kind === "text" || attachment.kind === "file") &&
+      typeof attachment.mimeType === "string" && attachment.mimeType.length > 0 &&
+      Number.isInteger(attachment.size) && Number(attachment.size) > 0 &&
+      typeof attachment.sha256 === "string" && /^[a-f0-9]{64}$/.test(attachment.sha256);
+  }
   if (part.type !== "image_url" || !part.image_url || typeof part.image_url !== "object") return false;
   return typeof (part.image_url as Record<string, unknown>).url === "string";
 }

@@ -1,0 +1,25 @@
+$ npm run test:turn-recovery
+
+> hi-code@0.6.0-alpha.8 test:turn-recovery
+> node test/turn-recovery-tests.mjs
+
+
+[turn-recovery] conservative state reduction
+  ✓ streaming interruption preserves output and allows model-only retry
+  ✓ completed assistant output without turn terminal requires review
+  ✓ recovery planner exposes the same deterministic disposition
+  ✓ completed answer followed by failed terminal is reviewed instead of duplicated
+  ✓ unanswered approval requires a new human decision
+  ✓ denied approval is retryable only through fresh approval
+  ✓ approved tool with no terminal event blocks automatic retry
+  ✓ failed turn after side-effecting tool blocks automatic retry
+  ✓ completed side effect outranks a missing legacy approval resolution
+  ✓ failed turn after read-only tool can retry
+  ✓ completed turn needs no recovery
+
+[turn-recovery] durable recovery records
+  ✓ multiple turns reduce independently
+  ✓ protocol recovery excludes completed turns and carries partial output
+  ✓ legacy failures without side-effect evidence require inspection
+
+=== 14 passed, 0 failed ===

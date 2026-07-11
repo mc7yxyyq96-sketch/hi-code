@@ -35,3 +35,4 @@ The file name is `ADR-NNNN-short-title.md`. Numbers are never reused. An accepte
 | [ADR-0006](ADR-0006-model-provider-adapter-v2.md) | Accepted | Separate model transports from task executors and negotiate capabilities before execution |
 | [ADR-0007](ADR-0007-explicit-openai-responses-transport.md) | Accepted | Select OpenAI Responses explicitly and preserve its native call and terminal semantics |
 | [ADR-0008](ADR-0008-explicit-anthropic-ollama-transports.md) | Accepted | Use dedicated explicit Anthropic Messages and Ollama native transports without exposing raw reasoning |
+| [ADR-0009](ADR-0009-durable-attachments-and-command-routing.md) | Accepted | Persist app-data attachment references and resolve all command routes through one deterministic registry |

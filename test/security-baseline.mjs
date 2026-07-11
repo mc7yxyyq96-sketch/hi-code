@@ -64,6 +64,9 @@ const context = fs.readFileSync(path.join(root, "src", "context.ts"), "utf8");
 const council = fs.readFileSync(path.join(root, "src", "agents", "council.ts"), "utf8");
 const manager = fs.readFileSync(path.join(root, "src", "agents", "manager.ts"), "utf8");
 const workspaceService = fs.readFileSync(path.join(root, "electron", "services", "workspace-service.mjs"), "utf8");
+const attachmentStore = fs.readFileSync(path.join(root, "src", "attachment-store.ts"), "utf8");
+const attachmentMaterializer = fs.readFileSync(path.join(root, "src", "attachment-materializer.ts"), "utf8");
+const commandRegistry = fs.readFileSync(path.join(root, "src", "command-registry.ts"), "utf8");
 const electronE2e = fs.readFileSync(path.join(root, "tests", "electron-e2e", "run.mjs"), "utf8");
 
 console.log("\n[security] runtime baseline");
@@ -98,7 +101,7 @@ check("preload does not expose ipcRenderer", !/ipcRenderer[,}]/.test(preload) &&
 check("preload does not expose generic invoke", !/invoke:\s*\(/.test(preload));
 check("preload validates string parameters", preload.includes("requireString(") && preload.includes("checkedInvoke("));
 check("preload normalizes object parameters", preload.includes("optionalObject(") && preload.includes("stringArray("));
-check("preload exposes bounded image attachment API", preload.includes('attachImage: (payload) => safeInvoke("attach-image", optionalObject(payload))'));
+check("preload exposes bounded typed attachment API", preload.includes("function runtimeInput") && preload.includes("attachmentIds.length > 8") && preload.includes('attachFile: (payload) => safeInvoke("attach-file", optionalObject(payload))') && preload.includes('removeAttachment: (id) => checkedInvoke("attachment:remove"'));
 check("preload exposes Industrial Project API", [
   "getIndustrialProjectSchema",
   "getIndustrialProject",
@@ -173,8 +176,11 @@ check("preload normalizes Release Builder payloads", preload.includes('getReleas
 check("preload exposes Sample Project API", preload.includes('createIndustrialControlBoxSample: (payload) => safeInvoke("sample:industrial-control-box:create", optionalObject(payload))'));
 check("IPC handlers use normalized wrapper", ipcUtils.includes("createIpcRegistrar") && /ipcMain\.handle\(channel/.test(ipcUtils));
 check("main process delegates IPC registration", main.includes("registerIpcHandlers({") && ipcRegister.includes("registerSecurityIpc"));
-check("workspace image attachments are confined to workspace", workspaceService.includes("attachImage(payload") && workspaceService.includes(".hicode") && workspaceService.includes("attachments") && workspaceService.includes("safeNewWorkspacePath") && workspaceService.includes("safeExistingWorkspacePath"));
-check("workspace image attachments restrict formats and size", workspaceService.includes("MAX_ATTACHMENT_BYTES") && workspaceService.includes("image/png") && workspaceService.includes("image/webp") && workspaceService.includes("只支持 PNG、JPG、GIF、WebP"));
+check("attachments use app-data content addressing without source paths", main.includes("ATTACHMENT_STORE_DIR") && main.includes("new FileAttachmentStore") && attachmentStore.includes("sha256") && attachmentStore.includes("blobKey") && !attachmentStore.includes("sourcePath"));
+check("attachment store enforces owner permissions and integrity", attachmentStore.includes("0o700") && attachmentStore.includes("0o600") && attachmentStore.includes("attachment_integrity_failed") && attachmentStore.includes("isSymbolicLink"));
+check("attachment capability checks happen before transport", agent.includes("materializeAttachmentMessages") && attachmentMaterializer.indexOf("negotiateModelProviderCapabilities") < attachmentMaterializer.indexOf("store.read(record.id)"));
+check("command registry fails closed on alias and route conflicts", commandRegistry.includes("command_alias_conflict") && commandRegistry.includes("command_route_conflict") && runtime.includes("commandRegistry.resolve"));
+check("workspace image compatibility path still restricts data URL formats and size", workspaceService.includes("MAX_ATTACHMENT_BYTES") && workspaceService.includes("image\\/(?:png|jpe?g|gif|webp)") && workspaceService.includes("parseImageDataUrl"));
 check("model image rejection returns actionable guidance", llm.includes("当前模型或服务商接口拒绝了图片输入") && llm.includes("hasImageContent(messages)"));
 check("model provider descriptors exclude credentials", modelProvider.includes('credentialStorage: "legacy-config"') && !/metadata:\s*\{[^}]*apiKey/s.test(modelProvider));
 check("model provider errors redact authorization and secret fields", modelProvider.includes("redactSensitiveText") && modelProvider.includes("sanitizeDetails") && modelProvider.includes("authorization\\s*:\\s*bearer"));
@@ -288,6 +294,7 @@ check("verify script includes provider tests", verifyScript.includes('"test:prov
 check("verify script includes model provider tests", verifyScript.includes('"test:model-providers"') && verifyScript.includes("test/model-provider-tests.mjs"));
 check("verify script includes OpenAI Responses conformance tests", verifyScript.includes('"test:openai-responses"') && verifyScript.includes("test/openai-responses-provider-tests.mjs"));
 check("verify script includes Anthropic and Ollama conformance tests", verifyScript.includes('"test:anthropic-ollama"') && verifyScript.includes("test/anthropic-ollama-provider-tests.mjs"));
+check("verify script includes attachment and command contracts", verifyScript.includes('"test:attachment-command"') && verifyScript.includes("test/attachment-command-registry-tests.mjs"));
 check("verify script includes worktree tests", verifyScript.includes('"test:worktrees"'));
 check("verify script includes patch arena tests", verifyScript.includes('"test:arena"'));
 check("verify script includes industrial project tests", verifyScript.includes('"test:industrial"'));

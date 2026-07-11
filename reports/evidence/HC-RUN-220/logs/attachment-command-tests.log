@@ -1,0 +1,53 @@
+$ npm run test:attachment-command
+
+> hi-code@0.6.0-alpha.8 test:attachment-command
+> node test/attachment-command-registry-tests.mjs
+
+
+[attachment-store] durable content-addressed storage
+  ✓ image type is detected from bytes
+  ✓ identical content shares one blob key
+  ✓ attachment records do not persist a source path
+  ✓ attachment metadata survives a new store instance
+  ✓ attachment bytes survive a new store instance
+  ✓ session listing is deterministic
+  ✓ attachment metadata is owner-only
+  ✓ attachment blob is owner-only
+  ✓ unsafe attachment session id is rejected
+  ✓ empty attachments are rejected visibly
+  ✓ blob tampering is detected on every read
+  ✓ removing one deduplicated record succeeds
+  ✓ shared content remains readable for the other record
+
+[attachment-store] runtime persistence and provider preflight
+  ✓ text and PDF are classified from content
+  ✓ supported image becomes an integrity-checked data URL
+  ✓ UTF-8 text is materialized locally with its filename
+  ✓ durable attachment references never reach the provider
+  ✓ unsupported PDF is rejected before provider transport
+  ✓ missing attachment is reported instead of silently ignored
+  ✓ runtime snapshot accepts durable attachment references
+  ✓ runtime restart preserves attachment identity
+  ✓ text attachment budget scales with materialized byte size
+
+[attachment-runtime] real Runtime and provider path
+  ✓ Runtime sends a verified image to the real provider path
+  ✓ Runtime persists only the durable reference
+  ✓ Runtime event carries the durable attachment reference
+  ✓ Runtime rejects unsupported PDF before a provider request
+  ✓ failed attachment preflight does not poison session history
+  ✓ failed attachment preflight makes no network request
+  ✓ Runtime reports unknown slash commands without contacting the model
+  ✓ ordinary coding language reaches the agent route
+
+[command-registry] one routing contract for all surfaces
+  ✓ canonical slash command resolves
+  ✓ slash alias resolves to one canonical command
+  ✓ shell routing is consistent on TUI
+  ✓ known native intent carries typed payload
+  ✓ ordinary coding request is not swallowed by native routing
+  ✓ unknown slash command is a visible routing error
+  ✓ overlapping slash aliases are rejected at registration
+  ✓ equal-priority native conflicts fail closed
+
+=== 38 passed, 0 failed ===

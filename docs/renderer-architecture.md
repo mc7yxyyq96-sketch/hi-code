@@ -50,6 +50,7 @@ Rules:
 - API failures should surface through toast or a panel-level status message.
 - Do not expose raw `ipcRenderer` or generic invoke behavior to renderer modules.
 - For persisted project features, missing preload APIs must fail closed instead of returning successful empty data.
+- Attachment selection uses `attachFile`, renders typed pending chips, and sends only opaque attachment IDs. Unsent records are discarded before a conversation switch; resumed messages reconstruct chips from persisted references.
 
 The demo fallback remains in `bootstrap.js` only for development without preload. Production behavior must not rely on mock data.
 

@@ -5,6 +5,7 @@ import { requestPermission, type Decision, type PermissionState, type AskFn } fr
 import { type ToolContext, readFile, writeFile, editFile, planEdit, ls, glob, resolveWorkspacePath } from "./fs.js";
 import { runBash, grep, type BashOutputStream } from "./bash.js";
 import { newDiffId, newEventId, type DiffEntry, type RuntimeEventDraft } from "../events.js";
+import type { AttachmentReader } from "../attachment-store.js";
 
 export interface ExecEnv {
   cfg: VibeConfig;
@@ -26,6 +27,8 @@ export interface ExecEnv {
   signal?: AbortSignal;
   /** Temporary terminal renderer used while clients migrate to structured assistant events. */
   legacyAssistantOutput?: boolean;
+  /** Durable attachment source used to materialize model input immediately before transport. */
+  attachmentStore?: AttachmentReader;
   /** Emits structured runtime events for desktop/UI surfaces. */
   emitEvent?: (event: RuntimeEventDraft) => string | void;
   /** Records a file's prior content before a mutation, for /undo. null = file didn't exist. */

@@ -49,6 +49,8 @@ Root-level legacy `main.mjs`, `renderer.js`, and `index.html` are not production
 
 `src/runtime.ts` orchestrates model turns, permissions, tool calls, events, and session state. `src/agent.ts` calls the capability-negotiated `src/model-provider.ts` facade; `src/llm.ts` is the low-level compatibility transport and is not an orchestration boundary. `src/tools/` provides tool behavior. `src/process-env.ts` builds minimal child-process environments.
 
+`src/attachment-store.ts` owns typed, content-addressed app-data attachments. Session messages retain `attachment_ref` values while `src/attachment-materializer.ts` verifies and converts supported content at the provider boundary. `src/command-registry.ts` is the shared shell/slash/native/agent classifier; Electron may execute a resolved native route but does not maintain a second input classifier.
+
 The Model Provider Adapter is separate from `src/agent-provider.ts`. Model providers execute one model request and normalize text, tool-call, usage, interruption, and error semantics. Agent providers execute a whole delegated engineering task, potentially in an isolated workspace.
 
 Model profiles select their wire transport explicitly. Existing profiles omit `protocol` and stay on the `src/llm.ts` Chat Completions compatibility path. Profiles can select `responses`, `anthropic_messages`, or `ollama_chat` for the dedicated modules under `src/`; all paths converge on the same Model Provider v2 events and Runtime Protocol. Transport selection never depends on hostname inference and does not rewrite persisted sessions or runtime stores. Native provider HTTP decoding is bounded, remote endpoints require HTTPS, and raw Anthropic/Ollama thinking remains outside assistant text and persistence.
@@ -81,6 +83,7 @@ The Job Center is the durable execution record. Providers, isolated worktrees, P
 | Full chat sessions | Local session JSON plus typed message snapshots | Compatibility write plus complete resume source | Remove legacy authority only after a later verified migration |
 | Runtime events | Legacy `~/.hicode/runtime-events/<session>.jsonl` plus typed event records | Append-only execution authority with non-destructive import | Retain legacy source for rollback during v0.6 |
 | Typed runtime context | `~/.hicode/runtime-store-v2/<session>/` | Thread metadata, exact model messages, normalized events | Backend remains replaceable behind interfaces |
+| Attachment metadata and blobs | Hi Code app data `attachments-v2/` | Typed records, session ownership, SHA-256 verified bytes | Add provider-native PDF/file transports without changing persistence |
 | Job Center | App-data Job Store | Job execution and artifact audit | Retain with protocol references |
 | Industrial project | Workspace `.hicode/project.json` | Project artifact and traceability model | Retain with schema migrations |
 | Generated artifacts | Workspace `.hicode/artifacts`, generated docs, releases | File plus metadata/evidence | Retain; strengthen checksums and provenance |
@@ -119,6 +122,8 @@ The target is implemented through compatibility layers:
 - Assistant text is data in `assistant.delta` and `assistant.completed` style events, never inferred from global stdout.
 - Tool output, approval requests, diffs, errors, and completion retain typed status and visibility.
 - Model capability requirements are negotiated before transport execution; provider request, tool-call, usage, and normalized failure events retain run/call correlation.
+- Durable attachment references are verified and materialized only after capability negotiation; unsupported content fails before network I/O.
+- Shell, slash, native, and agent input resolve through one registry; unknown or ambiguous command routes fail closed.
 - Append failure is observable and cannot be reported as durable success.
 - Compatibility fields may remain during migration but cannot become a second authority.
 

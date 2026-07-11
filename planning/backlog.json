@@ -5,7 +5,7 @@
   "sourceCommit": "6ed9ed666bb817f8d1e863c76b0bf61b31c7b52d",
   "horizonDays": 90,
   "status": "active",
-  "updatedAt": "2026-07-11T04:18:59Z",
+  "updatedAt": "2026-07-11T05:03:45Z",
   "principles": [
     "Runtime Protocol is the single source of truth",
     "No big-bang rewrite",
@@ -194,7 +194,12 @@
       "dependencies": ["HC-PROV-210"],
       "deliverables": ["attachment metadata/blob store", "capability checks", "CommandRegistry"],
       "acceptance": ["image/PDF/file errors are visible", "slash/native/agent routing conflicts are tested", "attachments survive restart"],
-      "status": "planned"
+      "status": "completed",
+      "startedAt": "2026-07-11T05:03:45Z",
+      "branch": "codex/runtime-engine/hc-run-220",
+      "taskManifest": "reports/tasks/HC-RUN-220.md",
+      "completedAt": "2026-07-11T07:00:39Z",
+      "evidenceManifest": "reports/evidence/HC-RUN-220/manifest.json"
     },
     {
       "id": "HC-UI-301",
