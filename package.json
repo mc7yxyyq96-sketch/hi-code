@@ -60,6 +60,7 @@
     "program:evidence:runtime-store": "node scripts/capture-task-evidence.mjs --task=HC-RUN-202",
     "program:evidence:turn-recovery": "node scripts/capture-task-evidence.mjs --task=HC-RUN-203",
     "program:evidence:electron": "node scripts/capture-task-evidence.mjs --task=HC-PLAT-110",
+    "program:evidence:model-provider": "node scripts/capture-task-evidence.mjs --task=HC-PROV-210",
     "program:evidence:alpha7": "node scripts/capture-task-evidence.mjs --task=HC-REL-ALPHA-7",
     "program:evidence:alpha8": "node scripts/capture-task-evidence.mjs --task=HC-REL-ALPHA-8",
     "store:export": "node scripts/export-store-catalog.mjs",

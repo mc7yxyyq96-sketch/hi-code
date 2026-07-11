@@ -54,6 +54,11 @@ const runtimeEventStore = fs.readFileSync(path.join(root, "src", "runtime-event-
 const turnStateMachine = fs.readFileSync(path.join(root, "src", "turn-state-machine.ts"), "utf8");
 const recovery = fs.readFileSync(path.join(root, "src", "recovery.ts"), "utf8");
 const llm = fs.readFileSync(path.join(root, "src", "llm.ts"), "utf8");
+const modelProvider = fs.readFileSync(path.join(root, "src", "model-provider.ts"), "utf8");
+const agent = fs.readFileSync(path.join(root, "src", "agent.ts"), "utf8");
+const context = fs.readFileSync(path.join(root, "src", "context.ts"), "utf8");
+const council = fs.readFileSync(path.join(root, "src", "agents", "council.ts"), "utf8");
+const manager = fs.readFileSync(path.join(root, "src", "agents", "manager.ts"), "utf8");
 const workspaceService = fs.readFileSync(path.join(root, "electron", "services", "workspace-service.mjs"), "utf8");
 const electronE2e = fs.readFileSync(path.join(root, "tests", "electron-e2e", "run.mjs"), "utf8");
 
@@ -157,6 +162,10 @@ check("main process delegates IPC registration", main.includes("registerIpcHandl
 check("workspace image attachments are confined to workspace", workspaceService.includes("attachImage(payload") && workspaceService.includes(".hicode") && workspaceService.includes("attachments") && workspaceService.includes("safeNewWorkspacePath") && workspaceService.includes("safeExistingWorkspacePath"));
 check("workspace image attachments restrict formats and size", workspaceService.includes("MAX_ATTACHMENT_BYTES") && workspaceService.includes("image/png") && workspaceService.includes("image/webp") && workspaceService.includes("只支持 PNG、JPG、GIF、WebP"));
 check("model image rejection returns actionable guidance", llm.includes("当前模型或服务商接口拒绝了图片输入") && llm.includes("hasImageContent(messages)"));
+check("model provider descriptors exclude credentials", modelProvider.includes('credentialStorage: "legacy-config"') && !/metadata:\s*\{[^}]*apiKey/s.test(modelProvider));
+check("model provider errors redact authorization and secret fields", modelProvider.includes("redactSensitiveText") && modelProvider.includes("sanitizeDetails") && modelProvider.includes("authorization\\s*:\\s*bearer"));
+check("model capability negotiation happens before adapter execution", modelProvider.indexOf("negotiateModelProviderCapabilities(adapter.descriptor, requirements)") < modelProvider.indexOf("await adapter.run({"));
+check("production orchestration uses the model provider facade", agent.includes("streamModelProfile") && context.includes("completeModelProfile") && council.includes("completeModelProfile") && manager.includes("completeModelProfile") && !agent.includes("streamChat("));
 check("main process wires Release Builder service", main.includes("createReleaseService") && ipcRegister.includes("registerReleaseIpc"));
 check("main process wires Sample Project service", main.includes("createSampleProjectService") && ipcRegister.includes("registerSampleProjectIpc") && ipcRegister.includes("sampleProject"));
 check("no direct IPC handle registrations in main", (main.match(/ipcMain\.handle\(/g) || []).length === 0);
@@ -262,6 +271,7 @@ check("verify script includes Electron compatibility tests", verifyScript.includ
 check("verify script includes service tests", verifyScript.includes('"test:services"'));
 check("verify script includes job center tests", verifyScript.includes('"test:jobs"'));
 check("verify script includes provider tests", verifyScript.includes('"test:providers"'));
+check("verify script includes model provider tests", verifyScript.includes('"test:model-providers"') && verifyScript.includes("test/model-provider-tests.mjs"));
 check("verify script includes worktree tests", verifyScript.includes('"test:worktrees"'));
 check("verify script includes patch arena tests", verifyScript.includes('"test:arena"'));
 check("verify script includes industrial project tests", verifyScript.includes('"test:industrial"'));

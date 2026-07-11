@@ -1,5 +1,5 @@
 import type { ChatMessage } from "./llm.js";
-import { complete } from "./llm.js";
+import { completeModelProfile } from "./model-provider.js";
 import type { ModelProfile } from "./config.js";
 
 /** Flatten message content (string or multimodal parts) to plain text. */
@@ -63,7 +63,7 @@ export async function compact(p: ModelProfile, s: Session, keepRecent = 6): Prom
     })
     .join("\n");
 
-  const summary = await complete(p, [
+  const summary = await completeModelProfile(p, [
     {
       role: "system",
       content:

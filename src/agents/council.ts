@@ -1,6 +1,6 @@
 import type { VibeConfig, ModelProfile } from "../config.js";
 import { getProfile } from "../config.js";
-import { complete } from "../llm.js";
+import { completeModelProfile } from "../model-provider.js";
 import { ui, startSpinner, stopSpinner } from "../ui.js";
 import { runLoop } from "../agent.js";
 import { newSession } from "../context.js";
@@ -68,7 +68,7 @@ export async function runCouncil(cfg: VibeConfig, question: string): Promise<str
   const answers = await Promise.all(
     members.map(async (m) => {
       try {
-        const text = await complete(m, [
+        const text = await completeModelProfile(m, [
           { role: "system", content: "Answer the user's question as correctly and concisely as you can. If unsure, say so." },
           { role: "user", content: question },
         ]);
@@ -87,7 +87,7 @@ export async function runCouncil(cfg: VibeConfig, question: string): Promise<str
 
   const synth = getProfile(cfg, cfg.councilSynthesizer);
   startSpinner(`synthesizing with ${synth.model}`);
-  const merged = await complete(
+  const merged = await completeModelProfile(
     synth,
     [
       {
@@ -153,7 +153,7 @@ export async function runDebate(
 
   const synth = getProfile(cfg, cfg.councilSynthesizer);
   startSpinner(`synthesizing verdict with ${synth.model}`);
-  const verdict = await complete(
+  const verdict = await completeModelProfile(
     synth,
     [
       {

@@ -240,6 +240,7 @@ export class ModelProviderRegistry {
         tools: normalizeTools(request.tools),
       }, controller, signal));
 
+      controller.validateResult(result);
       if (result.usage && !controller.hasUsage) controller.emit({ type: "usage.updated", usage: result.usage });
       if (result.aborted) {
         controller.emitInternal({ type: "response.interrupted", contentLength: result.content.length });
@@ -317,6 +318,17 @@ class ModelProviderEventController implements ModelProviderEventSink {
 
   snapshot(): ModelProviderEvent[] {
     return this.events.map((event) => ({ ...event })) as ModelProviderEvent[];
+  }
+
+  validateResult(result: ModelProviderAdapterResult): void {
+    if (result.aborted) return;
+    for (const call of result.toolCalls) {
+      if (this.toolStates.get(call.id) !== "completed") {
+        throw invalidEvent(`provider result contains an uncompleted tool call: ${call.id}`);
+      }
+    }
+    const active = Array.from(this.toolStates.entries()).find(([, state]) => state !== "completed");
+    if (active) throw invalidEvent(`provider result left an active tool call: ${active[0]}`);
   }
 
   private validateLifecycle(draft: ModelProviderEventDraft | ModelProviderTerminalDraft | ModelProviderRequestDraft): void {
@@ -493,7 +505,7 @@ export function createLegacyOpenAICompatibleAdapter(
           sink.emit({ type: "text.delta", delta });
         },
         onToolCallDelta(delta: ToolCallStreamDelta) {
-          const callId = delta.id || toolIds.get(delta.index) || `call_${delta.index}`;
+          const callId = toolIds.get(delta.index) || delta.id || `call_${request.runId}_${delta.index}`;
           toolIds.set(delta.index, callId);
           if (!started.has(delta.index)) {
             started.add(delta.index);
@@ -513,16 +525,20 @@ export function createLegacyOpenAICompatibleAdapter(
 
       if (!turn.aborted) {
         turn.tool_calls.forEach((call, index) => {
-          const callId = call.id || toolIds.get(index) || `call_${index}`;
+          const callId = toolIds.get(index) || call.id || `call_${request.runId}_${index}`;
           if (!started.has(index)) sink.emit({ type: "tool.call.started", callId, name: call.function.name, index });
-          sink.emit({ type: "tool.call.completed", call, index });
+          sink.emit({ type: "tool.call.completed", call: { ...call, id: callId }, index });
         });
       }
+      const toolCalls = turn.tool_calls.map((call, index) => ({
+        ...call,
+        id: toolIds.get(index) || call.id || `call_${request.runId}_${index}`,
+      }));
       const usage = legacyUsage(turn.usage);
       if (usage) sink.emit({ type: "usage.updated", usage });
       return {
         content: turn.content,
-        toolCalls: turn.tool_calls,
+        toolCalls,
         usage,
         finishReason: turn.aborted ? "interrupted" : turn.tool_calls.length ? "tool_calls" : "stop",
         aborted: !!turn.aborted,
@@ -832,19 +848,36 @@ function redactSensitiveText(value: string): string {
 }
 
 function sanitizeDetails(input: Record<string, unknown>): Record<string, unknown> {
+  return sanitizeObject(input, new WeakSet<object>(), 0);
+}
+
+function sanitizeObject(input: Record<string, unknown>, seen: WeakSet<object>, depth: number): Record<string, unknown> {
+  if (seen.has(input)) return { circular: "[REDACTED]" };
+  if (depth >= 6) return { truncated: true };
+  seen.add(input);
   const output: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(input)) {
+  for (const [key, value] of Object.entries(input).slice(0, 100)) {
     if (/api.?key|authorization|token|secret|password|private.?key/i.test(key)) {
       output[key] = "[REDACTED]";
-    } else if (typeof value === "string") {
-      output[key] = redactSensitiveText(value).slice(0, 1000);
-    } else if (typeof value === "number" || typeof value === "boolean" || value === null) {
-      output[key] = value;
-    } else if (Array.isArray(value)) {
-      output[key] = value.slice(0, 100).map((item) => typeof item === "string" ? redactSensitiveText(item).slice(0, 1000) : item);
-    } else if (value && typeof value === "object") {
-      output[key] = sanitizeDetails(value as Record<string, unknown>);
+    } else {
+      output[key] = sanitizeValue(value, seen, depth + 1);
     }
   }
+  seen.delete(input);
   return output;
+}
+
+function sanitizeValue(value: unknown, seen: WeakSet<object>, depth: number): unknown {
+  if (typeof value === "string") return redactSensitiveText(value).slice(0, 1000);
+  if (typeof value === "number" || typeof value === "boolean" || value === null) return value;
+  if (Array.isArray(value)) {
+    if (seen.has(value)) return "[REDACTED]";
+    if (depth >= 6) return "[TRUNCATED]";
+    seen.add(value);
+    const sanitized = value.slice(0, 100).map((item) => sanitizeValue(item, seen, depth + 1));
+    seen.delete(value);
+    return sanitized;
+  }
+  if (value && typeof value === "object") return sanitizeObject(value as Record<string, unknown>, seen, depth);
+  return undefined;
 }

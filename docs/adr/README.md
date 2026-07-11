@@ -32,3 +32,4 @@ The file name is `ADR-NNNN-short-title.md`. Numbers are never reused. An accepte
 | [ADR-0003](ADR-0003-typed-runtime-stores-and-idempotent-replay.md) | Accepted | Typed thread, event, and message stores provide additive, idempotent replay and migration |
 | [ADR-0004](ADR-0004-turn-state-and-conservative-recovery.md) | Accepted | Durable turn events derive conservative retry, approval, review, and tool-inspection actions |
 | [ADR-0005](ADR-0005-supported-electron-line.md) | Accepted | Pin a supported Electron runtime and require real Linux, macOS, and Windows startup smoke |
+| [ADR-0006](ADR-0006-model-provider-adapter-v2.md) | Accepted | Separate model transports from task executors and negotiate capabilities before execution |

@@ -1,5 +1,7 @@
 import http from "node:http";
 
+import { createRuntime } from "../dist/runtime.js";
+import { deleteSession } from "../dist/session-store.js";
 import {
   MODEL_PROVIDER_SCHEMA_VERSION,
   ModelProviderRegistry,
@@ -181,9 +183,67 @@ await rejectsCode(
   "provider_event_invalid",
 );
 
+const incompleteRegistry = new ModelProviderRegistry();
+incompleteRegistry.register({
+  id: "incomplete-events",
+  name: "Incomplete Events",
+  version: "1.0.0",
+  capabilities: {
+    "input.text": capability("supported"),
+    "tool.calling": capability("supported"),
+    "tool.streaming": capability("supported"),
+  },
+  async run(_request, sink) {
+    sink.emit({ type: "tool.call.started", callId: "call-open", name: "read_file", index: 0 });
+    return {
+      content: "",
+      toolCalls: [{ id: "call-open", type: "function", function: { name: "read_file", arguments: "{}" } }],
+      finishReason: "tool_calls",
+      aborted: false,
+    };
+  },
+});
+await rejectsCode(
+  "provider result rejects an uncompleted tool call",
+  () => incompleteRegistry.run("incomplete-events", {
+    messages: [{ role: "user", content: "read" }],
+    tools: [{ type: "function", function: { name: "read_file", description: "read", parameters: { type: "object" } } }],
+  }),
+  "provider_event_invalid",
+);
+
 const normalizedError = normalizeModelProviderError(new Error("Authorization: Bearer secret-token apiKey=sk-live-secret request timed out"));
 check("normalized provider error classifies timeout as retriable", normalizedError.category === "timeout" && normalizedError.retriable === true);
 check("normalized provider error redacts credentials", !JSON.stringify(normalizedError).includes("secret-token") && !JSON.stringify(normalizedError).includes("sk-live-secret"));
+
+const lateIdProfile = {
+  name: "late-id",
+  baseURL: "http://127.0.0.1:9/v1",
+  apiKey: "unused",
+  model: "late-id-model",
+  contextWindow: 8192,
+  temperature: 0,
+};
+const lateIdAdapter = createLegacyOpenAICompatibleAdapter(lateIdProfile, {
+  async stream(_profile, _messages, _tools, handlers) {
+    handlers.onToolCallDelta?.({ index: 0, nameDelta: "read_", argumentsDelta: "{" });
+    handlers.onToolCallDelta?.({ index: 0, id: "provider-late-id", nameDelta: "file", argumentsDelta: "}" });
+    return {
+      content: "",
+      tool_calls: [{ id: "provider-late-id", type: "function", function: { name: "read_file", arguments: "{}" } }],
+      aborted: false,
+    };
+  },
+});
+const lateIdRegistry = new ModelProviderRegistry();
+lateIdRegistry.register(lateIdAdapter);
+const lateIdEvents = [];
+const lateIdResult = await lateIdRegistry.run(lateIdAdapter.descriptor.id, {
+  runId: "late-run",
+  messages: [{ role: "user", content: "read" }],
+  tools: [{ type: "function", function: { name: "read_file", description: "read", parameters: { type: "object" } } }],
+}, (event) => lateIdEvents.push(event));
+check("late provider tool IDs keep stable event correlation", lateIdResult.toolCalls[0]?.id === "call_late-run_0" && lateIdEvents.filter((event) => event.type.startsWith("tool.call.")).every((event) => (event.callId || event.call?.id) === "call_late-run_0"));
 
 console.log("\n[model-provider] legacy profile migration and real transport");
 
@@ -201,12 +261,18 @@ const server = http.createServer(async (req, res) => {
   }
 
   res.writeHead(200, { "content-type": "text/event-stream", "cache-control": "no-cache" });
-  const events = [
-    { choices: [{ delta: { content: "hello " } }] },
-    { choices: [{ delta: { tool_calls: [{ index: 0, id: "call-local", type: "function", function: { name: "read_", arguments: "{\"path\":" } }] } }] },
-    { choices: [{ delta: { tool_calls: [{ index: 0, function: { name: "file", arguments: "\"README.md\"}" } }] } }] },
-    { choices: [], usage: { prompt_tokens: 21, completion_tokens: 7, total_tokens: 28 } },
-  ];
+  const hasToolResult = body.messages?.some((message) => message.role === "tool");
+  const events = hasToolResult
+    ? [
+        { choices: [{ delta: { content: "runtime complete" } }] },
+        { choices: [], usage: { prompt_tokens: 34, completion_tokens: 4, total_tokens: 38 } },
+      ]
+    : [
+        { choices: [{ delta: { content: "hello " } }] },
+        { choices: [{ delta: { tool_calls: [{ index: 0, id: "call-local", type: "function", function: { name: "read_", arguments: "{\"path\":" } }] } }] },
+        { choices: [{ delta: { tool_calls: [{ index: 0, function: { name: "file", arguments: "\"README.md\"}" } }] } }] },
+        { choices: [], usage: { prompt_tokens: 21, completion_tokens: 7, total_tokens: 28 } },
+      ];
   for (const item of events) res.write(`data: ${JSON.stringify(item)}\n\n`);
   res.end("data: [DONE]\n\n");
 });
@@ -234,6 +300,17 @@ try {
   check("compatibility descriptor never contains API key", !JSON.stringify(adapter.descriptor).includes(profile.apiKey));
   check("legacy image capability is explicit conditional support", adapter.descriptor.capabilities["input.image"]?.support === "conditional");
 
+  const nestedSecretRegistry = new ModelProviderRegistry();
+  const nestedDescriptor = nestedSecretRegistry.register({
+    id: "nested-secrets",
+    name: "Nested Secrets",
+    version: "1.0.0",
+    capabilities: { "input.text": capability("supported") },
+    metadata: { values: [{ GITHUB_TOKEN: "token-in-array", note: "apiKey=sk-nested-secret" }] },
+    async run() { return { content: "ok", toolCalls: [], finishReason: "stop", aborted: false }; },
+  });
+  check("nested descriptor metadata is recursively redacted", !JSON.stringify(nestedDescriptor).includes("token-in-array") && !JSON.stringify(nestedDescriptor).includes("sk-nested-secret"));
+
   const liveEvents = [];
   let liveText = "";
   const turn = await streamModelProfile(
@@ -254,6 +331,46 @@ try {
   const summary = await completeModelProfile(profile, [{ role: "user", content: "summarize" }], 0.1);
   check("non-streaming model path uses compatibility adapter", summary === "compact summary");
   check("legacy transport requests preserve configured endpoint and credential", requests.length === 2 && requests.every((request) => request.url === "/v1/chat/completions" && request.authorization === `Bearer ${profile.apiKey}`));
+
+  console.log("\n[model-provider] shared runtime integration");
+
+  const runtimeEvents = [];
+  const runtime = createRuntime({
+    cfg: {
+      profiles: { default: profile },
+      defaultProfile: "default",
+      roleModels: {},
+      councilMembers: [],
+      councilSynthesizer: "default",
+      compactThreshold: 0.75,
+      reasoningLevel: "medium",
+      sandbox: false,
+      mcpServers: {},
+    },
+    cwd: process.cwd(),
+    mode: "default",
+    systemPrompt: "Use read_file when asked to inspect README.md.",
+    ask: async () => "n",
+    legacyAssistantOutput: false,
+    persistRuntimeEvents: false,
+    emitEvent(event) { runtimeEvents.push(event); },
+  });
+  try {
+    await runtime.handleInput("Inspect README.md");
+    const protocol = runtimeEvents.map((event) => event.payload?.runtimeProtocol).filter(Boolean);
+    const kinds = protocol.map((event) => event.kind);
+    check("agent runtime uses provider facade through a real two-step tool loop", requests.length === 4 && runtime.session.messages.some((message) => message.role === "tool"));
+    check("runtime protocol records model request", kinds.filter((kind) => kind === "model.requested").length === 2, kinds.join(","));
+    check("runtime protocol records streamed provider tool lifecycle", ["model.tool_call.started", "model.tool_call.delta", "model.tool_call.completed"].every((kind) => kinds.includes(kind)), kinds.join(","));
+    check("runtime protocol records normalized usage", protocol.some((event) => event.kind === "usage.updated" && event.payload?.usage?.totalTokens === 28));
+    check("provider tool correlation survives into runtime protocol", protocol.some((event) => event.kind === "model.tool_call.completed" && event.payload?.callId === "call-local" && event.payload?.name === "read_file"));
+    check("provider argument deltas stay hidden from presentation clients", protocol.filter((event) => event.kind === "model.tool_call.delta").every((event) => event.visibility.includes("hidden") && !event.visibility.includes("chat")));
+    check("assistant text remains on the existing chat event path", protocol.some((event) => event.kind === "assistant.completed" && event.payload?.content === "runtime complete"));
+    check("provider runtime events never contain API key", !JSON.stringify(runtimeEvents).includes(profile.apiKey));
+  } finally {
+    runtime.shutdown();
+    deleteSession(runtime.sessionId);
+  }
 } finally {
   await new Promise((resolve) => server.close(resolve));
 }

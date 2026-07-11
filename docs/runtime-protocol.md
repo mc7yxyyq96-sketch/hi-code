@@ -22,6 +22,7 @@ Runtime integration:
 - `src/runtime.ts` calls `createRuntimeProtocolEvent(...)` for every emitted runtime event and sends the materialized event to an injected `RuntimeEventSink`.
 - The generated envelope is attached as `event.payload.runtimeProtocol`.
 - `src/agent.ts` emits first-class `assistant:delta` and `assistant:completed` events. Completion includes the full message; empty and failed responses use `error`, never a fake completed state.
+- `src/model-provider.ts` normalizes model request, tool-call stream, usage, interruption, and error semantics. `src/agent.ts` maps those operational records into Runtime Protocol without duplicating assistant text in chat.
 - `src/runtime-event-store.ts` appends validated protocol events to `~/.hicode/runtime-events/<sessionId>.jsonl` for replay and crash recovery.
 - `src/runtime-stores.ts` implements typed `ThreadStore`, `EventStore`, and `MessageStore` contracts under `~/.hicode/runtime-store-v2/`.
 - `src/agent.ts` emits hidden `message.appended` records for exact user, assistant, and tool messages; `src/runtime.ts` emits the system message once when a new model-backed session begins.
@@ -127,6 +128,12 @@ Initial protocol kinds:
 - `assistant.completed`
 - `message.appended`
 - `model.output`
+- `model.requested`
+- `model.tool_call.started`
+- `model.tool_call.delta`
+- `model.tool_call.completed`
+- `usage.updated`
+- `model.failed`
 - `tool.started`
 - `tool.output`
 - `tool.completed`
@@ -162,7 +169,7 @@ The `visibility` array tells downstream consumers where an event is safe and use
 - `sdk`
 - `hidden`
 
-Assistant deltas route to chat/sdk; assistant completions route to chat/timeline/sdk. Exact `message.appended` records route only to hidden/sdk consumers. Tool events route to timeline/job/sdk, diffs to diff/timeline/job/sdk, and approval request/resolution pairs to timeline/job/sdk. `model.output` is retained as a reserved compatibility kind and is not the new assistant transport.
+Assistant deltas route to chat/sdk; assistant completions route to chat/timeline/sdk. Exact `message.appended` records route only to hidden/sdk consumers. Provider tool-call records are hidden from chat and timeline because actual tool execution has its own events; usage is hidden/job/SDK, while model requests and normalized failures are timeline/job/SDK. Tool execution events route to timeline/job/sdk, diffs to diff/timeline/job/sdk, and approval request/resolution pairs to timeline/job/sdk. `model.output` is retained as a reserved compatibility kind and is not the new assistant transport.
 
 ## Validation
 
@@ -176,6 +183,9 @@ Assistant deltas route to chat/sdk; assistant completions route to chat/timeline
 - invalid visibility
 - `message.appended` without a non-empty message ID and valid system/user/assistant/tool message
 - `approval.resolved` without a request ID and an `allow`, `always`, or `deny` decision
+- model tool-call records without a call ID or an actual delta
+- usage records with missing or negative token values
+- model failures without normalized code, category, message, and retriable state
 
 ## Recovery Projection
 

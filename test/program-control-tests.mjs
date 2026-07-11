@@ -39,6 +39,8 @@ const requiredFiles = [
   "docs/adr/ADR-0003-typed-runtime-stores-and-idempotent-replay.md",
   "docs/adr/ADR-0004-turn-state-and-conservative-recovery.md",
   "docs/adr/ADR-0005-supported-electron-line.md",
+  "docs/adr/ADR-0006-model-provider-adapter-v2.md",
+  "docs/model-provider-adapters.md",
   "docs/electron-compatibility.md",
   "docs/runtime-stores.md",
   "planning/backlog.json",

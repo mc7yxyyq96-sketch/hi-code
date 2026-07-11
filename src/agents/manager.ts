@@ -1,6 +1,6 @@
 import type { VibeConfig } from "../config.js";
 import { getProfile, profileForRole } from "../config.js";
-import { complete } from "../llm.js";
+import { completeModelProfile } from "../model-provider.js";
 import type { ExecEnv } from "../tools/index.js";
 import { ui, startSpinner, stopSpinner } from "../ui.js";
 import { ROLES } from "./roles.js";
@@ -27,7 +27,7 @@ export async function runBuild(cfg: VibeConfig, env: ExecEnv, goal: string): Pro
   // --- 1. Decompose into a task graph ---
   const managerProfile = getProfile(cfg, cfg.roleModels["architect"]); // reuse the planning model
   startSpinner(`manager (${managerProfile.model}) decomposing the goal`);
-  const raw = await complete(
+  const raw = await completeModelProfile(
     managerProfile,
     [
       {
