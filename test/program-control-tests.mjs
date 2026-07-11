@@ -42,6 +42,8 @@ const requiredFiles = [
   "docs/adr/ADR-0006-model-provider-adapter-v2.md",
   "docs/adr/ADR-0007-explicit-openai-responses-transport.md",
   "docs/adr/ADR-0008-explicit-anthropic-ollama-transports.md",
+  "docs/adr/ADR-0009-durable-attachments-and-command-routing.md",
+  "docs/attachments-and-command-registry.md",
   "docs/anthropic-ollama-adapters.md",
   "docs/model-provider-adapters.md",
   "docs/openai-responses-adapter.md",
@@ -75,6 +77,7 @@ const requiredFiles = [
   "reports/evidence/HC-PROV-210/manifest.json",
   "reports/evidence/HC-PROV-211/manifest.json",
   "reports/evidence/HC-PROV-212/manifest.json",
+  "reports/evidence/HC-RUN-220/manifest.json",
   "scripts/electron-compatibility.mjs",
   "scripts/run-electron-builder.mjs",
   "test/electron-compatibility-tests.mjs",
@@ -112,6 +115,7 @@ const alpha8ReleaseManifest = readJson(root, "reports/evidence/HC-REL-ALPHA-8/ma
 const modelProviderManifest = readJson(root, "reports/evidence/HC-PROV-210/manifest.json");
 const openAIResponsesManifest = readJson(root, "reports/evidence/HC-PROV-211/manifest.json");
 const anthropicOllamaManifest = readJson(root, "reports/evidence/HC-PROV-212/manifest.json");
+const attachmentCommandManifest = readJson(root, "reports/evidence/HC-RUN-220/manifest.json");
 const packageJson = readJson(root, "package.json");
 const packageLock = readJson(root, "package-lock.json");
 const programTask = backlog.tasks.find((task) => task.id === "HC-PROG-100");
@@ -289,22 +293,32 @@ for (const command of anthropicOllamaManifest.commands || []) {
   if (fs.existsSync(absolute)) check(`HC-PROV-212 ${command.id} log hash matches`, digest(absolute) === command.logSha256);
 }
 check(
-  "HC-RUN-220 starts only after its runtime dependency",
-  attachmentCommandTask?.status === "in_progress" &&
+  "HC-RUN-220 completed only after its runtime dependency and evidence",
+  attachmentCommandTask?.status === "completed" &&
     attachmentCommandTask?.branch === "codex/runtime-engine/hc-run-220" &&
     Boolean(attachmentCommandTask?.startedAt) &&
+    Boolean(attachmentCommandTask?.completedAt) &&
     attachmentCommandTask?.taskManifest === "reports/tasks/HC-RUN-220.md" &&
+    attachmentCommandTask?.evidenceManifest === "reports/evidence/HC-RUN-220/manifest.json" &&
     attachmentCommandTask?.dependencies?.every((id) => backlog.tasks.find((task) => task.id === id)?.status === "completed") &&
-    attachmentCommandBoardTask?.status === "in_progress" &&
+    attachmentCommandBoardTask?.status === "completed" &&
     attachmentCommandBoardTask?.branch === "codex/runtime-engine/hc-run-220" &&
-    attachmentCommandBoardTask?.evidence === "reports/tasks/HC-RUN-220.md" &&
-    board.gates?.find((gate) => gate.id === "attachment-command-registry")?.status === "in_progress",
+    attachmentCommandBoardTask?.evidence === "reports/evidence/HC-RUN-220/manifest.json" &&
+    board.gates?.find((gate) => gate.id === "attachment-command-registry")?.status === "passed" &&
+    board.gates?.find((gate) => gate.id === "attachment-command-registry")?.evidence === "reports/evidence/HC-RUN-220/manifest.json",
   JSON.stringify(attachmentCommandTask),
 );
-check(
-  "HC-RUN-220 risk remains open while implementation is incomplete",
-  risks.risks?.some((risk) => risk.id === "RISK-RUN-004" && risk.status === "open" && risk.evidence?.includes("reports/tasks/HC-RUN-220.md")),
-);
+check("HC-RUN-220 risk is evidence-backed and mitigated", risks.risks?.some((risk) => risk.id === "RISK-RUN-004" && risk.status === "mitigated" && risk.evidence?.includes("reports/evidence/HC-RUN-220/manifest.json")));
+check("HC-RUN-220 evidence records every command passing", attachmentCommandManifest.summary?.allPassed === true && attachmentCommandManifest.summary?.total === 24, JSON.stringify(attachmentCommandManifest.summary));
+check("HC-RUN-220 evidence is captured from its isolated branch", attachmentCommandManifest.source?.branch === "codex/runtime-engine/hc-run-220" && attachmentCommandManifest.source?.parentCommit === "a5008b9edd0802ccbf50d3bd75ad73a9c95107bd");
+for (const requiredCommand of ["build", "verify", "release-check", "feature-tests", "attachment-command-tests", "model-provider-tests", "openai-responses-tests", "anthropic-ollama-tests", "service-tests", "runtime-protocol", "runtime-stores", "runtime-store-integration", "turn-recovery", "runtime-events", "runtime-concurrency", "runtime-clients", "renderer-tests", "security-tests", "dod-tests", "dod-scan", "production-audit", "electron-e2e", "program-control", "git-diff-check"]) {
+  check(`HC-RUN-220 captured ${requiredCommand}`, attachmentCommandManifest.commands?.some((command) => command.id === requiredCommand && command.status === "passed"));
+}
+for (const command of attachmentCommandManifest.commands || []) {
+  const absolute = path.join(root, command.logPath || "");
+  check(`HC-RUN-220 ${command.id} log exists`, Boolean(command.logPath) && fs.existsSync(absolute));
+  if (fs.existsSync(absolute)) check(`HC-RUN-220 ${command.id} log hash matches`, digest(absolute) === command.logSha256);
+}
 check("HC-PROV-210 evidence records every command passing", modelProviderManifest.summary?.allPassed === true && modelProviderManifest.summary?.total === 16, JSON.stringify(modelProviderManifest.summary));
 check("HC-PROV-210 evidence is captured from its task branch", modelProviderManifest.source?.branch === "codex/runtime-engine/hc-prov-210" && modelProviderManifest.source?.parentCommit === "a0f4025addf0de92192011632d194878bb7b0d3c");
 for (const requiredCommand of ["build", "verify", "release-check", "feature-tests", "model-provider-tests", "runtime-protocol", "runtime-events", "runtime-concurrency", "runtime-clients", "security-tests", "dod-tests", "dod-scan", "production-audit", "electron-e2e", "program-control", "git-diff-check"]) {

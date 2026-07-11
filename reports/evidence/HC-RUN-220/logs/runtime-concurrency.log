@@ -1,0 +1,18 @@
+$ npm run test:runtime-concurrency
+
+> hi-code@0.6.0-alpha.8 test:runtime-concurrency
+> node test/runtime-concurrency-tests.mjs
+
+
+[runtime-concurrency] protocol-native assistant output
+  ✓ two sessions interleave globally during real async streaming
+  ✓ alpha subscriber receives only alpha session events
+  ✓ beta subscriber receives only beta session events
+  ✓ alpha deltas preserve order without beta text
+  ✓ beta deltas preserve order without alpha text
+  ✓ completed events carry the full assistant message
+  ✓ every delivered event has the matching protocol envelope
+  ✓ session transcripts retain their own assistant response
+  ✓ assistant completions are durable in each append-only event store
+
+=== 9 passed, 0 failed ===

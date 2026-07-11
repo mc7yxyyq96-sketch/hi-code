@@ -1,6 +1,6 @@
 # HC-RUN-220 Task Manifest
 
-Status: In progress
+Status: Completed
 
 Owner: Runtime Engine
 
@@ -11,6 +11,10 @@ Branch: `codex/runtime-engine/hc-run-220`
 Parent commit: `12ff24e`
 
 Started: `2026-07-11T05:03:45Z`
+
+Completed: `2026-07-11T07:00:39Z`
+
+Evidence: `reports/evidence/HC-RUN-220/manifest.json`
 
 ## Problem
 
@@ -66,6 +70,27 @@ On parent `12ff24e`, `npm run build`, `npm run verify`, `npm run release:check`,
 ## Rollback
 
 Revert HC-RUN-220 commits. New app-data attachment records are additive and may remain for a future retry or be removed by the explicit attachment cleanup path. Existing workspace attachments, sessions, commands, and model profiles require no reverse migration.
+
+## Delivered Implementation
+
+- `FileAttachmentStore` writes typed records and deduplicated SHA-256 blobs under app data, applies bounded imports and owner permissions, rejects unsafe IDs/non-regular files, and verifies every read.
+- Runtime messages persist `attachment_ref` parts. The provider boundary materializes verified image/text content and rejects unsupported PDF/file input before transport or history mutation.
+- Electron IPC, preload, Runtime Queue, and Renderer use bounded attachment IDs; resumed sessions reconstruct attachment chips, and unsent records are discarded before conversation changes.
+- `CommandRegistry` provides canonical shell/slash/native/agent routing for all surfaces, rejects aliases and equal-priority native conflicts, and prevents ordinary coding requests from being swallowed by the app launcher.
+- Legacy inline images, `@image` references, and `attach-image` remain compatible.
+
+## Acceptance Result
+
+- Image, PDF, text, missing, corrupted, oversized, and cross-session errors are visible and tested. PDF and generic files remain durable inputs but are not claimed as provider-processed without a compatible transport.
+- Slash aliases, unknown commands, native conflicts, native fallback, shell routing, and ordinary agent language are covered by the shared contract.
+- A new attachment-store instance reads the same metadata and bytes; Runtime restart/replay preserves attachment identity.
+- Evidence captured 24 commands with 24 passes, zero failures, and zero DoD findings.
+
+## Known Boundaries
+
+- Provider-hosted file upload, PDF extraction/OCR, arbitrary binary analysis, cloud sync, and malware scanning remain out of scope.
+- The current Renderer imports at most eight attachment IDs per request. Text materialization is capped at 256 KiB per provider request even though the durable text import limit is 2 MiB.
+- HC-RUN-220 does not promote or tag `0.6.0-alpha.9`; formal release work remains approval-gated.
 
 ## Commit Plan
 

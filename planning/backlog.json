@@ -194,10 +194,12 @@
       "dependencies": ["HC-PROV-210"],
       "deliverables": ["attachment metadata/blob store", "capability checks", "CommandRegistry"],
       "acceptance": ["image/PDF/file errors are visible", "slash/native/agent routing conflicts are tested", "attachments survive restart"],
-      "status": "in_progress",
+      "status": "completed",
       "startedAt": "2026-07-11T05:03:45Z",
       "branch": "codex/runtime-engine/hc-run-220",
-      "taskManifest": "reports/tasks/HC-RUN-220.md"
+      "taskManifest": "reports/tasks/HC-RUN-220.md",
+      "completedAt": "2026-07-11T07:00:39Z",
+      "evidenceManifest": "reports/evidence/HC-RUN-220/manifest.json"
     },
     {
       "id": "HC-UI-301",

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "program": "Hi Code Product-Grade Desktop and Industrial Workbench",
-  "updatedAt": "2026-07-11T05:03:45Z",
+  "updatedAt": "2026-07-11T07:00:39Z",
   "risks": [
     {
       "id": "RISK-RUN-001",
@@ -105,13 +105,13 @@
     {
       "id": "RISK-RUN-004",
       "severity": "high",
-      "status": "open",
+      "status": "mitigated",
       "owner": "runtime-engine",
       "title": "Attachments and command intents can be lost or routed inconsistently",
-      "evidence": ["reports/tasks/HC-RUN-220.md"],
+      "evidence": ["src/attachment-store.ts", "src/attachment-materializer.ts", "src/command-registry.ts", "test/attachment-command-registry-tests.mjs", "reports/evidence/HC-RUN-220/manifest.json"],
       "impact": "Workspace-relative image files can disappear across restart, unsupported PDF or binary input can fail after a paid network request, and slash/native/agent routing can silently invoke the wrong behavior.",
-      "mitigation": "Add a content-addressed app-data attachment store with typed metadata and integrity checks, materialize only after capability preflight, and introduce one conflict-detecting Command Registry shared by Runtime and Electron routing.",
-      "trigger": "Any missing attachment that fails silently, unsupported input sent to a provider, duplicate command alias, or native action selected over an equally valid command blocks HC-RUN-220 completion."
+      "mitigation": "HC-RUN-220 stores content-addressed attachments in app data, verifies metadata and hashes on every read, materializes supported image/text content only after provider capability checks, rejects unsupported PDF/file transport before network I/O, and routes Runtime/Electron input through one conflict-detecting Command Registry.",
+      "trigger": "Any missing attachment that fails silently, unsupported input sent to a provider, duplicate command alias, or native action selected over an equally valid command reopens this risk."
     },
     {
       "id": "RISK-IND-001",
