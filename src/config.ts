@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 
 /** One model endpoint + its parameters. The unit the LLM client speaks. */
-export const MODEL_TRANSPORT_PROTOCOLS = ["chat_completions", "responses"] as const;
+export const MODEL_TRANSPORT_PROTOCOLS = ["chat_completions", "responses", "anthropic_messages", "ollama_chat"] as const;
 export type ModelTransportProtocol = (typeof MODEL_TRANSPORT_PROTOCOLS)[number];
 
 export interface ModelProfile {
@@ -180,7 +180,7 @@ function normalizeReasoningLevel(value: unknown): VibeConfig["reasoningLevel"] {
 
 export function normalizeModelTransportProtocol(value: unknown): ModelTransportProtocol {
   if (value === undefined || value === null || value === "") return "chat_completions";
-  if (value === "chat_completions" || value === "responses") return value;
+  if (MODEL_TRANSPORT_PROTOCOLS.includes(value as ModelTransportProtocol)) return value as ModelTransportProtocol;
   const error = new Error(`unsupported model transport protocol: ${String(value).slice(0, 80)}`);
   Object.assign(error, {
     code: "provider_protocol_invalid",

@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 
+import { createAnthropicMessagesAdapter } from "./anthropic-messages-provider.js";
 import { normalizeModelTransportProtocol, type ModelProfile } from "./config.js";
 import {
   complete,
@@ -12,8 +13,11 @@ import {
   type ToolSchema,
 } from "./llm.js";
 import { createOpenAIResponsesAdapter } from "./openai-responses-provider.js";
+import { createOllamaChatAdapter } from "./ollama-chat-provider.js";
 
+export { createAnthropicMessagesAdapter } from "./anthropic-messages-provider.js";
 export { createOpenAIResponsesAdapter } from "./openai-responses-provider.js";
+export { createOllamaChatAdapter } from "./ollama-chat-provider.js";
 
 export const MODEL_PROVIDER_SCHEMA_VERSION = 2;
 
@@ -553,6 +557,8 @@ export function createLegacyOpenAICompatibleAdapter(
 export function createModelProfileAdapter(profile: ModelProfile): ModelProviderAdapter {
   const protocol = normalizeModelTransportProtocol(profile.protocol);
   if (protocol === "responses") return createOpenAIResponsesAdapter(profile);
+  if (protocol === "anthropic_messages") return createAnthropicMessagesAdapter(profile);
+  if (protocol === "ollama_chat") return createOllamaChatAdapter(profile);
   return createLegacyOpenAICompatibleAdapter(profile);
 }
 

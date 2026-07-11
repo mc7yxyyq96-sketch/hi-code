@@ -152,7 +152,8 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    const hasToolResult = body.messages?.some((message) => message.role === "tool" && message.tool_name === "read_file");
+    const lastMessage = body.messages?.at(-1);
+    const hasToolResult = lastMessage?.role === "tool" && lastMessage.tool_name === "read_file";
     writeNdjson(res, {
       model: "qwen-fixture",
       message: {
@@ -250,7 +251,7 @@ try {
     } catch (error) {
       caught = error;
     }
-    check(`${id} rejects unsupported reasoning summaries before network`, caught?.code === "provider_capability_negotiation_failed" && requests.length === before, caught?.code || "no error");
+    check(`${id} rejects unsupported reasoning summaries before network`, caught?.code === "provider_capability_unsupported" && requests.length === before, caught?.code || "no error");
   }
 
   console.log("\n[anthropic-ollama] Anthropic Messages wire contract");
