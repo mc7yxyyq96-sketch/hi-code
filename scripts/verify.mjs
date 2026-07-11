@@ -22,6 +22,7 @@ const testFiles = [
   ["test:providers", "test/provider-tests.mjs"],
   ["test:model-providers", "test/model-provider-tests.mjs"],
   ["test:openai-responses", "test/openai-responses-provider-tests.mjs"],
+  ["test:anthropic-ollama", "test/anthropic-ollama-provider-tests.mjs"],
   ["test:worktrees", "test/worktree-runner-tests.mjs"],
   ["test:arena", "test/patch-arena-tests.mjs"],
   ["test:industrial", "test/industrial-project-tests.mjs"],
