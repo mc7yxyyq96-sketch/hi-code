@@ -81,6 +81,7 @@ const requiredFiles = [
   "reports/evidence/HC-PROV-211/manifest.json",
   "reports/evidence/HC-PROV-212/manifest.json",
   "reports/evidence/HC-RUN-220/manifest.json",
+  "reports/evidence/HC-UI-301/manifest.json",
   "scripts/electron-compatibility.mjs",
   "scripts/run-electron-builder.mjs",
   "test/electron-compatibility-tests.mjs",
@@ -119,6 +120,7 @@ const modelProviderManifest = readJson(root, "reports/evidence/HC-PROV-210/manif
 const openAIResponsesManifest = readJson(root, "reports/evidence/HC-PROV-211/manifest.json");
 const anthropicOllamaManifest = readJson(root, "reports/evidence/HC-PROV-212/manifest.json");
 const attachmentCommandManifest = readJson(root, "reports/evidence/HC-RUN-220/manifest.json");
+const uiShellManifest = readJson(root, "reports/evidence/HC-UI-301/manifest.json");
 const packageJson = readJson(root, "package.json");
 const packageLock = readJson(root, "package-lock.json");
 const programTask = backlog.tasks.find((task) => task.id === "HC-PROG-100");
@@ -224,17 +226,31 @@ check(
   JSON.stringify(alpha8ReleaseTask),
 );
 check(
-  "HC-UI-301 is active only after completed dependencies",
-  uiShellTask?.status === "in_progress" &&
+  "HC-UI-301 completed only after its dependencies and evidence",
+  uiShellTask?.status === "completed" &&
     uiShellTask?.branch === "codex/desktop-ux/hc-ui-301" &&
     Boolean(uiShellTask?.startedAt) &&
+    Boolean(uiShellTask?.completedAt) &&
     uiShellTask?.taskManifest === "reports/tasks/HC-UI-301.md" &&
+    uiShellTask?.evidenceManifest === "reports/evidence/HC-UI-301/manifest.json" &&
     uiShellTask?.dependencies?.every((id) => backlog.tasks.find((task) => task.id === id)?.status === "completed") &&
-    uiShellBoardTask?.status === "in_progress" &&
-    uiShellBoardTask?.taskManifest === "reports/tasks/HC-UI-301.md",
+    uiShellBoardTask?.status === "completed" &&
+    uiShellBoardTask?.taskManifest === "reports/tasks/HC-UI-301.md" &&
+    uiShellBoardTask?.evidence === "reports/evidence/HC-UI-301/manifest.json",
   JSON.stringify(uiShellTask),
 );
-check("React App Shell gate is tracked without a pass claim", board.gates?.find((gate) => gate.id === "react-app-shell")?.status === "in_progress");
+check("React App Shell gate passed with committed evidence", board.gates?.find((gate) => gate.id === "react-app-shell")?.status === "passed" && board.gates?.find((gate) => gate.id === "react-app-shell")?.evidence === "reports/evidence/HC-UI-301/manifest.json");
+check("HC-UI-301 compatibility risk is evidence-backed and mitigated", risks.risks?.some((risk) => risk.id === "RISK-UI-002" && risk.status === "mitigated" && risk.evidence?.includes("reports/evidence/HC-UI-301/manifest.json")));
+check("HC-UI-301 evidence records every command passing", uiShellManifest.summary?.allPassed === true && uiShellManifest.summary?.total === 13, JSON.stringify(uiShellManifest.summary));
+check("HC-UI-301 evidence is captured from its isolated branch", uiShellManifest.source?.branch === "codex/desktop-ux/hc-ui-301" && uiShellManifest.source?.parentCommit === "f25eab4c72bfff8a2a9e8b7f7ccfd6a2767cf1d6");
+for (const requiredCommand of ["build", "verify", "release-check", "feature-tests", "app-shell-tests", "renderer-tests", "security-tests", "dod-tests", "dod-scan", "production-audit", "electron-e2e", "program-control", "git-diff-check"]) {
+  check(`HC-UI-301 captured ${requiredCommand}`, uiShellManifest.commands?.some((command) => command.id === requiredCommand && command.status === "passed"));
+}
+for (const command of uiShellManifest.commands || []) {
+  const absolute = path.join(root, command.logPath || "");
+  check(`HC-UI-301 ${command.id} log exists`, Boolean(command.logPath) && fs.existsSync(absolute));
+  if (fs.existsSync(absolute)) check(`HC-UI-301 ${command.id} log hash matches`, digest(absolute) === command.logSha256);
+}
 check("alpha.8 version is synchronized", packageJson.version === "0.6.0-alpha.8" && packageLock.version === packageJson.version && packageLock.packages?.[""]?.version === packageJson.version && fs.readFileSync(path.join(root, "VERSION"), "utf8").trim() === packageJson.version);
 check("alpha.8 release candidate gate passed", board.currentRelease === packageJson.version && board.candidate?.version === packageJson.version && board.candidate?.branch === "codex/release/0.6.0-alpha.8" && board.candidate?.status === "passed" && board.candidate?.evidence === "reports/evidence/HC-REL-ALPHA-8/manifest.json" && board.gates?.find((gate) => gate.id === "alpha-8-release-candidate")?.status === "passed");
 check("historical alpha.7 release candidate gate remains passed", board.gates?.find((gate) => gate.id === "alpha-7-release-candidate")?.status === "passed");

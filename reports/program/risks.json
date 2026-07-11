@@ -50,17 +50,19 @@
     {
       "id": "RISK-UI-002",
       "severity": "high",
-      "status": "open",
+      "status": "mitigated",
       "owner": "desktop-ux",
       "title": "React App Shell and legacy panels can diverge during gradual migration",
       "evidence": [
         "renderer/index.html",
         "renderer/app/bootstrap.js",
         "renderer/app-shell/",
-        "tests/electron-e2e/run.mjs"
+        "tests/electron-e2e/run.mjs",
+        "docs/app-shell.md",
+        "reports/evidence/HC-UI-301/manifest.json"
       ],
       "impact": "Duplicate route state or hidden legacy controls could make an existing panel unreachable even though unit tests pass.",
-      "mitigation": "Keep one typed route registry, let the compatibility adapter own legacy visibility, preserve every existing panel ID, and verify real Electron navigation at 720, 1024, 1440, and 1920 widths.",
+      "mitigation": "One typed route registry and Legacy Panel Adapter now own shell route visibility, every existing production panel is validated before mount, and real Electron navigation passed at 720, 1024, 1440, and 1920 widths. Remaining panel-by-panel migration stays behind this compatibility boundary.",
       "trigger": "Any route with two state owners, any legacy view without a reachable route, or any 720-1920 clipping failure blocks HC-UI-301 completion."
     },
     {

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "program": "Hi Code Product-Grade Desktop and Industrial Workbench",
-  "updatedAt": "2026-07-11T07:52:25Z",
+  "updatedAt": "2026-07-11T09:47:05Z",
   "status": "active",
   "source": {
     "version": "0.6.0-alpha.6",
@@ -105,7 +105,7 @@
       "taskId": "HC-UI-301",
       "branch": "codex/desktop-ux/hc-ui-301",
       "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-hc-ui-301",
-      "mode": "active-worktree"
+      "mode": "completed-worktree"
     }
   ],
   "tasks": [
@@ -232,14 +232,16 @@
       "id": "HC-UI-301",
       "owner": "desktop-ux",
       "priority": "P0",
-      "status": "in_progress",
+      "status": "completed",
       "dependencies": [
         "HC-RUN-201",
         "HC-QA-101"
       ],
       "branch": "codex/desktop-ux/hc-ui-301",
       "startedAt": "2026-07-11T07:52:25Z",
-      "taskManifest": "reports/tasks/HC-UI-301.md"
+      "completedAt": "2026-07-11T09:47:05Z",
+      "taskManifest": "reports/tasks/HC-UI-301.md",
+      "evidence": "reports/evidence/HC-UI-301/manifest.json"
     }
   ],
   "gates": [
@@ -323,9 +325,10 @@
     },
     {
       "id": "react-app-shell",
-      "status": "in_progress",
+      "status": "passed",
       "owner": "HC-UI-301",
-      "evidence": "reports/tasks/HC-UI-301.md"
+      "verifiedAt": "2026-07-11T09:47:05Z",
+      "evidence": "reports/evidence/HC-UI-301/manifest.json"
     }
   ],
   "nextReleaseSlices": [
