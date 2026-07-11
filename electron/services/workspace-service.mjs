@@ -230,46 +230,22 @@ export function createWorkspaceService({
       }
       if (!baseURL) return { ok: false, error: "请填写 Base URL" };
       if (!model) return { ok: false, error: "请填写模型名" };
-      if (!apiKey) return { ok: false, error: "请填写 API Key；本地模型可填 sk-no-key-required" };
+      if (!apiKey && protocol !== "ollama_chat") return { ok: false, error: "请填写 API Key；本地 Ollama 原生协议可以留空" };
 
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 15000);
       try {
-        const isResponses = protocol === "responses";
-        const body = isResponses
-          ? {
-              model,
-              input: [{ role: "user", content: [{ type: "input_text", text: "Reply with ok." }] }],
-              max_output_tokens: 8,
-              stream: false,
-              store: false,
-            }
-          : {
-              model,
-              messages: [{ role: "user", content: "Reply with ok." }],
-              max_tokens: 8,
-              stream: false,
-            };
-        if (!shouldOmitTemperatureForBaseURL(baseURL)) body.temperature = 0;
-
-        const res = await fetchImpl(`${baseURL}/${isResponses ? "responses" : "chat/completions"}`, {
+        const request = buildModelTestRequest({ baseURL, apiKey, model, protocol });
+        const res = await fetchImpl(request.url, {
           method: "POST",
           signal: controller.signal,
-          headers: {
-            "content-type": "application/json",
-            authorization: `Bearer ${apiKey}`,
-          },
-          body: JSON.stringify(body),
+          headers: request.headers,
+          body: JSON.stringify(request.body),
         });
         const text = await res.text();
         if (!res.ok) return { ok: false, error: modelTestError(res.status, text, baseURL) };
-        if (isResponses) {
-          const response = JSON.parse(text || "{}");
-          if (response.status !== "completed") {
-            return { ok: false, error: `Responses 连接返回非完成状态：${String(response.status || "unknown")}` };
-          }
-        }
-        return { ok: true, message: "连接成功", capabilities: modelCapabilityHint({ baseURL, model }) };
+        validateModelTestResponse(protocol, text);
+        return { ok: true, message: "连接成功", capabilities: modelCapabilityHint({ baseURL, model, protocol }) };
       } catch (error) {
         return { ok: false, error: modelTestNetworkError(error, baseURL) };
       } finally {
@@ -291,7 +267,7 @@ export function validateModelProtocolConfig(config) {
       try {
         normalizeModelProtocol(profile.protocol);
       } catch {
-        throw new Error(`模型配置 ${name} 的 protocol 只支持 chat_completions 或 responses`);
+        throw new Error(`模型配置 ${name} 的 protocol 只支持 chat_completions、responses、anthropic_messages 或 ollama_chat`);
       }
     }
   }
@@ -300,8 +276,8 @@ export function validateModelProtocolConfig(config) {
 
 function normalizeModelProtocol(value) {
   if (value === undefined || value === null || value === "") return "chat_completions";
-  if (value === "chat_completions" || value === "responses") return value;
-  throw new Error("protocol 只支持 chat_completions 或 responses");
+  if (["chat_completions", "responses", "anthropic_messages", "ollama_chat"].includes(value)) return value;
+  throw new Error("protocol 只支持 chat_completions、responses、anthropic_messages 或 ollama_chat");
 }
 
 export function registerWorkspaceIpc({ register, workspace }) {
@@ -402,6 +378,113 @@ function isPathInside(root, candidate) {
 function shouldOmitTemperatureForBaseURL(baseURL) {
   const value = String(baseURL || "").toLowerCase();
   return value.includes("moonshot.") || value.includes("api.kimi.com");
+}
+
+export function buildModelTestRequest({ baseURL, apiKey, model, protocol }) {
+  const normalizedProtocol = normalizeModelProtocol(protocol);
+  const headers = { "content-type": "application/json" };
+  let url;
+  let body;
+
+  if (normalizedProtocol === "responses") {
+    url = secureModelTestEndpoint(baseURL, "responses", "Responses");
+    headers.authorization = `Bearer ${apiKey}`;
+    body = {
+      model,
+      input: [{ role: "user", content: [{ type: "input_text", text: "Reply with ok." }] }],
+      max_output_tokens: 8,
+      stream: false,
+      store: false,
+    };
+  } else if (normalizedProtocol === "anthropic_messages") {
+    url = secureModelTestEndpoint(baseURL, "messages", "Anthropic Messages", { defaultPath: "/v1/messages" });
+    headers["x-api-key"] = apiKey;
+    headers["anthropic-version"] = "2023-06-01";
+    body = {
+      model,
+      max_tokens: 8,
+      messages: [{ role: "user", content: "Reply with ok." }],
+      stream: false,
+    };
+  } else if (normalizedProtocol === "ollama_chat") {
+    url = secureOllamaTestEndpoint(baseURL);
+    if (apiKey && apiKey !== "sk-no-key-required") headers.authorization = `Bearer ${apiKey}`;
+    body = {
+      model,
+      messages: [{ role: "user", content: "Reply with ok." }],
+      stream: false,
+      think: false,
+      options: { temperature: 0, num_predict: 8 },
+    };
+  } else {
+    url = `${baseURL.replace(/\/+$/, "")}/chat/completions`;
+    headers.authorization = `Bearer ${apiKey}`;
+    body = {
+      model,
+      messages: [{ role: "user", content: "Reply with ok." }],
+      max_tokens: 8,
+      stream: false,
+    };
+    if (!shouldOmitTemperatureForBaseURL(baseURL)) body.temperature = 0;
+  }
+
+  return { url, headers, body, protocol: normalizedProtocol };
+}
+
+export function validateModelTestResponse(protocol, text) {
+  const normalizedProtocol = normalizeModelProtocol(protocol);
+  if (normalizedProtocol === "chat_completions") return true;
+  let response;
+  try {
+    response = JSON.parse(text || "{}");
+  } catch {
+    throw new Error("模型连接返回了无效 JSON");
+  }
+  if (normalizedProtocol === "responses" && response.status !== "completed") {
+    throw new Error(`Responses 连接返回非完成状态：${String(response.status || "unknown")}`);
+  }
+  if (normalizedProtocol === "anthropic_messages" && (response.type !== "message" || response.role !== "assistant" || !Array.isArray(response.content))) {
+    throw new Error("Anthropic Messages 连接未返回有效 assistant message");
+  }
+  if (normalizedProtocol === "ollama_chat" && (response.done !== true || !response.message || response.message.role !== "assistant")) {
+    throw new Error("Ollama 原生连接未返回完成的 assistant message");
+  }
+  return true;
+}
+
+function secureModelTestEndpoint(baseURL, suffix, label, { defaultPath = "" } = {}) {
+  const url = secureModelTestBaseURL(baseURL, label);
+  const current = url.pathname.replace(/\/+$/, "");
+  if (current.endsWith(`/${suffix}`)) url.pathname = current;
+  else if (!current && defaultPath) url.pathname = defaultPath;
+  else url.pathname = `${current}/${suffix}`.replace(/^\/\//, "/");
+  return url.toString();
+}
+
+function secureOllamaTestEndpoint(baseURL) {
+  const url = secureModelTestBaseURL(baseURL, "Ollama");
+  const current = url.pathname.replace(/\/+$/, "");
+  if (current.endsWith("/api/chat")) url.pathname = current;
+  else if (current.endsWith("/api")) url.pathname = `${current}/chat`;
+  else url.pathname = `${current}/api/chat`.replace(/^\/\//, "/");
+  return url.toString();
+}
+
+function secureModelTestBaseURL(baseURL, label) {
+  let url;
+  try {
+    url = new URL(baseURL);
+  } catch {
+    throw new Error(`${label} Base URL 无效`);
+  }
+  const loopback = ["localhost", "127.0.0.1", "[::1]", "::1"].includes(url.hostname);
+  if (url.protocol !== "https:" && !(url.protocol === "http:" && loopback)) {
+    throw new Error(`${label} 远程连接必须使用 HTTPS；本机回环地址可以使用 HTTP`);
+  }
+  if (url.username || url.password || url.search || url.hash) {
+    throw new Error(`${label} Base URL 不能包含凭据、查询参数或片段`);
+  }
+  return url;
 }
 
 export function modelCapabilityHint(profile = {}) {

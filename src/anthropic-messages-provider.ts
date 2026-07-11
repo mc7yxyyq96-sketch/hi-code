@@ -11,7 +11,6 @@ import type {
 import {
   createProviderRequestControl,
   fetchProviderWithRetry,
-  isFiniteNumber,
   isNonNegativeNumber,
   isPositiveInteger,
   isProviderRecord,
@@ -122,14 +121,12 @@ export function createAnthropicMessagesAdapter(
 function buildAnthropicBody(profile: ModelProfile, request: ModelProviderAdapterRequest): Record<string, unknown> {
   const converted = toAnthropicMessages(request.messages);
   const tools = request.tools.map(toAnthropicTool);
-  const temperature = isFiniteNumber(request.temperature) ? request.temperature : profile.temperature;
   return {
     model: requiredProviderText(profile.model, "profile.model"),
     max_tokens: request.requirements.outputTokens || DEFAULT_MAX_TOKENS,
     messages: converted.messages,
     ...(converted.system ? { system: converted.system } : {}),
     ...(tools.length ? { tools, tool_choice: { type: "auto" } } : {}),
-    ...(isFiniteNumber(temperature) ? { temperature } : {}),
     stream: request.mode !== "complete",
   };
 }
