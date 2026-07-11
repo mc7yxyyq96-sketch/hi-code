@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "program": "Hi Code Product-Grade Desktop and Industrial Workbench",
-  "updatedAt": "2026-07-11T07:00:39Z",
+  "updatedAt": "2026-07-11T07:52:25Z",
   "risks": [
     {
       "id": "RISK-RUN-001",
@@ -46,6 +46,24 @@
       "impact": "Unit and renderer smoke tests can miss clipping, unreachable controls, window lifecycle, and preload integration regressions.",
       "mitigation": "Playwright now launches the production Electron entrypoint at 720/1024/1440 widths locally and under Linux/Xvfb CI, with real navigation, drawer, overflow, and page-error assertions.",
       "trigger": "A core action hidden without an alternative or a failed real Electron launch blocks release."
+    },
+    {
+      "id": "RISK-UI-002",
+      "severity": "high",
+      "status": "mitigated",
+      "owner": "desktop-ux",
+      "title": "React App Shell and legacy panels can diverge during gradual migration",
+      "evidence": [
+        "renderer/index.html",
+        "renderer/app/bootstrap.js",
+        "renderer/app-shell/",
+        "tests/electron-e2e/run.mjs",
+        "docs/app-shell.md",
+        "reports/evidence/HC-UI-301/manifest.json"
+      ],
+      "impact": "Duplicate route state or hidden legacy controls could make an existing panel unreachable even though unit tests pass.",
+      "mitigation": "One typed route registry and Legacy Panel Adapter now own shell route visibility, every existing production panel is validated before mount, and real Electron navigation passed at 720, 1024, 1440, and 1920 widths. Remaining panel-by-panel migration stays behind this compatibility boundary.",
+      "trigger": "Any route with two state owners, any legacy view without a reachable route, or any 720-1920 clipping failure blocks HC-UI-301 completion."
     },
     {
       "id": "RISK-PLAT-001",

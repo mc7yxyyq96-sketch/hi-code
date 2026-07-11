@@ -143,6 +143,8 @@ async function captureHome(page, width) {
     const crumbStyle = crumbLabel ? getComputedStyle(crumbLabel) : null;
     const crumbFontSize = Number.parseFloat(crumbStyle?.fontSize || "0");
     const workspaceBar = document.querySelector("#workspacebar")?.getBoundingClientRect();
+    const shellMount = document.querySelector("#appShellMount");
+    const shellTrigger = document.querySelector(".app-shell-nav-trigger");
     const topActions = [...document.querySelectorAll(".workspace-actions .top-btn")]
       .filter((button) => button.getClientRects().length > 0)
       .map((button) => {
@@ -166,6 +168,11 @@ async function captureHome(page, width) {
         singleLine: crumbStyle?.whiteSpace === "nowrap" && crumbRect.height <= crumbFontSize * 1.7,
       } : null,
       topActions,
+      appShell: {
+        implementation: shellMount?.dataset.appShell || "",
+        activeRoute: shellMount?.dataset.activeRoute || "",
+        triggerVisible: Boolean(shellTrigger?.getClientRects().length),
+      },
     };
   });
 
@@ -177,10 +184,16 @@ async function captureHome(page, width) {
   assert.equal(layout.brand?.fullyInsideParent, true, `Brand is clipped by its parent at ${width}px`);
   assert.equal(layout.crumb?.text, baseline.brand.text, `Workspace brand text changed at ${width}px`);
   assert.equal(layout.crumb?.singleLine, true, `Workspace brand wrapped onto multiple lines at ${width}px`);
-  if (width <= 820) assert.equal(layout.topActions.length, 0, `Compact top actions should be hidden at ${width}px`);
+  assert.equal(layout.appShell.implementation, "react-typescript-vite", `Typed App Shell is not mounted at ${width}px`);
+  assert.equal(layout.appShell.activeRoute, "home", `App Shell route is not synchronized at ${width}px`);
+  if (width <= 820) {
+    assert.equal(layout.topActions.length, 0, `Compact top actions should be hidden at ${width}px`);
+    assert.equal(layout.appShell.triggerVisible, true, `Compact App Shell navigation is missing at ${width}px`);
+  }
   else {
     assert.equal(layout.topActions.length, 5, `Expected every top action at ${width}px`);
     assert.equal(layout.topActions.every((action) => action.fullyInsideHeader), true, `A top action is clipped at ${width}px`);
+    assert.equal(layout.appShell.triggerVisible, false, `Compact App Shell navigation should be hidden at ${width}px`);
   }
 
   const resultPath = path.join(resultDir, `home-${width}.png`);
@@ -189,6 +202,33 @@ async function captureHome(page, width) {
   if (updateFixtures) fs.copyFileSync(resultPath, path.join(fixtureDir, `home-${width}.png`));
   else assert.ok(fs.statSync(path.join(fixtureDir, `home-${width}.png`)).size > 12_000, `Committed ${width}px fixture is missing or blank`);
   return layout;
+}
+
+async function verifyTypedAppShell(page) {
+  await setContentSize(720, baseline.height);
+  await returnHome(page);
+  const trigger = await waitVisible(page, ".app-shell-nav-trigger");
+  assert.equal(await trigger.getAttribute("aria-expanded"), "false");
+  await trigger.click();
+  assert.equal(await trigger.getAttribute("aria-expanded"), "true");
+  const drawer = await waitVisible(page, "#appShellDrawer");
+  const routeButtons = drawer.locator(".app-shell-route");
+  assert.ok(await routeButtons.count() >= 10, "Compact App Shell omits production routes");
+  await drawer.getByRole("button", { name: "任务", exact: true }).click();
+  await waitVisible(page, "#jobView");
+  assert.equal(await page.locator("#appShellDrawer").isHidden(), true, "App Shell drawer did not close after navigation");
+  assert.equal(await page.locator("#app").getAttribute("data-shell-route"), "jobs");
+  assert.ok((await page.locator("#jobsBtn").getAttribute("class"))?.includes("active"));
+
+  await trigger.click();
+  await waitVisible(page, "#appShellDrawer");
+  await page.keyboard.press("Escape");
+  assert.equal(await page.locator("#appShellDrawer").isHidden(), true, "Escape did not close the App Shell drawer");
+  assert.equal(await trigger.evaluate((element) => document.activeElement === element), true, "App Shell trigger did not regain focus");
+
+  await setContentSize(1024, baseline.height);
+  await page.waitForTimeout(120);
+  assert.equal(await trigger.isHidden(), true, "Compact App Shell trigger should be hidden above the compact breakpoint");
 }
 
 async function openLocalChat(page) {
@@ -312,6 +352,10 @@ async function main() {
       await verifyNavigation(page, width);
     });
   }
+
+  await check("typed App Shell controls legacy panels at compact width", async () => {
+    await verifyTypedAppShell(page);
+  });
 
   await check("responsive timeline and diff panels have real drawer access", async () => {
     await verifyResponsivePanels(page);

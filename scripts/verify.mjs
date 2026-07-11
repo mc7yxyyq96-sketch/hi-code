@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const node = process.execPath;
+const tsx = path.join(root, "node_modules", "tsx", "dist", "cli.mjs");
 
 const testFiles = [
   ["test:feature", "test/feature-tests.mjs"],
@@ -35,6 +36,7 @@ const testFiles = [
   ["test:samples", "test/industrial-control-box-sample-tests.mjs"],
   ["test:dod", "test/definition-of-done-tests.mjs"],
   ["test:renderer", "test/renderer-architecture-tests.mjs"],
+  ["test:app-shell", "test/app-shell-tests.ts", tsx],
   ["test:entrypoints", "test/entrypoint-tests.mjs"],
   ["test:program", "test/program-control-tests.mjs"],
   ["test:security", "test/security-baseline.mjs"],
@@ -60,6 +62,9 @@ function run(label, command, args) {
 
 function runBuild() {
   const tsc = path.join(root, "node_modules", "typescript", "bin", "tsc");
+  const vite = path.join(root, "node_modules", "vite", "bin", "vite.js");
+  run("renderer:typecheck", node, [tsc, "-p", "renderer/tsconfig.json", "--noEmit"]);
+  run("renderer:build", node, [vite, "build", "--config", "vite.renderer.config.ts"]);
   run("build", node, [tsc, "-p", "tsconfig.json"]);
   const binPath = path.join(root, "dist", "index.js");
   if (fs.existsSync(binPath)) fs.chmodSync(binPath, 0o755);
@@ -74,8 +79,8 @@ function runSyntaxCheck() {
 run("sync:version", node, ["scripts/sync-version.mjs"]);
 runBuild();
 runSyntaxCheck();
-for (const [label, file] of testFiles) {
-  run(label, [node][0], [file]);
+for (const [label, file, loader] of testFiles) {
+  run(label, node, loader ? [loader, file] : [file]);
 }
 
 console.log("\n[verify] all checks passed");

@@ -6,6 +6,7 @@ pnpm-lock.yaml
 # build output / artifacts
 dist/
 release/
+renderer/generated/
 *.tsbuildinfo
 
 # logs

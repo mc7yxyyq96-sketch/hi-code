@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "height": 820,
-  "widths": [720, 1024, 1440],
+  "widths": [720, 1024, 1440, 1920],
   "brand": {
     "text": "Hi Code",
     "minimumVisibleWidth": 42

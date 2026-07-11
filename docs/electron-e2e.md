@@ -19,7 +19,7 @@ The normal command never overwrites fixtures. Runtime screenshots and observed l
 
 ## Coverage
 
-At 720, 1024, and 1440 content widths the suite verifies:
+At 720, 1024, 1440, and 1920 content widths the suite verifies:
 
 - the real Electron window and local file renderer launch;
 - the embedded Electron, Chromium, and Node versions match the pinned compatibility baseline;
@@ -28,6 +28,8 @@ At 720, 1024, and 1440 content widths the suite verifies:
 - the workspace breadcrumb remains a single line and every visible top action stays inside the header;
 - the root document has no horizontal overflow;
 - Job Center, Patch Arena, Industrial Project, Git/diffs, Store, and Settings open through reachable controls;
+- the typed React App Shell is mounted, synchronizes its route with legacy panels, and supplies real compact navigation at 720px;
+- compact navigation closes on selection and Escape, restores focus, and cannot cover modal controls;
 - small-window timeline and diff panels open as real drawers;
 - desktop timeline and diff panels remain visible without drawer controls;
 - renderer execution has no uncaught page error;

@@ -11,6 +11,20 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const npm = process.platform === "win32" ? "npm.cmd" : "npm";
 const node = process.execPath;
 
+function sanitizeEvidencePath(value) {
+  const localBin = path.resolve(root, "node_modules", ".bin");
+  const normalize = (entry) => {
+    const resolved = path.resolve(root, entry);
+    return process.platform === "win32" ? resolved.toLowerCase() : resolved;
+  };
+  const blocked = normalize(localBin);
+  return String(value || "")
+    .split(path.delimiter)
+    .filter(Boolean)
+    .filter((entry) => normalize(entry) !== blocked)
+    .join(path.delimiter);
+}
+
 const profiles = {
   "HC-QA-101": {
     evidenceType: "desktop-responsive-acceptance",
@@ -453,6 +467,61 @@ const profiles = {
       "test/security-baseline.mjs"
     ],
   },
+  "HC-UI-301": {
+    evidenceType: "typed-app-shell-compatibility-acceptance",
+    commands: [
+      { id: "build", command: npm, args: ["run", "build"] },
+      { id: "verify", command: npm, args: ["run", "verify"] },
+      { id: "release-check", command: npm, args: ["run", "release:check"] },
+      { id: "feature-tests", command: node, args: ["test/feature-tests.mjs"] },
+      { id: "app-shell-tests", command: npm, args: ["run", "test:app-shell"] },
+      { id: "renderer-tests", command: npm, args: ["run", "test:renderer"] },
+      { id: "security-tests", command: npm, args: ["run", "test:security"] },
+      { id: "dod-tests", command: npm, args: ["run", "test:dod"] },
+      { id: "dod-scan", command: npm, args: ["run", "scan:dod"] },
+      { id: "production-audit", command: npm, args: ["run", "audit:prod"] },
+      { id: "electron-e2e", command: npm, args: ["run", "test:electron-e2e"] },
+      { id: "program-control", command: npm, args: ["run", "test:program"] },
+      { id: "git-diff-check", command: "git", args: ["diff", "--check"] },
+    ],
+    keyArtifacts: [
+      "docs/adr/ADR-0010-gradual-react-app-shell.md",
+      "docs/adr/README.md",
+      "docs/app-shell.md",
+      "docs/electron-e2e.md",
+      "docs/engineering-baseline.md",
+      "docs/program/ARCHITECTURE.md",
+      "docs/renderer-architecture.md",
+      "package.json",
+      "package-lock.json",
+      "planning/backlog.json",
+      "planning/release-board.json",
+      "renderer/app-shell/AppShell.tsx",
+      "renderer/app-shell/contracts.ts",
+      "renderer/app-shell/legacy-panel-adapter.ts",
+      "renderer/app-shell/main.tsx",
+      "renderer/app-shell/store.ts",
+      "renderer/app/bootstrap.js",
+      "renderer/app/router.js",
+      "renderer/index.html",
+      "renderer/renderer.js",
+      "renderer/style.css",
+      "renderer/tsconfig.json",
+      "reports/program/risks.json",
+      "reports/program/status.md",
+      "reports/tasks/HC-UI-301.md",
+      "scripts/capture-task-evidence.mjs",
+      "scripts/verify.mjs",
+      "test/app-shell-tests.ts",
+      "test/program-control-tests.mjs",
+      "test/renderer-architecture-tests.mjs",
+      "test/security-baseline.mjs",
+      "tests/electron-e2e/fixtures/home-1920.png",
+      "tests/electron-e2e/fixtures/layout-baseline.json",
+      "tests/electron-e2e/run.mjs",
+      "vite.renderer.config.ts"
+    ],
+  },
   "HC-REL-ALPHA-7": {
     evidenceType: "release-candidate-acceptance",
     commands: [
@@ -552,6 +621,9 @@ function safeProcessEnv() {
   for (const key of allowed) {
     if (typeof process.env[key] === "string") env[key] = process.env[key];
   }
+  // Package-manager scripts prepend node_modules/.bin. Keeping that entry here
+  // can shadow the invoking package manager with an unrelated local `npm` bin.
+  env.PATH = sanitizeEvidencePath(env.PATH);
   env.NO_COLOR = "1";
   env.FORCE_COLOR = "0";
   env.HICODE_TASK_EVIDENCE = "1";
