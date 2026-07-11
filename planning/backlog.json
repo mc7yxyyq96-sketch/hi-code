@@ -5,7 +5,7 @@
   "sourceCommit": "6ed9ed666bb817f8d1e863c76b0bf61b31c7b52d",
   "horizonDays": 90,
   "status": "active",
-  "updatedAt": "2026-07-10T23:40:52Z",
+  "updatedAt": "2026-07-11T00:38:19Z",
   "principles": [
     "Runtime Protocol is the single source of truth",
     "No big-bang rewrite",
@@ -126,10 +126,12 @@
       "dependencies": ["HC-RUN-202"],
       "deliverables": ["provider interfaces", "capability matrix", "normalized errors/usage/tool events"],
       "acceptance": ["unsupported capability rejected before request", "provider events preserve semantics", "legacy configuration migrates"],
-      "status": "in_progress",
+      "status": "completed",
       "startedAt": "2026-07-10T23:40:52Z",
       "branch": "codex/runtime-engine/hc-prov-210",
-      "taskManifest": "reports/tasks/HC-PROV-210.md"
+      "taskManifest": "reports/tasks/HC-PROV-210.md",
+      "evidenceManifest": "reports/evidence/HC-PROV-210/manifest.json",
+      "completedAt": "2026-07-11T00:38:19Z"
     },
     {
       "id": "HC-REL-ALPHA-8",

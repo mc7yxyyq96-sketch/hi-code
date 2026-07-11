@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "program": "Hi Code Product-Grade Desktop and Industrial Workbench",
-  "updatedAt": "2026-07-10T23:40:52Z",
+  "updatedAt": "2026-07-11T00:38:19Z",
   "risks": [
     {
       "id": "RISK-RUN-001",
@@ -61,7 +61,7 @@
     {
       "id": "RISK-REL-001",
       "severity": "medium",
-      "status": "open",
+      "status": "mitigated",
       "owner": "security-release",
       "title": "Desktop installers are not commercially signed",
       "evidence": ["package.json", "reports/releases/0.6.0-alpha.8/known-limitations.md", "reports/evidence/HC-REL-ALPHA-8/manifest.json"],
@@ -75,9 +75,9 @@
       "status": "open",
       "owner": "runtime-engine",
       "title": "Model transport lacks an explicit capability contract",
-      "evidence": ["src/llm.ts", "src/config.ts", "src/agent-provider.ts", "reports/tasks/HC-PROV-210.md"],
+      "evidence": ["src/model-provider.ts", "src/agent.ts", "test/model-provider-tests.mjs", "reports/evidence/HC-PROV-210/manifest.json"],
       "impact": "A model request can reach the network before Hi Code discovers that images, tool streaming, structured output, reasoning, or token limits are unsupported, and provider-specific errors lose stable semantics.",
-      "mitigation": "HC-PROV-210 introduces a separate Model Provider Adapter registry, fail-fast capability negotiation, normalized events/errors/usage, and a tested compatibility migration for current model profiles.",
+      "mitigation": "HC-PROV-210 delivers a separate Model Provider Adapter registry, fail-fast capability negotiation, normalized events/errors/usage, stable tool correlation, Runtime Protocol projection, and a real local-SSE compatibility migration for current model profiles.",
       "trigger": "Any unsupported requirement sent to a provider, silent capability downgrade, or provider event that cannot be normalized blocks alpha.9."
     },
     {

@@ -33,7 +33,7 @@ The final machine-captured evidence is written by `npm run program:baseline` to 
 | 5 | HC-RUN-203 | Completed | Runtime Engine | HC-RUN-202 |
 | 6 | HC-PLAT-110 | Completed | Security And Release | HC-QA-101 |
 | 7 | HC-REL-ALPHA-8 | Completed | Release Owner | HC-RUN-202, HC-RUN-203, HC-PLAT-110 |
-| 8 | HC-PROV-210 | In Progress | Runtime Engine | HC-RUN-202, HC-REL-ALPHA-8 integration base |
+| 8 | HC-PROV-210 | Completed | Runtime Engine | HC-RUN-202, HC-REL-ALPHA-8 integration base |
 
 HC-QA-101 established a real Electron responsive baseline. HC-RUN-201 introduces protocol-native assistant output and concurrency isolation. No new industrial domain module is authorized before HC-RUN-201 completes.
 
@@ -55,7 +55,7 @@ The `0.6.0-alpha.7` candidate was integrated on `codex/release/0.6.0-alpha.7` fr
 
 The `0.6.0-alpha.8` candidate passed 13 isolated release commands on `codex/release/0.6.0-alpha.8` from HC-PLAT-110 completion commit `265a69f`. It integrates only completed runtime replay, recovery, and Electron compatibility work. The full-tree DoD scan found zero findings, real Electron E2E passed, and the unsigned macOS arm64 DMG was generated. Formal tag, GitHub Release, signing, notarization, and public promotion remain approval-gated.
 
-HC-PROV-210 is active on `codex/runtime-engine/hc-prov-210` from alpha.8 completion commit `80e6b83`. It separates Model Provider Adapter contracts from the existing external Agent Provider registry, adds pre-request capability negotiation and normalized provider events, and migrates legacy model profiles through a compatibility adapter. Concrete OpenAI Responses, Anthropic, and Ollama transports remain assigned to HC-PROV-211/212.
+HC-PROV-210 completed on `codex/runtime-engine/hc-prov-210` from alpha.8 completion commit `80e6b83`. It separates Model Provider Adapter contracts from the existing external Agent Provider registry, rejects unsupported capabilities before transport execution, normalizes text/tool/usage/error semantics, records correlated provider events in Runtime Protocol, and migrates legacy model profiles through a real OpenAI-compatible adapter. Sixteen machine-captured gates passed with zero DoD findings. Concrete OpenAI Responses, Anthropic, and Ollama transports remain assigned to HC-PROV-211/212.
 
 ## Current Product Truth
 
@@ -74,6 +74,7 @@ HC-PROV-210 is active on `codex/runtime-engine/hc-prov-210` from alpha.8 complet
 - Turn recovery evidence: `reports/tasks/HC-RUN-203.md`, `reports/evidence/HC-RUN-203/manifest.json`
 - Electron compatibility evidence: `reports/tasks/HC-PLAT-110.md`, `reports/evidence/HC-PLAT-110/manifest.json`, `reports/evidence/HC-PLAT-110/ci-matrix.json`
 - Alpha.8 release evidence: `reports/tasks/HC-REL-ALPHA-8.md`, `reports/evidence/HC-REL-ALPHA-8/manifest.json`
+- Model Provider v2 evidence: `reports/tasks/HC-PROV-210.md`, `reports/evidence/HC-PROV-210/manifest.json`
 - Current risks: `reports/program/risks.json`
 - Historical final acceptance: `reports/final-acceptance-historical.md`
 - Historical audit policy: `reports/audit/README.md`

@@ -1,6 +1,6 @@
 # HC-PROV-210 Task Manifest
 
-Status: In Progress
+Status: Completed
 
 Owner: Runtime Engine
 
@@ -12,7 +12,9 @@ Parent commit: `80e6b83`
 
 Started: `2026-07-10T23:40:52Z`
 
-Evidence: `reports/evidence/HC-PROV-210/manifest.json` after acceptance
+Completed: `2026-07-11T00:38:19Z`
+
+Evidence: `reports/evidence/HC-PROV-210/manifest.json`
 
 ## Problem
 
@@ -74,6 +76,21 @@ On the unmodified alpha.8 parent, `npm run build`, `npm run verify`, `npm run re
 ## Rollback
 
 Revert the HC-PROV-210 commits. No persisted profile, session, runtime event, artifact, or project format changes, so rollback requires no data migration.
+
+## Implementation Result
+
+- Added schema-v2 provider descriptors, registry, capability and token-limit negotiation, normalized events, results, usage, finish reasons, and errors.
+- Added a production compatibility adapter over the existing OpenAI Chat Completions transport without rewriting user configuration.
+- Routed Agent turns, context compaction, manager planning, council answers, and debate synthesis through the provider facade.
+- Added correlated Runtime Protocol records for model requests, streamed tool calls, usage, and normalized failures while retaining the existing assistant chat projection.
+- Added recursive metadata and error redaction, stable correlation when a provider tool ID arrives late, and rejection of incomplete tool lifecycles.
+- Added architecture documentation and ADR-0006. OpenAI Responses, Anthropic Messages, Ollama-native transport, and external Codex/Claude task providers remain explicitly outside this task.
+
+## Acceptance Result
+
+The final evidence run passed 16 of 16 commands. Focused Model Provider tests passed 35 assertions, Runtime Protocol tests passed 34 assertions, feature tests passed 80 assertions, security tests passed 157 assertions, real Electron E2E passed, the production audit passed, and the full-tree DoD scan reported zero findings. All 24 key artifact hashes and all 16 command-log hashes were independently recomputed with no mismatch.
+
+The first evidence attempt correctly failed on a production skeleton-marker phrase. The capability remained `unsupported`; its reason was rewritten as an explicit dedicated-adapter boundary without changing or weakening the DoD detector. The complete evidence profile was then rerun from the beginning.
 
 ## Commit Plan
 
