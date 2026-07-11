@@ -128,11 +128,7 @@
         </section>
 
         <section id="chatview" class="hidden">
-          <div class="workbench-mobile-tabs" aria-label="工作台面板">
-            <button id="timelineDrawerBtn" class="mini-btn workbench-drawer-toggle" type="button" aria-controls="timelinePanel" aria-expanded="false"><span class="i-stack"></span> 时间线</button>
-            <button id="diffDrawerBtn" class="mini-btn workbench-drawer-toggle workbench-diff-toggle" type="button" aria-controls="diffPanel" aria-expanded="false"><span class="i-stack"></span> 改动</button>
-          </div>
-          <button id="workbenchDrawerBackdrop" class="workbench-drawer-backdrop" type="button" aria-label="关闭工作台面板"></button>
+          <div id="workbenchControlsMount"></div>
           <div class="workbench-grid">
             <aside id="timelinePanel" class="timeline-panel">
               <div class="panel-head">
@@ -141,14 +137,7 @@
                   <div class="panel-sub">工具调用</div>
                 </div>
               </div>
-              <div id="recoveryPanel" class="recovery-panel hidden">
-                <div class="recovery-head">
-                  <span>可恢复任务</span>
-                  <button id="recoveryRefresh" class="timeline-action" title="重新读取失败任务">刷新</button>
-                </div>
-                <div id="recoveryList" class="recovery-list"></div>
-              </div>
-              <div id="timelineList" class="timeline-list"></div>
+              <div id="timelineWorkspaceMount" class="timeline-workspace-mount"></div>
             </aside>
 
             <div class="chat-column">
@@ -174,24 +163,7 @@
             </div>
 
             <aside id="diffPanel" class="diff-panel">
-              <div class="panel-head">
-                <div>
-                  <div class="panel-title">改动</div>
-                  <div class="panel-sub" id="diffSummary">0 个可回滚</div>
-                </div>
-                <div class="panel-actions diff-head-actions">
-                  <button id="diffHistory" class="mini-btn">历史</button>
-                  <button id="diffClear" class="mini-btn">清空</button>
-                </div>
-              </div>
-              <div id="diffList" class="diff-list"></div>
-              <pre id="diffView" class="diff-view">还没有文件改动。</pre>
-              <div class="diff-actions">
-                <button id="diffAccept" class="primary">归档</button>
-                <button id="diffReject" class="ghost">回滚</button>
-                <button id="diffAcceptAll" class="ghost">全部归档</button>
-                <button id="diffRejectAll" class="ghost">全部回滚</button>
-              </div>
+              <div id="inspectorWorkspaceMount" class="inspector-workspace-mount"></div>
             </aside>
           </div>
         </section>

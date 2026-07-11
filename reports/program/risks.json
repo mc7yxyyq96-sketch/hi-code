@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "program": "Hi Code Product-Grade Desktop and Industrial Workbench",
-  "updatedAt": "2026-07-11T07:52:25Z",
+  "updatedAt": "2026-07-11T12:31:58Z",
   "risks": [
     {
       "id": "RISK-RUN-001",
@@ -64,6 +64,23 @@
       "impact": "Duplicate route state or hidden legacy controls could make an existing panel unreachable even though unit tests pass.",
       "mitigation": "One typed route registry and Legacy Panel Adapter now own shell route visibility, every existing production panel is validated before mount, and real Electron navigation passed at 720, 1024, 1440, and 1920 widths. Remaining panel-by-panel migration stays behind this compatibility boundary.",
       "trigger": "Any route with two state owners, any legacy view without a reachable route, or any 720-1920 clipping failure blocks HC-UI-301 completion."
+    },
+    {
+      "id": "RISK-UI-003",
+      "severity": "high",
+      "status": "mitigated",
+      "owner": "desktop-ux",
+      "title": "React workbench migration can duplicate live conversation state or degrade long sessions",
+      "evidence": [
+        "renderer/app/bootstrap.js",
+        "renderer/app-shell/workspace/",
+        "test/workspace-shell-tests.ts",
+        "tests/electron-e2e/run.mjs",
+        "reports/evidence/HC-UI-302/manifest.json"
+      ],
+      "impact": "A second transcript owner can lose streaming output, open the wrong session, hide approval/diff actions, or render thousands of messages synchronously.",
+      "mitigation": "HC-UI-302 now uses one typed workspace store and the existing production handlers as its only callbacks. Conversation rendering is bounded to 160 mounted rows, saved/live session switching preserves the source snapshot, unavailable actions fail closed, and real Electron verifies long transcripts plus keyboard-complete drawers.",
+      "trigger": "Any duplicated persistence path, unbounded long-session DOM, hidden action without an alternative, lost live output, or keyboard trap blocks HC-UI-302 completion."
     },
     {
       "id": "RISK-PLAT-001",

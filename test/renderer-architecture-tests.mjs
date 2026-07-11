@@ -37,6 +37,12 @@ const rendererEntry = fs.readFileSync(path.join(root, "renderer", "renderer.js")
 const bootstrap = fs.readFileSync(path.join(root, "renderer", "app", "bootstrap.js"), "utf8");
 const html = fs.readFileSync(path.join(root, "renderer", "index.html"), "utf8");
 const css = fs.readFileSync(path.join(root, "renderer", "style.css"), "utf8");
+const workspaceMain = fs.readFileSync(path.join(root, "renderer", "app-shell", "main.tsx"), "utf8");
+const workspacePortals = fs.readFileSync(path.join(root, "renderer", "app-shell", "workspace", "WorkspacePortals.tsx"), "utf8");
+const sessionSidebar = fs.readFileSync(path.join(root, "renderer", "app-shell", "workspace", "SessionSidebar.tsx"), "utf8");
+const conversationView = fs.readFileSync(path.join(root, "renderer", "app-shell", "workspace", "Conversation.tsx"), "utf8");
+const timelineView = fs.readFileSync(path.join(root, "renderer", "app-shell", "workspace", "Timeline.tsx"), "utf8");
+const inspectorView = fs.readFileSync(path.join(root, "renderer", "app-shell", "workspace", "Inspector.tsx"), "utf8");
 const toastSource = fs.readFileSync(path.join(root, "renderer", "components", "toast.js"), "utf8");
 const electronE2e = fs.readFileSync(path.join(root, "tests", "electron-e2e", "run.mjs"), "utf8");
 const electronE2eBaseline = JSON.parse(fs.readFileSync(path.join(root, "tests", "electron-e2e", "fixtures", "layout-baseline.json"), "utf8"));
@@ -45,8 +51,7 @@ const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"))
 check("renderer.js is a thin module entry", rendererEntry.includes("bootstrapHiCode") && rendererEntry.split("\n").length <= 6);
 check("index.html loads renderer as ES module", html.includes('type="module" src="renderer.js"'));
 check("bootstrap uses API wrapper", bootstrap.includes("createHiCodeApi(window.hicode"));
-check("bootstrap imports panel modules", [
-  "components/diff-viewer.js",
+check("bootstrap imports legacy panel modules while App Shell owns migrated workbench surfaces", [
   "components/file-tree.js",
   "components/mcp-panel.js",
   "components/store-panel.js",
@@ -62,7 +67,9 @@ check("bootstrap imports panel modules", [
   "components/ai-team-panel.js",
   "components/settings-panel.js",
   "components/settings-usage-panel.js",
-].every((needle) => bootstrap.includes(needle)));
+].every((needle) => bootstrap.includes(needle))
+  && !bootstrap.includes("components/diff-viewer.js")
+  && workspaceMain.includes("WorkspacePortals"));
 check("settings opens usage tab by default", html.includes('data-settings-tab="usage"') && bootstrap.includes('openSettings(tab = "usage")') && bootstrap.includes("renderUsageSettings"));
 check("settings nav groups personal and coding sections", html.includes('class="settings-nav-group"') && html.includes("用量与统计") && html.includes("模型 API"));
 check("bootstrap applies shared user profile to sidebar and usage page", bootstrap.includes("applyUserProfile") && bootstrap.includes("cachedUserProfile") && bootstrap.includes("buildUserProfile"));
@@ -80,12 +87,13 @@ check("settings usage layout is responsive and locally scrollable", css.includes
 check("modal and settings content guard against small-window clipping", css.includes(".modal {\n  position: fixed;") && css.includes("overflow: auto") && css.includes("max-height: calc(100vh - 28px)") && css.includes("overflow-x: hidden") && css.includes("align-items: flex-start"));
 check("MCP config button opens MCP settings mode", bootstrap.includes("cfgBtn.onclick = openMcpSettings") && bootstrap.includes("return openSettings(\"mcp\")"));
 check("busy session switch previews without resuming runtime", bootstrap.includes("api.readSession(id)") && bootstrap.includes("saveLiveSessionSnapshot") && bootstrap.includes("restoreLiveSessionSnapshot"));
-check("running conversation remains reachable after leaving chat", bootstrap.includes("function makeRuntimeSessionFallback") && bootstrap.includes("list = source.filter((session) => sessionMatchesFilter(session, filter))") && bootstrap.includes("chatHasMessages()") && bootstrap.includes("if (id === currentSessionId)") && bootstrap.includes("api.readSession(id).catch") && css.includes(".sess-transient"));
+check("background turn completion finalizes its source snapshot instead of the visible session", bootstrap.includes("const completedInBackground") && bootstrap.includes("if (completedInBackground) finishLiveSessionSnapshot") && bootstrap.includes("function finishLiveSessionSnapshot"));
+check("running conversation remains reachable after leaving chat", bootstrap.includes("function makeRuntimeSessionFallback") && bootstrap.includes("workspace.setSessionFilter(filter)") && bootstrap.includes("workspace.setSessions(source.map") && bootstrap.includes("chatHasMessages()") && bootstrap.includes("if (id === currentSessionId)") && bootstrap.includes("api.readSession(id).catch") && sessionSidebar.includes("session.transient") && css.includes(".sess-transient"));
 check("recent session click restores the active conversation instead of no-op", bootstrap.includes("if (id === currentSessionId)") && bootstrap.includes("if (!chatHasMessages())") && bootstrap.includes("renderChatFromMessages(msgs)") && bootstrap.includes("这个会话还没有保存内容"));
-check("recent event-log sessions open as replay instead of fake resume", bootstrap.includes("s.replayOnly ? \"回放\"") && bootstrap.includes("s.replayOnly ? `${s.eventCount") && bootstrap.includes("if (meta?.replayOnly)") && bootstrap.includes("api.readSession(id).catch") && bootstrap.includes("renderChatFromMessages(msgs)"));
+check("recent event-log sessions open as replay instead of fake resume", sessionSidebar.includes('if (session.replayOnly) return "回放"') && sessionSidebar.includes("session.eventCount || session.messageCount") && bootstrap.includes("if (meta?.replayOnly)") && bootstrap.includes("api.readSession(id).catch") && bootstrap.includes("renderChatFromMessages(msgs)"));
 check("recovery actions restore the source session before retry", bootstrap.includes("async function handleRecoverableTask") && bootstrap.includes("await openSession(task.sessionId)") && bootstrap.includes("currentSessionId !== task.sessionId") && bootstrap.includes("return runLine(retryInput)"));
 check("unsafe recovery states never run automatically", bootstrap.includes('action === "retry_turn" || action === "retry_with_approval"') && bootstrap.includes("task.canRetry === true") && bootstrap.includes("该会话目前只能回放") && bootstrap.includes("请先检查未完成输出和工具副作用"));
-check("recovery UI distinguishes retry approval review and inspection", bootstrap.includes('retry_with_approval: "重新确认"') && bootstrap.includes('review_output: "查看输出"') && bootstrap.includes('inspect_tool: "检查状态"') && bootstrap.includes("保留 ${task.partialAssistantText.length} 字输出"));
+check("recovery UI distinguishes retry approval review and inspection", timelineView.includes('retry_with_approval: "重新确认"') && timelineView.includes('review_output: "查看输出"') && timelineView.includes('inspect_tool: "检查状态"') && timelineView.includes("保留 ${task.partialAssistantText.length} 字输出"));
 check("MCP settings validates mcpServers JSON", bootstrap.includes("function validateMcpServersConfig") && bootstrap.includes("MCP JSON 格式错误") && bootstrap.includes("mcpServers 必须是 JSON 对象"));
 check("command sidebar opens visible command center", html.includes('section id="commandView"') && bootstrap.includes('route: "commandView"') && bootstrap.includes('"cmdBtn").onclick = showCommandCenter'));
 check("command center exposes real actions", bootstrap.includes("function executeCommand") && bootstrap.includes('if (name === "/mcp") return showCapabilities("mcp")') && bootstrap.includes('if (name === "/diff") return showGit()'));
@@ -100,12 +108,12 @@ check("about dialog shows full prerelease version instead of sidebar truncation"
 check("sidebar menu area scrolls vertically", html.includes('class="side-scroll"') && css.includes(".side-scroll") && css.includes("overflow-y: auto") && css.includes("overscroll-behavior: contain") && css.includes(".side-foot { flex: none"));
 check("sidebar scroll resets on init and collapse toggle", bootstrap.includes("function resetSidebarScroll") && bootstrap.includes("function scheduleSidebarScrollReset") && bootstrap.includes('document.querySelector(".side-scroll")') && bootstrap.includes("sideScroll.scrollTop = 0") && bootstrap.includes("requestAnimationFrame(resetSidebarScroll)") && bootstrap.includes("window.setTimeout(resetSidebarScroll, 80)"));
 check("sidebar project row explains workspace switching", html.includes('class="proj-copy"') && html.includes('class="proj-hint"') && html.includes("当前工作区 · 点击切换") && css.includes(".proj-copy") && css.includes(".proj-hint"));
-check("sidebar recent sessions use compact product list", bootstrap.includes("function formatSessionAge") && bootstrap.includes("sessions-empty") && bootstrap.includes("sess-count") && bootstrap.includes("currentSessionId") && css.includes(".sess.active") && css.includes(".sess-count"));
+check("sidebar recent sessions use compact product list", sessionSidebar.includes("function formatSessionAge") && sessionSidebar.includes("sessions-empty") && sessionSidebar.includes("sess-count") && sessionSidebar.includes("state.activeSessionId") && css.includes(".sess.active") && css.includes(".sess-count"));
 check("workspace header keeps its brand and visible actions unclipped", css.includes(".crumb span:first-child") && css.includes("white-space: nowrap") && css.includes(".workspace-actions { flex: 0 1 auto; min-width: 0;") && css.includes(".workspace-actions { display: none; }"));
-check("responsive workbench exposes existing timeline and diff panels", html.includes('id="timelineDrawerBtn"') && html.includes('aria-controls="timelinePanel"') && html.includes('id="diffDrawerBtn"') && html.includes('aria-controls="diffPanel"') && html.includes('id="workbenchDrawerBackdrop"'));
-check("responsive workbench drawer controls have real behavior", bootstrap.includes("function setWorkbenchDrawer") && bootstrap.includes("timelineDrawerBtn.onclick") && bootstrap.includes("diffDrawerBtn.onclick") && bootstrap.includes("workbenchDrawerBackdrop.onclick") && bootstrap.includes('e.key === "Escape"'));
+check("responsive workbench exposes existing timeline and diff panels", html.includes('id="timelinePanel"') && html.includes('id="timelineWorkspaceMount"') && html.includes('id="diffPanel"') && html.includes('id="inspectorWorkspaceMount"') && workspacePortals.includes('id="timelineDrawerBtn"') && workspacePortals.includes('aria-controls="timelinePanel"') && workspacePortals.includes('id="diffDrawerBtn"') && workspacePortals.includes('aria-controls="diffPanel"') && workspacePortals.includes('id="workbenchDrawerBackdrop"'));
+check("responsive workbench drawer controls have real behavior", bootstrap.includes("function setWorkbenchDrawer") && bootstrap.includes("workspace.setDrawer") && workspacePortals.includes('event.key === "Escape"') && workspacePortals.includes('store.setDrawer("none")') && workspacePortals.includes('previousDrawer.current === "timeline"'));
 check("responsive drawer CSS preserves desktop panels and adds compact alternatives", css.includes("body.timeline-drawer-open .timeline-panel") && css.includes("body.diff-drawer-open .diff-panel") && css.includes("@media (min-width: 901px) and (max-width: 1180px)") && css.includes("@media (max-width: 900px)"));
-check("real Electron E2E covers supported widths and interactions", pkg.scripts["test:electron-e2e"] === "node tests/electron-e2e/run.mjs" && electronE2e.includes("_electron as electron") && JSON.stringify(electronE2eBaseline.widths) === JSON.stringify([720, 1024, 1440, 1920]) && electronE2e.includes("baseline.widths") && electronE2e.includes("verifyNavigation") && electronE2e.includes("verifyTypedAppShell") && electronE2e.includes("verifyResponsivePanels"));
+check("real Electron E2E covers supported widths and interactions", pkg.scripts["test:electron-e2e"] === "node tests/electron-e2e/run.mjs" && electronE2e.includes("_electron as electron") && JSON.stringify(electronE2eBaseline.widths) === JSON.stringify([720, 1024, 1440, 1920]) && electronE2e.includes("baseline.widths") && electronE2e.includes("verifyNavigation") && electronE2e.includes("verifyTypedAppShell") && electronE2e.includes("verifyResponsivePanels") && electronE2e.includes("verifySessionKeyboardAndLongTranscript"));
 check("CI runs the real Electron smoke under Xvfb", ciWorkflow.includes("electron-smoke:") && ciWorkflow.includes("xvfb-run -a npm run test:electron-e2e") && ciWorkflow.includes("test-results/electron-e2e/"));
 check("Git panel avoids clipped commit column on medium windows", css.includes('grid-template-areas:') && css.includes('"files diff"') && css.includes('"commit commit"') && css.includes(".git-commit-panel { grid-area: commit; }") && css.includes("@media (min-width: 1280px)") && css.includes('grid-template-areas: "files diff commit"'));
 check("Git commit controls remain visible in responsive layout", html.includes('class="git-commit-actions"') && css.includes(".git-commit-actions") && css.includes("grid-template-columns: minmax(0, 1fr) minmax(0, 1fr)") && css.includes(".git-commit-status:empty") && css.includes("height: 32px") && css.includes("#gitCommitMessage") && css.includes("max-height: 110px"));
@@ -126,7 +134,7 @@ check("run status keeps runtime output errors visible", bootstrap.includes("func
 check("model connection test surfaces vision capability hint", bootstrap.includes("function modelCapabilityHint") && bootstrap.includes("visionCapabilityNotice") && bootstrap.includes("图片输入：当前模型可能不支持") && bootstrap.includes("currentModel.capabilities"));
 check("settings preserve every explicit model transport protocol", bootstrap.includes("function configuredQuickProtocol") && bootstrap.includes('["responses", "chat_completions", "anthropic_messages", "ollama_chat"].includes(protocol)') && bootstrap.includes("...(protocol ? { protocol } : {})") && bootstrap.includes("protocol: config.protocol"));
 check("settings expose native Anthropic and Ollama routes", html.includes('data-provider="anthropic"') && bootstrap.includes('protocol: "anthropic_messages"') && bootstrap.includes('protocol: "ollama_chat"') && bootstrap.includes('baseURL: "http://127.0.0.1:11434"'));
-check("agent chat bubble never stays blank on empty model output", bootstrap.includes("Hi Code 正在思考") && bootstrap.includes("function finishAgentMessageIfEmpty") && bootstrap.includes("这次模型没有返回可显示内容") && css.includes(".agent-body.agent-empty") && css.includes(".agent-body.agent-error"));
+check("agent chat bubble never stays blank on empty model output", conversationView.includes("Hi Code 正在思考") && bootstrap.includes("function finishAgentMessageIfEmpty") && conversationView.includes("这次模型没有返回可显示内容") && css.includes(".agent-body.agent-empty") && css.includes(".agent-body.agent-error"));
 
 console.log("\n[renderer] state");
 resetState();
@@ -264,7 +272,7 @@ check("api wrapper reports user-facing errors", errors.length >= 2);
 console.log("\n[renderer] components");
 check("diff renderer escapes HTML", renderUnifiedDiff({ path: "a.js", before: "<x>", after: "<y>", status: "pending" }).includes("&lt;y&gt;"));
 check("diff status text reflects already-applied semantics", diffStatusText("pending") === "已应用 · 可回滚" && diffStatusText("accepted") === "已归档" && diffStatusText("rejected") === "已回滚");
-check("diff panel uses archive and rollback labels", html.includes("全部归档") && html.includes("全部回滚") && bootstrap.includes("个可回滚") && bootstrap.includes("归档改动失败") && bootstrap.includes("回滚改动失败"));
+check("diff panel uses archive and rollback labels", inspectorView.includes("全部归档") && inspectorView.includes("全部回滚") && inspectorView.includes("个可回滚") && bootstrap.includes("归档改动失败") && bootstrap.includes("回滚改动失败"));
 check("store query options trim search", storeQueryOptions("  mcp  ").query === "mcp");
 check("store Chinese summary translates English descriptions", storeChineseSummary({ summary: "Plugin for exporting source code documents" }).includes("源代码"));
 check("store Chinese summary translates mixed Chinese-English descriptions", storeChineseSummary({ summary: "A runnable AI organization pack with roster and review gates — themed as 三省六部." }).includes("中文说明"));

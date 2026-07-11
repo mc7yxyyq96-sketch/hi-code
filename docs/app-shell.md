@@ -50,6 +50,8 @@ Do not call panel APIs from the App Shell or duplicate an existing panel handler
 
 Business state remains in `renderer/app/state.js` until the relevant panel migration. This split prevents the shell from becoming a second runtime or domain store.
 
+HC-UI-302 is the first panel migration behind this boundary. `WorkspacePortals` owns the Session Sidebar, Conversation, Timeline/recovery, Diff Inspector, and responsive workbench controls. A separate immutable workspace presentation store receives normalized data from bootstrap; existing APIs and persistence remain authoritative. See `docs/session-workbench.md` and ADR-0011.
+
 ## Responsive Behavior
 
 - Above 820px, the established sidebar and workspace actions remain the visible navigation.
@@ -71,6 +73,7 @@ Business state remains in `renderer/app/state.js` until the relevant panel migra
 npm run check:renderer-types
 npm run build:renderer
 npm run test:app-shell
+npm run test:workspace-shell
 npm run test:renderer
 npm run test:electron-e2e
 ```

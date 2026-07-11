@@ -284,6 +284,68 @@ async function verifyResponsivePanels(page) {
   assert.equal(await page.locator("#diffPanel").isVisible(), true, "Desktop diff panel must remain visible");
 }
 
+async function verifySessionKeyboardAndLongTranscript(page) {
+  await setContentSize(1024, baseline.height);
+  await openLocalChat(page);
+  await page.evaluate(() => {
+    const workspace = window.hicodeAppShell?.workspace;
+    if (!workspace) throw new Error("Typed workspace bridge is unavailable");
+    const messages = Array.from({ length: 10_000 }, (_, index) => ({
+      id: `e2e-long-message-${index}`,
+      role: index % 2 === 0 ? "user" : "assistant",
+      text: `Long transcript message ${index}`,
+      status: "complete",
+      attachments: [],
+    }));
+    workspace.setConversation(messages, "e2e-long-session");
+    workspace.setSessions([
+      { id: "e2e-session-one", firstPrompt: "First keyboard session", messageCount: 4, updatedAt: Date.now(), model: "e2e", cwd: "/e2e" },
+      { id: "e2e-session-two", firstPrompt: "Second keyboard session", messageCount: 6, updatedAt: Date.now() - 1_000, model: "e2e", cwd: "/e2e" },
+      { id: "e2e-session-three", firstPrompt: "Third keyboard session", messageCount: 8, updatedAt: Date.now() - 2_000, model: "e2e", cwd: "/e2e" },
+    ]);
+  });
+
+  await page.waitForFunction(() => document.querySelector("#chat")?.dataset.totalMessages === "10000");
+  const transcript = await page.evaluate(() => {
+    const chat = document.querySelector("#chat");
+    return {
+      totalMessages: Number(chat?.dataset.totalMessages || 0),
+      mountedMessages: Number(chat?.dataset.mountedMessages || 0),
+      messageRows: chat?.querySelectorAll(".msg").length || 0,
+      windowStart: Number(chat?.dataset.windowStart || 0),
+      owner: chat?.dataset.workspaceOwner || "",
+    };
+  });
+  assert.equal(transcript.totalMessages, 10_000);
+  assert.ok(transcript.mountedMessages <= 160, `Mounted ${transcript.mountedMessages} transcript rows`);
+  assert.equal(transcript.messageRows, transcript.mountedMessages);
+  assert.equal(transcript.owner, "react");
+
+  await page.locator("#chat").getByRole("button", { name: "较早消息" }).click();
+  await page.waitForFunction((previousStart) => Number(document.querySelector("#chat")?.dataset.windowStart || 0) < previousStart, transcript.windowStart);
+
+  const sessionButtons = page.locator("#sessions .sess-main");
+  await sessionButtons.first().waitFor({ state: "visible" });
+  assert.equal(await sessionButtons.count(), 3);
+  await sessionButtons.nth(0).focus();
+  await page.keyboard.press("ArrowDown");
+  assert.equal(await sessionButtons.nth(1).evaluate((element) => document.activeElement === element), true, "ArrowDown did not move session keyboard focus");
+  await page.keyboard.press("End");
+  assert.equal(await sessionButtons.nth(2).evaluate((element) => document.activeElement === element), true, "End did not move session keyboard focus to the last session");
+
+  const workbenchImage = await page.screenshot({
+    path: path.join(resultDir, "workspace-long-transcript-1024.png"),
+    animations: "disabled",
+  });
+  assert.ok(workbenchImage.length > 12_000, "Long transcript screenshot is unexpectedly small");
+
+  await page.evaluate(() => {
+    const workspace = window.hicodeAppShell?.workspace;
+    workspace?.clearConversation("e2e-long-session");
+    workspace?.setSessions([]);
+  });
+}
+
 async function main() {
   fs.rmSync(resultDir, { recursive: true, force: true });
   fs.mkdirSync(resultDir, { recursive: true, mode: 0o755 });
@@ -359,6 +421,10 @@ async function main() {
 
   await check("responsive timeline and diff panels have real drawer access", async () => {
     await verifyResponsivePanels(page);
+  });
+
+  await check("long transcripts stay bounded and session keyboard navigation remains usable", async () => {
+    await verifySessionKeyboardAndLongTranscript(page);
   });
 
   await check("renderer produced no uncaught page errors", async () => {

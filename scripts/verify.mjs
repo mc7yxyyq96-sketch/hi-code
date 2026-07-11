@@ -37,6 +37,7 @@ const testFiles = [
   ["test:dod", "test/definition-of-done-tests.mjs"],
   ["test:renderer", "test/renderer-architecture-tests.mjs"],
   ["test:app-shell", "test/app-shell-tests.ts", tsx],
+  ["test:workspace-shell", "test/workspace-shell-tests.ts", tsx],
   ["test:entrypoints", "test/entrypoint-tests.mjs"],
   ["test:program", "test/program-control-tests.mjs"],
   ["test:security", "test/security-baseline.mjs"],

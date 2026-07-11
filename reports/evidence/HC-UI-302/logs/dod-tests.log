@@ -1,0 +1,31 @@
+$ npm run test:dod
+
+> hi-code@0.6.0-alpha.8 test:dod
+> node test/definition-of-done-tests.mjs
+
+
+[definition-of-done] skeleton detector rules
+  ✓ detects empty files
+  ✓ detects TODO-only files
+  ✓ detects placeholder production content
+  ✓ detects mock-only production path
+  ✓ detects interface-only files
+  ✓ detects UI button without behavior
+  ✓ blocking skeleton findings fail detector
+
+[definition-of-done] project artifact and gate integrity
+  ✓ detects simulated artifact marked real
+  ✓ detects fake pass gates
+  ✓ DoD writes durable evidence
+  ✓ DoD fails simulated-as-real project
+
+[definition-of-done] release blocking
+  ✓ failed detector blocks release readiness
+  ✓ failed detector blocks release build
+
+[definition-of-done] Patch Arena candidate skeleton risk
+  ✓ Patch Arena skeleton candidate is failed
+  ✓ Patch Arena candidate records skeleton risk
+  ✓ Patch Arena writes skeleton evidence artifact
+
+=== 16 passed, 0 failed ===

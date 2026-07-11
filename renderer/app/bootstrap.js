@@ -2,7 +2,6 @@ import { getState, setState } from "./state.js";
 import { showRoute } from "./router.js";
 import { createHiCodeApi } from "../api/hicode-api.js";
 import { mountAiTeamPanel } from "../components/ai-team-panel.js";
-import { diffStatusText, renderUnifiedDiff } from "../components/diff-viewer.js";
 import { mountFileTree } from "../components/file-tree.js";
 import { mountJobCenterPanel } from "../components/job-center-panel.js";
 import { mountPatchArenaPanel } from "../components/patch-arena-panel.js";
@@ -1279,6 +1278,8 @@ if (!window.hicode) {
 const appState = getState();
 const toast = createToastController();
 const api = createHiCodeApi(window.hicode, { onError: (message) => toast.error(message) });
+const workspace = window.hicodeAppShell?.workspace;
+if (!workspace) throw new Error("Typed workspace bridge is unavailable");
 const syncState = (patch) => {
   setState(patch);
   return appState;
@@ -1291,16 +1292,10 @@ const loginTab = $("loginTab"), registerTab = $("registerTab"), authSubmit = $("
 const userName = $("userName"), userEmail = $("userEmail"), userInitial = $("userInitial"), userBadge = $("userBadge");
 const main = $("main"), home = $("home"), chatview = $("chatview"), chat = $("chat");
 const homeSlot = $("homeSlot"), chatSlot = $("chatSlot");
-const greeting = $("greeting"), sessionsEl = $("sessions"), searchInput = $("search");
+const greeting = $("greeting"), searchInput = $("search");
 const projName = $("projName"), modelSide = $("modelNameSide"), appVersionEl = $("appVersion");
 const askBox = $("ask"), askQ = $("ask-q");
 const runStatus = $("runStatus"), runStatusDot = $("runStatusDot"), runStatusText = $("runStatusText"), runStatusMeta = $("runStatusMeta"), runStatusDetail = $("runStatusDetail");
-const timelineList = $("timelineList");
-const timelineDrawerBtn = $("timelineDrawerBtn"), diffDrawerBtn = $("diffDrawerBtn"), workbenchDrawerBackdrop = $("workbenchDrawerBackdrop");
-const recoveryPanel = $("recoveryPanel"), recoveryList = $("recoveryList"), recoveryRefresh = $("recoveryRefresh");
-const diffList = $("diffList"), diffView = $("diffView"), diffSummary = $("diffSummary");
-const diffAccept = $("diffAccept"), diffReject = $("diffReject");
-const diffAcceptAll = $("diffAcceptAll"), diffRejectAll = $("diffRejectAll"), diffHistory = $("diffHistory"), diffClear = $("diffClear");
 const settings = $("settings"), cfg = $("cfg"), cfgErr = $("cfg-err");
 const currentProject = $("currentProject");
 const filesModal = $("files"), filePath = $("filePath"), fileList = $("fileList"), filePreview = $("filePreview");
@@ -1377,7 +1372,7 @@ const queuePreview = composer.querySelector("#queuePreview");
 const queueOpenJob = composer.querySelector("#queueOpenJob");
 const queueClear = composer.querySelector("#queueClear");
 
-let busy = false, agentBody = null, agentRaw = "", yolo = false, cwd = "", inChat = false;
+let busy = false, activeAssistantMessageId = null, agentRaw = "", yolo = false, cwd = "", inChat = false;
 let currentModel = { model: "", baseURL: "", capabilities: null };
 let pendingAttachments = [];
 let queuedInputs = [];
@@ -1394,7 +1389,7 @@ let gitState = null, selectedGitPath = "", selectedGitStaged = false;
 let storeSearchComposing = false, composerComposing = false;
 syncState({
   busy,
-  agentBody,
+  activeAssistantMessageId,
   agentRaw,
   yolo,
   cwd,
@@ -1846,29 +1841,6 @@ $("logoutBtn").onclick = async () => {
   showSignedOut();
 };
 
-/* ---------- ANSI → HTML ---------- */
-const esc = (c) => (c === "&" ? "&amp;" : c === "<" ? "&lt;" : c === ">" ? "&gt;" : c);
-const escAll = (s) => s.replace(/[&<>]/g, esc);
-const colorClass = (n) => ({30:"c-gray",90:"c-gray",31:"c-red",91:"c-red",32:"c-green",92:"c-green",33:"c-yellow",93:"c-yellow",34:"c-blue",94:"c-blue",35:"c-magenta",95:"c-magenta",36:"c-cyan",96:"c-cyan"})[n];
-function ansiToHtml(s) {
-  let html = "", i = 0, bold = false, color = null, open = false;
-  const cur = () => [bold ? "c-bold" : null, color].filter(Boolean);
-  const sync = () => { if (open) { html += "</span>"; open = false; } const c = cur(); if (c.length) { html += `<span class="${c.join(" ")}">`; open = true; } };
-  while (i < s.length) {
-    const ch = s[i];
-    if (ch === "\x1b" && s[i + 1] === "[") {
-      const m = /^\x1b\[([0-9;]*)m/.exec(s.slice(i));
-      if (!m) break;
-      const codes = m[1].split(";").filter((x) => x !== "").map(Number);
-      if (!codes.length) codes.push(0);
-      for (const c of codes) { if (c === 0) { bold = false; color = null; } else if (c === 1) bold = true; else if (c === 22) bold = false; else if (c === 39) color = null; else color = colorClass(c) ?? color; }
-      sync(); i += m[0].length;
-    } else { html += esc(ch); i++; }
-  }
-  if (open) html += "</span>";
-  return html;
-}
-
 const COMMANDS = [
   ["/team", "架构师→程序员→审查员"],
   ["/build", "经理拆解 + 并行执行"],
@@ -1914,12 +1886,7 @@ function setActiveNav(id) {
 }
 
 function setWorkbenchDrawer(name = "") {
-  const timelineOpen = name === "timeline";
-  const diffOpen = name === "diff";
-  document.body.classList.toggle("timeline-drawer-open", timelineOpen);
-  document.body.classList.toggle("diff-drawer-open", diffOpen);
-  timelineDrawerBtn?.setAttribute("aria-expanded", timelineOpen ? "true" : "false");
-  diffDrawerBtn?.setAttribute("aria-expanded", diffOpen ? "true" : "false");
+  workspace.setDrawer(name === "timeline" ? "timeline" : name === "diff" || name === "inspector" ? "inspector" : "none");
 }
 
 function closeWorkbenchDrawers() {
@@ -2075,8 +2042,7 @@ async function showIndustrialProject() {
 }
 
 /* ---------- chat rendering ---------- */
-const atBottom = () => chat.scrollHeight - chat.scrollTop - chat.clientHeight < 90;
-const scrollDown = () => (chat.scrollTop = chat.scrollHeight);
+const scrollDown = () => requestAnimationFrame(() => { chat.scrollTop = chat.scrollHeight; });
 function attachmentKindLabel(attachment) {
   return { image: "图片", pdf: "PDF", text: "文本", file: "文件" }[attachment?.kind] || "附件";
 }
@@ -2139,47 +2105,43 @@ function appendPendingAttachment(result) {
   input.focus();
   return true;
 }
+let conversationMessageSequence = 0;
+function nextConversationMessageId(prefix) {
+  conversationMessageSequence += 1;
+  return `${prefix}-${Date.now().toString(36)}-${conversationMessageSequence.toString(36)}`;
+}
 function addUserMessage(text, attachments = []) {
-  const el = document.createElement("div");
-  el.className = "msg user";
-  const bubble = document.createElement("div");
-  bubble.className = "bubble";
-  bubble.textContent = text;
-  if (Array.isArray(attachments) && attachments.length) {
-    const tray = document.createElement("div");
-    tray.className = "attachment-tray";
-    for (const attachment of attachments) {
-      const chip = document.createElement("span");
-      chip.className = "attachment-chip";
-      const label = document.createElement("span");
-      label.textContent = `${attachmentKindLabel(attachment)}：${attachment.name || "attachment"}`;
-      chip.appendChild(label);
-      tray.appendChild(chip);
-    }
-    bubble.appendChild(tray);
-  }
-  el.appendChild(bubble);
-  chat.appendChild(el); scrollDown();
+  workspace.appendMessage({
+    id: nextConversationMessageId("user"),
+    role: "user",
+    text: String(text || ""),
+    status: "complete",
+    attachments: Array.isArray(attachments) ? attachments : [],
+  });
+  scrollDown();
 }
 function startAgentMessage() {
-  const el = document.createElement("div"); el.className = "msg agent";
-  el.innerHTML = `<div class="avatar"><span class="logo"></span></div><div class="agent-body agent-pending"></div>`;
-  chat.appendChild(el);
-  agentBody = el.querySelector(".agent-body");
-  agentBody.textContent = "Hi Code 正在思考…";
+  activeAssistantMessageId = workspace.startAssistantMessage(nextConversationMessageId("assistant"));
   agentRaw = "";
+  syncState({ activeAssistantMessageId, agentRaw });
   scrollDown();
+  return activeAssistantMessageId;
 }
 function appendOutput(chunk) {
   if (busy && runningSessionId && currentSessionId !== runningSessionId) {
-    if (liveSessionSnapshot?.id === runningSessionId) liveSessionSnapshot.agentRaw += chunk;
+    if (liveSessionSnapshot?.id === runningSessionId) {
+      liveSessionSnapshot.agentRaw += chunk;
+      const id = liveSessionSnapshot.activeAssistantMessageId;
+      liveSessionSnapshot.messages = liveSessionSnapshot.messages.map((message) => message.id === id
+        ? { ...message, text: `${message.text}${chunk}`, status: "streaming" }
+        : message);
+    }
     return;
   }
-  if (!agentBody) startAgentMessage();
-  const stick = atBottom();
+  if (!activeAssistantMessageId) startAgentMessage();
   agentRaw += chunk;
-  agentBody.classList.remove("agent-pending", "agent-empty", "agent-error");
-  agentBody.innerHTML = ansiToHtml(agentRaw);
+  workspace.appendAssistantDelta(chunk);
+  syncState({ agentRaw });
   const outputError = detectRuntimeOutputError(chunk);
   if (outputError) {
     lastRunErrorDetail = outputError;
@@ -2195,23 +2157,43 @@ function appendOutput(chunk) {
       status: "running",
     });
   }
-  if (stick) scrollDown();
+  scrollDown();
 }
 function finishAgentMessageIfEmpty(status = "done", detail = "") {
-  if (!agentBody || agentRaw.trim()) return;
-  agentBody.classList.remove("agent-pending", "agent-empty", "agent-error");
+  if (!activeAssistantMessageId) return;
   if (status === "error" || status === "denied" || status === "interrupted") {
-    agentBody.classList.add("agent-error");
-    agentBody.textContent = detail || "任务没有完成。请查看上方状态或时间线里的失败原因。";
-    return;
+    workspace.finishAssistantMessage("error", agentRaw.trim() ? "" : detail || "任务没有完成。请查看上方状态或时间线里的失败原因。");
+  } else if (!agentRaw.trim()) {
+    workspace.finishAssistantMessage("empty", "这次模型没有返回可显示内容。可以重试，或在“接入 API”里测试/切换模型。");
+  } else {
+    workspace.finishAssistantMessage("complete");
   }
-  agentBody.classList.add("agent-empty");
-  agentBody.textContent = "这次模型没有返回可显示内容。可以重试，或在“接入 API”里测试/切换模型。";
+  activeAssistantMessageId = null;
+  syncState({ activeAssistantMessageId });
+}
+function finishLiveSessionSnapshot(status = "done", detail = "") {
+  if (!liveSessionSnapshot?.activeAssistantMessageId) return;
+  const id = liveSessionSnapshot.activeAssistantMessageId;
+  const hasOutput = Boolean(liveSessionSnapshot.agentRaw.trim());
+  const failed = status === "error" || status === "denied" || status === "interrupted";
+  const messageStatus = failed ? "error" : hasOutput ? "complete" : "empty";
+  const fallback = failed
+    ? detail || "任务没有完成。请查看时间线里的失败原因。"
+    : "这次模型没有返回可显示内容。可以重试，或在“接入 API”里测试/切换模型。";
+  liveSessionSnapshot.messages = liveSessionSnapshot.messages.map((message) => message.id === id
+    ? { ...message, text: message.text || fallback, status: messageStatus }
+    : message);
+  liveSessionSnapshot.activeAssistantMessageId = null;
 }
 function addSystemNote(text) {
-  const el = document.createElement("div"); el.className = "msg agent";
-  el.innerHTML = `<div class="avatar"><span class="logo"></span></div><div class="agent-body c-gray"></div>`;
-  el.querySelector(".agent-body").textContent = text; chat.appendChild(el); scrollDown();
+  workspace.appendMessage({
+    id: nextConversationMessageId("system"),
+    role: "system",
+    text: String(text || ""),
+    status: "complete",
+    attachments: [],
+  });
+  scrollDown();
 }
 function setBusy(v) {
   busy = v;
@@ -2500,31 +2482,8 @@ function mergeToolEventInto(list, event) {
 }
 
 function renderRecoverableTasks() {
-  if (!recoveryPanel || !recoveryList) return;
-  recoveryList.innerHTML = "";
   const tasks = Array.isArray(recoverableTasks) ? recoverableTasks : [];
-  recoveryPanel.classList.toggle("hidden", tasks.length === 0);
-  if (!tasks.length) return;
-
-  for (const task of tasks.slice(0, 6)) {
-    const row = document.createElement("div");
-    row.className = `recovery-row ${statusClass(task.status)}`;
-    row.innerHTML = `
-      <span class="recovery-status"></span>
-      <span class="recovery-main">
-        <span class="recovery-title"></span>
-        <span class="recovery-meta"></span>
-      </span>
-      <button class="timeline-action recovery-retry" type="button"></button>
-    `;
-    row.querySelector(".recovery-status").textContent = statusText(task.status);
-    row.querySelector(".recovery-title").textContent = task.title || task.summary || "可恢复任务";
-    row.querySelector(".recovery-meta").textContent = recoveryMeta(task);
-    const action = row.querySelector(".recovery-retry");
-    action.textContent = recoveryActionLabel(task);
-    action.onclick = () => handleRecoverableTask(task);
-    recoveryList.appendChild(row);
-  }
+  workspace.setRecoveryTasks(tasks.slice(0, 6));
 }
 
 async function handleRecoverableTask(task) {
@@ -2547,95 +2506,20 @@ async function handleRecoverableTask(task) {
   addSystemNote(task.reason || "已打开原会话。请先检查未完成输出和工具副作用，再决定后续操作。");
 }
 
-function recoveryActionLabel(task) {
-  return {
-    retry_turn: "重试",
-    retry_with_approval: "重新确认",
-    review_output: "查看输出",
-    inspect_tool: "检查状态",
-  }[task?.recoveryAction] || "检查状态";
+function renderTimeline() {
+  workspace.setTimeline(toolEvents);
 }
 
-function renderTimeline() {
-  if (!timelineList) return;
-  timelineList.innerHTML = "";
-  const items = [...toolEvents].sort((a, b) => (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0));
-  if (!items.length) {
-    const empty = document.createElement("div");
-    empty.className = "timeline-empty";
-    empty.textContent = "工具调用会显示在这里。";
-    timelineList.appendChild(empty);
-    return;
-  }
-  for (const event of items.slice(0, 80)) {
-    const row = document.createElement("div");
-    row.className = `timeline-row ${statusClass(event.status)} ${event.type.replace(":", "-")}`;
-    row.innerHTML = `
-      <span class="timeline-dot"></span>
-      <span class="timeline-main">
-        <span class="timeline-title"></span>
-        <span class="timeline-meta"></span>
-      </span>
-      <span class="timeline-actions"></span>
-    `;
-    row.querySelector(".timeline-title").textContent = event.title || event.tool || event.type;
-    row.querySelector(".timeline-meta").textContent = timelineMeta(event);
-    row.onclick = (clickEvent) => {
-      if (clickEvent.target.closest("button")) return;
-      if (event.diffId) selectDiff(event.diffId);
-    };
-    const actions = row.querySelector(".timeline-actions");
-    const retryInput = event.payload?.retryInput;
-    if (isRetryableTurn(event) && retryInput) {
-      const retry = document.createElement("button");
-      retry.className = "timeline-action";
-      retry.textContent = "Retry";
-      retry.title = "重新执行这个任务";
-      retry.onclick = () => {
-        if (busy) return addSystemNote("当前任务还在执行，稍后再重试。");
-        runLine(String(retryInput));
-      };
-      actions.appendChild(retry);
-    }
-    timelineList.appendChild(row);
-  }
+function retryTimelineEvent(id) {
+  const event = toolEvents.find((item) => item.id === id);
+  const retryInput = event?.payload?.retryInput;
+  if (!event || !isRetryableTurn(event) || !retryInput) return addSystemNote("这条时间线记录不可重试。");
+  if (busy) return addSystemNote("当前任务还在执行，稍后再重试。");
+  return runLine(String(retryInput));
 }
 
 function isRetryableTurn(event) {
   return event.type?.startsWith("turn:") && ["error", "interrupted", "denied"].includes(event.status);
-}
-
-function timelineMeta(event) {
-  const bits = [];
-  if (event.type?.startsWith("turn:")) bits.push("turn");
-  else if (event.type === "permission:requested") bits.push("permission");
-  else bits.push(event.tool || event.type);
-  if (event.status) bits.push(statusText(event.status));
-  const duration = formatDuration(event.payload?.durationMs);
-  if (duration) bits.push(duration);
-  if (event.summary && event.summary !== event.title) bits.push(String(event.summary).slice(0, 80));
-  return bits.filter(Boolean).join(" · ");
-}
-
-function recoveryMeta(task) {
-  const bits = [];
-  const when = task.updatedAt || task.createdAt;
-  if (when) bits.push(new Date(when).toLocaleString());
-  const duration = formatDuration(task.durationMs);
-  if (duration) bits.push(duration);
-  const phase = {
-    running_model: "模型运行中断",
-    streaming: "流式输出中断",
-    waiting_approval: "等待审批",
-    tool_running: "工具状态未知",
-    failed: "执行失败",
-    denied: "审批已拒绝",
-    interrupted: "任务已中断",
-  }[task.phase];
-  if (phase) bits.push(phase);
-  if (task.partialAssistantText) bits.push(`保留 ${task.partialAssistantText.length} 字输出${task.partialOutputTruncated ? "（已截断）" : ""}`);
-  if (task.reason) bits.push(task.reason);
-  return bits.filter(Boolean).join(" · ");
 }
 
 function statusText(status) {
@@ -2681,44 +2565,9 @@ function diffBuckets() {
 }
 
 function renderDiffs() {
-  if (!diffList || !diffView) return;
-  diffList.innerHTML = "";
-  const { pending, archived, visible } = diffBuckets();
-  diffSummary.textContent = `${pending.length} 个可回滚${archived.length ? ` · ${archived.length} 个已归档` : ""}`;
-  updateDiffChrome(pending.length, archived.length);
-
-  if (!diffs.length) {
-    diffList.innerHTML = `<div class="diff-empty">Agent 修改文件后会出现在这里。</div>`;
-    diffView.textContent = "还没有文件改动。";
-    setDiffButtons(false);
-    return;
-  }
-  if (!visible.length) {
-    selectedDiffId = null;
-    diffList.innerHTML = `<div class="diff-empty">没有可回滚改动。${archived.length ? `${archived.length} 个历史改动已归档。` : ""}</div>`;
-    diffView.textContent = "当前没有可归档或回滚的文件改动。";
-    setDiffButtons(false);
-    return;
-  }
-
-  for (const diff of visible) {
-    const row = document.createElement("button");
-    row.className = `diff-row ${diff.id === selectedDiffId ? "active" : ""} diff-${diff.status}`;
-    row.innerHTML = `
-      <span class="diff-file"></span>
-      <span class="diff-status"></span>
-    `;
-    row.querySelector(".diff-file").textContent = diff.path;
-    row.querySelector(".diff-status").textContent = diffStatusText(diff.status);
-    row.onclick = () => selectDiff(diff.id);
-    diffList.appendChild(row);
-  }
-
-  const selected = visible.find((diff) => diff.id === selectedDiffId) || visible[0];
-  selectedDiffId = selected?.id || null;
-  if (!selected) return;
-  diffView.innerHTML = renderUnifiedDiff(selected);
-  setDiffButtons(selected.status === "pending");
+  const { visible } = diffBuckets();
+  if (!selectedDiffId || !visible.some((diff) => diff.id === selectedDiffId)) selectedDiffId = visible[0]?.id || null;
+  workspace.setDiffs(diffs, selectedDiffId, showArchivedDiffs);
 }
 
 function selectDiff(id) {
@@ -2729,66 +2578,48 @@ function selectDiff(id) {
   renderDiffs();
 }
 
-function updateDiffChrome(pendingCount, archivedCount) {
-  if (diffAcceptAll) diffAcceptAll.disabled = pendingCount === 0;
-  if (diffRejectAll) diffRejectAll.disabled = pendingCount === 0;
-  if (diffHistory) {
-    diffHistory.disabled = archivedCount === 0;
-    diffHistory.classList.toggle("active", showArchivedDiffs);
-    diffHistory.textContent = showArchivedDiffs ? "隐藏历史" : "历史";
-  }
-  if (diffClear) diffClear.disabled = archivedCount === 0;
-}
-
-function setDiffButtons(enabled) {
-  diffAccept.disabled = !enabled;
-  diffReject.disabled = !enabled;
-}
-
-if (recoveryRefresh) recoveryRefresh.onclick = refreshRecoverableTasks;
-
-diffAccept.onclick = async () => {
+async function archiveSelectedDiff() {
   if (!selectedDiffId || !api.has("acceptDiff")) return;
   const diff = diffs.find((item) => item.id === selectedDiffId);
   if (!diff || diff.status !== "pending") return;
   const r = await api.acceptDiff(selectedDiffId);
   if (!r?.ok) addSystemNote(r?.error || "归档改动失败");
   await refreshDiffs();
-};
-diffReject.onclick = async () => {
+}
+async function rollbackSelectedDiff() {
   if (!selectedDiffId || !api.has("rejectDiff")) return;
   const diff = diffs.find((item) => item.id === selectedDiffId);
   if (!diff || diff.status !== "pending") return;
   const r = await api.rejectDiff(selectedDiffId);
   if (!r?.ok) addSystemNote(r?.error || "回滚改动失败");
   await refreshDiffs();
-};
-diffAcceptAll.onclick = async () => {
+}
+async function archiveAllDiffs() {
   if (!api.has("acceptAllDiffs")) return;
   const r = await api.acceptAllDiffs();
   if (!r?.ok) addSystemNote(r?.error || "全部归档失败");
   await refreshDiffs();
-};
-diffRejectAll.onclick = async () => {
+}
+async function rollbackAllDiffs() {
   if (!api.has("rejectAllDiffs")) return;
   const r = await api.rejectAllDiffs();
   if (!r?.ok) addSystemNote(r?.error || "全部回滚失败");
   await refreshDiffs();
-};
-diffHistory.onclick = () => {
+}
+function toggleDiffHistory() {
   showArchivedDiffs = !showArchivedDiffs;
   const { visible } = diffBuckets();
   selectedDiffId = visible[0]?.id || null;
   syncState({ showArchivedDiffs, selectedDiffId });
   renderDiffs();
-};
-diffClear.onclick = async () => {
+}
+async function clearDiffHistory() {
   if (!api.has("clearArchivedDiffs")) return;
   const r = await api.clearArchivedDiffs();
   if (!r?.ok) addSystemNote(r?.error || "清理历史改动失败");
   if (r?.ok) showArchivedDiffs = false;
   await refreshDiffs();
-};
+}
 
 /* ---------- Git workflow ---------- */
 async function refreshGitStatus() {
@@ -2999,6 +2830,7 @@ api.onReady((d) => {
 });
 api.onOutput((s) => appendOutput(s));
 api.onTurnDone(() => {
+  const completedInBackground = Boolean(liveSessionSnapshot?.id === runningSessionId && currentSessionId !== runningSessionId);
   setBusy(false);
   let finalStatus = "done";
   let finalDetail = "任务已结束";
@@ -3013,13 +2845,15 @@ api.onTurnDone(() => {
     finalDetail = finalStatus === "done" ? "任务已结束" : lastRunErrorDetail || runState.detail;
     finishRunStatus(finalStatus, finalDetail);
   }
-  finishAgentMessageIfEmpty(finalStatus, finalDetail);
+  if (completedInBackground) finishLiveSessionSnapshot(finalStatus, finalDetail);
+  else finishAgentMessageIfEmpty(finalStatus, finalDetail);
   if (liveSessionSnapshot?.id === runningSessionId) {
     liveSessionSnapshot = null;
   }
   runningSessionId = null;
   if (currentSessionId === null && activeRuntimeSessionId) currentSessionId = activeRuntimeSessionId;
-  agentBody = null;
+  activeAssistantMessageId = null;
+  syncState({ activeAssistantMessageId });
   loadSessions();
   refreshWorkbench();
   setTimeout(runNextQueuedInput, 80);
@@ -3044,35 +2878,13 @@ let activeRuntimeSessionId = null;
 let runningSessionId = null;
 let liveSessionSnapshot = null;
 
-function formatSessionAge(value) {
-  const ts = new Date(value).getTime();
-  if (!Number.isFinite(ts)) return "";
-  const delta = Date.now() - ts;
-  if (delta < 60_000) return "刚刚";
-  if (delta < 60 * 60_000) return `${Math.max(1, Math.round(delta / 60_000))} 分钟前`;
-  if (delta < 24 * 60 * 60_000) return `${Math.round(delta / (60 * 60_000))} 小时前`;
-  if (delta < 7 * 24 * 60 * 60_000) return `${Math.round(delta / (24 * 60 * 60_000))} 天前`;
-  return new Date(ts).toLocaleDateString("zh-CN", { month: "numeric", day: "numeric" });
-}
-
-function sessionMatchesFilter(session, filter) {
-  if (!filter) return true;
-  const q = filter.toLowerCase();
-  return [
-    session.firstPrompt,
-    session.model,
-    session.cwd,
-  ].some((value) => String(value || "").toLowerCase().includes(q));
-}
-
 function chatHasMessages() {
-  return Boolean(chat?.querySelector(".msg"));
+  return workspace.getSnapshot().messages.length > 0;
 }
 
 function firstPromptFromVisibleChat() {
-  const bubble = chat?.querySelector(".msg.user .bubble");
-  const text = bubble?.childNodes?.[0]?.textContent || bubble?.textContent || "";
-  return text.replace(/\s+/g, " ").trim();
+  const message = workspace.getSnapshot().messages.find((item) => item.role === "user");
+  return String(message?.text || "").replace(/\s+/g, " ").trim();
 }
 
 function makeRuntimeSessionFallback() {
@@ -3080,7 +2892,7 @@ function makeRuntimeSessionFallback() {
   if (!id || allSessions.some((session) => session.id === id)) return null;
   const isRunning = Boolean(busy && runningSessionId === id);
   const hasLiveSnapshot = liveSessionSnapshot?.id === id;
-  const visibleMessageCount = chat.querySelectorAll(".msg").length;
+  const visibleMessageCount = workspace.getSnapshot().messages.length;
   if (!isRunning && !hasLiveSnapshot && !(currentSessionId === id && visibleMessageCount > 0)) return null;
   const messageCount = Math.max(visibleMessageCount, liveSessionSnapshot?.messageCount || 0, 1);
   const firstPrompt = firstPromptFromVisibleChat() || runState?.detail || liveSessionSnapshot?.firstPrompt || "正在进行的会话";
@@ -3107,34 +2919,22 @@ async function loadSessions() {
 function renderSessions(filter) {
   const runtimeFallback = makeRuntimeSessionFallback();
   const source = runtimeFallback ? [runtimeFallback, ...allSessions] : allSessions;
-  const list = source.filter((session) => sessionMatchesFilter(session, filter));
-  sessionsEl.innerHTML = "";
-  if (!list.length) { sessionsEl.innerHTML = `<div class="sessions-empty">还没有最近会话</div>`; return; }
-  for (const s of list) {
-    const running = Boolean(s.running || (busy && runningSessionId && s.id === runningSessionId));
-    const transient = Boolean(s.transient);
-    const el = document.createElement("div");
-    el.className = `sess${s.id === currentSessionId ? " active" : ""}${running ? " sess-running" : ""}${transient ? " sess-transient" : ""}`;
-    el.innerHTML = `<button class="sess-main" title="打开会话"><span class="t"></span><span class="s"><span class="sess-time"></span><span class="sess-count"></span></span></button><button class="sess-del" title="删除">×</button>`;
-    el.querySelector(".t").textContent = (running ? "● " : "") + (s.firstPrompt || "(空会话)");
-    el.querySelector(".sess-time").textContent = running ? "进行中" : transient ? "未保存" : s.replayOnly ? "回放" : formatSessionAge(s.updatedAt);
-    el.querySelector(".sess-count").textContent = s.replayOnly ? `${s.eventCount || s.messageCount || 0} 事件` : `${s.messageCount || 0} 条`;
-    el.querySelector(".sess-main").onclick = () => openSession(s.id);
-    if (transient) {
-      const del = el.querySelector(".sess-del");
-      del.disabled = true;
-      del.classList.add("hidden");
-      del.title = "运行中的会话结束后可删除";
-    }
-    el.querySelector(".sess-del").onclick = async (e) => {
-      e.stopPropagation();
-      if (transient || (busy && s.id === runningSessionId)) return;
-      await api.deleteSession(s.id);
-      if (currentSessionId === s.id) currentSessionId = null;
-      loadSessions();
-    };
-    sessionsEl.appendChild(el);
+  workspace.setSessionFilter(filter);
+  workspace.setSessions(source.map((session) => ({
+    ...session,
+    running: Boolean(session.running || (busy && runningSessionId && session.id === runningSessionId)),
+  })), currentSessionId);
+}
+
+async function deleteSession(id) {
+  const session = sessionMetaById(id);
+  if (!session || session.transient || (busy && id === runningSessionId)) return;
+  await api.deleteSession(id);
+  if (currentSessionId === id) {
+    currentSessionId = null;
+    workspace.clearConversation(null);
   }
+  await loadSessions();
 }
 
 function sessionMetaById(id) {
@@ -3142,14 +2942,19 @@ function sessionMetaById(id) {
 }
 
 function renderChatFromMessages(msgs) {
-  chat.innerHTML = "";
   showChat();
-  for (const m of msgs) {
-    if (m.role === "user") addUserMessage(m.text, m.attachments || []);
-    else { startAgentMessage(); agentBody.textContent = m.text; }
-  }
-  agentBody = null;
+  const sessionKey = currentSessionId || activeRuntimeSessionId || "local";
+  const messages = (Array.isArray(msgs) ? msgs : []).map((message, index) => ({
+    id: `${String(message.id || `${sessionKey}-${index}`)}-${index}`,
+    role: message.role === "user" ? "user" : message.role === "system" ? "system" : "assistant",
+    text: String(message.text || ""),
+    status: "complete",
+    attachments: Array.isArray(message.attachments) ? message.attachments : [],
+  }));
+  workspace.setConversation(messages, currentSessionId || activeRuntimeSessionId, null);
+  activeAssistantMessageId = null;
   agentRaw = "";
+  syncState({ activeAssistantMessageId, agentRaw });
   scrollDown();
 }
 
@@ -3157,20 +2962,20 @@ function saveLiveSessionSnapshot() {
   if (!busy || !runningSessionId) return;
   liveSessionSnapshot = {
     id: runningSessionId,
-    chatHtml: chat.innerHTML,
+    messages: workspace.getConversationMessages(),
+    activeAssistantMessageId,
     agentRaw,
     firstPrompt: runState?.detail || "",
-    messageCount: Math.max(chat.querySelectorAll(".msg").length, 1),
+    messageCount: Math.max(workspace.getSnapshot().messages.length, 1),
   };
 }
 
 function restoreLiveSessionSnapshot() {
   if (!liveSessionSnapshot || liveSessionSnapshot.id !== runningSessionId) return false;
-  chat.innerHTML = liveSessionSnapshot.chatHtml;
+  workspace.setConversation(liveSessionSnapshot.messages, liveSessionSnapshot.id, liveSessionSnapshot.activeAssistantMessageId);
+  activeAssistantMessageId = liveSessionSnapshot.activeAssistantMessageId || null;
   agentRaw = liveSessionSnapshot.agentRaw;
-  const bodies = chat.querySelectorAll(".msg.agent .agent-body");
-  agentBody = bodies.length ? bodies[bodies.length - 1] : null;
-  if (agentBody && agentRaw) agentBody.innerHTML = ansiToHtml(agentRaw);
+  syncState({ activeAssistantMessageId, agentRaw });
   scrollDown();
   return true;
 }
@@ -3185,7 +2990,7 @@ async function openSession(id) {
       const msgs = await api.readSession(id).catch(() => []);
       if (msgs.length) renderChatFromMessages(msgs);
       else {
-        chat.innerHTML = "";
+        workspace.clearConversation(id);
         showChat();
         addSystemNote("这个会话还没有保存内容。发送第一条消息后会出现在最近列表。");
       }
@@ -3218,7 +3023,7 @@ async function openSession(id) {
       const msgs = await api.readSession(id).catch(() => []);
       if (msgs.length) renderChatFromMessages(msgs);
       else if (previousSessionId && previousSessionId !== id) {
-        chat.innerHTML = "";
+        workspace.clearConversation(id);
         addSystemNote("正在恢复进行中的会话，新的输出会继续显示在这里。");
       }
     }
@@ -3264,9 +3069,10 @@ async function startNewConversation() {
   currentSessionId = null;
   runningSessionId = null;
   liveSessionSnapshot = null;
-  agentBody = null;
+  activeAssistantMessageId = null;
   agentRaw = "";
-  chat.innerHTML = "";
+  workspace.clearConversation(activeRuntimeSessionId);
+  syncState({ activeAssistantMessageId, agentRaw });
   renderSessions(searchInput.value.trim());
   showHome();
   setGreeting();
@@ -3369,7 +3175,10 @@ function executeCommand(name) {
   }
   if (name === "/tools") return showIndustrialProject();
   if (name === "/clear") {
-    chat.innerHTML = "";
+    workspace.clearConversation(currentSessionId || activeRuntimeSessionId);
+    activeAssistantMessageId = null;
+    agentRaw = "";
+    syncState({ activeAssistantMessageId, agentRaw });
     api.send("/clear");
     showHome();
     setGreeting();
@@ -3456,7 +3265,8 @@ async function pickFolder() {
     syncState({ cwd });
     projName.textContent = shortPath(dir);
     currentProject.textContent = shortPath(dir);
-    chat.innerHTML = "";
+    workspace.clearConversation(null);
+    currentSessionId = null;
     loadSessions();
     if (inChat) addSystemNote("已切换到 " + dir);
   }
@@ -3505,6 +3315,24 @@ async function attachImageFile(file) {
     return false;
   }
 }
+workspace.configureActions({
+  openSession,
+  deleteSession,
+  retryRecovery: (id) => {
+    const task = recoverableTasks.find((item) => item.id === id);
+    if (!task) return addSystemNote("恢复任务已不存在，请刷新后重试。");
+    return handleRecoverableTask(task);
+  },
+  refreshRecovery: refreshRecoverableTasks,
+  retryTimeline: retryTimelineEvent,
+  selectDiff,
+  archiveDiff: archiveSelectedDiff,
+  rollbackDiff: rollbackSelectedDiff,
+  archiveAllDiffs,
+  rollbackAllDiffs,
+  toggleDiffHistory,
+  clearDiffHistory,
+});
 $("projRow").onclick = pickFolder;
 $("settingsBtn").onclick = () => openSettings("usage");
 $("filesBtn").onclick = () => fileTree.open(cwd);
@@ -3525,9 +3353,6 @@ $("jobsTopBtn").onclick = () => showJobCenter();
 $("arenaTopBtn").onclick = showPatchArena;
 $("industrialTopBtn").onclick = showIndustrialProject;
 $("modelsBtn").onclick = () => openSettings("model");
-timelineDrawerBtn.onclick = () => setWorkbenchDrawer(document.body.classList.contains("timeline-drawer-open") ? "" : "timeline");
-diffDrawerBtn.onclick = () => setWorkbenchDrawer(document.body.classList.contains("diff-drawer-open") ? "" : "diff");
-workbenchDrawerBackdrop.onclick = closeWorkbenchDrawers;
 attachBtn.onclick = chooseAttachment;
 modelPill.onclick = (e) => {
   e.stopPropagation();

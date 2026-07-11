@@ -306,6 +306,7 @@ check("verify script includes release builder tests", verifyScript.includes('"te
 check("verify script includes sample project tests", verifyScript.includes('"test:samples"'));
 check("verify script includes Definition of Done tests", verifyScript.includes('"test:dod"'));
 check("verify script includes typed App Shell tests", verifyScript.includes('"test:app-shell"') && verifyScript.includes("test/app-shell-tests.ts"));
+check("verify script includes typed workspace shell tests", verifyScript.includes('"test:workspace-shell"') && verifyScript.includes("test/workspace-shell-tests.ts"));
 check("verify script includes program control tests", verifyScript.includes('"test:program"') && verifyScript.includes("test/program-control-tests.mjs"));
 check("verify script includes usage persistence tests", verifyScript.includes('"test:usage"') && verifyScript.includes("test/usage-store-tests.mjs"));
 
