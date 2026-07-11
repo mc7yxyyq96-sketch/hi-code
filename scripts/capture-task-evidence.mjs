@@ -11,6 +11,20 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const npm = process.platform === "win32" ? "npm.cmd" : "npm";
 const node = process.execPath;
 
+function sanitizeEvidencePath(value) {
+  const localBin = path.resolve(root, "node_modules", ".bin");
+  const normalize = (entry) => {
+    const resolved = path.resolve(root, entry);
+    return process.platform === "win32" ? resolved.toLowerCase() : resolved;
+  };
+  const blocked = normalize(localBin);
+  return String(value || "")
+    .split(path.delimiter)
+    .filter(Boolean)
+    .filter((entry) => normalize(entry) !== blocked)
+    .join(path.delimiter);
+}
+
 const profiles = {
   "HC-QA-101": {
     evidenceType: "desktop-responsive-acceptance",
@@ -607,6 +621,9 @@ function safeProcessEnv() {
   for (const key of allowed) {
     if (typeof process.env[key] === "string") env[key] = process.env[key];
   }
+  // Package-manager scripts prepend node_modules/.bin. Keeping that entry here
+  // can shadow the invoking package manager with an unrelated local `npm` bin.
+  env.PATH = sanitizeEvidencePath(env.PATH);
   env.NO_COLOR = "1";
   env.FORCE_COLOR = "0";
   env.HICODE_TASK_EVIDENCE = "1";

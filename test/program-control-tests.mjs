@@ -259,6 +259,7 @@ check("Anthropic and Ollama evidence capture is reproducible", packageJson.scrip
 check("Attachment and command evidence capture is reproducible", packageJson.scripts["program:evidence:attachment-command"] === "node scripts/capture-task-evidence.mjs --task=HC-RUN-220" && fs.readFileSync(path.join(root, "scripts/capture-task-evidence.mjs"), "utf8").includes('"HC-RUN-220"'));
 check("Typed App Shell tests are part of global verification", packageJson.scripts["test:app-shell"]?.includes("test/app-shell-tests.ts") && fs.readFileSync(path.join(root, "scripts/verify.mjs"), "utf8").includes("test/app-shell-tests.ts"));
 check("Typed App Shell evidence capture is reproducible", packageJson.scripts["program:evidence:app-shell"] === "node scripts/capture-task-evidence.mjs --task=HC-UI-301" && fs.readFileSync(path.join(root, "scripts/capture-task-evidence.mjs"), "utf8").includes('"HC-UI-301"'));
+check("Task evidence commands cannot be shadowed by a project-local npm binary", fs.readFileSync(path.join(root, "scripts/capture-task-evidence.mjs"), "utf8").includes("sanitizeEvidencePath") && fs.readFileSync(path.join(root, "scripts/capture-task-evidence.mjs"), "utf8").includes('path.resolve(root, "node_modules", ".bin")'));
 check(
   "HC-PROV-211 completed only after Model Provider v2 completion and evidence",
   openAIResponsesTask?.status === "completed" &&
