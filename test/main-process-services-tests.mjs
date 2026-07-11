@@ -9,7 +9,7 @@ import { createQueueService } from "../electron/services/queue-service.mjs";
 import { createGitService } from "../electron/services/git-service.mjs";
 import { parseOpenAppRequest } from "../electron/services/native-open-service.mjs";
 import { createPathGuard, redactSensitive } from "../electron/services/security-service.mjs";
-import { createWorkspaceService, modelCapabilityHint, modelTestError, modelTestNetworkError } from "../electron/services/workspace-service.mjs";
+import { createWorkspaceService, modelCapabilityHint, modelTestError, modelTestNetworkError, validateModelProtocolConfig } from "../electron/services/workspace-service.mjs";
 import { createAppInfoService, compareVersions } from "../electron/services/app-info-service.mjs";
 import { createUsageService } from "../electron/services/usage-service.mjs";
 
@@ -340,6 +340,80 @@ check(
 const rejectedAttachment = await workspaceAttachments.attachImage({ dataUrl: "data:text/plain;base64,aGVsbG8=", name: "note.txt" });
 check("workspace service rejects non-image data URLs", rejectedAttachment.ok === false && /图片/.test(rejectedAttachment.error || ""), JSON.stringify(rejectedAttachment));
 fs.rmSync(attachTmp, { recursive: true, force: true });
+
+console.log("\n[services] model protocol routing");
+const modelTmp = fs.mkdtempSync(path.join(os.tmpdir(), "hicode-model-protocol-"));
+const modelConfigPath = path.join(modelTmp, "config.json");
+const modelRequests = [];
+const workspaceModels = createWorkspaceService({
+  dialog: { showOpenDialog: async () => ({ canceled: true, filePaths: [] }) },
+  getWindow: () => null,
+  getCwd: () => modelTmp,
+  setCwd: () => {},
+  buildRuntime: () => {},
+  resolveInCwd: () => null,
+  listSessions: () => [],
+  deleteSession: () => false,
+  loadSession: () => [],
+  getRuntime: () => null,
+  configPath: modelConfigPath,
+  loadConfig: () => ({
+    profiles: { default: { name: "default", baseURL: "https://api.openai.com/v1", apiKey: "secret", model: "gpt-4.1", contextWindow: 128000, temperature: 0.2 } },
+    defaultProfile: "default",
+  }),
+  defaultProfile: (config) => config.profiles.default,
+  buildSystemPrompt: () => "",
+  send: () => {},
+  fetchImpl: async (url, init) => {
+    modelRequests.push({ url, body: JSON.parse(init.body) });
+    return {
+      ok: true,
+      status: 200,
+      text: async () => url.endsWith("/responses")
+        ? JSON.stringify({ id: "resp-test", status: "completed", output: [] })
+        : JSON.stringify({ choices: [{ message: { content: "ok" } }] }),
+    };
+  },
+});
+const responsesConnection = await workspaceModels.testModel({
+  baseURL: "https://api.openai.com/v1",
+  apiKey: "sk-test-only",
+  model: "gpt-4.1",
+  protocol: "responses",
+});
+check(
+  "workspace model test routes explicit Responses profiles to /responses",
+  responsesConnection.ok === true && modelRequests[0]?.url === "https://api.openai.com/v1/responses" && modelRequests[0]?.body.store === false && modelRequests[0]?.body.input?.[0]?.content?.[0]?.type === "input_text",
+  JSON.stringify(modelRequests[0]),
+);
+const legacyConnection = await workspaceModels.testModel({
+  baseURL: "https://api.openai.com/v1",
+  apiKey: "sk-test-only",
+  model: "gpt-4.1",
+});
+check(
+  "workspace model test keeps omitted protocol on /chat/completions",
+  legacyConnection.ok === true && modelRequests[1]?.url === "https://api.openai.com/v1/chat/completions",
+  JSON.stringify(modelRequests[1]),
+);
+fs.writeFileSync(modelConfigPath, "{\"profiles\":{}}\n");
+const invalidConfigSave = workspaceModels.saveConfig(JSON.stringify({
+  profiles: {
+    default: {
+      baseURL: "https://api.openai.com/v1",
+      apiKey: "sk-test-only",
+      model: "gpt-4.1",
+      protocol: "unreviewed",
+    },
+  },
+}));
+check(
+  "invalid model protocol is rejected before config write",
+  invalidConfigSave.ok === false && fs.readFileSync(modelConfigPath, "utf8") === "{\"profiles\":{}}\n",
+  JSON.stringify(invalidConfigSave),
+);
+check("model protocol validator accepts both supported values", validateModelProtocolConfig({ profiles: { a: { protocol: "responses" }, b: { protocol: "chat_completions" } } }) === true);
+fs.rmSync(modelTmp, { recursive: true, force: true });
 
 console.log("\n[services] app info");
 check("compareVersions orders patch releases", compareVersions("0.5.0", "0.5.1") < 0 && compareVersions("0.5.1", "0.5.0") > 0 && compareVersions("0.5.1", "0.5.1") === 0);

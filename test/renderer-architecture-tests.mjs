@@ -122,6 +122,7 @@ check("composer sends image attachments through workspace-relative refs", bootst
 check("composer supports pasted and dropped images", bootstrap.includes('input.addEventListener("paste"') && bootstrap.includes('composer.addEventListener("drop"') && bootstrap.includes("readImageFileAsDataUrl"));
 check("run status keeps runtime output errors visible", bootstrap.includes("function detectRuntimeOutputError") && bootstrap.includes("lastRunErrorDetail") && bootstrap.includes('label: "模型请求失败"') && bootstrap.includes('runState.status === "error" || lastRunErrorDetail'));
 check("model connection test surfaces vision capability hint", bootstrap.includes("function modelCapabilityHint") && bootstrap.includes("visionCapabilityNotice") && bootstrap.includes("图片输入：当前模型可能不支持") && bootstrap.includes("currentModel.capabilities"));
+check("settings preserve explicit model transport protocol", bootstrap.includes("function configuredQuickProtocol") && bootstrap.includes('protocol === "responses" || protocol === "chat_completions"') && bootstrap.includes("...(protocol ? { protocol } : {})") && bootstrap.includes("protocol: config.protocol"));
 check("agent chat bubble never stays blank on empty model output", bootstrap.includes("Hi Code 正在思考") && bootstrap.includes("function finishAgentMessageIfEmpty") && bootstrap.includes("这次模型没有返回可显示内容") && css.includes(".agent-body.agent-empty") && css.includes(".agent-body.agent-error"));
 
 console.log("\n[renderer] state");

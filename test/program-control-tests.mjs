@@ -40,7 +40,9 @@ const requiredFiles = [
   "docs/adr/ADR-0004-turn-state-and-conservative-recovery.md",
   "docs/adr/ADR-0005-supported-electron-line.md",
   "docs/adr/ADR-0006-model-provider-adapter-v2.md",
+  "docs/adr/ADR-0007-explicit-openai-responses-transport.md",
   "docs/model-provider-adapters.md",
+  "docs/openai-responses-adapter.md",
   "docs/electron-compatibility.md",
   "docs/runtime-stores.md",
   "planning/backlog.json",
@@ -218,6 +220,7 @@ check(
   JSON.stringify(modelProviderTask),
 );
 check("Model Provider focused tests are part of global verification", packageJson.scripts["test:model-providers"] === "node test/model-provider-tests.mjs" && fs.readFileSync(path.join(root, "scripts/verify.mjs"), "utf8").includes("test/model-provider-tests.mjs"));
+check("OpenAI Responses focused tests are part of global verification", packageJson.scripts["test:openai-responses"] === "node test/openai-responses-provider-tests.mjs" && fs.readFileSync(path.join(root, "scripts/verify.mjs"), "utf8").includes("test/openai-responses-provider-tests.mjs"));
 check(
   "HC-PROV-211 starts only after Model Provider v2 completion",
   openAIResponsesTask?.status === "in_progress" &&

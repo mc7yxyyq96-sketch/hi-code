@@ -190,7 +190,8 @@ export function createWorkspaceService({
     saveConfig(text) {
       try {
         const configText = ipcString(text);
-        JSON.parse(configText);
+        const parsed = JSON.parse(configText);
+        validateModelProtocolConfig(parsed);
         fs.mkdirSync(path.dirname(configPath), { recursive: true, mode: 0o700 });
         fs.writeFileSync(configPath, configText, { mode: 0o600 });
         try { fs.chmodSync(configPath, 0o600); } catch {}
@@ -221,6 +222,12 @@ export function createWorkspaceService({
       const baseURL = ipcString(data.baseURL).replace(/\/+$/, "");
       const apiKey = ipcString(data.apiKey);
       const model = ipcString(data.model);
+      let protocol;
+      try {
+        protocol = normalizeModelProtocol(data.protocol);
+      } catch (error) {
+        return { ok: false, error: error?.message ?? "模型协议无效" };
+      }
       if (!baseURL) return { ok: false, error: "请填写 Base URL" };
       if (!model) return { ok: false, error: "请填写模型名" };
       if (!apiKey) return { ok: false, error: "请填写 API Key；本地模型可填 sk-no-key-required" };
@@ -228,15 +235,24 @@ export function createWorkspaceService({
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 15000);
       try {
-        const body = {
-          model,
-          messages: [{ role: "user", content: "Reply with ok." }],
-          max_tokens: 8,
-          stream: false,
-        };
+        const isResponses = protocol === "responses";
+        const body = isResponses
+          ? {
+              model,
+              input: [{ role: "user", content: [{ type: "input_text", text: "Reply with ok." }] }],
+              max_output_tokens: 8,
+              stream: false,
+              store: false,
+            }
+          : {
+              model,
+              messages: [{ role: "user", content: "Reply with ok." }],
+              max_tokens: 8,
+              stream: false,
+            };
         if (!shouldOmitTemperatureForBaseURL(baseURL)) body.temperature = 0;
 
-        const res = await fetchImpl(`${baseURL}/chat/completions`, {
+        const res = await fetchImpl(`${baseURL}/${isResponses ? "responses" : "chat/completions"}`, {
           method: "POST",
           signal: controller.signal,
           headers: {
@@ -247,6 +263,12 @@ export function createWorkspaceService({
         });
         const text = await res.text();
         if (!res.ok) return { ok: false, error: modelTestError(res.status, text, baseURL) };
+        if (isResponses) {
+          const response = JSON.parse(text || "{}");
+          if (response.status !== "completed") {
+            return { ok: false, error: `Responses 连接返回非完成状态：${String(response.status || "unknown")}` };
+          }
+        }
         return { ok: true, message: "连接成功", capabilities: modelCapabilityHint({ baseURL, model }) };
       } catch (error) {
         return { ok: false, error: modelTestNetworkError(error, baseURL) };
@@ -255,6 +277,31 @@ export function createWorkspaceService({
       }
     },
   };
+}
+
+export function validateModelProtocolConfig(config) {
+  if (!config || typeof config !== "object" || Array.isArray(config)) throw new Error("配置必须是 JSON 对象");
+  normalizeModelProtocol(config.protocol);
+  if (config.profiles !== undefined) {
+    if (!config.profiles || typeof config.profiles !== "object" || Array.isArray(config.profiles)) {
+      throw new Error("profiles 必须是对象");
+    }
+    for (const [name, profile] of Object.entries(config.profiles)) {
+      if (!profile || typeof profile !== "object" || Array.isArray(profile)) throw new Error(`模型配置 ${name} 必须是对象`);
+      try {
+        normalizeModelProtocol(profile.protocol);
+      } catch {
+        throw new Error(`模型配置 ${name} 的 protocol 只支持 chat_completions 或 responses`);
+      }
+    }
+  }
+  return true;
+}
+
+function normalizeModelProtocol(value) {
+  if (value === undefined || value === null || value === "") return "chat_completions";
+  if (value === "chat_completions" || value === "responses") return value;
+  throw new Error("protocol 只支持 chat_completions 或 responses");
 }
 
 export function registerWorkspaceIpc({ register, workspace }) {

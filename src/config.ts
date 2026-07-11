@@ -3,6 +3,9 @@ import os from "node:os";
 import path from "node:path";
 
 /** One model endpoint + its parameters. The unit the LLM client speaks. */
+export const MODEL_TRANSPORT_PROTOCOLS = ["chat_completions", "responses"] as const;
+export type ModelTransportProtocol = (typeof MODEL_TRANSPORT_PROTOCOLS)[number];
+
 export interface ModelProfile {
   name: string;
   baseURL: string;
@@ -10,6 +13,8 @@ export interface ModelProfile {
   model: string;
   contextWindow: number;
   temperature: number;
+  /** Omitted in existing configs; omission deliberately preserves Chat Completions. */
+  protocol?: ModelTransportProtocol;
 }
 
 export interface VibeConfig {
@@ -64,6 +69,7 @@ const BASE_PROFILE: ModelProfile = {
   model: "deepseek-chat",
   contextWindow: 65536,
   temperature: 0.2,
+  protocol: "chat_completions",
 };
 
 /**
@@ -82,7 +88,12 @@ export function loadConfig(): VibeConfig {
   const profiles: Record<string, ModelProfile> = {};
   if (f.profiles && typeof f.profiles === "object") {
     for (const [k, v] of Object.entries<any>(f.profiles)) {
-      profiles[k] = { ...BASE_PROFILE, ...clean(v), name: k };
+      profiles[k] = {
+        ...BASE_PROFILE,
+        ...clean(v),
+        name: k,
+        protocol: normalizeModelTransportProtocol(v?.protocol),
+      };
     }
   }
 
@@ -98,8 +109,10 @@ export function loadConfig(): VibeConfig {
         model: f.model,
         contextWindow: f.contextWindow,
         temperature: f.temperature,
+        protocol: f.protocol,
       }),
       name: defaultKey,
+      protocol: normalizeModelTransportProtocol(f.protocol),
     };
   }
 
@@ -116,6 +129,9 @@ export function loadConfig(): VibeConfig {
       model: env.HICODE_MODEL ?? env.VIBE_MODEL,
       contextWindow: (env.HICODE_CONTEXT_WINDOW ?? env.VIBE_CONTEXT_WINDOW)
         ? Number(env.HICODE_CONTEXT_WINDOW ?? env.VIBE_CONTEXT_WINDOW)
+        : undefined,
+      protocol: env.HICODE_MODEL_PROTOCOL
+        ? normalizeModelTransportProtocol(env.HICODE_MODEL_PROTOCOL)
         : undefined,
     }),
   );
@@ -160,6 +176,18 @@ function clean<T extends object>(o: T): Partial<T> {
 
 function normalizeReasoningLevel(value: unknown): VibeConfig["reasoningLevel"] {
   return value === "low" || value === "high" || value === "ultra" ? value : "medium";
+}
+
+export function normalizeModelTransportProtocol(value: unknown): ModelTransportProtocol {
+  if (value === undefined || value === null || value === "") return "chat_completions";
+  if (value === "chat_completions" || value === "responses") return value;
+  const error = new Error(`unsupported model transport protocol: ${String(value).slice(0, 80)}`);
+  Object.assign(error, {
+    code: "provider_protocol_invalid",
+    category: "validation",
+    retriable: false,
+  });
+  throw error;
 }
 
 /** Persist the default profile's model (used by /model <name>). */

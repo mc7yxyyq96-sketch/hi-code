@@ -55,6 +55,7 @@ const turnStateMachine = fs.readFileSync(path.join(root, "src", "turn-state-mach
 const recovery = fs.readFileSync(path.join(root, "src", "recovery.ts"), "utf8");
 const llm = fs.readFileSync(path.join(root, "src", "llm.ts"), "utf8");
 const modelProvider = fs.readFileSync(path.join(root, "src", "model-provider.ts"), "utf8");
+const openAIResponsesProvider = fs.readFileSync(path.join(root, "src", "openai-responses-provider.ts"), "utf8");
 const agent = fs.readFileSync(path.join(root, "src", "agent.ts"), "utf8");
 const context = fs.readFileSync(path.join(root, "src", "context.ts"), "utf8");
 const council = fs.readFileSync(path.join(root, "src", "agents", "council.ts"), "utf8");
@@ -79,6 +80,10 @@ check("runtime protocol events are append-only persisted", runtime.includes("app
 check("approval decisions are durably correlated", runtimeProtocol.includes('"approval.resolved"') && runtimeProtocol.includes("approval.resolved requires requestId") && runtime.includes("requestId: approvalId"));
 check("turn recovery blocks unknown side effects", turnStateMachine.includes('recoveryAction: "inspect_tool"') && turnStateMachine.includes("unknown completion or side effects") && recovery.includes("legacy task has no durable tool-side-effect evidence"));
 check("turn recovery never reuses prior approval", turnStateMachine.includes('recoveryAction: "retry_with_approval"') && turnStateMachine.includes("retry must request a new human decision"));
+check("Responses remote endpoints require HTTPS", openAIResponsesProvider.includes('url.protocol !== "https:"') && openAIResponsesProvider.includes('url.protocol === "http:" && loopback') && openAIResponsesProvider.includes("provider_endpoint_insecure"));
+check("Responses requests disable provider-side storage", openAIResponsesProvider.includes("store: false") && openAIResponsesProvider.includes('persistence: "store-disabled"'));
+check("Responses credentials stay out of descriptors and persisted events", !openAIResponsesProvider.includes("metadata: { apiKey") && openAIResponsesProvider.includes("redactSensitiveText") === false && modelProvider.includes("redactSensitiveText(original"));
+check("Responses tool streams reject unannounced items", openAIResponsesProvider.includes("provider_tool_sequence_invalid") && openAIResponsesProvider.includes("function-call item was not announced"));
 check("app version is synced from package metadata", main.includes("version: app.getVersion()") && main.includes("getVersion: () => app.getVersion()") && syncVersionScript.includes("app.getVersion()") && syncVersionScript.includes("appVersionEl.textContent"));
 check("preload does not expose ipcRenderer", !/ipcRenderer[,}]/.test(preload) && !/ipcRenderer:\s*ipcRenderer/.test(preload));
 check("preload does not expose generic invoke", !/invoke:\s*\(/.test(preload));
@@ -272,6 +277,7 @@ check("verify script includes service tests", verifyScript.includes('"test:servi
 check("verify script includes job center tests", verifyScript.includes('"test:jobs"'));
 check("verify script includes provider tests", verifyScript.includes('"test:providers"'));
 check("verify script includes model provider tests", verifyScript.includes('"test:model-providers"') && verifyScript.includes("test/model-provider-tests.mjs"));
+check("verify script includes OpenAI Responses conformance tests", verifyScript.includes('"test:openai-responses"') && verifyScript.includes("test/openai-responses-provider-tests.mjs"));
 check("verify script includes worktree tests", verifyScript.includes('"test:worktrees"'));
 check("verify script includes patch arena tests", verifyScript.includes('"test:arena"'));
 check("verify script includes industrial project tests", verifyScript.includes('"test:industrial"'));

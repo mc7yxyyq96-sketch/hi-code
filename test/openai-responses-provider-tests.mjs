@@ -1,6 +1,8 @@
 import http from "node:http";
 
 import { normalizeModelTransportProtocol } from "../dist/config.js";
+import { createRuntime } from "../dist/runtime.js";
+import { deleteSession } from "../dist/session-store.js";
 import {
   ModelProviderRegistry,
   completeModelProfile,
@@ -110,6 +112,18 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  if (serializedInput.includes("out of order tool event")) {
+    writeSse(res, {
+      type: "response.function_call_arguments.delta",
+      item_id: "fc-unannounced",
+      output_index: 0,
+      delta: "{}",
+      sequence_number: 1,
+    });
+    res.end();
+    return;
+  }
+
   if (serializedInput.includes("failed response")) {
     writeSse(res, {
       type: "response.failed",
@@ -121,6 +135,28 @@ const server = http.createServer(async (req, res) => {
         output: [],
         usage: null,
       },
+      sequence_number: 2,
+    });
+    res.end();
+    return;
+  }
+
+  const hasCurrentToolResult = body.input?.some((item) => item.type === "function_call_output" && item.call_id === "call-response");
+  if (hasCurrentToolResult) {
+    writeSse(res, {
+      type: "response.output_text.delta",
+      item_id: "msg-runtime-complete",
+      output_index: 0,
+      content_index: 0,
+      delta: "runtime complete",
+      sequence_number: 1,
+    });
+    writeSse(res, {
+      type: "response.completed",
+      response: completedResponse({
+        output: [textMessage("runtime complete")],
+        usage: { input_tokens: 44, output_tokens: 4, total_tokens: 48 },
+      }),
       sequence_number: 2,
     });
     res.end();
@@ -237,6 +273,13 @@ try {
     invalidProtocolCode = error?.code || "";
   }
   check("unknown protocol is rejected", invalidProtocolCode === "provider_protocol_invalid", invalidProtocolCode);
+  let insecureEndpointCode = "";
+  try {
+    createOpenAIResponsesAdapter({ ...profile, baseURL: "http://models.example.com/v1" });
+  } catch (error) {
+    insecureEndpointCode = error?.code || "";
+  }
+  check("non-loopback Responses endpoint requires HTTPS", insecureEndpointCode === "provider_endpoint_insecure", insecureEndpointCode);
   check("default adapter remains Chat Completions", createModelProfileAdapter(baseProfile).descriptor.protocol === "openai.chat.completions");
   const responsesAdapter = createOpenAIResponsesAdapter(profile);
   check("Responses adapter advertises its actual wire protocol", responsesAdapter.descriptor.protocol === "openai.responses");
@@ -309,9 +352,10 @@ try {
   check("caller cancellation returns an interrupted turn", interrupted.aborted === true);
   check("cancellation never emits false completion", abortEvents.at(-1)?.type === "response.interrupted" && !abortEvents.some((event) => event.type === "response.completed"));
 
-  for (const [prompt, expectedCode] of [
-    ["incomplete response", "provider_response_incomplete"],
-    ["failed response", "server_error"],
+  for (const [prompt, expectedCode, expectedCategory] of [
+    ["incomplete response", "provider_response_incomplete", "context_length"],
+    ["failed response", "server_error", "provider"],
+    ["out of order tool event", "provider_tool_sequence_invalid", "provider"],
   ]) {
     const registry = new ModelProviderRegistry();
     registry.register(createOpenAIResponsesAdapter(profile));
@@ -322,8 +366,44 @@ try {
       caught = error;
     }
     check(`${prompt} rejects with normalized code`, caught?.code === expectedCode, caught?.code || "no error");
+    check(`${prompt} preserves normalized category`, caught?.category === expectedCategory, caught?.category || "no category");
     check(`${prompt} ends as failed rather than completed`, caught?.events?.at(-1)?.type === "response.failed" && !caught?.events?.some((event) => event.type === "response.completed"));
     check(`${prompt} error details are credential-safe`, !JSON.stringify(caught).includes("provider-secret-token"));
+  }
+
+  console.log("\n[openai-responses] shared runtime tool loop");
+  const runtimeEvents = [];
+  const runtime = createRuntime({
+    cfg: {
+      profiles: { default: profile },
+      defaultProfile: "default",
+      roleModels: {},
+      councilMembers: [],
+      councilSynthesizer: "default",
+      compactThreshold: 0.75,
+      reasoningLevel: "medium",
+      sandbox: false,
+      mcpServers: {},
+    },
+    cwd: process.cwd(),
+    mode: "default",
+    systemPrompt: "Use read_file when asked to inspect README.md.",
+    ask: async () => "n",
+    legacyAssistantOutput: false,
+    persistRuntimeEvents: false,
+    emitEvent(event) { runtimeEvents.push(event); },
+  });
+  try {
+    await runtime.handleInput("Inspect README.md");
+    const protocolEvents = runtimeEvents.map((event) => event.payload?.runtimeProtocol).filter(Boolean);
+    check("Runtime completes a real two-request Responses tool loop", runtime.session.messages.some((message) => message.role === "tool") && runtime.session.messages.at(-1)?.content === "runtime complete");
+    check("Runtime sends tool output back with the same Responses call_id", requests.some((request) => request.url === "/v1/responses" && request.body.input?.some((item) => item.type === "function_call_output" && item.call_id === "call-response")));
+    check("Runtime Protocol records both Responses requests", protocolEvents.filter((event) => event.kind === "model.requested").length === 2);
+    check("Runtime Protocol preserves Responses tool correlation", protocolEvents.some((event) => event.kind === "model.tool_call.completed" && event.payload?.callId === "call-response" && event.payload?.name === "read_file"));
+    check("Runtime Protocol receives Responses usage", protocolEvents.some((event) => event.kind === "usage.updated" && event.payload?.usage?.totalTokens === 48));
+  } finally {
+    runtime.shutdown();
+    deleteSession(runtime.sessionId);
   }
 
   console.log("\n[openai-responses] legacy endpoint remains available");

@@ -1,6 +1,6 @@
 # Model Provider Adapter v2
 
-Status: Implemented compatibility foundation in HC-PROV-210
+Status: Implemented compatibility foundation in HC-PROV-210; OpenAI Responses transport in HC-PROV-211
 
 ## Purpose
 
@@ -15,7 +15,7 @@ The Model Provider Adapter is the model-transport boundary used by the shared Hi
 - in-memory migration of the existing `ModelProfile`
 - the production compatibility adapter over the current OpenAI Chat Completions transport
 
-`src/llm.ts` remains the low-level HTTP/SSE transport. Runtime, context compaction, manager planning, and council synthesis call the provider facade instead of calling that transport directly.
+`src/llm.ts` remains the low-level Chat Completions HTTP/SSE transport. `src/openai-responses-provider.ts` owns the Responses-specific wire contract. Runtime, context compaction, manager planning, and council synthesis call the provider facade instead of either transport directly.
 
 ## Descriptor
 
@@ -84,6 +84,12 @@ Tool argument deltas are not chat-visible. Existing execution events (`tool.star
 
 The compatibility descriptor never includes the API key. Image input is conditional because OpenAI-compatible endpoints differ. File/PDF input, reasoning summaries, and structured-output negotiation remain explicitly unsupported until dedicated adapters deliver them.
 
+## Explicit Transport Selection
+
+`ModelProfile.protocol` accepts `chat_completions` or `responses`. Omission deliberately remains `chat_completions`; Hi Code does not infer protocol support from the endpoint or model name. The renderer preserves an existing explicit selector, the Electron connection test follows it, and unknown selectors are rejected before persistence.
+
+The Responses adapter uses real HTTPS/SSE transport, sets `store: false`, preserves Responses `call_id` across local tool execution, and maps native terminal and usage fields into the provider-neutral contract. See `docs/openai-responses-adapter.md` and ADR-0007.
+
 ## Error Contract
 
 Provider failures expose stable authentication, authorization, rate-limit, timeout, network, context-length, capability, validation, cancelled, or provider categories. Each error contains a stable code, redacted message, retriable flag, optional HTTP status, and sanitized details. Authorization headers and key/token/secret/password-like values are removed before events or evidence are persisted.
@@ -100,5 +106,4 @@ Provider failures expose stable authentication, authorization, rate-limit, timeo
 
 ## Current Limits
 
-HC-PROV-210 does not implement OpenAI Responses, Anthropic Messages, Ollama-native APIs, external Codex/Claude agents, attachment persistence, or provider settings UI. Those remain separate backlog items. The compatibility adapter is a real production path, not a mock, but its conditional capabilities depend on the configured endpoint and model.
-
+The current adapters do not implement Anthropic Messages, Ollama-native APIs, external Codex/Claude agents, provider-hosted files, background Responses, remote provider tools, or structured-output negotiation. Responses selection currently uses the existing Advanced JSON editor rather than a new settings redesign. Both Chat Completions and Responses are real production paths, not mocks.
