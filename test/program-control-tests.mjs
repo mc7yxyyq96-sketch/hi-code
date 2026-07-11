@@ -44,7 +44,9 @@ const requiredFiles = [
   "docs/adr/ADR-0008-explicit-anthropic-ollama-transports.md",
   "docs/adr/ADR-0009-durable-attachments-and-command-routing.md",
   "docs/adr/ADR-0010-gradual-react-app-shell.md",
+  "docs/adr/ADR-0011-typed-session-workbench.md",
   "docs/app-shell.md",
+  "docs/session-workbench.md",
   "docs/attachments-and-command-registry.md",
   "docs/anthropic-ollama-adapters.md",
   "docs/model-provider-adapters.md",
@@ -67,6 +69,7 @@ const requiredFiles = [
   "reports/tasks/HC-PROV-212.md",
   "reports/tasks/HC-RUN-220.md",
   "reports/tasks/HC-UI-301.md",
+  "reports/tasks/HC-UI-302.md",
   "reports/tasks/HC-REL-ALPHA-7.md",
   "reports/evidence/baseline/manifest.json",
   "reports/evidence/HC-QA-101/manifest.json",
@@ -82,6 +85,7 @@ const requiredFiles = [
   "reports/evidence/HC-PROV-212/manifest.json",
   "reports/evidence/HC-RUN-220/manifest.json",
   "reports/evidence/HC-UI-301/manifest.json",
+  "reports/evidence/HC-UI-302/manifest.json",
   "scripts/electron-compatibility.mjs",
   "scripts/run-electron-builder.mjs",
   "test/electron-compatibility-tests.mjs",
@@ -121,6 +125,7 @@ const openAIResponsesManifest = readJson(root, "reports/evidence/HC-PROV-211/man
 const anthropicOllamaManifest = readJson(root, "reports/evidence/HC-PROV-212/manifest.json");
 const attachmentCommandManifest = readJson(root, "reports/evidence/HC-RUN-220/manifest.json");
 const uiShellManifest = readJson(root, "reports/evidence/HC-UI-301/manifest.json");
+const uiWorkbenchManifest = readJson(root, "reports/evidence/HC-UI-302/manifest.json");
 const packageJson = readJson(root, "package.json");
 const packageLock = readJson(root, "package-lock.json");
 const programTask = backlog.tasks.find((task) => task.id === "HC-PROG-100");
@@ -134,6 +139,7 @@ const openAIResponsesTask = backlog.tasks.find((task) => task.id === "HC-PROV-21
 const anthropicOllamaTask = backlog.tasks.find((task) => task.id === "HC-PROV-212");
 const attachmentCommandTask = backlog.tasks.find((task) => task.id === "HC-RUN-220");
 const uiShellTask = backlog.tasks.find((task) => task.id === "HC-UI-301");
+const uiWorkbenchTask = backlog.tasks.find((task) => task.id === "HC-UI-302");
 const qaTask = board.tasks.find((task) => task.id === "HC-QA-101");
 const runtimeTask = board.tasks.find((task) => task.id === "HC-RUN-201");
 const runtimeStoreTask = board.tasks.find((task) => task.id === "HC-RUN-202");
@@ -145,6 +151,7 @@ const openAIResponsesBoardTask = board.tasks.find((task) => task.id === "HC-PROV
 const anthropicOllamaBoardTask = board.tasks.find((task) => task.id === "HC-PROV-212");
 const attachmentCommandBoardTask = board.tasks.find((task) => task.id === "HC-RUN-220");
 const uiShellBoardTask = board.tasks.find((task) => task.id === "HC-UI-301");
+const uiWorkbenchBoardTask = board.tasks.find((task) => task.id === "HC-UI-302");
 
 console.log("\n[program-control] board and evidence contract");
 check("backlog records immutable source commit", /^[0-9a-f]{40}$/.test(backlog.sourceCommit || ""));
@@ -250,6 +257,32 @@ for (const command of uiShellManifest.commands || []) {
   const absolute = path.join(root, command.logPath || "");
   check(`HC-UI-301 ${command.id} log exists`, Boolean(command.logPath) && fs.existsSync(absolute));
   if (fs.existsSync(absolute)) check(`HC-UI-301 ${command.id} log hash matches`, digest(absolute) === command.logSha256);
+}
+check(
+  "HC-UI-302 completed only after its dependencies and evidence",
+  uiWorkbenchTask?.status === "completed" &&
+    uiWorkbenchTask?.branch === "codex/desktop-ux/hc-ui-302" &&
+    Boolean(uiWorkbenchTask?.startedAt) &&
+    Boolean(uiWorkbenchTask?.completedAt) &&
+    uiWorkbenchTask?.taskManifest === "reports/tasks/HC-UI-302.md" &&
+    uiWorkbenchTask?.evidenceManifest === "reports/evidence/HC-UI-302/manifest.json" &&
+    uiWorkbenchTask?.dependencies?.every((id) => backlog.tasks.find((task) => task.id === id)?.status === "completed") &&
+    uiWorkbenchBoardTask?.status === "completed" &&
+    uiWorkbenchBoardTask?.taskManifest === "reports/tasks/HC-UI-302.md" &&
+    uiWorkbenchBoardTask?.evidence === "reports/evidence/HC-UI-302/manifest.json",
+  JSON.stringify(uiWorkbenchTask),
+);
+check("React Session Workbench gate passed with committed evidence", board.gates?.find((gate) => gate.id === "react-session-workbench")?.status === "passed" && board.gates?.find((gate) => gate.id === "react-session-workbench")?.evidence === "reports/evidence/HC-UI-302/manifest.json");
+check("HC-UI-302 migration risk is evidence-backed and mitigated", risks.risks?.some((risk) => risk.id === "RISK-UI-003" && risk.status === "mitigated" && risk.evidence?.includes("reports/evidence/HC-UI-302/manifest.json")));
+check("HC-UI-302 evidence records every command passing from a clean tree", uiWorkbenchManifest.summary?.allPassed === true && uiWorkbenchManifest.summary?.total === 14 && uiWorkbenchManifest.capture?.workingTreeClean === true, JSON.stringify(uiWorkbenchManifest.summary));
+check("HC-UI-302 evidence is captured from its isolated branch", uiWorkbenchManifest.source?.branch === "codex/desktop-ux/hc-ui-302" && uiWorkbenchManifest.source?.parentCommit === "423a05a64acf8f4c916b2b48cc5237a42b38a25b");
+for (const requiredCommand of ["build", "verify", "release-check", "feature-tests", "app-shell-tests", "workspace-shell-tests", "renderer-tests", "security-tests", "dod-tests", "dod-scan", "production-audit", "electron-e2e", "program-control", "git-diff-check"]) {
+  check(`HC-UI-302 captured ${requiredCommand}`, uiWorkbenchManifest.commands?.some((command) => command.id === requiredCommand && command.status === "passed"));
+}
+for (const command of uiWorkbenchManifest.commands || []) {
+  const absolute = path.join(root, command.logPath || "");
+  check(`HC-UI-302 ${command.id} log exists`, Boolean(command.logPath) && fs.existsSync(absolute));
+  if (fs.existsSync(absolute)) check(`HC-UI-302 ${command.id} log hash matches`, digest(absolute) === command.logSha256);
 }
 check("alpha.8 version is synchronized", packageJson.version === "0.6.0-alpha.8" && packageLock.version === packageJson.version && packageLock.packages?.[""]?.version === packageJson.version && fs.readFileSync(path.join(root, "VERSION"), "utf8").trim() === packageJson.version);
 check("alpha.8 release candidate gate passed", board.currentRelease === packageJson.version && board.candidate?.version === packageJson.version && board.candidate?.branch === "codex/release/0.6.0-alpha.8" && board.candidate?.status === "passed" && board.candidate?.evidence === "reports/evidence/HC-REL-ALPHA-8/manifest.json" && board.gates?.find((gate) => gate.id === "alpha-8-release-candidate")?.status === "passed");

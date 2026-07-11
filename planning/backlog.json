@@ -228,10 +228,12 @@
       "dependencies": ["HC-UI-301", "HC-RUN-202"],
       "deliverables": ["session sidebar", "virtualized transcript", "timeline", "inspector/drawers"],
       "acceptance": ["long-session performance target met", "no hidden actions without alternative", "keyboard navigation works"],
-      "status": "in_progress",
+      "status": "completed",
       "startedAt": "2026-07-11T10:21:16Z",
       "branch": "codex/desktop-ux/hc-ui-302",
-      "taskManifest": "reports/tasks/HC-UI-302.md"
+      "taskManifest": "reports/tasks/HC-UI-302.md",
+      "completedAt": "2026-07-11T12:31:58Z",
+      "evidenceManifest": "reports/evidence/HC-UI-302/manifest.json"
     },
     {
       "id": "HC-UI-310",

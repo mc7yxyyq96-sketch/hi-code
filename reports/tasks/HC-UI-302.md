@@ -1,12 +1,14 @@
 # HC-UI-302 - Session Workbench Migration
 
-Status: In progress
+Status: Completed
 
 Owner: Desktop UX
 
 Branch: `codex/desktop-ux/hc-ui-302`
 
 Started: 2026-07-11T10:21:16Z
+
+Completed: 2026-07-11T12:31:58Z
 
 Parent commit: `35754d00fcdb6141daebfc1c011e5d0c0328a2ed`
 
@@ -80,3 +82,41 @@ Revert HC-UI-302. HC-UI-301 retains the stable shell, and the existing bootstrap
 3. Typed store, controller, and React workspace components.
 4. Bootstrap compatibility integration and real actions.
 5. Responsive Electron E2E, documentation, and evidence.
+
+## Delivered
+
+- Added an immutable typed workspace store and renderer-internal compatibility controller.
+- Migrated recent sessions, conversation, Timeline/recovery, Diff Inspector, and workbench drawer controls to React portals.
+- Preserved real session persistence, Runtime events, attachments, approvals, recovery, and Diff handlers without new IPC.
+- Bounded conversation rendering to 160 mounted rows while retaining access to 10,000-message history.
+- Replaced raw ANSI/diff HTML rendering with typed text segments and bounded diff rows.
+- Added visible fail-closed action errors, disabled unavailable controls, session keyboard navigation, and drawer focus restoration.
+- Prevented a background turn completion from finalizing the saved session currently visible to the user.
+- Made task evidence invoke the repository-locked npm CLI with the current Node runtime, removing PATH/package-manager ambiguity.
+
+## Acceptance
+
+- Long-session performance target: passed with 10,000 stored messages and at most 160 mounted rows.
+- No hidden action without alternative: passed; real handlers are registered once and missing handlers disable controls with an explanation.
+- Keyboard navigation: passed for session Arrow Up/Down, Home/End, drawer Escape, and focus restoration.
+- Responsive behavior: passed at 720, 1024, 1440, and 1920 Electron content widths.
+- Security: no preload/IPC expansion; text-only message/diff presentation; existing destructive-action boundaries retained.
+
+## Evidence
+
+`reports/evidence/HC-UI-302/manifest.json` records 14/14 passing commands from clean source commit `423a05a64acf8f4c916b2b48cc5237a42b38a25b`:
+
+- build, verify, and release check;
+- feature, App Shell, workspace shell, Renderer, security, and DoD tests;
+- full-tree DoD scan with zero findings;
+- production dependency audit;
+- real Electron E2E;
+- Program control and Git diff checks.
+
+The first evidence attempt exposed a macOS Team-ID mismatch between an app-bundled Node and Rollup's native module. The runner was fixed to execute the locked npm CLI with the current compatible Node runtime; the failed attempt was discarded and the final clean capture reran every command successfully.
+
+## Residual Limits
+
+- Composer, approval prompt, attachment tray, run status, and remaining product panels stay on the HC-UI-301 compatibility path.
+- Conversation windowing is fixed-row bounded rendering rather than measured variable-height virtualization; it meets the current DOM bound and remains replaceable behind the same store.
+- The current release remains an unsigned alpha. HC-UI-302 does not promote, sign, notarize, or publish a release.

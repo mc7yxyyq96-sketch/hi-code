@@ -1,0 +1,37 @@
+$ npm run test:workspace-shell
+
+> hi-code@0.6.0-alpha.8 test:workspace-shell
+> vite build --config vite.renderer.config.ts && tsx test/workspace-shell-tests.ts
+
+vite v6.2.6 building for production...
+transforming...
+✓ 39 modules transformed.
+rendering chunks...
+computing gzip size...
+renderer/generated/app-shell.js  254.39 kB │ gzip: 63.70 kB
+✓ built in 230ms
+
+[workspace-shell] immutable workspace state
+  ✓ session and conversation updates publish immutable snapshots
+  ✓ assistant streaming replaces one active message instead of duplicating rows
+  ✓ only one responsive workbench drawer can be open
+
+[workspace-shell] bounded long-session rendering
+  ✓ a 10,000-message transcript mounts at most the product limit
+  ✓ transcript windows can move through all history without mounting it all
+  ✓ session keyboard navigation wraps predictably
+
+[workspace-shell] safe presentation and real actions
+  ✓ ANSI parsing preserves hostile text as text segments
+  ✓ diff preview is typed and bounded
+  ✓ missing production handlers fail closed with an actionable error
+  ✓ registered workspace actions call the existing concrete handler
+  ✓ session filtering covers prompt, model, and workspace
+
+[workspace-shell] production integration contract
+  ✓ App Shell source declares the workspace migration bridge
+  ✓ production HTML provides dedicated React workbench mounts
+  ✓ legacy bootstrap delegates migrated surfaces instead of rebuilding their children
+  ✓ real Electron acceptance covers long transcripts and workspace keyboard behavior
+
+=== 15 passed, 0 failed ===
