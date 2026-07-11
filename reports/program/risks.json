@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "program": "Hi Code Product-Grade Desktop and Industrial Workbench",
-  "updatedAt": "2026-07-11T02:17:26Z",
+  "updatedAt": "2026-07-11T04:18:59Z",
   "risks": [
     {
       "id": "RISK-RUN-001",
@@ -90,6 +90,17 @@
       "impact": "Incorrect event mapping can duplicate tool calls, lose image inputs or usage, report an interrupted request as complete, or silently move existing compatible endpoints to an unsupported protocol.",
       "mitigation": "HC-PROV-211 keeps Chat Completions as the compatibility default, makes Responses selection explicit, and verifies both transports with real local HTTP streams and shared Runtime tool-loop tests.",
       "trigger": "Any implicit protocol migration, duplicate or incomplete tool lifecycle, lost usage, image mismatch, or false terminal state blocks HC-PROV-211 completion."
+    },
+    {
+      "id": "RISK-PROV-003",
+      "severity": "high",
+      "status": "mitigated",
+      "owner": "runtime-engine",
+      "title": "Anthropic and Ollama wire semantics can be silently flattened",
+      "evidence": ["src/anthropic-messages-provider.ts", "src/ollama-chat-provider.ts", "src/provider-http-transport.ts", "test/anthropic-ollama-provider-tests.mjs", "reports/evidence/HC-PROV-212/manifest.json"],
+      "impact": "Tool identities, image encoding, stop reasons, usage, interruption, or provider-specific reasoning metadata could be lost or misreported when mapped into the shared runtime.",
+      "mitigation": "HC-PROV-212 implements dedicated adapters with explicit profile protocols, bounded real loopback stream fixtures, capability preflight, strict event ordering, unchanged legacy defaults, and a reviewed boundary that discards raw thinking instead of relabeling it.",
+      "trigger": "Any implicit protocol switch, untyped provider field, duplicate tool completion, false terminal state, or unsupported capability sent over the network blocks HC-PROV-212 completion."
     },
     {
       "id": "RISK-IND-001",

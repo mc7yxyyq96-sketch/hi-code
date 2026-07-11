@@ -1715,15 +1715,27 @@ const PROVIDERS = {
     apiOnly: true,
     note: "OpenAI 官方接口，填 API Key 即可。",
   },
+  anthropic: {
+    label: "Anthropic",
+    baseURL: "https://api.anthropic.com/v1",
+    model: "claude-sonnet-5",
+    contextWindow: 1000000,
+    apiKey: "",
+    keyPlaceholder: "sk-ant-...",
+    apiOnly: true,
+    protocol: "anthropic_messages",
+    note: "Anthropic 官方 Messages API。Hi Code 会保留原生工具调用、图片和 SSE 语义。",
+  },
   ollama: {
     label: "Ollama",
-    baseURL: "http://127.0.0.1:11434/v1",
+    baseURL: "http://127.0.0.1:11434",
     model: "deepseek-chat",
     contextWindow: 65536,
     apiKey: "sk-no-key-required",
     keyPlaceholder: "sk-no-key-required",
     apiOnly: false,
-    note: "本地 OpenAI 兼容服务，通常不需要真实 API Key。",
+    protocol: "ollama_chat",
+    note: "Ollama 原生 /api/chat，通常不需要 API Key；工具、图片和 NDJSON 流会按原生语义处理。",
   },
   custom: {
     label: "自定义",
@@ -4642,8 +4654,10 @@ function configuredQuickProtocol() {
   const profileKey = providerProfileKey(selectedProvider);
   const profile = profiles[profileKey]
     || (config.defaultProfile === profileKey ? profiles[config.defaultProfile] : null);
-  const protocol = profile?.protocol || (!Object.keys(profiles).length ? config.protocol : undefined);
-  return protocol === "responses" || protocol === "chat_completions" ? protocol : undefined;
+  const protocol = profile
+    ? profile.protocol
+    : (!Object.keys(profiles).length ? config.protocol : (PROVIDERS[selectedProvider] || PROVIDERS.custom).protocol);
+  return ["responses", "chat_completions", "anthropic_messages", "ollama_chat"].includes(protocol) ? protocol : undefined;
 }
 
 function validateQuickProfile(profile) {
@@ -4745,6 +4759,7 @@ function guessProvider(baseURL = "") {
   if (baseURL.includes("generativelanguage.googleapis.com")) return "gemini";
   if (baseURL.includes("openrouter.ai")) return "openrouter";
   if (baseURL.includes("api.openai.com")) return "openai";
+  if (baseURL.includes("api.anthropic.com")) return "anthropic";
   if (baseURL.includes("127.0.0.1") || baseURL.includes("localhost")) return "ollama";
   return "custom";
 }

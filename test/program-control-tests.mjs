@@ -41,6 +41,8 @@ const requiredFiles = [
   "docs/adr/ADR-0005-supported-electron-line.md",
   "docs/adr/ADR-0006-model-provider-adapter-v2.md",
   "docs/adr/ADR-0007-explicit-openai-responses-transport.md",
+  "docs/adr/ADR-0008-explicit-anthropic-ollama-transports.md",
+  "docs/anthropic-ollama-adapters.md",
   "docs/model-provider-adapters.md",
   "docs/openai-responses-adapter.md",
   "docs/electron-compatibility.md",
@@ -58,6 +60,7 @@ const requiredFiles = [
   "reports/tasks/HC-REL-ALPHA-8.md",
   "reports/tasks/HC-PROV-210.md",
   "reports/tasks/HC-PROV-211.md",
+  "reports/tasks/HC-PROV-212.md",
   "reports/tasks/HC-REL-ALPHA-7.md",
   "reports/evidence/baseline/manifest.json",
   "reports/evidence/HC-QA-101/manifest.json",
@@ -70,6 +73,7 @@ const requiredFiles = [
   "reports/evidence/HC-REL-ALPHA-8/manifest.json",
   "reports/evidence/HC-PROV-210/manifest.json",
   "reports/evidence/HC-PROV-211/manifest.json",
+  "reports/evidence/HC-PROV-212/manifest.json",
   "scripts/electron-compatibility.mjs",
   "scripts/run-electron-builder.mjs",
   "test/electron-compatibility-tests.mjs",
@@ -106,6 +110,7 @@ const releaseManifest = readJson(root, "reports/evidence/HC-REL-ALPHA-7/manifest
 const alpha8ReleaseManifest = readJson(root, "reports/evidence/HC-REL-ALPHA-8/manifest.json");
 const modelProviderManifest = readJson(root, "reports/evidence/HC-PROV-210/manifest.json");
 const openAIResponsesManifest = readJson(root, "reports/evidence/HC-PROV-211/manifest.json");
+const anthropicOllamaManifest = readJson(root, "reports/evidence/HC-PROV-212/manifest.json");
 const packageJson = readJson(root, "package.json");
 const packageLock = readJson(root, "package-lock.json");
 const programTask = backlog.tasks.find((task) => task.id === "HC-PROG-100");
@@ -116,6 +121,7 @@ const platformTask = backlog.tasks.find((task) => task.id === "HC-PLAT-110");
 const alpha8ReleaseTask = backlog.tasks.find((task) => task.id === "HC-REL-ALPHA-8");
 const modelProviderTask = backlog.tasks.find((task) => task.id === "HC-PROV-210");
 const openAIResponsesTask = backlog.tasks.find((task) => task.id === "HC-PROV-211");
+const anthropicOllamaTask = backlog.tasks.find((task) => task.id === "HC-PROV-212");
 const uiShellTask = backlog.tasks.find((task) => task.id === "HC-UI-301");
 const qaTask = board.tasks.find((task) => task.id === "HC-QA-101");
 const runtimeTask = board.tasks.find((task) => task.id === "HC-RUN-201");
@@ -125,6 +131,7 @@ const platformBoardTask = board.tasks.find((task) => task.id === "HC-PLAT-110");
 const alpha8ReleaseBoardTask = board.tasks.find((task) => task.id === "HC-REL-ALPHA-8");
 const modelProviderBoardTask = board.tasks.find((task) => task.id === "HC-PROV-210");
 const openAIResponsesBoardTask = board.tasks.find((task) => task.id === "HC-PROV-211");
+const anthropicOllamaBoardTask = board.tasks.find((task) => task.id === "HC-PROV-212");
 
 console.log("\n[program-control] board and evidence contract");
 check("backlog records immutable source commit", /^[0-9a-f]{40}$/.test(backlog.sourceCommit || ""));
@@ -223,7 +230,9 @@ check(
 );
 check("Model Provider focused tests are part of global verification", packageJson.scripts["test:model-providers"] === "node test/model-provider-tests.mjs" && fs.readFileSync(path.join(root, "scripts/verify.mjs"), "utf8").includes("test/model-provider-tests.mjs"));
 check("OpenAI Responses focused tests are part of global verification", packageJson.scripts["test:openai-responses"] === "node test/openai-responses-provider-tests.mjs" && fs.readFileSync(path.join(root, "scripts/verify.mjs"), "utf8").includes("test/openai-responses-provider-tests.mjs"));
+check("Anthropic and Ollama focused tests are part of global verification", packageJson.scripts["test:anthropic-ollama"] === "node test/anthropic-ollama-provider-tests.mjs" && fs.readFileSync(path.join(root, "scripts/verify.mjs"), "utf8").includes("test/anthropic-ollama-provider-tests.mjs"));
 check("OpenAI Responses evidence capture is reproducible", packageJson.scripts["program:evidence:openai-responses"] === "node scripts/capture-task-evidence.mjs --task=HC-PROV-211" && fs.readFileSync(path.join(root, "scripts/capture-task-evidence.mjs"), "utf8").includes('"HC-PROV-211"'));
+check("Anthropic and Ollama evidence capture is reproducible", packageJson.scripts["program:evidence:anthropic-ollama"] === "node scripts/capture-task-evidence.mjs --task=HC-PROV-212" && fs.readFileSync(path.join(root, "scripts/capture-task-evidence.mjs"), "utf8").includes('"HC-PROV-212"'));
 check(
   "HC-PROV-211 completed only after Model Provider v2 completion and evidence",
   openAIResponsesTask?.status === "completed" &&
@@ -247,6 +256,32 @@ for (const command of openAIResponsesManifest.commands || []) {
   const absolute = path.join(root, command.logPath || "");
   check(`HC-PROV-211 ${command.id} log exists`, Boolean(command.logPath) && fs.existsSync(absolute));
   if (fs.existsSync(absolute)) check(`HC-PROV-211 ${command.id} log hash matches`, digest(absolute) === command.logSha256);
+}
+check(
+  "HC-PROV-212 completed only after both provider transport dependencies and evidence",
+  anthropicOllamaTask?.status === "completed" &&
+    anthropicOllamaTask?.branch === "codex/runtime-engine/hc-prov-212" &&
+    Boolean(anthropicOllamaTask?.startedAt) &&
+    Boolean(anthropicOllamaTask?.completedAt) &&
+    anthropicOllamaTask?.taskManifest === "reports/tasks/HC-PROV-212.md" &&
+    anthropicOllamaTask?.evidenceManifest === "reports/evidence/HC-PROV-212/manifest.json" &&
+    anthropicOllamaTask?.dependencies?.includes("HC-PROV-211") &&
+    anthropicOllamaTask?.dependencies?.every((id) => backlog.tasks.find((task) => task.id === id)?.status === "completed") &&
+    anthropicOllamaBoardTask?.status === "completed" &&
+    anthropicOllamaBoardTask?.evidence === "reports/evidence/HC-PROV-212/manifest.json" &&
+    board.gates?.find((gate) => gate.id === "anthropic-ollama-adapters")?.status === "passed" &&
+    board.gates?.find((gate) => gate.id === "anthropic-ollama-adapters")?.evidence === "reports/evidence/HC-PROV-212/manifest.json",
+  JSON.stringify(anthropicOllamaTask),
+);
+check("HC-PROV-212 evidence records every command passing", anthropicOllamaManifest.summary?.allPassed === true && anthropicOllamaManifest.summary?.total === 20, JSON.stringify(anthropicOllamaManifest.summary));
+check("HC-PROV-212 evidence is captured from its isolated branch", anthropicOllamaManifest.source?.branch === "codex/runtime-engine/hc-prov-212" && anthropicOllamaManifest.source?.parentCommit === "e40f45d29a1a964fc4b50b1f8ec3e476809e149a");
+for (const requiredCommand of ["build", "verify", "release-check", "feature-tests", "anthropic-ollama-tests", "model-provider-tests", "openai-responses-tests", "service-tests", "runtime-protocol", "runtime-events", "runtime-concurrency", "runtime-clients", "renderer-tests", "security-tests", "dod-tests", "dod-scan", "production-audit", "electron-e2e", "program-control", "git-diff-check"]) {
+  check(`HC-PROV-212 captured ${requiredCommand}`, anthropicOllamaManifest.commands?.some((command) => command.id === requiredCommand && command.status === "passed"));
+}
+for (const command of anthropicOllamaManifest.commands || []) {
+  const absolute = path.join(root, command.logPath || "");
+  check(`HC-PROV-212 ${command.id} log exists`, Boolean(command.logPath) && fs.existsSync(absolute));
+  if (fs.existsSync(absolute)) check(`HC-PROV-212 ${command.id} log hash matches`, digest(absolute) === command.logSha256);
 }
 check("HC-PROV-210 evidence records every command passing", modelProviderManifest.summary?.allPassed === true && modelProviderManifest.summary?.total === 16, JSON.stringify(modelProviderManifest.summary));
 check("HC-PROV-210 evidence is captured from its task branch", modelProviderManifest.source?.branch === "codex/runtime-engine/hc-prov-210" && modelProviderManifest.source?.parentCommit === "a0f4025addf0de92192011632d194878bb7b0d3c");

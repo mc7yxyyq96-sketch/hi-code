@@ -1,0 +1,21 @@
+$ npm run test:runtime-events
+
+> hi-code@0.6.0-alpha.8 test:runtime-events
+> node test/runtime-event-sink-tests.mjs
+
+
+[runtime-event-sink] subscriptions
+  ✓ emit returns the materialized event id
+  ✓ unfiltered subscriber receives both events
+  ✓ session filter prevents cross-session delivery
+  ✓ type filter receives only matching event
+  ✓ one listener failure does not stop other listeners
+  ✓ delivered event and nested protocol payload are immutable
+  ✓ unsubscribe is idempotent and stops delivery
+  ✓ invalid materialized events are rejected
+
+[runtime-event-sink] assistant protocol mapping
+  ✓ assistant delta maps to a chat-visible assistant protocol event
+  ✓ assistant completion maps to a durable assistant protocol event
+
+=== 10 passed, 0 failed ===

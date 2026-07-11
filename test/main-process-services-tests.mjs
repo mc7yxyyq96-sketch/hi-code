@@ -365,13 +365,16 @@ const workspaceModels = createWorkspaceService({
   buildSystemPrompt: () => "",
   send: () => {},
   fetchImpl: async (url, init) => {
-    modelRequests.push({ url, body: JSON.parse(init.body) });
+    modelRequests.push({ url, body: JSON.parse(init.body), headers: init.headers });
     return {
       ok: true,
       status: 200,
-      text: async () => url.endsWith("/responses")
-        ? JSON.stringify({ id: "resp-test", status: "completed", output: [] })
-        : JSON.stringify({ choices: [{ message: { content: "ok" } }] }),
+      text: async () => {
+        if (url.endsWith("/responses")) return JSON.stringify({ id: "resp-test", status: "completed", output: [] });
+        if (url.endsWith("/messages")) return JSON.stringify({ id: "msg-test", type: "message", role: "assistant", content: [{ type: "text", text: "ok" }] });
+        if (url.endsWith("/api/chat")) return JSON.stringify({ model: "qwen", message: { role: "assistant", content: "ok" }, done: true, done_reason: "stop" });
+        return JSON.stringify({ choices: [{ message: { content: "ok" } }] });
+      },
     };
   },
 });
@@ -396,6 +399,48 @@ check(
   legacyConnection.ok === true && modelRequests[1]?.url === "https://api.openai.com/v1/chat/completions",
   JSON.stringify(modelRequests[1]),
 );
+const anthropicConnection = await workspaceModels.testModel({
+  baseURL: "https://api.anthropic.com/v1",
+  apiKey: "sk-ant-test-only",
+  model: "claude-sonnet-5",
+  protocol: "anthropic_messages",
+});
+check(
+  "workspace model test uses Anthropic Messages headers and body",
+  anthropicConnection.ok === true
+    && modelRequests[2]?.url === "https://api.anthropic.com/v1/messages"
+    && modelRequests[2]?.headers?.["x-api-key"] === "sk-ant-test-only"
+    && modelRequests[2]?.headers?.["anthropic-version"] === "2023-06-01"
+    && modelRequests[2]?.body.max_tokens === 8
+    && modelRequests[2]?.body.temperature === undefined,
+  JSON.stringify(modelRequests[2]),
+);
+const ollamaConnection = await workspaceModels.testModel({
+  baseURL: "http://127.0.0.1:11434",
+  apiKey: "",
+  model: "qwen3",
+  protocol: "ollama_chat",
+});
+check(
+  "workspace model test uses Ollama native chat without placeholder auth",
+  ollamaConnection.ok === true
+    && modelRequests[3]?.url === "http://127.0.0.1:11434/api/chat"
+    && modelRequests[3]?.headers?.authorization === undefined
+    && modelRequests[3]?.body.think === false,
+  JSON.stringify(modelRequests[3]),
+);
+const requestsBeforeInsecure = modelRequests.length;
+const insecureAnthropicConnection = await workspaceModels.testModel({
+  baseURL: "http://api.anthropic.example/v1",
+  apiKey: "sk-ant-test-only",
+  model: "claude-sonnet-5",
+  protocol: "anthropic_messages",
+});
+check(
+  "workspace model test rejects insecure remote native endpoints before fetch",
+  insecureAnthropicConnection.ok === false && /HTTPS/.test(insecureAnthropicConnection.error || "") && modelRequests.length === requestsBeforeInsecure,
+  JSON.stringify(insecureAnthropicConnection),
+);
 fs.writeFileSync(modelConfigPath, "{\"profiles\":{}}\n");
 const invalidConfigSave = workspaceModels.saveConfig(JSON.stringify({
   profiles: {
@@ -412,7 +457,7 @@ check(
   invalidConfigSave.ok === false && fs.readFileSync(modelConfigPath, "utf8") === "{\"profiles\":{}}\n",
   JSON.stringify(invalidConfigSave),
 );
-check("model protocol validator accepts both supported values", validateModelProtocolConfig({ profiles: { a: { protocol: "responses" }, b: { protocol: "chat_completions" } } }) === true);
+check("model protocol validator accepts all supported values", validateModelProtocolConfig({ profiles: { a: { protocol: "responses" }, b: { protocol: "chat_completions" }, c: { protocol: "anthropic_messages" }, d: { protocol: "ollama_chat" } } }) === true);
 fs.rmSync(modelTmp, { recursive: true, force: true });
 
 console.log("\n[services] app info");
