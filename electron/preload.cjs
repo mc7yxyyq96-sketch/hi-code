@@ -71,6 +71,57 @@ function editorSaveRequest(value) {
   };
 }
 
+function terminalSessionId(value) {
+  const checked = requireString(value, "terminalSessionId");
+  if (!checked.ok || !/^terminal-[a-f0-9-]{36}$/.test(checked.value)) {
+    return { ok: false, error: "terminalSessionId is invalid" };
+  }
+  return checked;
+}
+
+function terminalSize(value) {
+  const data = optionalObject(value);
+  const cols = Number(data.cols);
+  const rows = Number(data.rows);
+  if (!Number.isFinite(cols) || !Number.isFinite(rows) || cols < 20 || cols > 400 || rows < 5 || rows > 200) {
+    return { ok: false, error: "terminal size is invalid" };
+  }
+  return { ok: true, value: { cols: Math.round(cols), rows: Math.round(rows) } };
+}
+
+function terminalInput(value) {
+  const checked = requireString(value, "terminalInput");
+  if (!checked.ok || !checked.value || utf8Length(checked.value) > 64 * 1024) {
+    return { ok: false, error: "terminal input is empty or too large" };
+  }
+  return checked;
+}
+
+function terminalEvent(value) {
+  const data = optionalObject(value);
+  if (!/^terminal-[a-f0-9-]{36}$/.test(String(data.sessionId || ""))) return null;
+  if (!Number.isInteger(data.sequence) || data.sequence < 1) return null;
+  if (data.type === "output") {
+    if (typeof data.data !== "string" || utf8Length(data.data) > 64 * 1024) return null;
+    return { type: "output", sessionId: data.sessionId, sequence: data.sequence, data: data.data };
+  }
+  if (data.type === "exit") {
+    return {
+      type: "exit",
+      sessionId: data.sessionId,
+      sequence: data.sequence,
+      reason: typeof data.reason === "string" ? data.reason.slice(0, 64) : "closed",
+      exitCode: Number.isInteger(data.exitCode) ? data.exitCode : null,
+      signal: Number.isInteger(data.signal) ? data.signal : null,
+    };
+  }
+  return null;
+}
+
+function utf8Length(value) {
+  return new TextEncoder().encode(String(value)).byteLength;
+}
+
 contextBridge.exposeInMainWorld("hicode", {
   onOutput: (cb) => typeof cb === "function" && ipcRenderer.on("output", (_e, s) => cb(String(s || ""))),
   onReady: (cb) => typeof cb === "function" && ipcRenderer.on("ready", (_e, d) => cb(optionalObject(d))),
@@ -79,6 +130,15 @@ contextBridge.exposeInMainWorld("hicode", {
   onToolEvent: (cb) => typeof cb === "function" && ipcRenderer.on("tool-event", (_e, d) => cb(optionalObject(d))),
   onDiffsChanged: (cb) => typeof cb === "function" && ipcRenderer.on("diffs-changed", (_e, d) => cb(Array.isArray(d) ? d : [])),
   onRuntimeQueue: (cb) => typeof cb === "function" && ipcRenderer.on("runtime-queue", (_e, d) => cb(optionalObject(d))),
+  onTerminalEvent: (cb) => {
+    if (typeof cb !== "function") return () => {};
+    const handler = (_event, value) => {
+      const normalized = terminalEvent(value);
+      if (normalized) cb(normalized);
+    };
+    ipcRenderer.on("terminal:event", handler);
+    return () => ipcRenderer.removeListener("terminal:event", handler);
+  },
   send: (input) => {
     const checked = runtimeInput(input);
     if (!checked.ok) return checked;
@@ -137,6 +197,31 @@ contextBridge.exposeInMainWorld("hicode", {
   saveEditorFile: (payload) => {
     const checked = editorSaveRequest(payload);
     return checked.ok ? safeInvoke("editor:file:save", checked.value) : Promise.resolve(checked);
+  },
+  getTerminalCapabilities: () => safeInvoke("terminal:capabilities"),
+  createTerminal: (payload) => {
+    const checked = terminalSize(payload);
+    return checked.ok ? safeInvoke("terminal:create", checked.value) : Promise.resolve(checked);
+  },
+  getTerminalStatus: () => safeInvoke("terminal:status"),
+  writeTerminal: (sessionId, input) => {
+    const checkedId = terminalSessionId(sessionId);
+    if (!checkedId.ok) return Promise.resolve(checkedId);
+    const checkedInput = terminalInput(input);
+    return checkedInput.ok ? safeInvoke("terminal:write", checkedId.value, checkedInput.value) : Promise.resolve(checkedInput);
+  },
+  resizeTerminal: (sessionId, payload) => {
+    const checkedId = terminalSessionId(sessionId);
+    if (!checkedId.ok) return Promise.resolve(checkedId);
+    const checkedSize = terminalSize(payload);
+    return checkedSize.ok ? safeInvoke("terminal:resize", checkedId.value, checkedSize.value) : Promise.resolve(checkedSize);
+  },
+  closeTerminal: (sessionId, reason = "user_closed") => {
+    const checkedId = terminalSessionId(sessionId);
+    if (!checkedId.ok) return Promise.resolve(checkedId);
+    const checkedReason = requireString(reason, "reason");
+    if (!checkedReason.ok || !/^[a-z0-9_-]{1,64}$/i.test(checkedReason.value)) return Promise.resolve({ ok: false, error: "terminal close reason is invalid" });
+    return safeInvoke("terminal:close", checkedId.value, checkedReason.value);
   },
   listSessions: () => safeInvoke("list-sessions"),
   resumeSession: (id) => checkedInvoke("resume-session", id, "sessionId"),

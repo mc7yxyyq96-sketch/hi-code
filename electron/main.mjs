@@ -12,6 +12,7 @@ import { spawnSync } from "node:child_process";
 
 import { loadConfig, defaultProfile, HICODE_DIR } from "../dist/config.js";
 import { createRuntime, buildSystemPrompt } from "../dist/runtime.js";
+import { requestPermission } from "../dist/permissions.js";
 import { setSpinnerEnabled } from "../dist/ui.js";
 import { initMcp } from "../dist/mcp.js";
 import { listSessions, deleteSession, loadSession, replaySessionMessages } from "../dist/session-store.js";
@@ -49,6 +50,7 @@ import { createGitService } from "./services/git-service.mjs";
 import { createDiffIpcService } from "./services/diff-service.mjs";
 import { createWorkspaceService, modelCapabilityHint } from "./services/workspace-service.mjs";
 import { createEditorService } from "./services/editor-service.mjs";
+import { createTerminalService } from "./services/terminal-service.mjs";
 import { createSecurityService, redactSensitive } from "./services/security-service.mjs";
 import { createAppInfoService } from "./services/app-info-service.mjs";
 import { createUsageService } from "./services/usage-service.mjs";
@@ -86,6 +88,7 @@ let cwd = os.homedir();
 let mainServices = null;
 const askResolvers = new Map();
 let askSeq = 0;
+let terminalQuitInProgress = false;
 const toolEvents = [];
 const diffService = new DiffService(() => cwd);
 const worktreeRunner = new WorktreeRunner({ safeRoot: WORKTREE_RUNNER_DIR });
@@ -2462,6 +2465,25 @@ function makeRendererAsk() {
     });
 }
 
+async function authorizeTerminal(request) {
+  const currentRuntime = runtime;
+  if (!currentRuntime?.execEnv?.perms) return "deny";
+  return requestPermission(currentRuntime.execEnv.perms, request, async (question) => {
+    if (!win || win.isDestroyed()) return "n";
+    const result = await dialog.showMessageBox(win, {
+      type: "warning",
+      title: "启动集成终端",
+      message: "允许 Hi Code 在当前工作区启动交互终端吗？",
+      detail: `终端启动后，本次会话中的输入将直接由本机 shell 执行，不会逐条再次确认。切换工作区、关闭终端或关闭窗口会结束该进程树。\n\n${stripAnsi(question).replace(/\[[yan]\][^›]*›/i, "").trim()}`,
+      buttons: ["允许一次", "本次运行始终允许", "拒绝"],
+      defaultId: 2,
+      cancelId: 2,
+      noLink: true,
+    });
+    return result.response === 0 ? "y" : result.response === 1 ? "a" : "n";
+  });
+}
+
 function createWindow() {
   const rendererPath = path.join(__dirname, "..", "renderer", "index.html");
   const rendererUrl = pathToFileURL(rendererPath).href;
@@ -2482,6 +2504,10 @@ function createWindow() {
   });
   win.on("closed", () => {
     win = null;
+  });
+  win.on("close", () => {
+    const ownerId = win?.webContents?.id;
+    if (ownerId) void mainServices?.terminal?.closeAllForOwner(ownerId, "window_closed");
   });
   win.once("ready-to-show", () => {
     win?.show();
@@ -2542,6 +2568,14 @@ app.whenReady().then(() => {
 app.on("window-all-closed", () => {
   if (runtime) runtime.shutdown();
   if (process.platform !== "darwin") app.quit();
+});
+
+app.on("before-quit", (event) => {
+  const terminal = mainServices?.terminal;
+  if (terminalQuitInProgress || !terminal?.activeCount?.()) return;
+  event.preventDefault();
+  terminalQuitInProgress = true;
+  Promise.resolve(terminal.closeAll("app_quit")).finally(() => app.quit());
 });
 
 function createMainServices() {
@@ -2622,11 +2656,25 @@ function createMainServices() {
       getCwd: () => cwd,
       resolveInCwd,
     }),
+    terminal: createTerminalService({
+      getCwd: () => cwd,
+      authorize: authorizeTerminal,
+      logger: (event, payload) => appendRuntimeLog({
+        id: `terminal-${Date.now()}-${crypto.randomUUID()}`,
+        type: event,
+        title: event,
+        payload,
+        createdAt: Date.now(),
+      }),
+    }),
     workspace: createWorkspaceService({
       dialog,
       getWindow: () => win,
       getCwd: () => cwd,
-      setCwd: (nextCwd) => { cwd = nextCwd; },
+      setCwd: async (nextCwd) => {
+        await mainServices?.terminal?.closeAll("workspace_changed");
+        cwd = nextCwd;
+      },
       buildRuntime,
       resolveInCwd,
       listSessions,

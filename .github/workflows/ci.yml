@@ -34,7 +34,7 @@ jobs:
           set -e
           for t in feature services jobs providers worktrees arena industrial \
                    domain-packs agent-team industrial-tools quality-gates \
-                   release-builder samples dod renderer entrypoints security; do
+                   release-builder samples dod renderer terminal entrypoints security; do
             echo "=== test:$t ==="
             npm run -s "test:$t"
           done

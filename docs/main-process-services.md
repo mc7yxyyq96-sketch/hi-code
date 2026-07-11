@@ -66,6 +66,11 @@ Sprint 1A splits Electron main-process IPC registration into service modules wit
   - Workspace-confined UTF-8 file snapshots and saves for the integrated editor
   - Enforces a 2 MiB bound, SHA-256 expected revisions, conflict refusal, sibling temporary writes, fsync, and atomic rename
   - Force overwrite remains an explicit Renderer confirmation; the service never retries a stale normal save automatically
+- `electron/services/terminal-service.mjs`
+  - Owns real PTY capability detection, policy authorization, trusted shell selection, input/output, resize, and process-tree cleanup
+  - Binds one terminal to one renderer owner and the current workspace; workspace/window/app close ends the session
+  - Uses the shared safe child environment, 64 KiB IPC bounds, a one MiB in-memory transcript tail, and redacted metadata-only logs
+  - Terminal startup is one explicit authorization unit. Commands typed after startup are not approved one by one, and the shell retains the desktop user's OS permissions
 - `electron/services/security-service.mjs`
   - Auth IPC registration
   - Path guard and sensitive log redaction utilities
@@ -104,6 +109,8 @@ The normalized error path redacts API keys, bearer tokens, password-like fields,
 - Preload validates parameter shape before invoking main-process channels.
 - Workspace file reads use the existing workspace path confinement.
 - Integrated editor open/save uses the same workspace path authority. It rejects symlink escapes, binary or invalid UTF-8 content, oversized files, and stale normal saves. A force save is available only through an explicit typed request after visible user confirmation.
+- Integrated terminal creation uses the same Runtime permission state and a main-process-owned PTY. The renderer cannot select an executable, cwd, arguments, or environment. The terminal starts in the active workspace and is closed before workspace changes; this workspace binding is not an OS filesystem sandbox.
+- Terminal children receive a minimal safe environment and never inherit API keys, tokens, passwords, unknown variables, or `SSH_AUTH_SOCK`. Raw input, output, and transcripts are not persisted in logs.
 - Attachment records and content-addressed blobs stay under app data, use owner permissions, and are revalidated on read. Attachment IDs are session-owned and bounded before Runtime queueing.
 - Store install validation continues to block remote `sourcePath` and `sourceRoot`.
 - Remote downloads continue to require HTTPS.
@@ -140,6 +147,7 @@ Renderer and preload channels are unchanged:
 - `diffs:list`, `diffs:accept`, `diffs:reject`, `diffs:accept-all`, `diffs:reject-all`, `diffs:clear-archived`
 - `git:status`, `git:diff`, `git:stage`, `git:unstage`, `git:commit-message`, `git:commit`
 - `editor:file:open`, `editor:file:save`
+- `terminal:capabilities`, `terminal:create`, `terminal:status`, `terminal:write`, `terminal:resize`, `terminal:close`
 - `pick-folder`, `get-cwd`, `list-dir`, `read-file`
 - `attach-file`, `attach-image`, `attachments:list`, `attachment:remove`
 - `list-sessions`, `resume-session`, `delete-session`
@@ -161,6 +169,7 @@ npm run verify
 node test/feature-tests.mjs
 node test/main-process-services-tests.mjs
 npm run test:editor-workbench
+npm run test:terminal
 node test/patch-arena-tests.mjs
 node test/industrial-project-tests.mjs
 node test/domain-pack-tests.mjs

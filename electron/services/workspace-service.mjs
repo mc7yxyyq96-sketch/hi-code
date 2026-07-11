@@ -75,7 +75,7 @@ export function createWorkspaceService({
     async pickFolder() {
       const result = await dialog.showOpenDialog(getWindow(), { properties: ["openDirectory"] });
       if (!result.canceled && result.filePaths[0]) {
-        setCwd(result.filePaths[0]);
+        await Promise.resolve(setCwd(result.filePaths[0]));
         buildRuntime();
       }
       return getCwd();

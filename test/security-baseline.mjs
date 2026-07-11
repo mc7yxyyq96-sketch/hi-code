@@ -65,6 +65,7 @@ const council = fs.readFileSync(path.join(root, "src", "agents", "council.ts"), 
 const manager = fs.readFileSync(path.join(root, "src", "agents", "manager.ts"), "utf8");
 const workspaceService = fs.readFileSync(path.join(root, "electron", "services", "workspace-service.mjs"), "utf8");
 const editorService = fs.readFileSync(path.join(root, "electron", "services", "editor-service.mjs"), "utf8");
+const terminalService = fs.readFileSync(path.join(root, "electron", "services", "terminal-service.mjs"), "utf8");
 const attachmentStore = fs.readFileSync(path.join(root, "src", "attachment-store.ts"), "utf8");
 const attachmentMaterializer = fs.readFileSync(path.join(root, "src", "attachment-materializer.ts"), "utf8");
 const commandRegistry = fs.readFileSync(path.join(root, "src", "command-registry.ts"), "utf8");
@@ -181,6 +182,13 @@ check("editor preload validates bounded path content and revision payloads", pre
 check("editor service confines paths and rejects stale writes", editorService.includes("resolveInCwd(requestedPath)") && editorService.includes('failure("path_outside_workspace"') && editorService.includes('code: "file_conflict"') && editorService.includes("beforeReplace.file.revision !== expectedRevision"));
 check("editor service uses bounded UTF-8 snapshots and atomic sibling replacement", editorService.includes("MAX_EDITOR_BYTES") && editorService.includes('TextDecoder("utf-8", { fatal: true })') && editorService.includes('openSync(tempPath, "wx"') && editorService.includes("renameSync(tempPath, current.target)"));
 check("editor IPC remains centralized and typed", ipcRegister.includes("registerEditorIpc") && !/ipcMain\.handle\(["']editor:file:/.test(main));
+check("terminal preload validates session, dimensions, and bounded input", preload.includes("function terminalSessionId") && preload.includes("function terminalSize") && preload.includes("function terminalInput") && preload.includes("64 * 1024"));
+check("terminal IPC remains centralized without raw PTY exposure", ipcRegister.includes("registerTerminalIpc") && !/ipcMain\.handle\(["']terminal:/.test(main) && !preload.includes("node-pty"));
+check("terminal start requires runtime policy authorization before spawn", terminalService.indexOf("await authorize(") < terminalService.indexOf("pty.spawn(") && main.includes("requestPermission(currentRuntime.execEnv.perms"));
+check("terminal sessions are owner-scoped and close with their window", terminalService.includes("session.ownerId !== owner.id") && terminalService.includes('owner.once("destroyed"') && main.includes("closeAllForOwner(ownerId"));
+check("terminal environment is minimized and persisted logs omit content", terminalService.includes("buildSafeChildEnv") && terminalService.includes("HISTFILE: os.devNull") && terminalService.includes("sanitizeTerminalLog") && !/env:\s*process\.env/.test(terminalService));
+check("terminal output and transcript are bounded", terminalService.includes("MAX_TERMINAL_OUTPUT_EVENT_BYTES") && terminalService.includes("MAX_TERMINAL_TRANSCRIPT_BYTES") && terminalService.includes("utf8Tail"));
+check("terminal cleanup covers process groups, descendants, and Windows trees", terminalService.includes("collectUnixDescendants") && terminalService.includes('process.kill(-pid, "SIGTERM")') && terminalService.includes('"/T", "/F"'));
 check("attachments use app-data content addressing without source paths", main.includes("ATTACHMENT_STORE_DIR") && main.includes("new FileAttachmentStore") && attachmentStore.includes("sha256") && attachmentStore.includes("blobKey") && !attachmentStore.includes("sourcePath"));
 check("attachment store enforces owner permissions and integrity", attachmentStore.includes("0o700") && attachmentStore.includes("0o600") && attachmentStore.includes("attachment_integrity_failed") && attachmentStore.includes("isSymbolicLink"));
 check("attachment capability checks happen before transport", agent.includes("materializeAttachmentMessages") && attachmentMaterializer.indexOf("negotiateModelProviderCapabilities") < attachmentMaterializer.indexOf("store.read(record.id)"));
@@ -313,6 +321,7 @@ check("verify script includes Definition of Done tests", verifyScript.includes('
 check("verify script includes typed App Shell tests", verifyScript.includes('"test:app-shell"') && verifyScript.includes("test/app-shell-tests.ts"));
 check("verify script includes typed workspace shell tests", verifyScript.includes('"test:workspace-shell"') && verifyScript.includes("test/workspace-shell-tests.ts"));
 check("verify script includes conflict-safe editor workbench tests", verifyScript.includes('"test:editor-workbench"') && verifyScript.includes("test/editor-workbench-tests.ts"));
+check("verify script includes integrated terminal tests", verifyScript.includes('"test:terminal-service"') && verifyScript.includes("test/terminal-service-tests.mjs") && verifyScript.includes('"test:terminal-renderer"') && verifyScript.includes("test/terminal-workbench-tests.ts"));
 check("verify script includes program control tests", verifyScript.includes('"test:program"') && verifyScript.includes("test/program-control-tests.mjs"));
 check("verify script includes usage persistence tests", verifyScript.includes('"test:usage"') && verifyScript.includes("test/usage-store-tests.mjs"));
 

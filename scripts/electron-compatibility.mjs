@@ -17,6 +17,10 @@ export const ELECTRON_COMPATIBILITY_TARGET = Object.freeze({
   supportedStableMajorsAtDecision: Object.freeze([41, 42, 43]),
 });
 
+export const APPROVED_NATIVE_PRODUCTION_DEPENDENCIES = Object.freeze([
+  Object.freeze({ name: "node-pty", version: "1.2.0-beta.12", signals: Object.freeze(["install-script"]) }),
+]);
+
 function packageNameFromLockPath(lockPath) {
   const marker = "node_modules/";
   const index = lockPath.lastIndexOf(marker);
@@ -51,6 +55,7 @@ export function inspectElectronCompatibility(root = defaultRoot) {
   const installedElectron = readJson(root, "node_modules/electron/package.json");
   const installedBuilder = readJson(root, "node_modules/electron-builder/package.json");
   const installedNpm = readJson(root, "node_modules/npm/package.json");
+  const installedPty = readJson(root, "node_modules/node-pty/package.json");
   const mainSource = fs.readFileSync(path.join(root, "electron", "main.mjs"), "utf8");
   const workflow = fs.readFileSync(path.join(root, ".github", "workflows", "ci.yml"), "utf8");
   const ciEvidence = readJson(root, "reports/evidence/HC-PLAT-110/ci-matrix.json");
@@ -74,7 +79,16 @@ export function inspectElectronCompatibility(root = defaultRoot) {
   check("renderer-sandbox", /sandbox:\s*true/.test(mainSource), "sandbox must remain true");
   check("window-open-guard", mainSource.includes("setWindowOpenHandler") && mainSource.includes('action: "deny"'), "new renderer windows must be denied");
   check("navigation-guard", mainSource.includes('webContents.on("will-navigate"') && mainSource.includes("event.preventDefault()"), "untrusted renderer navigation must be blocked");
-  check("native-production-inventory", nativeProductionDependencies.length === 0, nativeProductionDependencies.map((entry) => `${entry.name}@${entry.version}`).join(", ") || "none");
+  const approvedNative = nativeProductionDependencies.map(({ name, version, signals }) => ({ name, version, signals }));
+  check("native-production-inventory", JSON.stringify(approvedNative) === JSON.stringify(APPROVED_NATIVE_PRODUCTION_DEPENDENCIES), approvedNative.map((entry) => `${entry.name}@${entry.version}`).join(", ") || "none");
+  check("node-pty-package-pin", pkg.dependencies?.["node-pty"] === "1.2.0-beta.12" && lockRoot.dependencies?.["node-pty"] === "1.2.0-beta.12" && installedPty.version === "1.2.0-beta.12", installedPty.version);
+  check("node-pty-asar-unpack", Array.isArray(pkg.build?.asarUnpack) && pkg.build.asarUnpack.includes("node_modules/node-pty/**/*"), JSON.stringify(pkg.build?.asarUnpack || []));
+  const hostPrebuildDir = path.join(root, "node_modules", "node-pty", "prebuilds", `${process.platform}-${process.arch}`);
+  const hostPtyBinary = path.join(hostPrebuildDir, "pty.node");
+  const hostSpawnHelper = path.join(hostPrebuildDir, "spawn-helper");
+  const hostPrebuildReady = fs.existsSync(hostPtyBinary)
+    && (process.platform !== "darwin" || (fs.existsSync(hostSpawnHelper) && Boolean(fs.statSync(hostSpawnHelper).mode & 0o111)));
+  check("node-pty-host-prebuild", hostPrebuildReady, hostPrebuildDir);
   check("three-platform-ci-matrix", /os:\s*\[ubuntu-latest, macos-latest, windows-latest\]/.test(workflow), "Ubuntu, macOS, and Windows are required");
   check("linux-xvfb-smoke", workflow.includes("xvfb-run -a npm run test:electron-e2e"), "Linux Electron smoke requires Xvfb");
   check("native-desktop-smoke", workflow.includes("if: runner.os != 'Linux'") && workflow.includes("run: npm run test:electron-e2e"), "macOS and Windows must launch Electron directly");

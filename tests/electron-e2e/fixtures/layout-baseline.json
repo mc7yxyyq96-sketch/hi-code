@@ -10,6 +10,7 @@
     { "button": "#jobsBtn", "view": "#jobView", "name": "Job Center" },
     { "button": "#arenaBtn", "view": "#arenaView", "name": "Patch Arena" },
     { "button": "#industrialBtn", "view": "#industrialView", "name": "Industrial Project" },
+    { "button": "#terminalBtn", "view": "#terminalView", "name": "Integrated terminal" },
     { "button": "#gitBtn", "view": "#gitView", "name": "Git and diffs" },
     { "button": "#storeBtn", "view": "#capabilityView", "name": "Store" }
   ],

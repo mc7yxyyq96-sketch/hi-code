@@ -40,9 +40,28 @@ This task does not implement app preview, Git/PR/CI orchestration, industrial ad
 - Output events are owner-scoped, sequence-numbered, size-bounded, and detached before renderer delivery.
 - Cleanup is idempotent and limited to sessions created by the service.
 
-## Planned Evidence
+## Implementation
 
-Focused service and renderer tests will cover authorization, workspace confinement, environment minimization, interactive I/O, resize, bounded output, ownership, and cleanup. Real Electron E2E will cover keyboard interaction and terminal close behavior at compact and desktop widths. The task will then capture build, verify, release check, feature, security, DoD, production audit, Electron E2E, program-control, and diff-check evidence from a clean source commit.
+- `electron/services/terminal-service.mjs` owns the real `node-pty` lifecycle, trusted profile-free shell selection, one-session-per-window ownership, bounded sequencing, transcript tail, resize, and process-tree termination.
+- `electron/main.mjs` reuses the Runtime permission state and a native confirmation dialog before spawn. Workspace changes and window/app shutdown close the owning PTY first.
+- `electron/preload.cjs` and centralized IPC expose only typed, bounded terminal operations and an unsubscribable event listener; renderer code never receives a native PTY or generic invoke channel.
+- `renderer/app-shell/terminal/` lazy-loads xterm and the fit add-on, restores only a bounded snapshot, serializes input writes, deduplicates output sequence numbers, and reports unavailable native support instead of rendering a fake terminal.
+- The packaged Electron app unpacks the reviewed native `node-pty@1.2.0-beta.12` module. Compatibility checks verify the exact package, target prebuild, executable macOS helper, and CI platform matrix.
+
+## Verification So Far
+
+- Production build: passed; xterm remains outside the initial App Shell chunk.
+- App Shell: 13/13 passed.
+- Terminal service: 10/10 passed, including a real PTY in a workspace containing spaces and Chinese characters and verified descendant cleanup.
+- Terminal renderer: 7/7 passed.
+- Electron compatibility: 29/29 passed.
+- Security baseline: 187/187 passed before the final verify-coverage assertion was added.
+- Real Electron acceptance: passed at 1024 px and 720 px with keyboard input, output, close, and inactive-status verification.
+- macOS package inspection: passed; the native module and executable spawn helper are present under `app.asar.unpacked`.
+
+## Final Evidence Plan
+
+The reproducible `program:evidence:terminal` profile captures focused terminal, service, App Shell, renderer, compatibility, security, build, verify, release, feature, DoD, production-audit, real Electron, macOS package, packaged-terminal, program-control, and diff-check gates from a clean implementation commit. Cross-platform native behavior remains enforced by the existing macOS/Linux/Windows CI matrix before merge; local evidence is macOS arm64.
 
 ## Rollback
 
