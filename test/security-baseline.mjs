@@ -64,6 +64,7 @@ const context = fs.readFileSync(path.join(root, "src", "context.ts"), "utf8");
 const council = fs.readFileSync(path.join(root, "src", "agents", "council.ts"), "utf8");
 const manager = fs.readFileSync(path.join(root, "src", "agents", "manager.ts"), "utf8");
 const workspaceService = fs.readFileSync(path.join(root, "electron", "services", "workspace-service.mjs"), "utf8");
+const editorService = fs.readFileSync(path.join(root, "electron", "services", "editor-service.mjs"), "utf8");
 const attachmentStore = fs.readFileSync(path.join(root, "src", "attachment-store.ts"), "utf8");
 const attachmentMaterializer = fs.readFileSync(path.join(root, "src", "attachment-materializer.ts"), "utf8");
 const commandRegistry = fs.readFileSync(path.join(root, "src", "command-registry.ts"), "utf8");
@@ -176,6 +177,10 @@ check("preload normalizes Release Builder payloads", preload.includes('getReleas
 check("preload exposes Sample Project API", preload.includes('createIndustrialControlBoxSample: (payload) => safeInvoke("sample:industrial-control-box:create", optionalObject(payload))'));
 check("IPC handlers use normalized wrapper", ipcUtils.includes("createIpcRegistrar") && /ipcMain\.handle\(channel/.test(ipcUtils));
 check("main process delegates IPC registration", main.includes("registerIpcHandlers({") && ipcRegister.includes("registerSecurityIpc"));
+check("editor preload validates bounded path content and revision payloads", preload.includes("function editorOpenRequest") && preload.includes("function editorSaveRequest") && preload.includes("expectedRevision must be a valid SHA-256 revision") && preload.includes('safeInvoke("editor:file:save", checked.value)'));
+check("editor service confines paths and rejects stale writes", editorService.includes("resolveInCwd(requestedPath)") && editorService.includes('failure("path_outside_workspace"') && editorService.includes('code: "file_conflict"') && editorService.includes("beforeReplace.file.revision !== expectedRevision"));
+check("editor service uses bounded UTF-8 snapshots and atomic sibling replacement", editorService.includes("MAX_EDITOR_BYTES") && editorService.includes('TextDecoder("utf-8", { fatal: true })') && editorService.includes('openSync(tempPath, "wx"') && editorService.includes("renameSync(tempPath, current.target)"));
+check("editor IPC remains centralized and typed", ipcRegister.includes("registerEditorIpc") && !/ipcMain\.handle\(["']editor:file:/.test(main));
 check("attachments use app-data content addressing without source paths", main.includes("ATTACHMENT_STORE_DIR") && main.includes("new FileAttachmentStore") && attachmentStore.includes("sha256") && attachmentStore.includes("blobKey") && !attachmentStore.includes("sourcePath"));
 check("attachment store enforces owner permissions and integrity", attachmentStore.includes("0o700") && attachmentStore.includes("0o600") && attachmentStore.includes("attachment_integrity_failed") && attachmentStore.includes("isSymbolicLink"));
 check("attachment capability checks happen before transport", agent.includes("materializeAttachmentMessages") && attachmentMaterializer.indexOf("negotiateModelProviderCapabilities") < attachmentMaterializer.indexOf("store.read(record.id)"));
@@ -307,6 +312,7 @@ check("verify script includes sample project tests", verifyScript.includes('"tes
 check("verify script includes Definition of Done tests", verifyScript.includes('"test:dod"'));
 check("verify script includes typed App Shell tests", verifyScript.includes('"test:app-shell"') && verifyScript.includes("test/app-shell-tests.ts"));
 check("verify script includes typed workspace shell tests", verifyScript.includes('"test:workspace-shell"') && verifyScript.includes("test/workspace-shell-tests.ts"));
+check("verify script includes conflict-safe editor workbench tests", verifyScript.includes('"test:editor-workbench"') && verifyScript.includes("test/editor-workbench-tests.ts"));
 check("verify script includes program control tests", verifyScript.includes('"test:program"') && verifyScript.includes("test/program-control-tests.mjs"));
 check("verify script includes usage persistence tests", verifyScript.includes('"test:usage"') && verifyScript.includes("test/usage-store-tests.mjs"));
 

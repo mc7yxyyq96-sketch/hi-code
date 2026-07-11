@@ -89,6 +89,7 @@ export interface WorkspaceActions {
   rollbackAllDiffs(): unknown | Promise<unknown>;
   toggleDiffHistory(): unknown | Promise<unknown>;
   clearDiffHistory(): unknown | Promise<unknown>;
+  requestDiffRevision(comment: import("./review.ts").DiffReviewComment): unknown | Promise<unknown>;
 }
 
 export type WorkspaceActionName = keyof WorkspaceActions;

@@ -1,11 +1,17 @@
-import { useSyncExternalStore } from "react";
-import { buildUnifiedDiffLines } from "./diff.ts";
+import { useEffect, useState, useSyncExternalStore } from "react";
+import { buildUnifiedDiffLines, type UnifiedDiffLine } from "./diff.ts";
 import type { WorkspaceController } from "./controller.ts";
+import type { DiffReviewComment } from "./review.ts";
 import type { WorkspaceStore } from "./store.ts";
 
 interface InspectorProps {
   controller: WorkspaceController;
   store: WorkspaceStore;
+}
+
+interface ReviewTarget {
+  line: number;
+  side: "before" | "after";
 }
 
 function diffStatusText(status: string) {
@@ -14,16 +20,46 @@ function diffStatusText(status: string) {
 
 export function Inspector({ controller, store }: InspectorProps) {
   const state = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
+  const [reviewTarget, setReviewTarget] = useState<ReviewTarget | null>(null);
+  const [commentBody, setCommentBody] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const pending = state.diffs.filter((diff) => diff.status === "pending");
   const archived = state.diffs.filter((diff) => diff.status !== "pending");
   const visible = state.showArchivedDiffs ? [...pending, ...archived] : pending;
   const selected = visible.find((diff) => diff.id === state.selectedDiffId) || visible[0];
   const actions = new Set(state.availableActions);
-  const run = (name: Parameters<WorkspaceController["run"]>[0], value?: string) => {
-    void controller.run(name, ...(value ? [value] : [])).catch(() => undefined);
+  const run = (name: Parameters<WorkspaceController["run"]>[0], value?: unknown) => {
+    void controller.run(name, ...(value === undefined ? [] : [value])).catch(() => undefined);
   };
   const enabled = selected?.status === "pending";
   const lines = selected ? buildUnifiedDiffLines(selected) : [];
+
+  useEffect(() => {
+    setReviewTarget(null);
+    setCommentBody("");
+    setSubmitting(false);
+  }, [selected?.id]);
+
+  const submitReview = async () => {
+    if (!selected || !reviewTarget || !commentBody.trim() || !actions.has("requestDiffRevision")) return;
+    const comment: DiffReviewComment = {
+      diffId: selected.id,
+      path: selected.path,
+      line: reviewTarget.line,
+      side: reviewTarget.side,
+      body: commentBody,
+    };
+    setSubmitting(true);
+    try {
+      await controller.run("requestDiffRevision", comment);
+      setCommentBody("");
+      setReviewTarget(null);
+    } catch {
+      // Controller publishes a visible error; preserve the draft for retry.
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div className="inspector-workspace" data-workspace-owner="react">
@@ -45,9 +81,19 @@ export function Inspector({ controller, store }: InspectorProps) {
           </button>
         ))}
       </div>
-      <pre className="diff-view">
-        {selected ? lines.map((line, index) => <span className={`diff-code-line ${line.kind}`} key={`${selected.id}-${index}`}>{line.text || " "}</span>) : state.diffs.length ? "当前没有可归档或回滚的文件改动。" : "还没有文件改动。"}
-      </pre>
+      <div className="diff-view" role="listbox" aria-label="文件改动行">
+        {selected ? lines.map((line, index) => <DiffLine key={`${selected.id}-${index}`} line={line} selected={Boolean(reviewTarget && line.line === reviewTarget.line && line.side === reviewTarget.side)} reviewable={Boolean(enabled && actions.has("requestDiffRevision"))} onSelect={setReviewTarget} />) : <span className="diff-code-line meta">{state.diffs.length ? "当前没有可归档或回滚的文件改动。" : "还没有文件改动。"}</span>}
+      </div>
+      {enabled ? (
+        <div className="diff-review">
+          <div className="diff-review-head">
+            <strong>行级审查</strong>
+            <span>{reviewTarget ? `${reviewTarget.side === "after" ? "新" : "旧"}文件第 ${reviewTarget.line} 行` : "先选择一行"}</span>
+          </div>
+          <textarea value={commentBody} maxLength={4_000} disabled={!reviewTarget || submitting} onChange={(event) => setCommentBody(event.target.value)} placeholder="说明需要修改的内容。提交后会作为真实任务进入当前会话。" />
+          <button className="primary" type="button" disabled={!reviewTarget || !commentBody.trim() || submitting || !actions.has("requestDiffRevision")} onClick={() => { void submitReview(); }}>{submitting ? "正在提交…" : "请求修改"}</button>
+        </div>
+      ) : null}
       <div className="diff-actions">
         <button className="primary" type="button" disabled={!enabled || !actions.has("archiveDiff")} onClick={() => run("archiveDiff")}>归档</button>
         <button className="ghost" type="button" disabled={!enabled || !actions.has("rollbackDiff")} onClick={() => run("rollbackDiff")}>回滚</button>
@@ -55,5 +101,15 @@ export function Inspector({ controller, store }: InspectorProps) {
         <button className="ghost" type="button" disabled={!pending.length || !actions.has("rollbackAllDiffs")} onClick={() => run("rollbackAllDiffs")}>全部回滚</button>
       </div>
     </div>
+  );
+}
+
+function DiffLine({ line, selected, reviewable, onSelect }: { line: UnifiedDiffLine; selected: boolean; reviewable: boolean; onSelect(target: ReviewTarget): void }) {
+  if (!line.line || !line.side) return <span className={`diff-code-line ${line.kind}`}>{line.text || " "}</span>;
+  return (
+    <button className={`diff-code-line ${line.kind}${selected ? " selected" : ""}`} type="button" role="option" aria-selected={selected} disabled={!reviewable} onClick={() => onSelect({ line: line.line!, side: line.side! })}>
+      <span className="diff-line-number">{line.line}</span>
+      <code>{line.text || " "}</code>
+    </button>
   );
 }

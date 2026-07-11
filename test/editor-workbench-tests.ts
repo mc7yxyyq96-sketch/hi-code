@@ -223,6 +223,7 @@ await check("production sources expose the editor and real review action", () =>
   const registrar = fs.readFileSync(path.resolve("electron/ipc/register-ipc-handlers.mjs"), "utf8");
   const api = fs.readFileSync(path.resolve("renderer/api/hicode-api.js"), "utf8");
   const fileTree = fs.readFileSync(path.resolve("renderer/components/file-tree.js"), "utf8");
+  const codeEditor = fs.readFileSync(path.resolve("renderer/app-shell/editor/code-editor.ts"), "utf8");
   const inspector = fs.readFileSync(path.resolve("renderer/app-shell/workspace/Inspector.tsx"), "utf8");
   const bootstrap = fs.readFileSync(path.resolve("renderer/app/bootstrap.js"), "utf8");
   const e2e = fs.readFileSync(path.resolve("tests/electron-e2e/run.mjs"), "utf8");
@@ -231,7 +232,8 @@ await check("production sources expose the editor and real review action", () =>
   assert.match(registrar, /registerEditorIpc/);
   assert.match(api, /openEditorFile/);
   assert.match(api, /saveEditorFile/);
-  assert.match(fileTree, /EditorView|CodeMirror/);
+  assert.match(fileTree, /hicodeAppShell.*editor/);
+  assert.match(codeEditor, /EditorView/);
   assert.match(inspector, /requestDiffRevision/);
   assert.match(bootstrap, /buildRevisionRequest|requestDiffRevision/);
   assert.match(e2e, /file_conflict/);

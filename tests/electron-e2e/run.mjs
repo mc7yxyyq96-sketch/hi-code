@@ -22,6 +22,7 @@ let modelServer;
 let modelBaseURL = "";
 let modelServerRequests = 0;
 let embeddedRuntime = null;
+let editorFixturePath = "";
 
 function safeElectronEnv(isolatedHome) {
   const allowed = [
@@ -346,10 +347,110 @@ async function verifySessionKeyboardAndLongTranscript(page) {
   });
 }
 
+async function verifyIntegratedEditor(page) {
+  await setContentSize(720, baseline.height);
+  const filesButton = page.locator("#filesBtn");
+  await filesButton.scrollIntoViewIfNeeded();
+  await filesButton.click();
+  await waitVisible(page, "#files");
+  const sourceDirectory = page.locator("#fileList .file-row").filter({ hasText: "src" });
+  await sourceDirectory.click();
+  const sourceFile = page.locator("#fileList .file-row").filter({ hasText: "editor-e2e.ts" });
+  await sourceFile.click();
+  await waitVisible(page, "#fileEditorMount .cm-editor");
+  await page.waitForFunction(() => document.querySelector("#files")?.dataset.editorState === "clean");
+
+  const editorContent = page.locator("#fileEditorMount .cm-content");
+  await editorContent.click();
+  await page.keyboard.press(process.platform === "darwin" ? "Meta+A" : "Control+A");
+  await page.keyboard.insertText("export const editorValue = 2;\n");
+  await page.waitForFunction(() => document.querySelector("#files")?.dataset.editorState === "dirty");
+  await page.locator("#fileSave").click();
+  await page.waitForFunction(() => document.querySelector("#files")?.dataset.editorState === "clean");
+  assert.equal(fs.readFileSync(editorFixturePath, "utf8"), "export const editorValue = 2;\n");
+
+  await editorContent.click();
+  await page.keyboard.press(process.platform === "darwin" ? "Meta+A" : "Control+A");
+  await page.keyboard.insertText("export const editorValue = 3;\n");
+  fs.writeFileSync(editorFixturePath, "export const externalValue = 9;\n");
+  await page.locator("#fileSave").click();
+  await page.waitForFunction(() => document.querySelector("#files")?.dataset.editorState === "conflict");
+  const fileConflict = await page.locator("#fileEditorStatus").textContent();
+  assert.match(fileConflict || "", /磁盘文件已被其他程序修改/);
+  assert.equal(fs.readFileSync(editorFixturePath, "utf8"), "export const externalValue = 9;\n", "file_conflict overwrote the external disk change");
+  assert.equal(await page.locator("#fileForceSave").isVisible(), true, "Conflict does not expose an explicit force action");
+  assert.equal(await page.locator("#fileSave").isDisabled(), true, "Conflict still permits a normal stale save");
+  await editorContent.click();
+  await page.keyboard.press(process.platform === "darwin" ? "Meta+End" : "Control+End");
+  await page.keyboard.insertText(" ");
+  assert.equal(await page.locator("#files").getAttribute("data-editor-state"), "conflict", "Typing after a conflict hid the conflict state");
+  assert.equal(await page.locator("#fileForceSave").isVisible(), true, "Typing after a conflict hid the force action");
+  const editorLayout = await page.locator("#files .file-card").evaluate((element) => ({
+    width: element.clientWidth,
+    scrollWidth: element.scrollWidth,
+  }));
+  assert.ok(editorLayout.scrollWidth <= editorLayout.width + 1, `Compact editor overflows horizontally: ${JSON.stringify(editorLayout)}`);
+  const editorConflictImage = await page.screenshot({
+    path: path.join(resultDir, "editor-conflict-720.png"),
+    animations: "disabled",
+  });
+  assert.ok(editorConflictImage.length > 12_000, "Editor conflict screenshot is unexpectedly small");
+
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.locator("#fileReload").click();
+  await page.waitForFunction(() => document.querySelector("#files")?.dataset.editorState === "clean");
+  assert.match(await editorContent.textContent() || "", /externalValue/);
+  await page.locator("#file-close").click();
+  assert.equal(await page.locator("#files").isHidden(), true);
+}
+
+async function verifyDiffCommentRevisionRequest(page) {
+  await setContentSize(1440, baseline.height);
+  await openLocalChat(page);
+  await page.locator(".toast").evaluateAll((elements) => elements.forEach((element) => element.click()));
+  const requestsBefore = modelServerRequests;
+  const assistantMessagesBefore = await page.locator(".msg.agent .agent-body").count();
+  await page.evaluate(() => {
+    const workspace = window.hicodeAppShell?.workspace;
+    if (!workspace) throw new Error("Typed workspace bridge is unavailable");
+    workspace.setDiffs([{
+      id: "e2e-review-diff",
+      path: "src/editor-e2e.ts",
+      before: "export const editorValue = 2;\n",
+      after: "export const externalValue = 9;\n",
+      status: "pending",
+    }], "e2e-review-diff");
+  });
+  const changedLine = page.locator("#diffPanel .diff-code-line.add").first();
+  await changedLine.click();
+  const reviewComment = "请把变量名改为 validatedValue，并保留导出。";
+  await page.locator("#diffPanel .diff-review textarea").fill(reviewComment);
+  const reviewImage = await page.screenshot({
+    path: path.join(resultDir, "diff-review-comment-1440.png"),
+    animations: "disabled",
+  });
+  assert.ok(reviewImage.length > 12_000, "Diff review screenshot is unexpectedly small");
+  await page.locator("#diffPanel .diff-review button").click();
+  await page.waitForFunction((text) => [...document.querySelectorAll(".msg.user")].some((message) => message.textContent?.includes(text)), reviewComment);
+  await page.waitForFunction(
+    (count) => document.querySelectorAll(".msg.agent .agent-body").length > count,
+    assistantMessagesBefore,
+    { timeout: 8_000 },
+  );
+  const latestAssistant = page.locator(".msg.agent .agent-body").last();
+  await latestAssistant.waitFor({ state: "visible", timeout: 8_000 });
+  assert.match(await latestAssistant.textContent() || "", /protocol-native desktop response/);
+  await page.waitForFunction(() => document.querySelector("#runStatus")?.classList.contains("hidden"), undefined, { timeout: 8_000 });
+  assert.equal(modelServerRequests, requestsBefore + 1, "Diff review comment did not enter the real model Runtime");
+}
+
 async function main() {
   fs.rmSync(resultDir, { recursive: true, force: true });
   fs.mkdirSync(resultDir, { recursive: true, mode: 0o755 });
   userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), "hicode-electron-e2e-"));
+  editorFixturePath = path.join(userDataDir, "src", "editor-e2e.ts");
+  fs.mkdirSync(path.dirname(editorFixturePath), { recursive: true });
+  fs.writeFileSync(editorFixturePath, "export const editorValue = 1;\n");
   await startModelServer();
 
   console.log("\n[electron-e2e] real Electron smoke");
@@ -425,6 +526,14 @@ async function main() {
 
   await check("long transcripts stay bounded and session keyboard navigation remains usable", async () => {
     await verifySessionKeyboardAndLongTranscript(page);
+  });
+
+  await check("CodeMirror opens edits saves reloads and refuses stale disk writes", async () => {
+    await verifyIntegratedEditor(page);
+  });
+
+  await check("diff review comment enters the real Runtime revision loop", async () => {
+    await verifyDiffCommentRevisionRequest(page);
   });
 
   await check("renderer produced no uncaught page errors", async () => {

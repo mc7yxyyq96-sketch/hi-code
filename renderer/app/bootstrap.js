@@ -1298,7 +1298,7 @@ const askBox = $("ask"), askQ = $("ask-q");
 const runStatus = $("runStatus"), runStatusDot = $("runStatusDot"), runStatusText = $("runStatusText"), runStatusMeta = $("runStatusMeta"), runStatusDetail = $("runStatusDetail");
 const settings = $("settings"), cfg = $("cfg"), cfgErr = $("cfg-err");
 const currentProject = $("currentProject");
-const filesModal = $("files"), filePath = $("filePath"), fileList = $("fileList"), filePreview = $("filePreview");
+const filesModal = $("files"), filePath = $("filePath"), fileList = $("fileList"), fileEditorMount = $("fileEditorMount");
 const capabilityView = $("capabilityView"), capTitle = $("capTitle"), capSubtitle = $("capSubtitle"), capSummary = $("capSummary"), capList = $("capList"), capActions = $("capActions");
 const commandView = $("commandView"), commandSearch = $("commandSearch"), commandSummary = $("commandSummary"), commandList = $("commandList"), commandComposerSlot = $("commandComposerSlot"), commandFocusInput = $("commandFocusInput"), commandRunInput = $("commandRunInput");
 const gitView = $("gitView"), gitSub = $("gitSub"), gitBranch = $("gitBranch"), gitDirty = $("gitDirty"), gitStaged = $("gitStaged"), gitUnstaged = $("gitUnstaged");
@@ -1426,11 +1426,17 @@ const fileTree = mountFileTree({
     modal: filesModal,
     pathLabel: filePath,
     list: fileList,
-    preview: filePreview,
+    editorMount: fileEditorMount,
+    emptyState: $("fileEditorEmpty"),
+    status: $("fileEditorStatus"),
+    saveButton: $("fileSave"),
+    reloadButton: $("fileReload"),
+    forceButton: $("fileForceSave"),
     closeButton: $("file-close"),
   },
   api,
   getCwd: () => cwd,
+  toast,
 });
 
 const jobCenter = mountJobCenterPanel({
@@ -2621,6 +2627,18 @@ async function clearDiffHistory() {
   await refreshDiffs();
 }
 
+function requestDiffRevision(comment) {
+  const diff = workspace.getSnapshot().diffs.find((item) => item.id === comment?.diffId);
+  if (!diff) throw new Error("审查对应的改动已不存在，请刷新后重试");
+  const builder = window.hicodeAppShell?.review?.buildRevisionRequest;
+  if (!builder) throw new Error("审查请求构造器不可用，请重启 Hi Code 后重试");
+  const request = builder({ comment, diff });
+  const queued = busy;
+  setWorkbenchDrawer("");
+  runLine(request.runtimeText, { displayText: request.displayText });
+  return { ok: true, queued };
+}
+
 /* ---------- Git workflow ---------- */
 async function refreshGitStatus() {
   if (!api.has("gitStatus")) return;
@@ -3332,6 +3350,7 @@ workspace.configureActions({
   rollbackAllDiffs,
   toggleDiffHistory,
   clearDiffHistory,
+  requestDiffRevision,
 });
 $("projRow").onclick = pickFolder;
 $("settingsBtn").onclick = () => openSettings("usage");

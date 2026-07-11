@@ -747,7 +747,18 @@
         </div>
         <div class="file-body">
           <div id="fileList" class="file-list"></div>
-          <pre id="filePreview" class="file-preview">选择一个文件预览内容。</pre>
+          <section class="file-editor-pane" aria-label="文件编辑器">
+            <div class="file-editor-toolbar">
+              <div id="fileEditorStatus" class="file-editor-status" role="status">选择一个 UTF-8 文本文件开始编辑。最大 2MB。</div>
+              <div class="file-editor-actions">
+                <button id="fileReload" class="ghost" type="button" disabled>重新加载</button>
+                <button id="fileForceSave" class="ghost danger hidden" type="button">强制覆盖</button>
+                <button id="fileSave" class="primary" type="button" disabled>保存</button>
+              </div>
+            </div>
+            <div id="fileEditorEmpty" class="file-editor-empty">选择左侧文件后，可在这里编辑并保存。磁盘内容变化时 Hi Code 会停止覆盖并要求确认。</div>
+            <div id="fileEditorMount" class="file-editor-mount hidden"></div>
+          </section>
         </div>
       </div>
     </div>

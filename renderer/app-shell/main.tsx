@@ -5,6 +5,8 @@ import { createShellStore } from "./store.ts";
 import { createWorkspaceBridge, WorkspaceController, type WorkspaceBridge } from "./workspace/controller.ts";
 import { createWorkspaceStore } from "./workspace/store.ts";
 import { WorkspacePortals } from "./workspace/WorkspacePortals.tsx";
+import { createCodeEditorFactory, type CodeEditorFactory } from "./editor/code-editor.ts";
+import { buildRevisionRequest } from "./workspace/review.ts";
 
 export interface HiCodeAppShellBridge {
   readonly ownsNavigation: true;
@@ -12,6 +14,8 @@ export interface HiCodeAppShellBridge {
   requestRoute(routeId: string): void;
   setDrawerOpen(open: boolean): void;
   readonly workspace: WorkspaceBridge;
+  readonly editor: CodeEditorFactory;
+  readonly review: Readonly<{ buildRevisionRequest: typeof buildRevisionRequest }>;
 }
 
 declare global {
@@ -33,6 +37,7 @@ export function mountHiCodeAppShell() {
   const workspaceStore = createWorkspaceStore();
   const workspaceController = new WorkspaceController(workspaceStore);
   const workspace = createWorkspaceBridge(workspaceStore, workspaceController);
+  const editor = createCodeEditorFactory();
 
   window.hicodeAppShell = Object.freeze({
     ownsNavigation: true as const,
@@ -40,6 +45,8 @@ export function mountHiCodeAppShell() {
     requestRoute: (routeId: string) => adapter.requestRoute(routeId),
     setDrawerOpen: (open: boolean) => store.setDrawerOpen(open),
     workspace,
+    editor,
+    review: Object.freeze({ buildRevisionRequest }),
   });
 
   mountedRoot = createRoot(mount);

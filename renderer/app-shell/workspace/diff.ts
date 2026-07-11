@@ -3,6 +3,8 @@ import type { WorkspaceDiff } from "./contracts.ts";
 export interface UnifiedDiffLine {
   kind: "meta" | "ctx" | "del" | "add";
   text: string;
+  line?: number;
+  side?: "before" | "after";
 }
 
 function splitLines(value: string | null) {
@@ -25,10 +27,10 @@ export function buildUnifiedDiffLines(diff: WorkspaceDiff): UnifiedDiffLine[] {
     const oldLine = before[index];
     const newLine = after[index];
     const nextRows: UnifiedDiffLine[] = [];
-    if (oldLine === newLine && oldLine !== undefined) nextRows.push({ kind: "ctx", text: ` ${oldLine}` });
+    if (oldLine === newLine && oldLine !== undefined) nextRows.push({ kind: "ctx", text: ` ${oldLine}`, line: index + 1, side: "after" });
     else {
-      if (oldLine !== undefined) nextRows.push({ kind: "del", text: `-${oldLine}` });
-      if (newLine !== undefined) nextRows.push({ kind: "add", text: `+${newLine}` });
+      if (oldLine !== undefined) nextRows.push({ kind: "del", text: `-${oldLine}`, line: index + 1, side: "before" });
+      if (newLine !== undefined) nextRows.push({ kind: "add", text: `+${newLine}`, line: index + 1, side: "after" });
     }
     if (contentRows + nextRows.length > maxContentRows) {
       rows.push({ kind: "meta", text: "... diff truncated in preview ..." });
