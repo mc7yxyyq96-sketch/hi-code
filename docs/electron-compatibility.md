@@ -9,7 +9,7 @@ npm run test:electron-compatibility
 npm run test:electron-e2e
 ```
 
-The compatibility test verifies package and lockfile pins, installed package versions, BrowserWindow security settings, navigation/window guards, the native production dependency inventory, and the three-platform CI matrix. The real Electron E2E test reads `process.versions` from the launched main process and records it in `test-results/electron-e2e/<platform>-<arch>/layout-observed.json`.
+The compatibility test verifies package and lockfile pins, installed package versions, BrowserWindow security settings, navigation/window guards, the native production dependency inventory, and the three-platform CI matrix. CI listens to every pull request target so stacked task PRs receive the same native-platform gate; direct push validation remains limited to `main`. The real Electron E2E test reads `process.versions` from the launched main process and records it in `test-results/electron-e2e/<platform>-<arch>/layout-observed.json`.
 
 ## Target Platforms
 

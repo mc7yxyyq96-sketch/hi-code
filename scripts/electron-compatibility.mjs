@@ -90,6 +90,7 @@ export function inspectElectronCompatibility(root = defaultRoot) {
     && (process.platform !== "darwin" || (fs.existsSync(hostSpawnHelper) && Boolean(fs.statSync(hostSpawnHelper).mode & 0o111)));
   check("node-pty-host-prebuild", hostPrebuildReady, hostPrebuildDir);
   check("three-platform-ci-matrix", /os:\s*\[ubuntu-latest, macos-latest, windows-latest\]/.test(workflow), "Ubuntu, macOS, and Windows are required");
+  check("stacked-pr-ci", /pull_request:\s*\{\}/.test(workflow), "CI must validate pull requests targeting task branches as well as main");
   check("linux-xvfb-smoke", workflow.includes("xvfb-run -a npm run test:electron-e2e"), "Linux Electron smoke requires Xvfb");
   check("native-desktop-smoke", workflow.includes("if: runner.os != 'Linux'") && workflow.includes("run: npm run test:electron-e2e"), "macOS and Windows must launch Electron directly");
   const requiredSmokeJobs = ["ubuntu-latest", "macos-latest", "windows-latest"];
