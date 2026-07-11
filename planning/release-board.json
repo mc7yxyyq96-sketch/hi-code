@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "program": "Hi Code Product-Grade Desktop and Industrial Workbench",
-  "updatedAt": "2026-07-11T04:18:59Z",
+  "updatedAt": "2026-07-11T05:03:45Z",
   "status": "active",
   "source": {
     "version": "0.6.0-alpha.6",
@@ -94,6 +94,12 @@
       "branch": "codex/runtime-engine/hc-prov-212",
       "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-hc-prov-212",
       "mode": "completed-worktree"
+    },
+    {
+      "taskId": "HC-RUN-220",
+      "branch": "codex/runtime-engine/hc-run-220",
+      "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-hc-run-220",
+      "mode": "active-worktree"
     }
   ],
   "tasks": [
@@ -204,6 +210,16 @@
       "startedAt": "2026-07-11T02:40:19Z",
       "completedAt": "2026-07-11T04:18:59Z",
       "evidence": "reports/evidence/HC-PROV-212/manifest.json"
+    },
+    {
+      "id": "HC-RUN-220",
+      "owner": "runtime-engine",
+      "priority": "P1",
+      "status": "in_progress",
+      "dependencies": ["HC-PROV-210"],
+      "branch": "codex/runtime-engine/hc-run-220",
+      "startedAt": "2026-07-11T05:03:45Z",
+      "evidence": "reports/tasks/HC-RUN-220.md"
     }
   ],
   "gates": [
@@ -277,6 +293,12 @@
       "owner": "HC-PROV-212",
       "verifiedAt": "2026-07-11T04:18:59Z",
       "evidence": "reports/evidence/HC-PROV-212/manifest.json"
+    },
+    {
+      "id": "attachment-command-registry",
+      "status": "in_progress",
+      "owner": "HC-RUN-220",
+      "evidence": "reports/tasks/HC-RUN-220.md"
     }
   ],
   "nextReleaseSlices": [

@@ -36,6 +36,7 @@ The final machine-captured evidence is written by `npm run program:baseline` to 
 | 8 | HC-PROV-210 | Completed | Runtime Engine | HC-RUN-202, HC-REL-ALPHA-8 integration base |
 | 9 | HC-PROV-211 | Completed | Runtime Engine | HC-PROV-210 |
 | 10 | HC-PROV-212 | Completed | Runtime Engine | HC-PROV-210, HC-PROV-211 |
+| 11 | HC-RUN-220 | In progress | Runtime Engine | HC-PROV-210 |
 
 HC-QA-101 established a real Electron responsive baseline. HC-RUN-201 introduces protocol-native assistant output and concurrency isolation. No new industrial domain module is authorized before HC-RUN-201 completes.
 
@@ -62,6 +63,8 @@ HC-PROV-210 completed on `codex/runtime-engine/hc-prov-210` from alpha.8 complet
 HC-PROV-211 completed in the isolated `codex/runtime-engine/hc-prov-211` worktree from HC-PROV-210 completion commit `06dd676`. A real OpenAI Responses HTTPS/SSE transport now preserves text, image, function-call `call_id`, tool result, usage, interruption, incomplete, and failed semantics through the shared Runtime. Existing profiles remain on Chat Completions unless `protocol: "responses"` is explicit. Nineteen machine-captured gates passed, including a real two-request Runtime tool loop, Electron config routing, security, DoD, production audit, and Electron E2E.
 
 HC-PROV-212 completed in the isolated `codex/runtime-engine/hc-prov-212` worktree from HC-PROV-211 completion commit `7f91c76`. Dedicated Anthropic Messages SSE and Ollama native NDJSON transports now preserve text, images, tool correlation, usage, interruption, native terminal states, and normalized errors through the shared Runtime. Profiles opt in explicitly; current Chat Completions and Responses profiles are unchanged. Raw provider thinking is neither displayed nor persisted. Twenty machine-captured gates passed, including both two-request Runtime tool loops, legacy transport regressions, Electron config routing, security, DoD, production audit, and real Electron E2E.
+
+HC-RUN-220 is active in the isolated `codex/runtime-engine/hc-run-220` worktree from HC-PROV-212 completion commit `12ff24e`. It is limited to durable attachment metadata/blob storage, pre-network capability checks, and one slash/native/shell/agent command resolution contract. The unchanged parent passed build, verify, release check, and all 80 feature assertions.
 
 ## Current Product Truth
 
