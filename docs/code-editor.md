@@ -43,7 +43,7 @@ Force overwrite is intentionally a user decision, not an automatic retry. The ed
 
 ## CodeMirror Boundary
 
-CodeMirror is bundled by Vite in the typed App Shell. The legacy browser bootstrap never imports bare package specifiers. `window.hicodeAppShell.editor` is a renderer-internal factory, not a preload capability.
+CodeMirror is bundled by Vite as a lazy local chunk. Opening the Files surface loads that chunk once through `window.hicodeAppShell.editor.load()`; normal App Shell startup stays below its existing production bundle budget. The legacy browser bootstrap never imports bare package specifiers. The loader is renderer-internal, not a preload capability, and needs no network access.
 
 The surface provides line numbers, history, selection, syntax highlighting for JavaScript, TypeScript, JSON, Markdown, CSS, and HTML, line wrapping, and `Mod-S` save. Unsupported extensions remain editable as plain UTF-8 text.
 

@@ -5,7 +5,7 @@ import { createShellStore } from "./store.ts";
 import { createWorkspaceBridge, WorkspaceController, type WorkspaceBridge } from "./workspace/controller.ts";
 import { createWorkspaceStore } from "./workspace/store.ts";
 import { WorkspacePortals } from "./workspace/WorkspacePortals.tsx";
-import { createCodeEditorFactory, type CodeEditorFactory } from "./editor/code-editor.ts";
+import type { CodeEditorFactory } from "./editor/code-editor.ts";
 import { buildRevisionRequest } from "./workspace/review.ts";
 
 export interface HiCodeAppShellBridge {
@@ -14,7 +14,7 @@ export interface HiCodeAppShellBridge {
   requestRoute(routeId: string): void;
   setDrawerOpen(open: boolean): void;
   readonly workspace: WorkspaceBridge;
-  readonly editor: CodeEditorFactory;
+  readonly editor: Readonly<{ load(): Promise<CodeEditorFactory> }>;
   readonly review: Readonly<{ buildRevisionRequest: typeof buildRevisionRequest }>;
 }
 
@@ -37,7 +37,13 @@ export function mountHiCodeAppShell() {
   const workspaceStore = createWorkspaceStore();
   const workspaceController = new WorkspaceController(workspaceStore);
   const workspace = createWorkspaceBridge(workspaceStore, workspaceController);
-  const editor = createCodeEditorFactory();
+  let editorFactoryPromise: Promise<CodeEditorFactory> | null = null;
+  const editor = Object.freeze({
+    load() {
+      editorFactoryPromise ||= import("./editor/code-editor.ts").then((module) => module.createCodeEditorFactory());
+      return editorFactoryPromise;
+    },
+  });
 
   window.hicodeAppShell = Object.freeze({
     ownsNavigation: true as const,

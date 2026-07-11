@@ -207,6 +207,12 @@ await check("the generated bundle exists after a production build", () => {
   const size = fs.statSync(output).size;
   assert.ok(size > 1_000, "App Shell bundle is unexpectedly empty");
   assert.ok(size < 300_000, `App Shell production bundle includes unexpected development weight: ${size} bytes`);
+  const chunksDir = path.resolve("renderer/generated/chunks");
+  const editorChunks = fs.existsSync(chunksDir)
+    ? fs.readdirSync(chunksDir).filter((name) => /^code-editor-.*\.js$/.test(name))
+    : [];
+  assert.equal(editorChunks.length, 1, `Expected one lazy CodeMirror chunk, found ${editorChunks.join(", ") || "none"}`);
+  assert.ok(fs.statSync(path.join(chunksDir, editorChunks[0])).size > 100_000, "Lazy CodeMirror chunk is unexpectedly empty");
 });
 
 await check("real Electron acceptance includes the full 720-1920 range", () => {

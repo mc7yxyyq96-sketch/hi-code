@@ -18,19 +18,41 @@ export function mountFileTree({ elements, api, getCwd, toast = null }) {
     closeButton,
   } = elements;
 
-  const editorFactory = window.hicodeAppShell?.editor;
-  if (!editorFactory?.create) throw new Error("CodeMirror editor factory is unavailable");
-  const editor = editorFactory.create({
-    parent: editorMount,
-    onChange: handleEditorUpdate,
-    onSave: () => { void save(); },
-  });
+  const editorLoader = window.hicodeAppShell?.editor;
+  if (!editorLoader?.load) throw new Error("CodeMirror editor loader is unavailable");
+  let editor = null;
+  let editorPromise = null;
+
+  const ensureEditor = async () => {
+    if (editor) return editor;
+    editorPromise ||= editorLoader.load().then((factory) => factory.create({
+      parent: editorMount,
+      onChange: handleEditorUpdate,
+      onSave: () => { void save(); },
+    }));
+    try {
+      editor = await editorPromise;
+      return editor;
+    } catch (error) {
+      editorPromise = null;
+      throw error;
+    }
+  };
 
   const open = async (dir) => {
     fileDir = dir || getCwd();
     modal.classList.remove("hidden");
-    await render(fileDir);
-    editor.focus();
+    setState("loading", "正在加载编辑器…");
+    try {
+      await ensureEditor();
+      await render(fileDir);
+      if (conflict) setState("conflict", "磁盘文件已被其他程序修改。请重新加载，或明确选择强制覆盖。");
+      else if (activeFile) setState(isDirty() ? "dirty" : "clean", isDirty() ? "有未保存修改" : `${activeFile.relativePath || shortPath(activeFile.path)} · UTF-8`);
+      else setState("empty", "选择一个 UTF-8 文本文件开始编辑。最大 2MB。");
+      editor?.focus();
+    } catch (error) {
+      showError(error?.message || "编辑器加载失败，请重试");
+    }
   };
 
   const close = () => {
@@ -72,6 +94,11 @@ export function mountFileTree({ elements, api, getCwd, toast = null }) {
     if (!api.has("openEditorFile")) return showError("当前版本未提供安全编辑 API");
     if (!discard && isDirty() && !confirmDiscard("打开其他文件会丢失尚未保存的修改。仍要继续吗？")) return false;
     setState("loading", "正在读取文件…");
+    try {
+      await ensureEditor();
+    } catch (error) {
+      return showError(error?.message || "编辑器加载失败，请重试");
+    }
     const result = await api.openEditorFile({ path: filePath });
     if (!result?.ok) return showError(result?.error || "文件读取失败");
     activeFile = result.file;
@@ -88,7 +115,7 @@ export function mountFileTree({ elements, api, getCwd, toast = null }) {
   }
 
   async function save({ force = false } = {}) {
-    if (!activeFile || saving || !api.has("saveEditorFile")) return false;
+    if (!activeFile || !editor || saving || !api.has("saveEditorFile")) return false;
     if (force && !conflict) return false;
     if (force && !window.confirm("磁盘文件已变化。强制覆盖会丢失外部修改，确定继续吗？")) return false;
     saving = true;
@@ -132,7 +159,7 @@ export function mountFileTree({ elements, api, getCwd, toast = null }) {
   }
 
   function isDirty() {
-    return Boolean(activeFile && editor.getContent() !== activeFile.content);
+    return Boolean(activeFile && editor && editor.getContent() !== activeFile.content);
   }
 
   function setState(name, message) {
@@ -170,7 +197,7 @@ export function mountFileTree({ elements, api, getCwd, toast = null }) {
     reload,
     getDir: () => fileDir,
     getFile: () => activeFile ? { ...activeFile } : null,
-    destroy: () => editor.destroy(),
+    destroy: () => editor?.destroy(),
   };
 }
 

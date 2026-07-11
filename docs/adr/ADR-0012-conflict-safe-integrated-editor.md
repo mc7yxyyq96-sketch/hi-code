@@ -14,7 +14,7 @@ The Files modal could preview text but could not provide an integrated edit/save
 2. Every snapshot carries a main-process SHA-256 revision. Normal save compares that revision before writing and immediately before replacement.
 3. Save writes a unique sibling temporary file, flushes it, atomically renames it over the target, restores the original mode, and removes any failed temporary file.
 4. Revision mismatch returns `file_conflict` without writing. Conflict remains sticky in the UI; normal save is disabled. Reload and force overwrite are explicit, confirmed choices.
-5. CodeMirror 6 is bundled inside the typed Renderer App Shell and exposed only through a renderer-internal factory. It cannot call preload or Node APIs.
+5. CodeMirror 6 is bundled as a lazy local Renderer chunk and exposed only through a renderer-internal loader/factory. It cannot call preload or Node APIs, and it does not consume the App Shell startup bundle budget.
 6. Diff comments are typed, line-specific, byte-bounded, and checked against the current selected diff.
 7. A submitted comment enters the existing conversation and Runtime through `runLine`. It does not call a model directly or create a second task queue.
 8. No autosave, collaborative merge, new persistence schema, or file watcher is introduced in this task.
