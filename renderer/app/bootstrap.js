@@ -1909,6 +1909,7 @@ const COMMAND_CATEGORIES = {
 /* ---------- view switching ---------- */
 function setActiveNav(id) {
   closeWorkbenchDrawers();
+  if (window.hicodeAppShell?.ownsNavigation) return;
   document.querySelectorAll(".nav-row").forEach((btn) => btn.classList.toggle("active", btn.id === id));
 }
 
