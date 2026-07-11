@@ -277,6 +277,7 @@ check("Typed App Shell tests are part of global verification", packageJson.scrip
 check("Typed App Shell evidence capture is reproducible", packageJson.scripts["program:evidence:app-shell"] === "node scripts/capture-task-evidence.mjs --task=HC-UI-301" && fs.readFileSync(path.join(root, "scripts/capture-task-evidence.mjs"), "utf8").includes('"HC-UI-301"'));
 check("Typed Session Workbench evidence capture is reproducible", packageJson.scripts["program:evidence:session-workbench"] === "node scripts/capture-task-evidence.mjs --task=HC-UI-302" && fs.readFileSync(path.join(root, "scripts/capture-task-evidence.mjs"), "utf8").includes('"HC-UI-302"'));
 check("Task evidence commands cannot be shadowed by a project-local npm binary", fs.readFileSync(path.join(root, "scripts/capture-task-evidence.mjs"), "utf8").includes("sanitizeEvidencePath") && fs.readFileSync(path.join(root, "scripts/capture-task-evidence.mjs"), "utf8").includes('path.resolve(root, "node_modules", ".bin")'));
+check("Task evidence executes the locked npm CLI with the current Node runtime", fs.readFileSync(path.join(root, "scripts/capture-task-evidence.mjs"), "utf8").includes('path.join(root, "node_modules", "npm", "bin", "npm-cli.js")') && fs.readFileSync(path.join(root, "scripts/capture-task-evidence.mjs"), "utf8").includes("isNpmCommand ? node : spec.command"));
 check(
   "HC-PROV-211 completed only after Model Provider v2 completion and evidence",
   openAIResponsesTask?.status === "completed" &&

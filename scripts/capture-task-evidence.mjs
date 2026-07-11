@@ -10,6 +10,7 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const npm = process.platform === "win32" ? "npm.cmd" : "npm";
 const node = process.execPath;
+const npmCli = path.join(root, "node_modules", "npm", "bin", "npm-cli.js");
 
 function sanitizeEvidencePath(value) {
   const localBin = path.resolve(root, "node_modules", ".bin");
@@ -716,7 +717,10 @@ function parseTaskId() {
 function runCommand(spec, taskId, stagingLogDir) {
   const startedAt = new Date();
   const started = process.hrtime.bigint();
-  const result = spawnSync(spec.command, spec.args, {
+  const isNpmCommand = spec.command === npm;
+  const executable = isNpmCommand ? node : spec.command;
+  const args = isNpmCommand ? [npmCli, ...spec.args] : spec.args;
+  const result = spawnSync(executable, args, {
     cwd: root,
     encoding: "utf8",
     env: safeProcessEnv(),
