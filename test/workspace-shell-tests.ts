@@ -127,6 +127,8 @@ await check("diff preview is typed and bounded", () => {
   assert.ok(lines.length <= 803);
   assert.equal(lines[0]?.kind, "meta");
   assert.ok(lines.some((line) => line.text.includes("truncated")));
+  assert.ok(lines.some((line) => line.kind === "del" && line.side === "before" && line.line === 1));
+  assert.ok(lines.some((line) => line.kind === "add" && line.side === "after" && line.line === 1));
 });
 
 await check("missing production handlers fail closed with an actionable error", async () => {

@@ -36,7 +36,7 @@ The store is presentation state, not a second persistence layer. Session history
 | Sessions | open, delete |
 | Recovery | refresh, retry/reconfirm, review/inspect |
 | Timeline | retry a recoverable turn, select related diff |
-| Inspector | select, archive, rollback, archive all, rollback all, history, clear history |
+| Inspector | select, request line revision, archive, rollback, archive all, rollback all, history, clear history |
 
 Errors are written to the typed store and shown in the workbench alert. No action returns a synthetic success result.
 
@@ -58,6 +58,7 @@ This is bounded windowing rather than destructive truncation: persisted messages
 
 - Message content is rendered as text segments; ANSI colors never become HTML.
 - Diff previews use typed rows and a hard 803-row preview bound.
+- Diff review comments are line-specific and byte-bounded, and enter the established conversation/Runtime path instead of a UI-only response.
 - React never receives filesystem, Node, environment, or generic IPC access.
 - Delete, rollback, retry, and approval behavior remains on existing permission and service paths.
 - Missing handlers disable controls and produce an actionable visible error.
@@ -75,6 +76,7 @@ This is bounded windowing rather than destructive truncation: persisted messages
 ```bash
 npm run check:renderer-types
 npm run test:workspace-shell
+npm run test:editor-workbench
 npm run test:renderer
 npm run test:electron-e2e
 npm run verify

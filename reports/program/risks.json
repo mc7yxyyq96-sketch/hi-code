@@ -83,6 +83,24 @@
       "trigger": "Any duplicated persistence path, unbounded long-session DOM, hidden action without an alternative, lost live output, or keyboard trap blocks HC-UI-302 completion."
     },
     {
+      "id": "RISK-UI-004",
+      "severity": "high",
+      "status": "mitigated",
+      "owner": "desktop-ux",
+      "title": "Integrated editor can overwrite external changes or create a fake review loop",
+      "evidence": [
+        "electron/services/editor-service.mjs",
+        "renderer/components/file-tree.js",
+        "renderer/app-shell/workspace/Inspector.tsx",
+        "test/editor-workbench-tests.ts",
+        "tests/electron-e2e/run.mjs",
+        "reports/evidence/HC-UI-310/manifest.json"
+      ],
+      "impact": "A stale editor save can destroy disk changes, while a comment button without a persisted Runtime request can mislead users into believing an Agent revision was requested.",
+      "mitigation": "HC-UI-310 uses workspace-confined SHA-256 revisions, bounded UTF-8 snapshots, double conflict comparison, atomic sibling replacement, sticky explicit conflict resolution, a lazy local CodeMirror surface, and typed line comments that enter the existing Runtime/session path. Real Electron verifies refusal to overwrite external changes and a model-backed revision request.",
+      "trigger": "Any save without revision comparison, hidden force overwrite, unsafe path, unbounded/binary load, or review action that does not enter the Runtime blocks HC-UI-310 completion."
+    },
+    {
       "id": "RISK-PLAT-001",
       "severity": "high",
       "status": "mitigated",

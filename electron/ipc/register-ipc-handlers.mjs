@@ -17,6 +17,7 @@ import { registerSampleProjectIpc } from "../services/sample-project-service.mjs
 import { registerGitIpc } from "../services/git-service.mjs";
 import { registerDiffIpc } from "../services/diff-service.mjs";
 import { registerWorkspaceIpc } from "../services/workspace-service.mjs";
+import { registerEditorIpc } from "../services/editor-service.mjs";
 import { registerSecurityIpc } from "../services/security-service.mjs";
 import { registerAppInfoIpc } from "../services/app-info-service.mjs";
 import { registerUsageIpc } from "../services/usage-service.mjs";
@@ -44,6 +45,7 @@ export function registerIpcHandlers({ services, ipcMain, dialog, shell, logger =
   registerSampleProjectIpc({ register, sampleProject: services.sampleProject });
   registerDiffIpc({ register, diff: services.diff });
   registerGitIpc({ register, git: services.git });
+  registerEditorIpc({ register, editor: services.editor });
   registerWorkspaceIpc({ register, workspace: services.workspace, dialog, shell });
   registerAppInfoIpc({ register, appInfo: services.appInfo });
   registerUsageIpc({ register, usage: services.usage });

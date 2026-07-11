@@ -48,6 +48,7 @@ import { createSampleProjectService } from "./services/sample-project-service.mj
 import { createGitService } from "./services/git-service.mjs";
 import { createDiffIpcService } from "./services/diff-service.mjs";
 import { createWorkspaceService, modelCapabilityHint } from "./services/workspace-service.mjs";
+import { createEditorService } from "./services/editor-service.mjs";
 import { createSecurityService, redactSensitive } from "./services/security-service.mjs";
 import { createAppInfoService } from "./services/app-info-service.mjs";
 import { createUsageService } from "./services/usage-service.mjs";
@@ -2616,6 +2617,10 @@ function createMainServices() {
       gitUnstage,
       gitGenerateCommitMessage,
       gitCommit,
+    }),
+    editor: createEditorService({
+      getCwd: () => cwd,
+      resolveInCwd,
     }),
     workspace: createWorkspaceService({
       dialog,

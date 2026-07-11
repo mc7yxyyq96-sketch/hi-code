@@ -1,0 +1,23 @@
+$ npm run test:editor-workbench
+
+> hi-code@0.6.0-alpha.8 test:editor-workbench
+> tsx test/editor-workbench-tests.ts
+
+
+[editor-workbench] conflict-safe file service
+  ✓ opens bounded UTF-8 text with a stable revision
+  ✓ saves atomically and returns the new revision
+  ✓ refuses to overwrite an external disk change
+  ✓ requires an explicit force flag after a visible conflict
+  ✓ rejects outside paths and symlink escapes
+  ✓ rejects binary invalid UTF-8 and oversized content
+  ✓ registers validated editor IPC channels
+
+[editor-workbench] typed diff review request
+  ✓ normalizes a bounded line-specific diff comment
+  ✓ builds a bounded revision request with diff context
+
+[editor-workbench] production integration contract
+  ✓ production sources expose the editor and real review action
+
+=== 10 passed, 0 failed ===

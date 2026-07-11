@@ -1,0 +1,13 @@
+$ npm run build
+
+> hi-code@0.6.0-alpha.8 build
+> tsc -p renderer/tsconfig.json --noEmit && vite build --config vite.renderer.config.ts && tsc -p tsconfig.json && chmod +x dist/index.js
+
+vite v6.2.6 building for production...
+transforming...
+✓ 63 modules transformed.
+rendering chunks...
+computing gzip size...
+renderer/generated/app-shell.js                    259.13 kB │ gzip:  65.28 kB
+renderer/generated/chunks/code-editor-oiW-xu-R.js  772.97 kB │ gzip: 232.99 kB
+✓ built in 570ms

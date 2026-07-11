@@ -6,7 +6,7 @@ Program state: Active
 
 Current verified release candidate: `0.6.0-alpha.8`
 
-Active development slice: `0.6.0-alpha.9`
+Active development slice: `0.6.0-beta.2`
 
 ## Source Baseline
 
@@ -39,6 +39,7 @@ The final machine-captured evidence is written by `npm run program:baseline` to 
 | 11 | HC-RUN-220 | Completed | Runtime Engine | HC-PROV-210 |
 | 12 | HC-UI-301 | Completed | Desktop UX | HC-RUN-201, HC-QA-101 |
 | 13 | HC-UI-302 | Completed | Desktop UX | HC-UI-301, HC-RUN-202 |
+| 14 | HC-UI-310 | Completed | Desktop UX | HC-UI-302 |
 
 HC-QA-101 established a real Electron responsive baseline. HC-RUN-201 introduces protocol-native assistant output and concurrency isolation. No new industrial domain module is authorized before HC-RUN-201 completes.
 
@@ -71,6 +72,8 @@ HC-RUN-220 completed in the isolated `codex/runtime-engine/hc-run-220` worktree 
 HC-UI-301 completed in the isolated `codex/desktop-ux/hc-ui-301` worktree from HC-RUN-220 completion commit `fd46ac7`. A production React 18/TypeScript/Vite App Shell now owns the typed route and compact-navigation boundary while the Legacy Panel Adapter preserves every existing panel and invokes its real trigger. Thirteen machine-captured gates passed, including build, verify, release check, security, DoD, production audit, and real Electron navigation at 720, 1024, 1440, and 1920 widths. Business panels remain on the compatibility path for incremental migration in HC-UI-302 and later tasks.
 
 HC-UI-302 completed in the isolated `codex/desktop-ux/hc-ui-302` worktree from HC-UI-301 completion commit `35754d0`. Session Sidebar, Conversation, Timeline/recovery, Diff Inspector, and responsive drawer controls now use one immutable typed workspace store while existing session, Runtime, attachment, approval, and Diff services remain authoritative. A 10,000-message transcript mounts at most 160 rows; background turns finalize their source snapshot; unavailable actions fail closed. Fourteen machine-captured gates passed, including build, verify, release check, security, DoD, production audit, and real Electron acceptance at 720, 1024, 1440, and 1920 widths.
+
+HC-UI-310 completed in the isolated `codex/desktop-ux/hc-ui-310` worktree from HC-UI-302 completion commit `8b13b88`. A lazy local CodeMirror editor now opens, edits, saves, and reloads bounded UTF-8 workspace files. SHA-256 revision comparison, atomic sibling replacement, sticky conflict state, and explicit confirmed force overwrite prevent silent stale writes. Typed line comments enter the existing conversation and Runtime revision path. Fifteen machine-captured gates passed from clean source commit `cfd75e1`, including build, verify, release check, security, DoD, production audit, and real Electron acceptance at 720 px with an external disk mutation. The completed ten-hour HC-RUN-220 evidence was reused rather than rerun.
 
 ## Current Product Truth
 
