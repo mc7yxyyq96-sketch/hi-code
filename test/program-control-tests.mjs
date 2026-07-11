@@ -69,6 +69,7 @@ const requiredFiles = [
   "reports/evidence/HC-PLAT-110/manifest.json",
   "reports/evidence/HC-REL-ALPHA-8/manifest.json",
   "reports/evidence/HC-PROV-210/manifest.json",
+  "reports/evidence/HC-PROV-211/manifest.json",
   "scripts/electron-compatibility.mjs",
   "scripts/run-electron-builder.mjs",
   "test/electron-compatibility-tests.mjs",
@@ -104,6 +105,7 @@ const platformCiEvidence = readJson(root, "reports/evidence/HC-PLAT-110/ci-matri
 const releaseManifest = readJson(root, "reports/evidence/HC-REL-ALPHA-7/manifest.json");
 const alpha8ReleaseManifest = readJson(root, "reports/evidence/HC-REL-ALPHA-8/manifest.json");
 const modelProviderManifest = readJson(root, "reports/evidence/HC-PROV-210/manifest.json");
+const openAIResponsesManifest = readJson(root, "reports/evidence/HC-PROV-211/manifest.json");
 const packageJson = readJson(root, "package.json");
 const packageLock = readJson(root, "package-lock.json");
 const programTask = backlog.tasks.find((task) => task.id === "HC-PROG-100");
@@ -223,16 +225,29 @@ check("Model Provider focused tests are part of global verification", packageJso
 check("OpenAI Responses focused tests are part of global verification", packageJson.scripts["test:openai-responses"] === "node test/openai-responses-provider-tests.mjs" && fs.readFileSync(path.join(root, "scripts/verify.mjs"), "utf8").includes("test/openai-responses-provider-tests.mjs"));
 check("OpenAI Responses evidence capture is reproducible", packageJson.scripts["program:evidence:openai-responses"] === "node scripts/capture-task-evidence.mjs --task=HC-PROV-211" && fs.readFileSync(path.join(root, "scripts/capture-task-evidence.mjs"), "utf8").includes('"HC-PROV-211"'));
 check(
-  "HC-PROV-211 starts only after Model Provider v2 completion",
-  openAIResponsesTask?.status === "in_progress" &&
+  "HC-PROV-211 completed only after Model Provider v2 completion and evidence",
+  openAIResponsesTask?.status === "completed" &&
     openAIResponsesTask?.branch === "codex/runtime-engine/hc-prov-211" &&
     Boolean(openAIResponsesTask?.startedAt) &&
+    Boolean(openAIResponsesTask?.completedAt) &&
     openAIResponsesTask?.taskManifest === "reports/tasks/HC-PROV-211.md" &&
+    openAIResponsesTask?.evidenceManifest === "reports/evidence/HC-PROV-211/manifest.json" &&
     openAIResponsesTask?.dependencies?.every((id) => backlog.tasks.find((task) => task.id === id)?.status === "completed") &&
-    openAIResponsesBoardTask?.status === "in_progress" &&
-    board.gates?.find((gate) => gate.id === "openai-responses-adapter")?.status === "in_progress",
+    openAIResponsesBoardTask?.status === "completed" &&
+    openAIResponsesBoardTask?.evidence === "reports/evidence/HC-PROV-211/manifest.json" &&
+    board.gates?.find((gate) => gate.id === "openai-responses-adapter")?.status === "passed",
   JSON.stringify(openAIResponsesTask),
 );
+check("HC-PROV-211 evidence records every command passing", openAIResponsesManifest.summary?.allPassed === true && openAIResponsesManifest.summary?.total === 19, JSON.stringify(openAIResponsesManifest.summary));
+check("HC-PROV-211 evidence is captured from its isolated branch", openAIResponsesManifest.source?.branch === "codex/runtime-engine/hc-prov-211" && openAIResponsesManifest.source?.parentCommit === "b6d6ae2a3dc296c9ba80c57226b516e7f54dc291");
+for (const requiredCommand of ["build", "verify", "release-check", "feature-tests", "openai-responses-tests", "model-provider-tests", "service-tests", "runtime-protocol", "runtime-events", "runtime-concurrency", "runtime-clients", "renderer-tests", "security-tests", "dod-tests", "dod-scan", "production-audit", "electron-e2e", "program-control", "git-diff-check"]) {
+  check(`HC-PROV-211 captured ${requiredCommand}`, openAIResponsesManifest.commands?.some((command) => command.id === requiredCommand && command.status === "passed"));
+}
+for (const command of openAIResponsesManifest.commands || []) {
+  const absolute = path.join(root, command.logPath || "");
+  check(`HC-PROV-211 ${command.id} log exists`, Boolean(command.logPath) && fs.existsSync(absolute));
+  if (fs.existsSync(absolute)) check(`HC-PROV-211 ${command.id} log hash matches`, digest(absolute) === command.logSha256);
+}
 check("HC-PROV-210 evidence records every command passing", modelProviderManifest.summary?.allPassed === true && modelProviderManifest.summary?.total === 16, JSON.stringify(modelProviderManifest.summary));
 check("HC-PROV-210 evidence is captured from its task branch", modelProviderManifest.source?.branch === "codex/runtime-engine/hc-prov-210" && modelProviderManifest.source?.parentCommit === "a0f4025addf0de92192011632d194878bb7b0d3c");
 for (const requiredCommand of ["build", "verify", "release-check", "feature-tests", "model-provider-tests", "runtime-protocol", "runtime-events", "runtime-concurrency", "runtime-clients", "security-tests", "dod-tests", "dod-scan", "production-audit", "electron-e2e", "program-control", "git-diff-check"]) {

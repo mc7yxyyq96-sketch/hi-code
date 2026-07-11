@@ -1,6 +1,6 @@
 # HC-PROV-211 Task Manifest
 
-Status: In progress
+Status: Completed
 
 Owner: Runtime Engine
 
@@ -11,6 +11,10 @@ Branch: `codex/runtime-engine/hc-prov-211`
 Parent commit: `06dd676`
 
 Started: `2026-07-11T00:51:02Z`
+
+Completed: `2026-07-11T02:17:26Z`
+
+Evidence: `reports/evidence/HC-PROV-211/manifest.json`
 
 ## Problem
 
@@ -72,6 +76,21 @@ On the unmodified HC-PROV-210 parent, `npm run build`, `npm run verify`, `npm ru
 ## Rollback
 
 Revert HC-PROV-211 commits. Profiles without the optional selector remain unchanged; profiles that explicitly selected Responses can be reset to `chat_completions` without migrating user data.
+
+## Implementation Result
+
+- Added a production OpenAI Responses adapter with HTTPS or loopback endpoint enforcement, bounded retry and timeout control, real SSE decoding, `store: false`, and non-streaming completion support.
+- Converted text, user images, prior assistant function calls, and tool results without conflating streamed `item_id` with logical `call_id`.
+- Routed explicit Responses profiles through Model Provider v2 while profiles with an omitted selector continue to use Chat Completions.
+- Preserved exact function arguments, emitted each tool completion once, normalized detailed usage, and rejected unannounced tool deltas or terminal-less streams.
+- Integrated Electron config validation, connection testing, and renderer quick-form preservation without redesigning settings or rewriting existing config.
+- Added ADR-0007, operator documentation, security checks, renderer checks, service tests, and a real shared Runtime two-request tool-loop fixture.
+
+## Acceptance Result
+
+The final evidence run passed 19 of 19 commands from clean commit `b6d6ae2`. The Responses conformance suite passed 42 assertions, Model Provider v2 passed 35, service tests passed 139, Runtime Protocol passed 34, renderer tests passed 165, feature tests passed 80, and security tests passed 162. Full verify and release checks passed, the production audit passed, real Electron E2E passed, and the full-tree DoD scan reported zero findings.
+
+No profile was migrated implicitly. The compatibility route still called `/chat/completions`, explicit Responses connection tests called `/responses`, cancellation never emitted completion, and credential-bearing provider errors were redacted before provider or Runtime evidence.
 
 ## Commit Plan
 

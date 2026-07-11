@@ -87,7 +87,7 @@
       "taskId": "HC-PROV-211",
       "branch": "codex/runtime-engine/hc-prov-211",
       "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-hc-prov-211",
-      "mode": "active-worktree"
+      "mode": "completed-worktree"
     }
   ],
   "tasks": [
@@ -181,11 +181,12 @@
       "id": "HC-PROV-211",
       "owner": "runtime-engine",
       "priority": "P1",
-      "status": "in_progress",
+      "status": "completed",
       "dependencies": ["HC-PROV-210"],
       "branch": "codex/runtime-engine/hc-prov-211",
       "startedAt": "2026-07-11T00:51:02Z",
-      "evidence": "reports/tasks/HC-PROV-211.md"
+      "completedAt": "2026-07-11T02:17:26Z",
+      "evidence": "reports/evidence/HC-PROV-211/manifest.json"
     }
   ],
   "gates": [
@@ -249,9 +250,9 @@
     },
     {
       "id": "openai-responses-adapter",
-      "status": "in_progress",
+      "status": "passed",
       "owner": "HC-PROV-211",
-      "evidence": "reports/tasks/HC-PROV-211.md"
+      "evidence": "reports/evidence/HC-PROV-211/manifest.json"
     }
   ],
   "nextReleaseSlices": [
