@@ -20,6 +20,7 @@ const testFiles = [
   ["test:services", "test/main-process-services-tests.mjs"],
   ["test:jobs", "test/job-center-tests.mjs"],
   ["test:providers", "test/provider-tests.mjs"],
+  ["test:model-providers", "test/model-provider-tests.mjs"],
   ["test:worktrees", "test/worktree-runner-tests.mjs"],
   ["test:arena", "test/patch-arena-tests.mjs"],
   ["test:industrial", "test/industrial-project-tests.mjs"],

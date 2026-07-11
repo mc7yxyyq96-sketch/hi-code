@@ -39,6 +39,8 @@ const requiredFiles = [
   "docs/adr/ADR-0003-typed-runtime-stores-and-idempotent-replay.md",
   "docs/adr/ADR-0004-turn-state-and-conservative-recovery.md",
   "docs/adr/ADR-0005-supported-electron-line.md",
+  "docs/adr/ADR-0006-model-provider-adapter-v2.md",
+  "docs/model-provider-adapters.md",
   "docs/electron-compatibility.md",
   "docs/runtime-stores.md",
   "planning/backlog.json",
@@ -52,6 +54,7 @@ const requiredFiles = [
   "reports/tasks/HC-RUN-203.md",
   "reports/tasks/HC-PLAT-110.md",
   "reports/tasks/HC-REL-ALPHA-8.md",
+  "reports/tasks/HC-PROV-210.md",
   "reports/tasks/HC-REL-ALPHA-7.md",
   "reports/evidence/baseline/manifest.json",
   "reports/evidence/HC-QA-101/manifest.json",
@@ -62,6 +65,7 @@ const requiredFiles = [
   "reports/evidence/HC-PLAT-110/ci-matrix.json",
   "reports/evidence/HC-PLAT-110/manifest.json",
   "reports/evidence/HC-REL-ALPHA-8/manifest.json",
+  "reports/evidence/HC-PROV-210/manifest.json",
   "scripts/electron-compatibility.mjs",
   "scripts/run-electron-builder.mjs",
   "test/electron-compatibility-tests.mjs",
@@ -96,6 +100,7 @@ const platformManifest = readJson(root, "reports/evidence/HC-PLAT-110/manifest.j
 const platformCiEvidence = readJson(root, "reports/evidence/HC-PLAT-110/ci-matrix.json");
 const releaseManifest = readJson(root, "reports/evidence/HC-REL-ALPHA-7/manifest.json");
 const alpha8ReleaseManifest = readJson(root, "reports/evidence/HC-REL-ALPHA-8/manifest.json");
+const modelProviderManifest = readJson(root, "reports/evidence/HC-PROV-210/manifest.json");
 const packageJson = readJson(root, "package.json");
 const packageLock = readJson(root, "package-lock.json");
 const programTask = backlog.tasks.find((task) => task.id === "HC-PROG-100");
@@ -104,6 +109,7 @@ const nextRuntimeTask = backlog.tasks.find((task) => task.id === "HC-RUN-202");
 const recoveryRuntimeTask = backlog.tasks.find((task) => task.id === "HC-RUN-203");
 const platformTask = backlog.tasks.find((task) => task.id === "HC-PLAT-110");
 const alpha8ReleaseTask = backlog.tasks.find((task) => task.id === "HC-REL-ALPHA-8");
+const modelProviderTask = backlog.tasks.find((task) => task.id === "HC-PROV-210");
 const uiShellTask = backlog.tasks.find((task) => task.id === "HC-UI-301");
 const qaTask = board.tasks.find((task) => task.id === "HC-QA-101");
 const runtimeTask = board.tasks.find((task) => task.id === "HC-RUN-201");
@@ -111,6 +117,7 @@ const runtimeStoreTask = board.tasks.find((task) => task.id === "HC-RUN-202");
 const turnRecoveryTask = board.tasks.find((task) => task.id === "HC-RUN-203");
 const platformBoardTask = board.tasks.find((task) => task.id === "HC-PLAT-110");
 const alpha8ReleaseBoardTask = board.tasks.find((task) => task.id === "HC-REL-ALPHA-8");
+const modelProviderBoardTask = board.tasks.find((task) => task.id === "HC-PROV-210");
 
 console.log("\n[program-control] board and evidence contract");
 check("backlog records immutable source commit", /^[0-9a-f]{40}$/.test(backlog.sourceCommit || ""));
@@ -195,6 +202,29 @@ check("HC-UI-301 is dependency-ready", uiShellTask?.status === "ready" && uiShel
 check("alpha.8 version is synchronized", packageJson.version === "0.6.0-alpha.8" && packageLock.version === packageJson.version && packageLock.packages?.[""]?.version === packageJson.version && fs.readFileSync(path.join(root, "VERSION"), "utf8").trim() === packageJson.version);
 check("alpha.8 release candidate gate passed", board.currentRelease === packageJson.version && board.candidate?.version === packageJson.version && board.candidate?.branch === "codex/release/0.6.0-alpha.8" && board.candidate?.status === "passed" && board.candidate?.evidence === "reports/evidence/HC-REL-ALPHA-8/manifest.json" && board.gates?.find((gate) => gate.id === "alpha-8-release-candidate")?.status === "passed");
 check("historical alpha.7 release candidate gate remains passed", board.gates?.find((gate) => gate.id === "alpha-7-release-candidate")?.status === "passed");
+check(
+  "HC-PROV-210 completed only after typed runtime store completion and evidence",
+  modelProviderTask?.status === "completed" &&
+    modelProviderTask?.branch === "codex/runtime-engine/hc-prov-210" &&
+    modelProviderTask?.completedAt &&
+    modelProviderTask?.evidenceManifest === "reports/evidence/HC-PROV-210/manifest.json" &&
+    modelProviderTask?.dependencies?.every((id) => backlog.tasks.find((task) => task.id === id)?.status === "completed") &&
+    modelProviderBoardTask?.status === "completed" &&
+    modelProviderBoardTask?.evidence === "reports/evidence/HC-PROV-210/manifest.json" &&
+    board.gates?.find((gate) => gate.id === "model-provider-v2")?.status === "passed",
+  JSON.stringify(modelProviderTask),
+);
+check("Model Provider focused tests are part of global verification", packageJson.scripts["test:model-providers"] === "node test/model-provider-tests.mjs" && fs.readFileSync(path.join(root, "scripts/verify.mjs"), "utf8").includes("test/model-provider-tests.mjs"));
+check("HC-PROV-210 evidence records every command passing", modelProviderManifest.summary?.allPassed === true && modelProviderManifest.summary?.total === 16, JSON.stringify(modelProviderManifest.summary));
+check("HC-PROV-210 evidence is captured from its task branch", modelProviderManifest.source?.branch === "codex/runtime-engine/hc-prov-210" && modelProviderManifest.source?.parentCommit === "a0f4025addf0de92192011632d194878bb7b0d3c");
+for (const requiredCommand of ["build", "verify", "release-check", "feature-tests", "model-provider-tests", "runtime-protocol", "runtime-events", "runtime-concurrency", "runtime-clients", "security-tests", "dod-tests", "dod-scan", "production-audit", "electron-e2e", "program-control", "git-diff-check"]) {
+  check(`HC-PROV-210 captured ${requiredCommand}`, modelProviderManifest.commands?.some((command) => command.id === requiredCommand && command.status === "passed"));
+}
+for (const command of modelProviderManifest.commands || []) {
+  const absolute = path.join(root, command.logPath || "");
+  check(`HC-PROV-210 ${command.id} log exists`, Boolean(command.logPath) && fs.existsSync(absolute));
+  if (fs.existsSync(absolute)) check(`HC-PROV-210 ${command.id} log hash matches`, digest(absolute) === command.logSha256);
+}
 check("risk register has active risks", Array.isArray(risks.risks) && risks.risks.length > 0);
 check("baseline records source commit", manifest.source?.commit === backlog.sourceCommit);
 check("baseline records every gate passing", manifest.summary?.allPassed === true, JSON.stringify(manifest.summary));

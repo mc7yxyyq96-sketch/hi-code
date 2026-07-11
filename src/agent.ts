@@ -1,6 +1,7 @@
 import type { VibeConfig, ModelProfile } from "./config.js";
 import { defaultProfile } from "./config.js";
-import { streamChat, type ChatMessage, type ToolSchema, type ContentPart } from "./llm.js";
+import type { ChatMessage, ToolSchema, ContentPart } from "./llm.js";
+import { streamModelProfile, type ModelProviderEvent } from "./model-provider.js";
 import { TOOL_SCHEMAS, executeTool, type ExecEnv } from "./tools/index.js";
 import { mcpToolSchemas } from "./mcp.js";
 import { ui, startSpinner, stopSpinner } from "./ui.js";
@@ -87,11 +88,18 @@ export async function runLoop(
 
     let turn;
     try {
-      turn = await streamChat(
+      const history = fullHistory(session);
+      turn = await streamModelProfile(
         p,
-        fullHistory(session),
+        history,
         tools,
         {
+          requirements: { contextTokens: estimateTokens(history) },
+          onProviderEvent: (event) => emitProviderRuntimeEvent(env, event, {
+            step,
+            model: p.model,
+            ...(opts.label ? { label: opts.label } : {}),
+          }),
           onText: quiet
             ? undefined
             : (delta) => {
@@ -242,6 +250,97 @@ export async function runLoop(
 
   if (legacyOutput) ui.warn(`  ↳ stopped after ${maxSteps} tool steps (possible loop)`);
   return finalText;
+}
+
+function emitProviderRuntimeEvent(
+  env: ExecEnv,
+  event: ModelProviderEvent,
+  metadata: Record<string, unknown>,
+): void {
+  const correlation = {
+    providerId: event.providerId,
+    runId: event.runId,
+    providerSequence: event.sequence,
+    providerSchemaVersion: event.schemaVersion,
+    ...metadata,
+  };
+  if (event.type === "request.started") {
+    env.emitEvent?.({
+      type: "provider:request",
+      tool: "model-provider",
+      title: "Model request started",
+      summary: event.model || event.providerId,
+      status: "running",
+      payload: { ...correlation, model: event.model, requirements: event.requirements },
+    });
+    return;
+  }
+  if (event.type === "tool.call.started") {
+    env.emitEvent?.({
+      type: "provider:tool:start",
+      tool: event.name || "model-tool",
+      title: event.name ? `Model selected ${event.name}` : "Model tool call started",
+      summary: event.callId,
+      status: "running",
+      payload: { ...correlation, callId: event.callId, index: event.index, name: event.name },
+    });
+    return;
+  }
+  if (event.type === "tool.call.delta") {
+    env.emitEvent?.({
+      type: "provider:tool:delta",
+      tool: "model-tool",
+      title: "Model tool call streaming",
+      summary: event.nameDelta || "arguments",
+      status: "running",
+      payload: {
+        ...correlation,
+        callId: event.callId,
+        index: event.index,
+        ...(event.nameDelta ? { nameDelta: event.nameDelta } : {}),
+        ...(event.argumentsDelta ? { argumentsDelta: event.argumentsDelta } : {}),
+      },
+    });
+    return;
+  }
+  if (event.type === "tool.call.completed") {
+    env.emitEvent?.({
+      type: "provider:tool:done",
+      tool: event.call.function.name,
+      title: `Model prepared ${event.call.function.name}`,
+      summary: event.call.id,
+      status: "done",
+      payload: {
+        ...correlation,
+        callId: event.call.id,
+        index: event.index,
+        name: event.call.function.name,
+        arguments: event.call.function.arguments,
+      },
+    });
+    return;
+  }
+  if (event.type === "usage.updated") {
+    env.emitEvent?.({
+      type: "provider:usage",
+      tool: "model-provider",
+      title: "Model usage updated",
+      summary: `${event.usage.totalTokens ?? 0} tokens`,
+      status: "done",
+      payload: { ...correlation, usage: event.usage },
+    });
+    return;
+  }
+  if (event.type === "response.failed") {
+    env.emitEvent?.({
+      type: "provider:error",
+      tool: "model-provider",
+      title: "Model request failed",
+      summary: event.error.message,
+      status: "error",
+      payload: { ...correlation, error: event.error },
+    });
+  }
 }
 
 function emitAssistantCompleted(

@@ -18,7 +18,8 @@ flowchart LR
   C["CLI entry"] --> R["Shared runtime"]
   T["Ink TUI"] --> R
   S --> R
-  R --> L["OpenAI-compatible LLM client"]
+  R --> MP["Model Provider Adapter v2"]
+  MP --> L["OpenAI-compatible transport"]
   R --> X["Permission-gated tools"]
   X --> F["Workspace, Git, Bash, MCP"]
   R --> RP["Runtime Protocol envelope"]
@@ -46,7 +47,9 @@ Root-level legacy `main.mjs`, `renderer.js`, and `index.html` are not production
 
 ### Core runtime
 
-`src/runtime.ts` orchestrates model turns, permissions, tool calls, events, and session state. `src/agent.ts`, `src/llm.ts`, and `src/tools/` provide model and tool behavior. `src/process-env.ts` builds minimal child-process environments.
+`src/runtime.ts` orchestrates model turns, permissions, tool calls, events, and session state. `src/agent.ts` calls the capability-negotiated `src/model-provider.ts` facade; `src/llm.ts` is the low-level compatibility transport and is not an orchestration boundary. `src/tools/` provides tool behavior. `src/process-env.ts` builds minimal child-process environments.
+
+The Model Provider Adapter is separate from `src/agent-provider.ts`. Model providers execute one model request and normalize text, tool-call, usage, interruption, and error semantics. Agent providers execute a whole delegated engineering task, potentially in an isolated workspace.
 
 ### Protocol and persistence
 
@@ -113,6 +116,7 @@ The target is implemented through compatibility layers:
 - Per-session sequence is monotonic; concurrent sessions cannot share mutable output buffers.
 - Assistant text is data in `assistant.delta` and `assistant.completed` style events, never inferred from global stdout.
 - Tool output, approval requests, diffs, errors, and completion retain typed status and visibility.
+- Model capability requirements are negotiated before transport execution; provider request, tool-call, usage, and normalized failure events retain run/call correlation.
 - Append failure is observable and cannot be reported as durable success.
 - Compatibility fields may remain during migration but cannot become a second authority.
 

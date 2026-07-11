@@ -104,6 +104,62 @@ check(
   validateRuntimeProtocolEvent({ ...approvalResolvedEnvelope, payload: { requestId: "approval-1", decision: "later" } }).ok === false,
 );
 
+const modelToolEnvelope = createRuntimeProtocolEvent(
+  {
+    type: "provider:tool:delta",
+    tool: "model-tool",
+    title: "Model tool call streaming",
+    status: "running",
+    sessionId: "session-a",
+    turnId: "session-a-turn-1",
+    payload: { providerId: "fixture", runId: "run-1", callId: "call-1", argumentsDelta: "{}" },
+  },
+  { sequence: 4, createdAt: 103 },
+);
+check(
+  "provider tool delta maps to a hidden model protocol event",
+  modelToolEnvelope.kind === "model.tool_call.delta" &&
+    modelToolEnvelope.actor === "assistant" &&
+    modelToolEnvelope.visibility.includes("hidden") &&
+    validateRuntimeProtocolEvent(modelToolEnvelope).ok,
+  JSON.stringify(modelToolEnvelope),
+);
+check(
+  "provider tool delta requires correlation and content",
+  validateRuntimeProtocolEvent({ ...modelToolEnvelope, payload: { callId: "call-1" } }).ok === false &&
+    validateRuntimeProtocolEvent({ ...modelToolEnvelope, payload: { argumentsDelta: "{}" } }).ok === false,
+);
+
+const usageEnvelope = createRuntimeProtocolEvent(
+  {
+    type: "provider:usage",
+    tool: "model-provider",
+    title: "Model usage updated",
+    status: "done",
+    sessionId: "session-a",
+    turnId: "session-a-turn-1",
+    payload: { providerId: "fixture", runId: "run-1", usage: { inputTokens: 10, outputTokens: 2, totalTokens: 12 } },
+  },
+  { sequence: 5, createdAt: 104 },
+);
+check("provider usage maps and validates", usageEnvelope.kind === "usage.updated" && validateRuntimeProtocolEvent(usageEnvelope).ok, JSON.stringify(usageEnvelope));
+check("provider usage rejects negative totals", validateRuntimeProtocolEvent({ ...usageEnvelope, payload: { usage: { totalTokens: -1 } } }).ok === false);
+
+const failureEnvelope = createRuntimeProtocolEvent(
+  {
+    type: "provider:error",
+    tool: "model-provider",
+    title: "Model request failed",
+    status: "error",
+    sessionId: "session-a",
+    turnId: "session-a-turn-1",
+    payload: { providerId: "fixture", runId: "run-1", error: { code: "provider_timeout", category: "timeout", message: "request timed out", retriable: true } },
+  },
+  { sequence: 6, createdAt: 105 },
+);
+check("normalized provider failure maps and validates", failureEnvelope.kind === "model.failed" && validateRuntimeProtocolEvent(failureEnvelope).ok, JSON.stringify(failureEnvelope));
+check("provider failure rejects unnormalized errors", validateRuntimeProtocolEvent({ ...failureEnvelope, payload: { error: { message: "raw" } } }).ok === false);
+
 console.log("\n[runtime-protocol] runtime integration");
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "hicode-runtime-protocol-"));
