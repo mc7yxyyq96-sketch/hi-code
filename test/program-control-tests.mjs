@@ -43,6 +43,8 @@ const requiredFiles = [
   "docs/adr/ADR-0007-explicit-openai-responses-transport.md",
   "docs/adr/ADR-0008-explicit-anthropic-ollama-transports.md",
   "docs/adr/ADR-0009-durable-attachments-and-command-routing.md",
+  "docs/adr/ADR-0010-gradual-react-app-shell.md",
+  "docs/app-shell.md",
   "docs/attachments-and-command-registry.md",
   "docs/anthropic-ollama-adapters.md",
   "docs/model-provider-adapters.md",
@@ -255,6 +257,8 @@ check("Attachment and command routing tests are part of global verification", pa
 check("OpenAI Responses evidence capture is reproducible", packageJson.scripts["program:evidence:openai-responses"] === "node scripts/capture-task-evidence.mjs --task=HC-PROV-211" && fs.readFileSync(path.join(root, "scripts/capture-task-evidence.mjs"), "utf8").includes('"HC-PROV-211"'));
 check("Anthropic and Ollama evidence capture is reproducible", packageJson.scripts["program:evidence:anthropic-ollama"] === "node scripts/capture-task-evidence.mjs --task=HC-PROV-212" && fs.readFileSync(path.join(root, "scripts/capture-task-evidence.mjs"), "utf8").includes('"HC-PROV-212"'));
 check("Attachment and command evidence capture is reproducible", packageJson.scripts["program:evidence:attachment-command"] === "node scripts/capture-task-evidence.mjs --task=HC-RUN-220" && fs.readFileSync(path.join(root, "scripts/capture-task-evidence.mjs"), "utf8").includes('"HC-RUN-220"'));
+check("Typed App Shell tests are part of global verification", packageJson.scripts["test:app-shell"]?.includes("test/app-shell-tests.ts") && fs.readFileSync(path.join(root, "scripts/verify.mjs"), "utf8").includes("test/app-shell-tests.ts"));
+check("Typed App Shell evidence capture is reproducible", packageJson.scripts["program:evidence:app-shell"] === "node scripts/capture-task-evidence.mjs --task=HC-UI-301" && fs.readFileSync(path.join(root, "scripts/capture-task-evidence.mjs"), "utf8").includes('"HC-UI-301"'));
 check(
   "HC-PROV-211 completed only after Model Provider v2 completion and evidence",
   openAIResponsesTask?.status === "completed" &&

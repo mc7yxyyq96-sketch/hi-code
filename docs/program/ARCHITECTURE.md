@@ -39,7 +39,7 @@ The diagram describes implemented connections. It does not imply that every clie
 - Electron main: `electron/main.mjs`
 - Electron preload: `electron/preload.cjs`
 - Renderer document: `renderer/index.html`
-- Renderer bootstrap: `renderer/renderer.js` and `renderer/app/bootstrap.js`
+- Renderer bootstrap: `renderer/renderer.js`, generated `renderer/generated/app-shell.js`, and legacy `renderer/app/bootstrap.js`
 
 Root-level legacy `main.mjs`, `renderer.js`, and `index.html` are not production entrypoints. Archived v0.4 files live under `legacy/v0.4/` and must not be reintroduced into package metadata.
 
@@ -69,7 +69,9 @@ HC-RUN-201 moved assistant text to first-class protocol events. HC-RUN-202 adds 
 
 ### Renderer
 
-`renderer/app/state.js` owns explicit renderer state. `renderer/api/hicode-api.js` normalizes preload calls and failures. Components under `renderer/components/` own panel rendering and user actions. `renderer/renderer.js` remains a compatibility composition layer while behavior migrates into components.
+`renderer/app-shell/` owns the typed React shell route and compact-navigation state. Vite creates a local production bundle during build; generated code is not committed. `renderer/app-shell/legacy-panel-adapter.ts` validates the current panel DOM and is the production shell-level visibility writer. It sends new navigation intent through existing real triggers, so no business panel is duplicated.
+
+`renderer/app/state.js` continues to own legacy business state. `renderer/api/hicode-api.js` normalizes preload calls and failures. Components under `renderer/components/` own panel rendering and user actions. `renderer/renderer.js` mounts the typed shell and then calls the legacy bootstrap as a compatibility composition layer. Panels migrate one route at a time; the React shell is not a second Runtime, API, or persistence authority.
 
 ### Engineering services
 

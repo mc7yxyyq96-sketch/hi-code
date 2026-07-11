@@ -9,7 +9,7 @@ This document freezes the Sprint 0 engineering baseline. Future Codex or Claude 
 - Electron main process: `electron/main.mjs`
 - Electron preload bridge: `electron/preload.cjs`
 - Renderer document: `renderer/index.html`
-- Renderer logic: `renderer/renderer.js`
+- Renderer logic: `renderer/renderer.js`, typed source under `renderer/app-shell/`, and legacy panels under `renderer/app/` and `renderer/components/`
 - CLI/TUI source entry: `src/index.ts`
 - Compiled CLI binary: `dist/index.js`
 
@@ -42,6 +42,7 @@ npm run test
 npm run test:feature
 npm run test:entrypoints
 npm run test:security
+npm run test:app-shell
 npm run test:openai-responses
 npm run check:syntax
 npm run verify
@@ -67,6 +68,8 @@ The current script also runs entrypoint/security tests and production dependency
 - `contextIsolation` must remain `true`.
 - `nodeIntegration` must remain `false`.
 - Renderer `sandbox` should remain `true`; any future compatibility exception must be documented with a failing repro and mitigation.
+- The React/Vite App Shell must remain a local generated bundle. Do not load framework code from a CDN or expand CSP for the shell.
+- New shell routes must use the typed registry and a real existing trigger. Missing panels, duplicate mappings, and non-actionable routes fail closed.
 - `renderer/index.html` must keep a CSP that blocks remote scripts by default.
 - Preload APIs must validate argument types before calling main-process IPC.
 - Main-process IPC handlers must use normalized error returns instead of leaking thrown exceptions.
