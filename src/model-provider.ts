@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 
-import type { ModelProfile } from "./config.js";
+import { normalizeModelTransportProtocol, type ModelProfile } from "./config.js";
 import {
   complete,
   streamChat,
@@ -11,6 +11,9 @@ import {
   type ToolCallStreamDelta,
   type ToolSchema,
 } from "./llm.js";
+import { createOpenAIResponsesAdapter } from "./openai-responses-provider.js";
+
+export { createOpenAIResponsesAdapter } from "./openai-responses-provider.js";
 
 export const MODEL_PROVIDER_SCHEMA_VERSION = 2;
 
@@ -547,6 +550,12 @@ export function createLegacyOpenAICompatibleAdapter(
   };
 }
 
+export function createModelProfileAdapter(profile: ModelProfile): ModelProviderAdapter {
+  const protocol = normalizeModelTransportProtocol(profile.protocol);
+  if (protocol === "responses") return createOpenAIResponsesAdapter(profile);
+  return createLegacyOpenAICompatibleAdapter(profile);
+}
+
 export interface ModelStreamHandlers extends StreamHandlers {
   onProviderEvent?: ModelProviderEventListener;
   requirements?: Partial<ModelProviderRequirements>;
@@ -560,7 +569,7 @@ export async function streamModelProfile(
   signal?: AbortSignal,
 ): Promise<AssistantTurn> {
   const registry = new ModelProviderRegistry();
-  const adapter = createLegacyOpenAICompatibleAdapter(profile);
+  const adapter = createModelProfileAdapter(profile);
   registry.register(adapter);
   const result = await registry.run(adapter.descriptor.id, {
     messages,
@@ -596,7 +605,7 @@ export async function completeModelProfile(
   listener?: ModelProviderEventListener,
 ): Promise<string> {
   const registry = new ModelProviderRegistry();
-  const adapter = createLegacyOpenAICompatibleAdapter(profile);
+  const adapter = createModelProfileAdapter(profile);
   registry.register(adapter);
   const result = await registry.run(adapter.descriptor.id, {
     messages,
@@ -612,10 +621,15 @@ export function normalizeModelProviderError(error: unknown): ModelProviderError 
   const original = error instanceof Error ? error.message : typeof error === "string" ? error : String(source.message || "model provider request failed");
   const message = redactSensitiveText(original || "model provider request failed");
   const status = finiteStatus(source.status);
-  const existingCode = typeof source.code === "string" && source.code.trim() ? source.code.trim() : "";
+  const rawCode = typeof source.code === "string" ? source.code.trim() : "";
+  const existingCode = /^[a-z0-9_.-]{1,100}$/i.test(rawCode) ? rawCode : "";
   const lower = original.toLowerCase();
 
-  let category: ModelProviderErrorCategory = "provider";
+  const sourceCategory = typeof source.category === "string" && [
+    "authentication", "authorization", "rate_limit", "timeout", "network", "context_length",
+    "capability", "validation", "cancelled", "provider",
+  ].includes(source.category) ? source.category as ModelProviderErrorCategory : undefined;
+  let category: ModelProviderErrorCategory = sourceCategory || "provider";
   let code = existingCode || "provider_request_failed";
   let retriable = false;
 

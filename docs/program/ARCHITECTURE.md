@@ -51,6 +51,8 @@ Root-level legacy `main.mjs`, `renderer.js`, and `index.html` are not production
 
 The Model Provider Adapter is separate from `src/agent-provider.ts`. Model providers execute one model request and normalize text, tool-call, usage, interruption, and error semantics. Agent providers execute a whole delegated engineering task, potentially in an isolated workspace.
 
+Model profiles select their wire transport explicitly. Existing profiles omit `protocol` and stay on the `src/llm.ts` Chat Completions compatibility path. Profiles with `protocol: "responses"` use `src/openai-responses-provider.ts`; both paths converge on the same Model Provider v2 events and Runtime Protocol. Transport selection never depends on hostname inference and does not rewrite persisted sessions or runtime stores.
+
 ### Protocol and persistence
 
 `src/runtime-protocol.ts` defines versioned event envelopes. `src/runtime-event-store.ts` preserves legacy JSONL while synchronizing validated events into the typed store. `src/runtime-stores.ts` owns typed thread, event, and normalized model-message contracts. `src/session-store.ts` remains the compatibility facade. `src/turn-state-machine.ts` derives conservative crash, approval, and tool recovery from durable events; `src/recovery.ts` projects those plans through the compatibility IPC and treats evidence-poor legacy failures as inspection-only.

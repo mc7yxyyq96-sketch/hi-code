@@ -4578,6 +4578,7 @@ function normalizeConfig(config = {}) {
       model: config.model,
       contextWindow: config.contextWindow,
       temperature: config.temperature,
+      protocol: config.protocol,
     };
   }
   const defaultProfile = config.defaultProfile || Object.keys(profiles)[0] || "default";
@@ -4615,6 +4616,7 @@ function defaultProfileFromConfig(config) {
     model: config.model,
     contextWindow: config.contextWindow,
     temperature: config.temperature,
+    protocol: config.protocol,
   };
 }
 
@@ -4622,6 +4624,7 @@ function quickProfile() {
   const preset = PROVIDERS[selectedProvider] || PROVIDERS.custom;
   const baseURL = quickBaseURL.value.trim() || preset.baseURL;
   const apiKey = quickApiKey.value.trim() || (isLocalEndpoint(baseURL) ? "sk-no-key-required" : preset.apiKey);
+  const protocol = configuredQuickProtocol();
   return {
     name: "default",
     baseURL,
@@ -4629,7 +4632,18 @@ function quickProfile() {
     model: quickModel.value.trim() || preset.model,
     contextWindow: Number(quickContext.value) || preset.contextWindow,
     temperature: typeof preset.temperature === "number" ? preset.temperature : 0.2,
+    ...(protocol ? { protocol } : {}),
   };
+}
+
+function configuredQuickProtocol() {
+  const config = parseConfig(cfg.value || cfgText || "{}");
+  const profiles = config.profiles && typeof config.profiles === "object" ? config.profiles : {};
+  const profileKey = providerProfileKey(selectedProvider);
+  const profile = profiles[profileKey]
+    || (config.defaultProfile === profileKey ? profiles[config.defaultProfile] : null);
+  const protocol = profile?.protocol || (!Object.keys(profiles).length ? config.protocol : undefined);
+  return protocol === "responses" || protocol === "chat_completions" ? protocol : undefined;
 }
 
 function validateQuickProfile(profile) {

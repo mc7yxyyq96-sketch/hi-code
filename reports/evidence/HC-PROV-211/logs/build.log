@@ -1,0 +1,4 @@
+$ npm run build
+
+> hi-code@0.6.0-alpha.8 build
+> tsc -p tsconfig.json && chmod +x dist/index.js

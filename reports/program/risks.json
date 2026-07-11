@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "program": "Hi Code Product-Grade Desktop and Industrial Workbench",
-  "updatedAt": "2026-07-11T00:38:19Z",
+  "updatedAt": "2026-07-11T02:17:26Z",
   "risks": [
     {
       "id": "RISK-RUN-001",
@@ -79,6 +79,17 @@
       "impact": "A model request can reach the network before Hi Code discovers that images, tool streaming, structured output, reasoning, or token limits are unsupported, and provider-specific errors lose stable semantics.",
       "mitigation": "HC-PROV-210 delivers a separate Model Provider Adapter registry, fail-fast capability negotiation, normalized events/errors/usage, stable tool correlation, Runtime Protocol projection, and a real local-SSE compatibility migration for current model profiles.",
       "trigger": "Any unsupported requirement sent to a provider, silent capability downgrade, or provider event that cannot be normalized blocks alpha.9."
+    },
+    {
+      "id": "RISK-PROV-002",
+      "severity": "high",
+      "status": "mitigated",
+      "owner": "runtime-engine",
+      "title": "Responses and Chat Completions semantics can diverge during migration",
+      "evidence": ["src/openai-responses-provider.ts", "src/model-provider.ts", "test/openai-responses-provider-tests.mjs", "reports/evidence/HC-PROV-211/manifest.json"],
+      "impact": "Incorrect event mapping can duplicate tool calls, lose image inputs or usage, report an interrupted request as complete, or silently move existing compatible endpoints to an unsupported protocol.",
+      "mitigation": "HC-PROV-211 keeps Chat Completions as the compatibility default, makes Responses selection explicit, and verifies both transports with real local HTTP streams and shared Runtime tool-loop tests.",
+      "trigger": "Any implicit protocol migration, duplicate or incomplete tool lifecycle, lost usage, image mismatch, or false terminal state blocks HC-PROV-211 completion."
     },
     {
       "id": "RISK-IND-001",
