@@ -245,7 +245,10 @@
       "dependencies": ["HC-UI-302"],
       "deliverables": ["CodeMirror editor", "file conflict handling", "diff comments", "review actions"],
       "acceptance": ["open/edit/save/reload works", "disk conflict is detected", "diff comment triggers agent revision"],
-      "status": "planned"
+      "status": "in_progress",
+      "startedAt": "2026-07-11T14:02:09Z",
+      "branch": "codex/desktop-ux/hc-ui-310",
+      "taskManifest": "reports/tasks/HC-UI-310.md"
     },
     {
       "id": "HC-UI-311",
