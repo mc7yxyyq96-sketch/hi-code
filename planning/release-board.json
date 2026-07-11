@@ -88,6 +88,12 @@
       "branch": "codex/runtime-engine/hc-prov-211",
       "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-hc-prov-211",
       "mode": "completed-worktree"
+    },
+    {
+      "taskId": "HC-PROV-212",
+      "branch": "codex/runtime-engine/hc-prov-212",
+      "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-hc-prov-212",
+      "mode": "active-worktree"
     }
   ],
   "tasks": [
@@ -187,6 +193,16 @@
       "startedAt": "2026-07-11T00:51:02Z",
       "completedAt": "2026-07-11T02:17:26Z",
       "evidence": "reports/evidence/HC-PROV-211/manifest.json"
+    },
+    {
+      "id": "HC-PROV-212",
+      "owner": "runtime-engine",
+      "priority": "P1",
+      "status": "in_progress",
+      "dependencies": ["HC-PROV-210", "HC-PROV-211"],
+      "branch": "codex/runtime-engine/hc-prov-212",
+      "startedAt": "2026-07-11T02:40:19Z",
+      "evidence": "reports/tasks/HC-PROV-212.md"
     }
   ],
   "gates": [
@@ -253,6 +269,12 @@
       "status": "passed",
       "owner": "HC-PROV-211",
       "evidence": "reports/evidence/HC-PROV-211/manifest.json"
+    },
+    {
+      "id": "anthropic-ollama-adapters",
+      "status": "in_progress",
+      "owner": "HC-PROV-212",
+      "evidence": "reports/tasks/HC-PROV-212.md"
     }
   ],
   "nextReleaseSlices": [

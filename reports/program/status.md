@@ -35,6 +35,7 @@ The final machine-captured evidence is written by `npm run program:baseline` to 
 | 7 | HC-REL-ALPHA-8 | Completed | Release Owner | HC-RUN-202, HC-RUN-203, HC-PLAT-110 |
 | 8 | HC-PROV-210 | Completed | Runtime Engine | HC-RUN-202, HC-REL-ALPHA-8 integration base |
 | 9 | HC-PROV-211 | Completed | Runtime Engine | HC-PROV-210 |
+| 10 | HC-PROV-212 | In progress | Runtime Engine | HC-PROV-210, HC-PROV-211 |
 
 HC-QA-101 established a real Electron responsive baseline. HC-RUN-201 introduces protocol-native assistant output and concurrency isolation. No new industrial domain module is authorized before HC-RUN-201 completes.
 
@@ -59,6 +60,8 @@ The `0.6.0-alpha.8` candidate passed 13 isolated release commands on `codex/rele
 HC-PROV-210 completed on `codex/runtime-engine/hc-prov-210` from alpha.8 completion commit `80e6b83`. It separates Model Provider Adapter contracts from the existing external Agent Provider registry, rejects unsupported capabilities before transport execution, normalizes text/tool/usage/error semantics, records correlated provider events in Runtime Protocol, and migrates legacy model profiles through a real OpenAI-compatible adapter. Sixteen machine-captured gates passed with zero DoD findings. Concrete OpenAI Responses, Anthropic, and Ollama transports remain assigned to HC-PROV-211/212.
 
 HC-PROV-211 completed in the isolated `codex/runtime-engine/hc-prov-211` worktree from HC-PROV-210 completion commit `06dd676`. A real OpenAI Responses HTTPS/SSE transport now preserves text, image, function-call `call_id`, tool result, usage, interruption, incomplete, and failed semantics through the shared Runtime. Existing profiles remain on Chat Completions unless `protocol: "responses"` is explicit. Nineteen machine-captured gates passed, including a real two-request Runtime tool loop, Electron config routing, security, DoD, production audit, and Electron E2E.
+
+HC-PROV-212 is active in the isolated `codex/runtime-engine/hc-prov-212` worktree from HC-PROV-211 completion commit `7f91c76`. It is limited to dedicated Anthropic Messages and Ollama native/compatible transports, capability and error conformance, and unchanged legacy defaults. The parent passed build, verify, release check, and all 80 feature assertions before task-control changes.
 
 ## Current Product Truth
 

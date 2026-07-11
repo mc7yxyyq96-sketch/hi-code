@@ -174,10 +174,13 @@
       "title": "Anthropic and Ollama/OpenAI-compatible adapters",
       "owner": "runtime-engine",
       "estimatedDays": 5,
-      "dependencies": ["HC-PROV-210"],
+      "dependencies": ["HC-PROV-210", "HC-PROV-211"],
       "deliverables": ["Anthropic adapter", "Ollama adapter", "capability/error fixtures"],
       "acceptance": ["provider-specific tool streaming is normalized", "reasoning summaries are optional and typed", "no silent downgrade"],
-      "status": "planned"
+      "status": "in_progress",
+      "startedAt": "2026-07-11T02:40:19Z",
+      "branch": "codex/runtime-engine/hc-prov-212",
+      "taskManifest": "reports/tasks/HC-PROV-212.md"
     },
     {
       "id": "HC-RUN-220",
