@@ -64,6 +64,7 @@
     "program:evidence:electron": "node scripts/capture-task-evidence.mjs --task=HC-PLAT-110",
     "program:evidence:model-provider": "node scripts/capture-task-evidence.mjs --task=HC-PROV-210",
     "program:evidence:openai-responses": "node scripts/capture-task-evidence.mjs --task=HC-PROV-211",
+    "program:evidence:anthropic-ollama": "node scripts/capture-task-evidence.mjs --task=HC-PROV-212",
     "program:evidence:alpha7": "node scripts/capture-task-evidence.mjs --task=HC-REL-ALPHA-7",
     "program:evidence:alpha8": "node scripts/capture-task-evidence.mjs --task=HC-REL-ALPHA-8",
     "store:export": "node scripts/export-store-catalog.mjs",

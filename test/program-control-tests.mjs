@@ -41,6 +41,8 @@ const requiredFiles = [
   "docs/adr/ADR-0005-supported-electron-line.md",
   "docs/adr/ADR-0006-model-provider-adapter-v2.md",
   "docs/adr/ADR-0007-explicit-openai-responses-transport.md",
+  "docs/adr/ADR-0008-explicit-anthropic-ollama-transports.md",
+  "docs/anthropic-ollama-adapters.md",
   "docs/model-provider-adapters.md",
   "docs/openai-responses-adapter.md",
   "docs/electron-compatibility.md",
@@ -226,7 +228,9 @@ check(
 );
 check("Model Provider focused tests are part of global verification", packageJson.scripts["test:model-providers"] === "node test/model-provider-tests.mjs" && fs.readFileSync(path.join(root, "scripts/verify.mjs"), "utf8").includes("test/model-provider-tests.mjs"));
 check("OpenAI Responses focused tests are part of global verification", packageJson.scripts["test:openai-responses"] === "node test/openai-responses-provider-tests.mjs" && fs.readFileSync(path.join(root, "scripts/verify.mjs"), "utf8").includes("test/openai-responses-provider-tests.mjs"));
+check("Anthropic and Ollama focused tests are part of global verification", packageJson.scripts["test:anthropic-ollama"] === "node test/anthropic-ollama-provider-tests.mjs" && fs.readFileSync(path.join(root, "scripts/verify.mjs"), "utf8").includes("test/anthropic-ollama-provider-tests.mjs"));
 check("OpenAI Responses evidence capture is reproducible", packageJson.scripts["program:evidence:openai-responses"] === "node scripts/capture-task-evidence.mjs --task=HC-PROV-211" && fs.readFileSync(path.join(root, "scripts/capture-task-evidence.mjs"), "utf8").includes('"HC-PROV-211"'));
+check("Anthropic and Ollama evidence capture is reproducible", packageJson.scripts["program:evidence:anthropic-ollama"] === "node scripts/capture-task-evidence.mjs --task=HC-PROV-212" && fs.readFileSync(path.join(root, "scripts/capture-task-evidence.mjs"), "utf8").includes('"HC-PROV-212"'));
 check(
   "HC-PROV-211 completed only after Model Provider v2 completion and evidence",
   openAIResponsesTask?.status === "completed" &&
