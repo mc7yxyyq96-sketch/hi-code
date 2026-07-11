@@ -40,6 +40,7 @@ The final machine-captured evidence is written by `npm run program:baseline` to 
 | 12 | HC-UI-301 | Completed | Desktop UX | HC-RUN-201, HC-QA-101 |
 | 13 | HC-UI-302 | Completed | Desktop UX | HC-UI-301, HC-RUN-202 |
 | 14 | HC-UI-310 | Completed | Desktop UX | HC-UI-302 |
+| 15 | HC-UI-311 | In Progress | Desktop UX | HC-UI-301, HC-PLAT-110 |
 
 HC-QA-101 established a real Electron responsive baseline. HC-RUN-201 introduces protocol-native assistant output and concurrency isolation. No new industrial domain module is authorized before HC-RUN-201 completes.
 
@@ -75,6 +76,8 @@ HC-UI-302 completed in the isolated `codex/desktop-ux/hc-ui-302` worktree from H
 
 HC-UI-310 completed in the isolated `codex/desktop-ux/hc-ui-310` worktree from HC-UI-302 completion commit `8b13b88`. A lazy local CodeMirror editor now opens, edits, saves, and reloads bounded UTF-8 workspace files. SHA-256 revision comparison, atomic sibling replacement, sticky conflict state, and explicit confirmed force overwrite prevent silent stale writes. Typed line comments enter the existing conversation and Runtime revision path. Fifteen machine-captured gates passed from clean source commit `cfd75e1`, including build, verify, release check, security, DoD, production audit, and real Electron acceptance at 720 px with an external disk mutation. The completed ten-hour HC-RUN-220 evidence was reused rather than rerun.
 
+HC-UI-311 started in the isolated `codex/desktop-ux/hc-ui-311` worktree from HC-UI-310 completion commit `115ea61`. The inherited `verify` baseline passed before task-state changes. The implementation boundary is a real interactive PTY owned by a centralized service and constrained by the existing execution policy, workspace confinement, minimal child environment, redacted bounded output, and deterministic process-tree cleanup. App preview, Git/PR/CI flow, and industrial expansion remain outside this task.
+
 ## Current Product Truth
 
 - Core Electron, CLI/TUI, runtime, tool, security, Job Center, Provider, Worktree, Arena, industrial, gate, sample, and release tests pass.
@@ -97,6 +100,8 @@ HC-UI-310 completed in the isolated `codex/desktop-ux/hc-ui-310` worktree from H
 - Anthropic and Ollama evidence: `reports/tasks/HC-PROV-212.md`, `reports/evidence/HC-PROV-212/manifest.json`
 - Attachment and command routing evidence: `reports/tasks/HC-RUN-220.md`, `reports/evidence/HC-RUN-220/manifest.json`
 - Typed App Shell evidence: `reports/tasks/HC-UI-301.md`, `reports/evidence/HC-UI-301/manifest.json`
+- Integrated editor evidence: `reports/tasks/HC-UI-310.md`, `reports/evidence/HC-UI-310/manifest.json`
+- Active terminal task: `reports/tasks/HC-UI-311.md`
 - Current risks: `reports/program/risks.json`
 - Historical final acceptance: `reports/final-acceptance-historical.md`
 - Historical audit policy: `reports/audit/README.md`

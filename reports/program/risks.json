@@ -101,6 +101,21 @@
       "trigger": "Any save without revision comparison, hidden force overwrite, unsafe path, unbounded/binary load, or review action that does not enter the Runtime blocks HC-UI-310 completion."
     },
     {
+      "id": "RISK-UI-005",
+      "severity": "high",
+      "status": "open",
+      "owner": "desktop-ux",
+      "title": "An integrated PTY can bypass policy or outlive its terminal",
+      "evidence": [
+        "reports/tasks/HC-UI-311.md",
+        "electron/services/security-service.mjs",
+        "src/tools/bash.ts"
+      ],
+      "impact": "An unrestricted PTY can inherit credentials, execute without explicit policy, retain hidden child processes, or continue producing output after the UI closes.",
+      "mitigation": "HC-UI-311 will use a centralized PTY service, workspace-bound sessions, minimal child environments, explicit execution authorization, bounded redacted output, resize validation, and verified process-tree termination.",
+      "trigger": "Any PTY spawn without policy approval, inherited secret, unbounded transcript, cross-workspace session, or surviving process tree blocks HC-UI-311 completion."
+    },
+    {
       "id": "RISK-PLAT-001",
       "severity": "high",
       "status": "mitigated",

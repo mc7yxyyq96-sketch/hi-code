@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "program": "Hi Code Product-Grade Desktop and Industrial Workbench",
-  "updatedAt": "2026-07-11T14:02:09Z",
+  "updatedAt": "2026-07-11T17:58:50Z",
   "status": "active",
   "source": {
     "version": "0.6.0-alpha.6",
@@ -118,6 +118,12 @@
       "branch": "codex/desktop-ux/hc-ui-310",
       "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-hc-ui-310",
       "mode": "completed-worktree"
+    },
+    {
+      "taskId": "HC-UI-311",
+      "branch": "codex/desktop-ux/hc-ui-311",
+      "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-hc-ui-311",
+      "mode": "active-task-worktree"
     }
   ],
   "tasks": [
@@ -281,6 +287,16 @@
       "completedAt": "2026-07-11T16:02:52Z",
       "taskManifest": "reports/tasks/HC-UI-310.md",
       "evidence": "reports/evidence/HC-UI-310/manifest.json"
+    },
+    {
+      "id": "HC-UI-311",
+      "owner": "desktop-ux",
+      "priority": "P0",
+      "status": "in_progress",
+      "dependencies": ["HC-UI-301", "HC-PLAT-110"],
+      "branch": "codex/desktop-ux/hc-ui-311",
+      "startedAt": "2026-07-11T17:58:50Z",
+      "taskManifest": "reports/tasks/HC-UI-311.md"
     }
   ],
   "gates": [
@@ -382,6 +398,12 @@
       "owner": "HC-UI-310",
       "verifiedAt": "2026-07-11T16:02:52Z",
       "evidence": "reports/evidence/HC-UI-310/manifest.json"
+    },
+    {
+      "id": "integrated-terminal-policy",
+      "status": "pending",
+      "owner": "HC-UI-311",
+      "evidence": "reports/tasks/HC-UI-311.md"
     }
   ],
   "nextReleaseSlices": [
@@ -395,7 +417,7 @@
     },
     {
       "release": "0.6.0-beta.2",
-      "focus": "Integrated editor, conflict-safe saves, and review-to-revision workflow"
+      "focus": "Policy-bound PTY terminal, secure app preview, and Git/PR/CI coding loop"
     }
   ]
 }
