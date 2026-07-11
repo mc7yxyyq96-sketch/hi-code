@@ -1,6 +1,6 @@
 # Model Provider Adapter v2
 
-Status: Implemented compatibility foundation in HC-PROV-210; OpenAI Responses transport in HC-PROV-211
+Status: Implemented compatibility foundation in HC-PROV-210; OpenAI Responses in HC-PROV-211; Anthropic Messages and Ollama native chat in HC-PROV-212
 
 ## Purpose
 
@@ -15,7 +15,7 @@ The Model Provider Adapter is the model-transport boundary used by the shared Hi
 - in-memory migration of the existing `ModelProfile`
 - the production compatibility adapter over the current OpenAI Chat Completions transport
 
-`src/llm.ts` remains the low-level Chat Completions HTTP/SSE transport. `src/openai-responses-provider.ts` owns the Responses-specific wire contract. Runtime, context compaction, manager planning, and council synthesis call the provider facade instead of either transport directly.
+`src/llm.ts` remains the low-level Chat Completions HTTP/SSE transport. Dedicated modules own the OpenAI Responses, Anthropic Messages, and Ollama native wire contracts. Runtime, context compaction, manager planning, and council synthesis call the provider facade instead of any transport directly.
 
 ## Descriptor
 
@@ -86,9 +86,11 @@ The compatibility descriptor never includes the API key. Image input is conditio
 
 ## Explicit Transport Selection
 
-`ModelProfile.protocol` accepts `chat_completions` or `responses`. Omission deliberately remains `chat_completions`; Hi Code does not infer protocol support from the endpoint or model name. The renderer preserves an existing explicit selector, the Electron connection test follows it, and unknown selectors are rejected before persistence.
+`ModelProfile.protocol` accepts `chat_completions`, `responses`, `anthropic_messages`, or `ollama_chat`. Omission deliberately remains `chat_completions`; Hi Code does not infer protocol support from the endpoint or model name. The renderer preserves an existing explicit selector, native Anthropic and Ollama presets write their explicit selector, the Electron connection test follows it, and unknown selectors are rejected before persistence.
 
 The Responses adapter uses real HTTPS/SSE transport, sets `store: false`, preserves Responses `call_id` across local tool execution, and maps native terminal and usage fields into the provider-neutral contract. See `docs/openai-responses-adapter.md` and ADR-0007.
+
+The Anthropic adapter uses `/v1/messages`, Anthropic-versioned headers, native content blocks, `tool_use`/`tool_result` correlation, and named SSE events. The Ollama adapter uses `/api/chat`, native image arrays, `tool_name` results, and NDJSON. Both use bounded response readers and the same provider terminal-state validator. See `docs/anthropic-ollama-adapters.md` and ADR-0008.
 
 ## Error Contract
 
@@ -106,4 +108,4 @@ Provider failures expose stable authentication, authorization, rate-limit, timeo
 
 ## Current Limits
 
-The current adapters do not implement Anthropic Messages, Ollama-native APIs, external Codex/Claude agents, provider-hosted files, background Responses, remote provider tools, or structured-output negotiation. Responses selection currently uses the existing Advanced JSON editor rather than a new settings redesign. Both Chat Completions and Responses are real production paths, not mocks.
+The current adapters do not implement Gemini-native APIs, external Codex/Claude task agents, provider-hosted file lifecycle, background Responses, remote provider tools, or structured-output negotiation. Raw Anthropic/Ollama thinking is neither displayed nor persisted and is not relabeled as a reasoning summary. Chat Completions, Responses, Anthropic Messages, and Ollama native chat are real production paths, not mocks.

@@ -19,7 +19,7 @@ flowchart LR
   T["Ink TUI"] --> R
   S --> R
   R --> MP["Model Provider Adapter v2"]
-  MP --> L["OpenAI-compatible transport"]
+  MP --> L["Chat Completions / Responses / Anthropic / Ollama transports"]
   R --> X["Permission-gated tools"]
   X --> F["Workspace, Git, Bash, MCP"]
   R --> RP["Runtime Protocol envelope"]
@@ -51,7 +51,7 @@ Root-level legacy `main.mjs`, `renderer.js`, and `index.html` are not production
 
 The Model Provider Adapter is separate from `src/agent-provider.ts`. Model providers execute one model request and normalize text, tool-call, usage, interruption, and error semantics. Agent providers execute a whole delegated engineering task, potentially in an isolated workspace.
 
-Model profiles select their wire transport explicitly. Existing profiles omit `protocol` and stay on the `src/llm.ts` Chat Completions compatibility path. Profiles with `protocol: "responses"` use `src/openai-responses-provider.ts`; both paths converge on the same Model Provider v2 events and Runtime Protocol. Transport selection never depends on hostname inference and does not rewrite persisted sessions or runtime stores.
+Model profiles select their wire transport explicitly. Existing profiles omit `protocol` and stay on the `src/llm.ts` Chat Completions compatibility path. Profiles can select `responses`, `anthropic_messages`, or `ollama_chat` for the dedicated modules under `src/`; all paths converge on the same Model Provider v2 events and Runtime Protocol. Transport selection never depends on hostname inference and does not rewrite persisted sessions or runtime stores. Native provider HTTP decoding is bounded, remote endpoints require HTTPS, and raw Anthropic/Ollama thinking remains outside assistant text and persistence.
 
 ### Protocol and persistence
 
