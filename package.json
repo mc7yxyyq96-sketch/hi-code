@@ -33,6 +33,7 @@
     "test:services": "node test/main-process-services-tests.mjs",
     "test:jobs": "node test/job-center-tests.mjs",
     "test:providers": "node test/provider-tests.mjs",
+    "test:model-providers": "node test/model-provider-tests.mjs",
     "test:worktrees": "node test/worktree-runner-tests.mjs",
     "test:arena": "node test/patch-arena-tests.mjs",
     "test:industrial": "node test/industrial-project-tests.mjs",

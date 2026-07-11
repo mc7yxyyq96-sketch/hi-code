@@ -34,6 +34,14 @@ export interface StreamHandlers {
   onText?: (delta: string) => void;
   /** Fired once the model commits to calling tools (after stream ends). */
   onToolCallStart?: (name: string) => void;
+  onToolCallDelta?: (delta: ToolCallStreamDelta) => void;
+}
+
+export interface ToolCallStreamDelta {
+  index: number;
+  id?: string;
+  nameDelta?: string;
+  argumentsDelta?: string;
 }
 
 export interface AssistantTurn {
@@ -125,7 +133,7 @@ export async function streamChat(
   let content = "";
   const toolCalls: ToolCall[] = [];
   let usage: AssistantTurn["usage"];
-  const seenToolNames = new Set<string>();
+  const startedToolIndexes = new Set<number>();
 
   const decoder = new TextDecoder();
   let buf = "";
@@ -177,10 +185,18 @@ export async function streamChat(
               }
               const slot = toolCalls[i];
               if (tc.id) slot.id = tc.id;
+              const nameDelta = typeof tc.function?.name === "string" ? tc.function.name : "";
+              const argumentsDelta = typeof tc.function?.arguments === "string" ? tc.function.arguments : "";
+              handlers.onToolCallDelta?.({
+                index: i,
+                ...(tc.id ? { id: tc.id } : {}),
+                ...(nameDelta ? { nameDelta } : {}),
+                ...(argumentsDelta ? { argumentsDelta } : {}),
+              });
               if (tc.function?.name) {
                 slot.function.name += tc.function.name;
-                if (!seenToolNames.has(slot.function.name)) {
-                  seenToolNames.add(slot.function.name);
+                if (!startedToolIndexes.has(i)) {
+                  startedToolIndexes.add(i);
                   handlers.onToolCallStart?.(slot.function.name);
                 }
               }
