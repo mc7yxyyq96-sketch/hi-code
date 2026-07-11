@@ -604,6 +604,23 @@ if (!window.hicode) {
     gitCommitMessage: async () => ({ ok: true, message: "Update Hi Code workspace" }),
     gitCommit: async () => ({ ok: true, hash: "demo123", output: "Committed demo123" }),
     pickFolder: async () => "/demo/hicode-project",
+    getTerminalCapabilities: async () => ({
+      ok: true,
+      available: false,
+      platform: "browser-preview",
+      shell: null,
+      supportsResize: false,
+      profileLoading: false,
+      maxSessionsPerWindow: 1,
+      reason: "浏览器预览不提供本机 PTY。",
+      setupHint: "请在 Hi Code 桌面 App 中打开集成终端。",
+    }),
+    createTerminal: async () => ({ ok: false, code: "terminal_unavailable", error: "浏览器预览不提供本机 PTY" }),
+    getTerminalStatus: async () => ({ ok: true, active: false, session: null, snapshot: "" }),
+    writeTerminal: async () => ({ ok: false, code: "terminal_closed", error: "没有活动终端" }),
+    resizeTerminal: async () => ({ ok: false, code: "terminal_closed", error: "没有活动终端" }),
+    closeTerminal: async () => ({ ok: true, closed: false }),
+    onTerminalEvent: () => () => {},
     attachFile: async () => ({ ok: true, id: "att-00000000-0000-4000-8000-000000000001", name: "demo-notes.txt", kind: "text", mimeType: "text/plain", size: 32, sha256: "0".repeat(64) }),
     attachImage: async () => ({ ok: true, id: "att-00000000-0000-4000-8000-000000000002", name: "demo-image.png", kind: "image", mimeType: "image/png", size: 68, sha256: "1".repeat(64) }),
     listAttachments: async () => [],
@@ -1301,6 +1318,7 @@ const currentProject = $("currentProject");
 const filesModal = $("files"), filePath = $("filePath"), fileList = $("fileList"), fileEditorMount = $("fileEditorMount");
 const capabilityView = $("capabilityView"), capTitle = $("capTitle"), capSubtitle = $("capSubtitle"), capSummary = $("capSummary"), capList = $("capList"), capActions = $("capActions");
 const commandView = $("commandView"), commandSearch = $("commandSearch"), commandSummary = $("commandSummary"), commandList = $("commandList"), commandComposerSlot = $("commandComposerSlot"), commandFocusInput = $("commandFocusInput"), commandRunInput = $("commandRunInput");
+const terminalView = $("terminalView");
 const gitView = $("gitView"), gitSub = $("gitSub"), gitBranch = $("gitBranch"), gitDirty = $("gitDirty"), gitStaged = $("gitStaged"), gitUnstaged = $("gitUnstaged");
 const jobView = $("jobView"), jobSummary = $("jobSummary"), jobList = $("jobList"), jobDetail = $("jobDetail"), jobRefresh = $("jobRefresh"), jobStatusText = $("jobStatusText");
 const arenaView = $("arenaView"), arenaSummary = $("arenaSummary"), arenaRunList = $("arenaRunList"), arenaCandidateList = $("arenaCandidateList"), arenaDetail = $("arenaDetail");
@@ -1350,7 +1368,7 @@ const aboutRepoBtn = $("aboutRepoBtn"), aboutReleasesBtn = $("aboutReleasesBtn")
 const providerHint = $("providerHint");
 const quickBaseURL = $("quickBaseURL"), quickApiKey = $("quickApiKey"), quickModel = $("quickModel"), quickContext = $("quickContext");
 const advancedConfig = $("advanced-config");
-const routeViews = { home, chatview, capabilityView, commandView, gitView, jobView, arenaView, industrialView };
+const routeViews = { home, chatview, capabilityView, commandView, terminalView, gitView, jobView, arenaView, industrialView };
 
 // Build the single composer from the template, start it in the home slot.
 const composer = $("composer-tpl").content.firstElementChild.cloneNode(true);
@@ -1988,6 +2006,21 @@ function showCommandCenter() {
   renderCommandCenter(commandSearch.value.trim());
   input.focus();
   if (input.value === "/") showMenu("/");
+}
+
+function showTerminal() {
+  jobCenter.stop();
+  patchArena.stop();
+  industrialProject.stop();
+  domainPacks.stop();
+  agentTeam.stop();
+  toolchain.stop();
+  qualityGates.stop();
+  releaseCenter.stop();
+  inChat = false;
+  syncState({ inChat });
+  showRoute({ main, views: routeViews, route: "terminalView", mainClass: "terminal", activeNav: "terminalBtn", setActiveNav });
+  window.hicodeAppShell?.terminal?.focus();
 }
 
 async function showGit() {
@@ -3264,6 +3297,7 @@ $("searchToggle").onclick = () => {
   if (!w.classList.contains("hidden")) searchInput.focus(); else { searchInput.value = ""; renderSessions(""); }
 };
 $("cmdBtn").onclick = showCommandCenter;
+$("terminalBtn").onclick = showTerminal;
 commandSearch.addEventListener("input", () => renderCommandCenter(commandSearch.value.trim()));
 commandFocusInput.onclick = () => {
   if (!input.value.trim()) input.value = "/";

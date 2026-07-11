@@ -38,6 +38,13 @@ function findingTypes(result) {
 }
 
 console.log("\n[definition-of-done] skeleton detector rules");
+const fullTreeScanner = fs.readFileSync(path.join(process.cwd(), "scripts", "scan-dod.mjs"), "utf8");
+check(
+  "full-tree scan excludes only the ignored derived renderer bundle while retaining first-party renderer source",
+  fullTreeScanner.includes('const derivedRoots = new Set(["renderer/generated"])')
+    && fullTreeScanner.includes('const includeRoots = ["package.json", "electron", "renderer", "src", "docs", "reports", "scripts", "test"]')
+    && !fullTreeScanner.includes('derivedRoots = new Set(["renderer"]'),
+);
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "hicode-dod-"));
 const detectorWorkspace = path.join(tmp, "detector");
 fs.mkdirSync(detectorWorkspace, { recursive: true });

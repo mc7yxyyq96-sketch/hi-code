@@ -98,7 +98,7 @@ await check("registry preserves every production shell destination", () => {
   const registry = createRouteRegistry(DEFAULT_SHELL_ROUTES);
   assert.deepEqual(
     registry.list().map((route) => route.id),
-    ["home", "chat", "store", "plugins", "skills", "agents", "mcp", "commands", "git", "jobs", "arena", "industrial"],
+    ["home", "chat", "store", "plugins", "skills", "agents", "mcp", "terminal", "commands", "git", "jobs", "arena", "industrial"],
   );
   assert.equal(registry.resolveLegacy("capabilityView", "skillsBtn")?.id, "skills");
   assert.equal(registry.resolveLegacy("capabilityView", "storeBtn")?.id, "store");
@@ -213,6 +213,11 @@ await check("the generated bundle exists after a production build", () => {
     : [];
   assert.equal(editorChunks.length, 1, `Expected one lazy CodeMirror chunk, found ${editorChunks.join(", ") || "none"}`);
   assert.ok(fs.statSync(path.join(chunksDir, editorChunks[0])).size > 100_000, "Lazy CodeMirror chunk is unexpectedly empty");
+  const terminalChunks = fs.existsSync(chunksDir)
+    ? fs.readdirSync(chunksDir).filter((name) => /^xterm-runtime-.*\.js$/.test(name))
+    : [];
+  assert.equal(terminalChunks.length, 1, `Expected one lazy xterm chunk, found ${terminalChunks.join(", ") || "none"}`);
+  assert.ok(fs.statSync(path.join(chunksDir, terminalChunks[0])).size > 100_000, "Lazy xterm chunk is unexpectedly empty");
 });
 
 await check("real Electron acceptance includes the full 720-1920 range", () => {

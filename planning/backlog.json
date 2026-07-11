@@ -262,7 +262,13 @@
       "dependencies": ["HC-UI-301", "HC-PLAT-110"],
       "deliverables": ["xterm terminal", "PTY service", "permission/policy integration", "process cleanup"],
       "acceptance": ["interactive shell works on target platforms", "terminal process tree ends on close", "secrets are not logged"],
-      "status": "planned"
+      "status": "completed",
+      "startedAt": "2026-07-11T17:58:50Z",
+      "branch": "codex/desktop-ux/hc-ui-311",
+      "taskManifest": "reports/tasks/HC-UI-311.md",
+      "completedAt": "2026-07-11T20:35:56Z",
+      "evidenceManifest": "reports/evidence/HC-UI-311/manifest.json",
+      "ciEvidence": "reports/evidence/HC-UI-311/ci-matrix.json"
     },
     {
       "id": "HC-UI-312",

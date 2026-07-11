@@ -63,13 +63,13 @@ HC-RUN-201 moved assistant text to first-class protocol events. HC-RUN-202 adds 
 
 ### Electron shell
 
-`electron/main.mjs` owns window lifecycle and service composition. `electron/ipc/register-ipc-handlers.mjs` is the single handler registration point. Service modules under `electron/services/` validate and delegate runtime, workspace, Git, Store, Job, Provider, Arena, industrial, gate, sample, and release operations.
+`electron/main.mjs` owns window lifecycle and service composition. `electron/ipc/register-ipc-handlers.mjs` is the single handler registration point. Service modules under `electron/services/` validate and delegate runtime, workspace, Git, Store, Job, Provider, Arena, industrial, gate, sample, release, editor, and integrated-terminal operations. Native PTY ownership remains in the main process and is never projected as a renderer primitive.
 
 `electron/preload.cjs` exposes a bounded API. The renderer never receives raw `ipcRenderer` or Node access.
 
 ### Renderer
 
-`renderer/app-shell/` owns the typed React shell route and compact-navigation state. Vite creates a local production bundle during build; generated code is not committed. `renderer/app-shell/legacy-panel-adapter.ts` validates the current panel DOM and is the production shell-level visibility writer. It sends new navigation intent through existing real triggers, so no business panel is duplicated.
+`renderer/app-shell/` owns the typed React shell route and compact-navigation state. Vite creates a local production bundle during build; generated code is not committed. `renderer/app-shell/legacy-panel-adapter.ts` validates the current panel DOM and is the production shell-level visibility writer. It sends new navigation intent through existing real triggers, so no business panel is duplicated. CodeMirror and xterm are separate lazy chunks; their Renderer modules own presentation only, while workspace files and PTY processes remain main-process services.
 
 `renderer/app/state.js` continues to own legacy business state. `renderer/api/hicode-api.js` normalizes preload calls and failures. Components under `renderer/components/` own panel rendering and user actions. `renderer/renderer.js` mounts the typed shell and then calls the legacy bootstrap as a compatibility composition layer. Panels migrate one route at a time; the React shell is not a second Runtime, API, or persistence authority.
 
@@ -144,6 +144,7 @@ Electron keeps its existing `output` and `tool-event` IPC channels while changin
 - Workspace operations resolve real paths and reject symlink/path escape.
 - Mutating tools and external adapters require explicit permission unless the user selected a documented higher-trust mode.
 - Child processes receive minimal allowlisted environments; tokens, secrets, passwords, keys, and unknown sensitive variables are excluded by default.
+- Integrated terminal startup is one explicit permission decision for an interactive shell session. The shell starts in the active workspace and closes on owner/workspace/app lifecycle changes, but retains the desktop user's OS permissions and does not claim filesystem sandboxing.
 - Store and Domain Pack remote installs require HTTPS, safe destinations, and manifest validation. Remote manifests cannot inject local source paths or automatic scripts.
 - Commercial adapters never bypass licensing, VPN, identity, or enterprise authorization. Plaintext credentials are not persisted.
 - Logs and evidence redact secret-like data before persistence.

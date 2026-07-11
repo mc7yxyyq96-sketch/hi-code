@@ -35,14 +35,15 @@ export function createHiCodeApi(rawApi = window.hicode, { onError = null } = {})
 
   const listen = (name, handler) => {
     const fn = api[name];
-    if (typeof fn !== "function" || typeof handler !== "function") return;
-    fn((payload) => {
+    if (typeof fn !== "function" || typeof handler !== "function") return () => {};
+    const unsubscribe = fn((payload) => {
       try {
         handler(payload);
       } catch (error) {
         notifyError(error, `${name} 事件处理失败`);
       }
     });
+    return typeof unsubscribe === "function" ? unsubscribe : () => {};
   };
 
   return {
@@ -75,6 +76,12 @@ export function createHiCodeApi(rawApi = window.hicode, { onError = null } = {})
     readFile: (filePath) => call("readFile", [filePath], { error: "读取文件失败", content: "" }),
     openEditorFile: (payload) => call("openEditorFile", [payload], { ok: false, error: "文件打开失败" }),
     saveEditorFile: (payload) => call("saveEditorFile", [payload], { ok: false, error: "文件保存失败" }),
+    getTerminalCapabilities: () => call("getTerminalCapabilities", [], { ok: true, available: false, reason: "当前环境不支持集成终端" }, { silent: true }),
+    createTerminal: (payload) => call("createTerminal", [payload], { ok: false, error: "终端启动失败" }, { silent: true }),
+    getTerminalStatus: () => call("getTerminalStatus", [], { ok: true, active: false, session: null, snapshot: "" }, { silent: true }),
+    writeTerminal: (sessionId, input) => call("writeTerminal", [sessionId, input], { ok: false, error: "终端输入失败" }, { silent: true }),
+    resizeTerminal: (sessionId, payload) => call("resizeTerminal", [sessionId, payload], { ok: false, error: "终端尺寸更新失败" }, { silent: true }),
+    closeTerminal: (sessionId, reason) => call("closeTerminal", [sessionId, reason], { ok: false, error: "终端关闭失败" }, { silent: true }),
     listSessions: () => call("listSessions", [], []),
     resumeSession: (id) => call("resumeSession", [id], []),
     newSession: () => call("newSession", [], { ok: false, error: "新对话创建失败" }),
@@ -183,6 +190,7 @@ export function createHiCodeApi(rawApi = window.hicode, { onError = null } = {})
     onToolEvent: (handler) => listen("onToolEvent", handler),
     onDiffsChanged: (handler) => listen("onDiffsChanged", handler),
     onRuntimeQueue: (handler) => listen("onRuntimeQueue", handler),
+    onTerminalEvent: (handler) => listen("onTerminalEvent", handler),
   };
 }
 

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {
+  APPROVED_NATIVE_PRODUCTION_DEPENDENCIES,
   collectNativeProductionDependencies,
   ELECTRON_COMPATIBILITY_TARGET,
   inspectElectronCompatibility,
@@ -50,8 +51,11 @@ const report = inspectElectronCompatibility(process.cwd());
 for (const entry of report.checks) {
   check(entry.id, () => assert.equal(entry.passed, true, entry.detail));
 }
-check("current production graph has no native rebuild requirement", () => {
-  assert.deepEqual(report.nativeProductionDependencies, []);
+check("current production graph contains only the reviewed PTY native module", () => {
+  assert.deepEqual(
+    report.nativeProductionDependencies.map(({ name, version, signals }) => ({ name, version, signals })),
+    APPROVED_NATIVE_PRODUCTION_DEPENDENCIES,
+  );
 });
 check("complete compatibility report passes", () => {
   assert.equal(report.allPassed, true);

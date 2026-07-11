@@ -7,6 +7,8 @@ import { createWorkspaceStore } from "./workspace/store.ts";
 import { WorkspacePortals } from "./workspace/WorkspacePortals.tsx";
 import type { CodeEditorFactory } from "./editor/code-editor.ts";
 import { buildRevisionRequest } from "./workspace/review.ts";
+import { createTerminalApi, type RawTerminalBridge } from "./terminal/api.ts";
+import { TerminalPortal } from "./terminal/TerminalPortal.tsx";
 
 export interface HiCodeAppShellBridge {
   readonly ownsNavigation: true;
@@ -16,6 +18,7 @@ export interface HiCodeAppShellBridge {
   readonly workspace: WorkspaceBridge;
   readonly editor: Readonly<{ load(): Promise<CodeEditorFactory> }>;
   readonly review: Readonly<{ buildRevisionRequest: typeof buildRevisionRequest }>;
+  readonly terminal: Readonly<{ focus(): void }>;
 }
 
 declare global {
@@ -44,6 +47,7 @@ export function mountHiCodeAppShell() {
       return editorFactoryPromise;
     },
   });
+  const terminalApi = createTerminalApi((window as Window & { hicode?: RawTerminalBridge }).hicode);
 
   window.hicodeAppShell = Object.freeze({
     ownsNavigation: true as const,
@@ -53,6 +57,9 @@ export function mountHiCodeAppShell() {
     workspace,
     editor,
     review: Object.freeze({ buildRevisionRequest }),
+    terminal: Object.freeze({
+      focus() { window.dispatchEvent(new Event("hicode:terminal-focus")); },
+    }),
   });
 
   mountedRoot = createRoot(mount);
@@ -60,6 +67,7 @@ export function mountHiCodeAppShell() {
     <>
       <AppShell adapter={adapter} store={store} />
       <WorkspacePortals controller={workspaceController} store={workspaceStore} />
+      <TerminalPortal api={terminalApi} />
     </>,
   );
   adapter.applyLegacyRoute({ route: "home", mainClass: "home", activeNav: "newChat" });

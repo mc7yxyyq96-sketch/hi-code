@@ -444,6 +444,85 @@ async function verifyDiffCommentRevisionRequest(page) {
   assert.equal(modelServerRequests, requestsBefore + 1, "Diff review comment did not enter the real model Runtime");
 }
 
+async function verifyIntegratedTerminal(page) {
+  console.log("    [terminal] prepare execution policy");
+  await setContentSize(1024, baseline.height);
+  await returnHome(page);
+  const accessLabel = page.locator("#accessLabel");
+  if ((await accessLabel.textContent()) !== "完全访问") {
+    await page.evaluate(() => {
+      window.__hicodeTerminalPolicyReady = false;
+      window.hicode.onTurnDone(() => { window.__hicodeTerminalPolicyReady = true; });
+    });
+    await page.locator("#access").click();
+    await page.waitForFunction(() => document.querySelector("#accessLabel")?.textContent === "完全访问");
+    await page.waitForFunction(() => window.__hicodeTerminalPolicyReady === true, undefined, { timeout: 8_000 });
+  }
+
+  console.log("    [terminal] open workbench");
+  const terminalButton = page.locator("#terminalBtn");
+  await terminalButton.scrollIntoViewIfNeeded();
+  await terminalButton.click();
+  await waitVisible(page, "#terminalView");
+  const terminal = page.locator('[data-testid="integrated-terminal"]');
+  await terminal.waitFor({ state: "visible" });
+  console.log("    [terminal] start PTY");
+  await terminal.getByRole("button", { name: "启动终端" }).click();
+  await page.waitForFunction(() => document.querySelector('[data-testid="integrated-terminal"]')?.getAttribute("data-phase") === "running", undefined, { timeout: 10_000 });
+
+  console.log("    [terminal] execute command");
+  const input = page.locator("#terminalView .xterm-helper-textarea");
+  await input.waitFor({ state: "attached", timeout: 8_000 });
+  await input.focus();
+  await page.keyboard.type(process.platform === "win32" ? "Write-Output HICODE_PTY_E2E" : "printf 'HICODE_PTY_E2E\\n'");
+  await page.keyboard.press("Enter");
+  await page.waitForFunction(() => document.querySelector("#terminalView .xterm-rows")?.textContent?.includes("HICODE_PTY_E2E"), undefined, { timeout: 8_000 });
+
+  console.log("    [terminal] capture responsive layouts");
+  const desktopLayout = await page.locator("#terminalView").evaluate((element) => ({
+    width: element.clientWidth,
+    scrollWidth: element.scrollWidth,
+    phase: element.querySelector('[data-testid="integrated-terminal"]')?.getAttribute("data-phase"),
+  }));
+  assert.equal(desktopLayout.phase, "running");
+  assert.ok(desktopLayout.scrollWidth <= desktopLayout.width + 1, `Desktop terminal overflows horizontally: ${JSON.stringify(desktopLayout)}`);
+  const desktopImage = await page.screenshot({
+    path: path.join(resultDir, "terminal-running-1024.png"),
+    animations: "disabled",
+  });
+  assert.ok(desktopImage.length > 12_000, "Desktop terminal screenshot is unexpectedly small");
+
+  await setContentSize(720, baseline.height);
+  await page.waitForTimeout(180);
+  const compactLayout = await page.locator("#terminalView").evaluate((element) => ({
+    width: element.clientWidth,
+    scrollWidth: element.scrollWidth,
+    stopVisible: Boolean([...element.querySelectorAll("button")].find((button) => button.textContent?.trim() === "停止")?.getClientRects().length),
+  }));
+  assert.ok(compactLayout.scrollWidth <= compactLayout.width + 1, `Compact terminal overflows horizontally: ${JSON.stringify(compactLayout)}`);
+  assert.equal(compactLayout.stopVisible, true, "Compact terminal does not expose its stop action");
+  const compactImage = await page.screenshot({
+    path: path.join(resultDir, "terminal-running-720.png"),
+    animations: "disabled",
+  });
+  assert.ok(compactImage.length > 12_000, "Compact terminal screenshot is unexpectedly small");
+
+  console.log("    [terminal] stop PTY");
+  await terminal.getByRole("button", { name: "停止" }).click();
+  await page.waitForFunction(() => document.querySelector('[data-testid="integrated-terminal"]')?.getAttribute("data-phase") === "idle", undefined, { timeout: 8_000 });
+  const status = await page.evaluate(() => window.hicode.getTerminalStatus());
+  assert.equal(status.ok, true);
+  assert.equal(status.active, false);
+
+  await returnHome(page);
+  if ((await accessLabel.textContent()) === "完全访问") {
+    await page.evaluate(() => { window.__hicodeTerminalPolicyReady = false; });
+    await page.locator("#access").click();
+    await page.waitForFunction(() => document.querySelector("#accessLabel")?.textContent === "需确认");
+    await page.waitForFunction(() => window.__hicodeTerminalPolicyReady === true, undefined, { timeout: 8_000 });
+  }
+}
+
 async function main() {
   fs.rmSync(resultDir, { recursive: true, force: true });
   fs.mkdirSync(resultDir, { recursive: true, mode: 0o755 });
@@ -534,6 +613,10 @@ async function main() {
 
   await check("diff review comment enters the real Runtime revision loop", async () => {
     await verifyDiffCommentRevisionRequest(page);
+  });
+
+  await check("integrated terminal runs real PTY input output resize and close", async () => {
+    await verifyIntegratedTerminal(page);
   });
 
   await check("renderer produced no uncaught page errors", async () => {
