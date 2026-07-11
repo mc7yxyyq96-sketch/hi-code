@@ -52,6 +52,7 @@
     "test:renderer": "node test/renderer-architecture-tests.mjs",
     "test:app-shell": "vite build --config vite.renderer.config.ts && tsx test/app-shell-tests.ts",
     "test:workspace-shell": "vite build --config vite.renderer.config.ts && tsx test/workspace-shell-tests.ts",
+    "test:editor-workbench": "tsx test/editor-workbench-tests.ts",
     "test:entrypoints": "node test/entrypoint-tests.mjs",
     "test:security": "node test/security-baseline.mjs",
     "test:usage": "node test/usage-store-tests.mjs",
