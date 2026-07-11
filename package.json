@@ -48,6 +48,7 @@
     "test:samples": "node test/industrial-control-box-sample-tests.mjs",
     "test:dod": "node test/definition-of-done-tests.mjs",
     "test:renderer": "node test/renderer-architecture-tests.mjs",
+    "test:app-shell": "tsx test/app-shell-tests.ts",
     "test:entrypoints": "node test/entrypoint-tests.mjs",
     "test:security": "node test/security-baseline.mjs",
     "test:usage": "node test/usage-store-tests.mjs",
