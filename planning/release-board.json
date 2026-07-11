@@ -117,7 +117,7 @@
       "taskId": "HC-UI-310",
       "branch": "codex/desktop-ux/hc-ui-310",
       "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-hc-ui-310",
-      "mode": "active-worktree"
+      "mode": "completed-worktree"
     }
   ],
   "tasks": [
@@ -274,11 +274,13 @@
       "id": "HC-UI-310",
       "owner": "desktop-ux",
       "priority": "P0",
-      "status": "in_progress",
+      "status": "completed",
       "dependencies": ["HC-UI-302"],
       "branch": "codex/desktop-ux/hc-ui-310",
       "startedAt": "2026-07-11T14:02:09Z",
-      "taskManifest": "reports/tasks/HC-UI-310.md"
+      "completedAt": "2026-07-11T16:02:52Z",
+      "taskManifest": "reports/tasks/HC-UI-310.md",
+      "evidence": "reports/evidence/HC-UI-310/manifest.json"
     }
   ],
   "gates": [
@@ -376,9 +378,10 @@
     },
     {
       "id": "integrated-editor-review-loop",
-      "status": "in_progress",
+      "status": "passed",
       "owner": "HC-UI-310",
-      "evidence": "reports/tasks/HC-UI-310.md"
+      "verifiedAt": "2026-07-11T16:02:52Z",
+      "evidence": "reports/evidence/HC-UI-310/manifest.json"
     }
   ],
   "nextReleaseSlices": [

@@ -85,17 +85,19 @@
     {
       "id": "RISK-UI-004",
       "severity": "high",
-      "status": "open",
+      "status": "mitigated",
       "owner": "desktop-ux",
       "title": "Integrated editor can overwrite external changes or create a fake review loop",
       "evidence": [
-        "electron/services/workspace-service.mjs",
+        "electron/services/editor-service.mjs",
         "renderer/components/file-tree.js",
         "renderer/app-shell/workspace/Inspector.tsx",
-        "reports/tasks/HC-UI-310.md"
+        "test/editor-workbench-tests.ts",
+        "tests/electron-e2e/run.mjs",
+        "reports/evidence/HC-UI-310/manifest.json"
       ],
       "impact": "A stale editor save can destroy disk changes, while a comment button without a persisted Runtime request can mislead users into believing an Agent revision was requested.",
-      "mitigation": "HC-UI-310 will use workspace-confined revision tokens, atomic writes, explicit conflict resolution, a real CodeMirror surface, typed diff comments, and the existing Runtime/session path for revision requests.",
+      "mitigation": "HC-UI-310 uses workspace-confined SHA-256 revisions, bounded UTF-8 snapshots, double conflict comparison, atomic sibling replacement, sticky explicit conflict resolution, a lazy local CodeMirror surface, and typed line comments that enter the existing Runtime/session path. Real Electron verifies refusal to overwrite external changes and a model-backed revision request.",
       "trigger": "Any save without revision comparison, hidden force overwrite, unsafe path, unbounded/binary load, or review action that does not enter the Runtime blocks HC-UI-310 completion."
     },
     {

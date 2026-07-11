@@ -45,8 +45,10 @@ const requiredFiles = [
   "docs/adr/ADR-0009-durable-attachments-and-command-routing.md",
   "docs/adr/ADR-0010-gradual-react-app-shell.md",
   "docs/adr/ADR-0011-typed-session-workbench.md",
+  "docs/adr/ADR-0012-conflict-safe-integrated-editor.md",
   "docs/app-shell.md",
   "docs/session-workbench.md",
+  "docs/code-editor.md",
   "docs/attachments-and-command-registry.md",
   "docs/anthropic-ollama-adapters.md",
   "docs/model-provider-adapters.md",
@@ -70,6 +72,7 @@ const requiredFiles = [
   "reports/tasks/HC-RUN-220.md",
   "reports/tasks/HC-UI-301.md",
   "reports/tasks/HC-UI-302.md",
+  "reports/tasks/HC-UI-310.md",
   "reports/tasks/HC-REL-ALPHA-7.md",
   "reports/evidence/baseline/manifest.json",
   "reports/evidence/HC-QA-101/manifest.json",
@@ -86,6 +89,7 @@ const requiredFiles = [
   "reports/evidence/HC-RUN-220/manifest.json",
   "reports/evidence/HC-UI-301/manifest.json",
   "reports/evidence/HC-UI-302/manifest.json",
+  "reports/evidence/HC-UI-310/manifest.json",
   "scripts/electron-compatibility.mjs",
   "scripts/run-electron-builder.mjs",
   "test/electron-compatibility-tests.mjs",
@@ -126,6 +130,7 @@ const anthropicOllamaManifest = readJson(root, "reports/evidence/HC-PROV-212/man
 const attachmentCommandManifest = readJson(root, "reports/evidence/HC-RUN-220/manifest.json");
 const uiShellManifest = readJson(root, "reports/evidence/HC-UI-301/manifest.json");
 const uiWorkbenchManifest = readJson(root, "reports/evidence/HC-UI-302/manifest.json");
+const editorWorkbenchManifest = readJson(root, "reports/evidence/HC-UI-310/manifest.json");
 const packageJson = readJson(root, "package.json");
 const packageLock = readJson(root, "package-lock.json");
 const programTask = backlog.tasks.find((task) => task.id === "HC-PROG-100");
@@ -140,6 +145,7 @@ const anthropicOllamaTask = backlog.tasks.find((task) => task.id === "HC-PROV-21
 const attachmentCommandTask = backlog.tasks.find((task) => task.id === "HC-RUN-220");
 const uiShellTask = backlog.tasks.find((task) => task.id === "HC-UI-301");
 const uiWorkbenchTask = backlog.tasks.find((task) => task.id === "HC-UI-302");
+const editorWorkbenchTask = backlog.tasks.find((task) => task.id === "HC-UI-310");
 const qaTask = board.tasks.find((task) => task.id === "HC-QA-101");
 const runtimeTask = board.tasks.find((task) => task.id === "HC-RUN-201");
 const runtimeStoreTask = board.tasks.find((task) => task.id === "HC-RUN-202");
@@ -152,6 +158,7 @@ const anthropicOllamaBoardTask = board.tasks.find((task) => task.id === "HC-PROV
 const attachmentCommandBoardTask = board.tasks.find((task) => task.id === "HC-RUN-220");
 const uiShellBoardTask = board.tasks.find((task) => task.id === "HC-UI-301");
 const uiWorkbenchBoardTask = board.tasks.find((task) => task.id === "HC-UI-302");
+const editorWorkbenchBoardTask = board.tasks.find((task) => task.id === "HC-UI-310");
 
 console.log("\n[program-control] board and evidence contract");
 check("backlog records immutable source commit", /^[0-9a-f]{40}$/.test(backlog.sourceCommit || ""));
@@ -284,6 +291,32 @@ for (const command of uiWorkbenchManifest.commands || []) {
   check(`HC-UI-302 ${command.id} log exists`, Boolean(command.logPath) && fs.existsSync(absolute));
   if (fs.existsSync(absolute)) check(`HC-UI-302 ${command.id} log hash matches`, digest(absolute) === command.logSha256);
 }
+check(
+  "HC-UI-310 completed only after its dependency and evidence",
+  editorWorkbenchTask?.status === "completed" &&
+    editorWorkbenchTask?.branch === "codex/desktop-ux/hc-ui-310" &&
+    Boolean(editorWorkbenchTask?.startedAt) &&
+    Boolean(editorWorkbenchTask?.completedAt) &&
+    editorWorkbenchTask?.taskManifest === "reports/tasks/HC-UI-310.md" &&
+    editorWorkbenchTask?.evidenceManifest === "reports/evidence/HC-UI-310/manifest.json" &&
+    editorWorkbenchTask?.dependencies?.every((id) => backlog.tasks.find((task) => task.id === id)?.status === "completed") &&
+    editorWorkbenchBoardTask?.status === "completed" &&
+    editorWorkbenchBoardTask?.taskManifest === "reports/tasks/HC-UI-310.md" &&
+    editorWorkbenchBoardTask?.evidence === "reports/evidence/HC-UI-310/manifest.json",
+  JSON.stringify(editorWorkbenchTask),
+);
+check("Integrated editor review gate passed with committed evidence", board.gates?.find((gate) => gate.id === "integrated-editor-review-loop")?.status === "passed" && board.gates?.find((gate) => gate.id === "integrated-editor-review-loop")?.evidence === "reports/evidence/HC-UI-310/manifest.json");
+check("HC-UI-310 data-loss and fake-review risk is evidence-backed and mitigated", risks.risks?.some((risk) => risk.id === "RISK-UI-004" && risk.status === "mitigated" && risk.evidence?.includes("reports/evidence/HC-UI-310/manifest.json")));
+check("HC-UI-310 evidence records every command passing from a clean tree", editorWorkbenchManifest.summary?.allPassed === true && editorWorkbenchManifest.summary?.total === 15 && editorWorkbenchManifest.capture?.workingTreeClean === true, JSON.stringify(editorWorkbenchManifest.summary));
+check("HC-UI-310 evidence is captured from its isolated branch", editorWorkbenchManifest.source?.branch === "codex/desktop-ux/hc-ui-310" && editorWorkbenchManifest.source?.parentCommit === "cfd75e100f7d1fc7841c7df3d31534da30368b14");
+for (const requiredCommand of ["build", "verify", "release-check", "feature-tests", "editor-workbench-tests", "workspace-shell-tests", "renderer-tests", "service-tests", "security-tests", "dod-tests", "dod-scan", "production-audit", "electron-e2e", "program-control", "git-diff-check"]) {
+  check(`HC-UI-310 captured ${requiredCommand}`, editorWorkbenchManifest.commands?.some((command) => command.id === requiredCommand && command.status === "passed"));
+}
+for (const command of editorWorkbenchManifest.commands || []) {
+  const absolute = path.join(root, command.logPath || "");
+  check(`HC-UI-310 ${command.id} log exists`, Boolean(command.logPath) && fs.existsSync(absolute));
+  if (fs.existsSync(absolute)) check(`HC-UI-310 ${command.id} log hash matches`, digest(absolute) === command.logSha256);
+}
 check("alpha.8 version is synchronized", packageJson.version === "0.6.0-alpha.8" && packageLock.version === packageJson.version && packageLock.packages?.[""]?.version === packageJson.version && fs.readFileSync(path.join(root, "VERSION"), "utf8").trim() === packageJson.version);
 check("alpha.8 release candidate gate passed", board.currentRelease === packageJson.version && board.candidate?.version === packageJson.version && board.candidate?.branch === "codex/release/0.6.0-alpha.8" && board.candidate?.status === "passed" && board.candidate?.evidence === "reports/evidence/HC-REL-ALPHA-8/manifest.json" && board.gates?.find((gate) => gate.id === "alpha-8-release-candidate")?.status === "passed");
 check("historical alpha.7 release candidate gate remains passed", board.gates?.find((gate) => gate.id === "alpha-7-release-candidate")?.status === "passed");
@@ -309,6 +342,8 @@ check("Attachment and command evidence capture is reproducible", packageJson.scr
 check("Typed App Shell tests are part of global verification", packageJson.scripts["test:app-shell"]?.includes("test/app-shell-tests.ts") && fs.readFileSync(path.join(root, "scripts/verify.mjs"), "utf8").includes("test/app-shell-tests.ts"));
 check("Typed App Shell evidence capture is reproducible", packageJson.scripts["program:evidence:app-shell"] === "node scripts/capture-task-evidence.mjs --task=HC-UI-301" && fs.readFileSync(path.join(root, "scripts/capture-task-evidence.mjs"), "utf8").includes('"HC-UI-301"'));
 check("Typed Session Workbench evidence capture is reproducible", packageJson.scripts["program:evidence:session-workbench"] === "node scripts/capture-task-evidence.mjs --task=HC-UI-302" && fs.readFileSync(path.join(root, "scripts/capture-task-evidence.mjs"), "utf8").includes('"HC-UI-302"'));
+check("Integrated editor tests are part of global verification", packageJson.scripts["test:editor-workbench"] === "tsx test/editor-workbench-tests.ts" && fs.readFileSync(path.join(root, "scripts/verify.mjs"), "utf8").includes("test/editor-workbench-tests.ts"));
+check("Integrated editor evidence capture is reproducible", packageJson.scripts["program:evidence:editor-workbench"] === "node scripts/capture-task-evidence.mjs --task=HC-UI-310" && fs.readFileSync(path.join(root, "scripts/capture-task-evidence.mjs"), "utf8").includes('"HC-UI-310"'));
 check("Task evidence commands cannot be shadowed by a project-local npm binary", fs.readFileSync(path.join(root, "scripts/capture-task-evidence.mjs"), "utf8").includes("sanitizeEvidencePath") && fs.readFileSync(path.join(root, "scripts/capture-task-evidence.mjs"), "utf8").includes('path.resolve(root, "node_modules", ".bin")'));
 check("Task evidence executes the locked npm CLI with the current Node runtime", fs.readFileSync(path.join(root, "scripts/capture-task-evidence.mjs"), "utf8").includes('path.join(root, "node_modules", "npm", "bin", "npm-cli.js")') && fs.readFileSync(path.join(root, "scripts/capture-task-evidence.mjs"), "utf8").includes("isNpmCommand ? node : spec.command"));
 check(
