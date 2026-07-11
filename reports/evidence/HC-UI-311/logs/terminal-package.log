@@ -1,0 +1,9 @@
+$ npm run test:terminal-package
+
+> hi-code@0.6.0-alpha.8 test:terminal-package
+> node test/terminal-package-tests.mjs
+
+[terminal-package] app: /Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-hc-ui-311/release/mac-arm64/Hi Code.app
+[terminal-package] node-pty: /Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-hc-ui-311/release/mac-arm64/Hi Code.app/Contents/Resources/app.asar.unpacked/node_modules/node-pty
+
+=== 4 passed, 0 failed ===

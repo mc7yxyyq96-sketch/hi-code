@@ -123,7 +123,7 @@
       "taskId": "HC-UI-311",
       "branch": "codex/desktop-ux/hc-ui-311",
       "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-hc-ui-311",
-      "mode": "active-task-worktree"
+      "mode": "completed-worktree"
     }
   ],
   "tasks": [
@@ -292,11 +292,13 @@
       "id": "HC-UI-311",
       "owner": "desktop-ux",
       "priority": "P0",
-      "status": "in_progress",
+      "status": "completed",
       "dependencies": ["HC-UI-301", "HC-PLAT-110"],
       "branch": "codex/desktop-ux/hc-ui-311",
       "startedAt": "2026-07-11T17:58:50Z",
-      "taskManifest": "reports/tasks/HC-UI-311.md"
+      "completedAt": "2026-07-11T20:35:56Z",
+      "taskManifest": "reports/tasks/HC-UI-311.md",
+      "evidence": "reports/evidence/HC-UI-311/manifest.json"
     }
   ],
   "gates": [
@@ -401,9 +403,10 @@
     },
     {
       "id": "integrated-terminal-policy",
-      "status": "pending",
+      "status": "passed",
       "owner": "HC-UI-311",
-      "evidence": "reports/tasks/HC-UI-311.md"
+      "verifiedAt": "2026-07-11T20:35:56Z",
+      "evidence": "reports/evidence/HC-UI-311/manifest.json"
     }
   ],
   "nextReleaseSlices": [

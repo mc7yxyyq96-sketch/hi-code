@@ -1,12 +1,14 @@
 # HC-UI-311 Integrated PTY Terminal Under Execution Policy
 
-Status: In Progress
+Status: Completed
 
 Branch: `codex/desktop-ux/hc-ui-311`
 
 Parent commit: `115ea610d4432cf386f7c66d566534e165392454`
 
 Started: `2026-07-11T17:58:50Z`
+
+Completed: `2026-07-11T20:35:56Z`
 
 ## Scope
 
@@ -52,16 +54,16 @@ This task does not implement app preview, Git/PR/CI orchestration, industrial ad
 
 - Production build: passed; xterm remains outside the initial App Shell chunk.
 - App Shell: 13/13 passed.
-- Terminal service: 10/10 passed, including a real PTY in a workspace containing spaces and Chinese characters and verified descendant cleanup.
+- Terminal service: 12/12 passed, including a real PTY in a workspace containing spaces and Chinese characters, stale owner/workspace start cancellation, and verified descendant cleanup.
 - Terminal renderer: 7/7 passed.
 - Electron compatibility: 29/29 passed.
-- Security baseline: 187/187 passed before the final verify-coverage assertion was added.
+- Security baseline: 188/188 passed.
 - Real Electron acceptance: passed at 1024 px and 720 px with keyboard input, output, close, and inactive-status verification.
 - macOS package inspection: passed; the native module and executable spawn helper are present under `app.asar.unpacked`.
 
-## Final Evidence Plan
+## Final Evidence
 
-The reproducible `program:evidence:terminal` profile captures focused terminal, service, App Shell, renderer, compatibility, security, build, verify, release, feature, DoD, production-audit, real Electron, macOS package, packaged-terminal, program-control, and diff-check gates from a clean implementation commit. Cross-platform native behavior remains enforced by the existing macOS/Linux/Windows CI matrix before merge; local evidence is macOS arm64.
+`reports/evidence/HC-UI-311/manifest.json` records 18/18 passing gates from clean source commit `cdf7bd956feb28fca4754bf45c8c0eb25faf6a87`. It includes focused terminal, service, App Shell, renderer, compatibility, security, build, verify, release, feature, DoD, production-audit, real Electron, macOS package, packaged-terminal, program-control, and diff-check evidence with hashed logs. The full-tree DoD scan reports zero findings. Cross-platform native behavior remains enforced by the existing macOS/Linux/Windows CI matrix before merge; local native acceptance is macOS arm64.
 
 ## Rollback
 
