@@ -54,6 +54,8 @@ import { createUsageService } from "./services/usage-service.mjs";
 import { recordUsage } from "../dist/usage-store.js";
 import { RuntimeEventBus } from "../dist/runtime-event-sink.js";
 import { connectAssistantTextOutput } from "../dist/runtime-client-adapters.js";
+import { FileAttachmentStore } from "../dist/attachment-store.js";
+import { createDefaultCommandRegistry } from "../dist/command-registry.js";
 import { openMacApp, parseOpenAppRequest } from "./services/native-open-service.mjs";
 import { BUILTIN_STORE_CATALOG } from "./store-catalog.mjs";
 
@@ -72,6 +74,7 @@ const PATCH_ARENA_PATH = path.join(HICODE_DIR, "patch-arena", "arena-runs.json")
 const PATCH_ARENA_ARTIFACT_DIR = path.join(HICODE_DIR, "patch-arena", "artifacts");
 const DOMAIN_PACK_DIR = path.join(HICODE_DIR, "domain-packs");
 const AGENT_TEAM_DIR = path.join(HICODE_DIR, "agent-team");
+const ATTACHMENT_STORE_DIR = path.join(HICODE_DIR, "attachments-v2");
 const CODEX_DIR = path.join(os.homedir(), ".codex");
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -88,6 +91,15 @@ const worktreeRunner = new WorktreeRunner({ safeRoot: WORKTREE_RUNNER_DIR });
 const patchArenaStore = new PatchArenaStore({ storePath: PATCH_ARENA_PATH });
 const domainPackManager = createDomainPackManager({ safeRoot: DOMAIN_PACK_DIR });
 const agentTeamStore = createAgentTeamStore({ safeRoot: AGENT_TEAM_DIR });
+const attachmentStore = new FileAttachmentStore(ATTACHMENT_STORE_DIR);
+const desktopCommandRegistry = createDefaultCommandRegistry({
+  nativeCommands: [{
+    id: "native.open-app",
+    surfaces: ["desktop"],
+    priority: 100,
+    match: (input) => parseOpenAppRequest(input),
+  }],
+});
 const industrialToolRegistry = createIndustrialToolRegistry();
 const jobStore = new JobStore({
   storePath: JOB_CENTER_PATH,
@@ -2212,8 +2224,8 @@ function resolveInCwd(p = cwd) {
   return real;
 }
 
-async function handleNativeOpenApp(text) {
-  const request = parseOpenAppRequest(text);
+async function handleNativeOpenApp(requestOrText) {
+  const request = typeof requestOrText === "string" ? parseOpenAppRequest(requestOrText) : requestOrText;
   if (!request) return false;
   const title = `Open ${request.appName}`;
   const startId = handleRuntimeEvent({
@@ -2252,12 +2264,24 @@ async function runRuntimeQueueJob(job) {
 async function runRuntimeInput(text, metadata = {}) {
   if (!runtime) return;
   try {
+    const attachmentIds = Array.isArray(metadata.attachmentIds) ? metadata.attachmentIds : [];
     const executionCwd = typeof metadata.executionCwd === "string" ? metadata.executionCwd : "";
     if (executionCwd && path.resolve(executionCwd) !== path.resolve(cwd)) {
+      if (attachmentIds.length) throw new Error("Attachments cannot be forwarded into an isolated runtime workspace.");
       await runRuntimeInputInIsolatedCwd(text, executionCwd);
     } else {
-      const handledNative = await handleNativeOpenApp(text);
-      if (!handledNative) await runtime.handleInput(text);
+      const resolution = desktopCommandRegistry.resolve(text, { surface: "desktop" });
+      if (resolution.ok && resolution.route === "native") {
+        const handledNative = await handleNativeOpenApp(resolution.payload);
+        if (!handledNative) {
+          await runtime.handleInput(text, {
+            attachmentIds,
+            resolvedCommand: desktopCommandRegistry.resolveAgent(text, { surface: "desktop" }),
+          });
+        }
+      } else {
+        await runtime.handleInput(text, { attachmentIds, resolvedCommand: resolution });
+      }
     }
   } catch (err) {
     send("output", `error: ${err?.message ?? err}\n`);
@@ -2412,6 +2436,9 @@ function buildRuntime() {
     eventSink: runtimeEventBus,
     legacyAssistantOutput: false,
     allowProcessExit: false,
+    attachmentStore,
+    commandRegistry: desktopCommandRegistry,
+    commandSurface: "desktop",
   });
   send("ready", {
     model: p.model,
@@ -2607,6 +2634,7 @@ function createMainServices() {
       defaultProfile,
       buildSystemPrompt,
       send,
+      attachmentStore,
     }),
     appInfo: createAppInfoService({
       getVersion: () => app.getVersion(),

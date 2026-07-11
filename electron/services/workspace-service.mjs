@@ -1,25 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
-import { contentText } from "../../dist/context.js";
 import { ipcObject, ipcString } from "../ipc/ipc-utils.mjs";
 
 const IGNORE_DIRS = new Set(["node_modules", ".git", "dist", "build", ".next", "release", "__pycache__"]);
-const ATTACHMENT_DIR = path.join(".hicode", "attachments");
 const MAX_ATTACHMENT_BYTES = 8 * 1024 * 1024;
-const IMAGE_MIME_EXT = new Map([
-  ["image/png", ".png"],
-  ["image/jpeg", ".jpg"],
-  ["image/jpg", ".jpg"],
-  ["image/gif", ".gif"],
-  ["image/webp", ".webp"],
-]);
-const IMAGE_EXT_MIME = new Map([
-  [".png", "image/png"],
-  [".jpg", "image/jpeg"],
-  [".jpeg", "image/jpeg"],
-  [".gif", "image/gif"],
-  [".webp", "image/webp"],
-]);
 
 export function createWorkspaceService({
   dialog,
@@ -38,8 +22,55 @@ export function createWorkspaceService({
   defaultProfile,
   buildSystemPrompt,
   send,
+  attachmentStore,
   fetchImpl = fetch,
 }) {
+  if (!attachmentStore?.putBuffer || !attachmentStore?.get) throw new Error("workspace-service requires attachmentStore");
+
+  const attachFile = async (payload = {}) => {
+    try {
+      const data = ipcObject(payload);
+      const runtime = getRuntime();
+      const sessionId = ipcString(runtime?.sessionId).trim();
+      if (!sessionId) return { ok: false, error: "当前会话尚未准备好，请稍后重试" };
+      let name;
+      let buffer;
+
+      if (typeof data.dataUrl === "string" && data.dataUrl.trim()) {
+        const parsed = parseImageDataUrl(data.dataUrl);
+        if (!parsed.ok) return { ok: false, error: parsed.error };
+        name = ipcString(data.name, "pasted-image.png");
+        buffer = parsed.buffer;
+      } else {
+        const imagesOnly = data.imagesOnly === true;
+        const result = await dialog.showOpenDialog(getWindow(), {
+          properties: ["openFile"],
+          filters: imagesOnly
+            ? [{ name: "Images", extensions: ["png", "jpg", "jpeg", "gif", "webp"] }]
+            : [
+                { name: "Supported attachments", extensions: ["png", "jpg", "jpeg", "gif", "webp", "pdf", "txt", "md", "json", "csv", "log"] },
+                { name: "All files", extensions: ["*"] },
+              ],
+        });
+        if (result.canceled || !result.filePaths?.[0]) return { ok: false, canceled: true, error: "已取消选择附件" };
+        const sourcePath = result.filePaths[0];
+        const stat = fs.statSync(sourcePath);
+        if (!stat.isFile()) return { ok: false, error: "请选择一个文件" };
+        name = path.basename(sourcePath);
+        buffer = fs.readFileSync(sourcePath);
+      }
+
+      const record = attachmentStore.putBuffer({ sessionId, name, data: buffer });
+      if (data.imagesOnly === true && record.kind !== "image") {
+        attachmentStore.remove(record.id);
+        return { ok: false, error: "请选择 PNG、JPG、GIF 或 WebP 图片" };
+      }
+      return attachmentResult(record);
+    } catch (error) {
+      return { ok: false, error: error?.message ?? "附件添加失败" };
+    }
+  };
+
   return {
     async pickFolder() {
       const result = await dialog.showOpenDialog(getWindow(), { properties: ["openDirectory"] });
@@ -50,46 +81,24 @@ export function createWorkspaceService({
       return getCwd();
     },
 
-    async attachImage(payload = {}) {
-      try {
-        const data = ipcObject(payload);
-        if (typeof data.dataUrl === "string" && data.dataUrl.trim()) {
-          const parsed = parseImageDataUrl(data.dataUrl);
-          if (!parsed.ok) return { ok: false, error: parsed.error };
-          return writeAttachment({
-            cwd: getCwd(),
-            name: data.name,
-            ext: parsed.ext,
-            mime: parsed.mime,
-            buffer: parsed.buffer,
-          });
-        }
+    attachFile,
 
-        const result = await dialog.showOpenDialog(getWindow(), {
-          properties: ["openFile"],
-          filters: [{ name: "Images", extensions: ["png", "jpg", "jpeg", "gif", "webp"] }],
-        });
-        if (result.canceled || !result.filePaths?.[0]) {
-          return { ok: false, canceled: true, error: "已取消选择图片" };
-        }
+    attachImage(payload = {}) {
+      return attachFile({ ...ipcObject(payload), imagesOnly: true });
+    },
 
-        const sourcePath = result.filePaths[0];
-        const ext = path.extname(sourcePath).toLowerCase();
-        const mime = IMAGE_EXT_MIME.get(ext);
-        if (!mime) return { ok: false, error: "只支持 PNG、JPG、GIF、WebP 图片附件" };
-        const stat = fs.statSync(sourcePath);
-        if (!stat.isFile()) return { ok: false, error: "请选择一个图片文件" };
-        if (stat.size > MAX_ATTACHMENT_BYTES) return { ok: false, error: "图片超过 8MB，请压缩后再添加" };
-        return writeAttachment({
-          cwd: getCwd(),
-          name: path.basename(sourcePath),
-          ext,
-          mime,
-          buffer: fs.readFileSync(sourcePath),
-        });
-      } catch (error) {
-        return { ok: false, error: error?.message ?? "图片附件失败" };
-      }
+    listAttachments(id) {
+      const sessionId = ipcString(id, getRuntime()?.sessionId || "").trim();
+      if (!sessionId) return [];
+      return attachmentStore.list(sessionId).map(attachmentResult);
+    },
+
+    removeAttachment(id) {
+      const attachmentId = ipcString(id).trim();
+      const record = attachmentStore.get(attachmentId);
+      if (!record) return { ok: false, error: "附件不存在" };
+      if (record.sessionId !== getRuntime()?.sessionId) return { ok: false, error: "不能删除其他会话的附件" };
+      return { ok: attachmentStore.remove(attachmentId) };
     },
 
     getCwd,
@@ -163,7 +172,10 @@ export function createWorkspaceService({
 
     deleteSession(id) {
       try {
-        return deleteSession(ipcString(id));
+        const sessionId = ipcString(id);
+        const removed = deleteSession(sessionId);
+        if (removed) attachmentStore.removeSession(sessionId);
+        return removed;
       } catch {
         return false;
       }
@@ -285,7 +297,10 @@ export function registerWorkspaceIpc({ register, workspace }) {
   if (!workspace) throw new Error("registerWorkspaceIpc requires workspace service");
 
   register.handle("pick-folder", () => workspace.pickFolder());
+  register.handle("attach-file", (_event, payload) => workspace.attachFile(payload));
   register.handle("attach-image", (_event, payload) => workspace.attachImage(payload));
+  register.handle("attachments:list", (_event, sessionId) => workspace.listAttachments(sessionId));
+  register.handle("attachment:remove", (_event, id) => workspace.removeAttachment(id));
   register.handle("get-cwd", () => workspace.getCwd());
   register.handle("list-dir", (_event, dir) => workspace.listDir(dir));
   register.handle("read-file", (_event, filePath) => workspace.readFile(filePath));
@@ -300,79 +315,27 @@ export function registerWorkspaceIpc({ register, workspace }) {
 }
 
 function parseImageDataUrl(dataUrl) {
+  if (String(dataUrl || "").length > Math.ceil(MAX_ATTACHMENT_BYTES * 1.5)) return { ok: false, error: "图片超过 8MB，请压缩后再添加" };
   const match = /^data:(image\/(?:png|jpe?g|gif|webp));base64,([a-z0-9+/=\s]+)$/i.exec(String(dataUrl || ""));
   if (!match) return { ok: false, error: "粘贴内容不是支持的图片格式" };
   const mime = match[1].toLowerCase().replace("image/jpg", "image/jpeg");
-  const ext = IMAGE_MIME_EXT.get(mime);
-  if (!ext) return { ok: false, error: "只支持 PNG、JPG、GIF、WebP 图片附件" };
   const buffer = Buffer.from(match[2].replace(/\s/g, ""), "base64");
   if (!buffer.length) return { ok: false, error: "图片内容为空" };
   if (buffer.length > MAX_ATTACHMENT_BYTES) return { ok: false, error: "图片超过 8MB，请压缩后再添加" };
-  return { ok: true, mime, ext, buffer };
+  return { ok: true, mime, buffer };
 }
 
-function writeAttachment({ cwd, name, ext, mime, buffer }) {
-  const safeName = safeAttachmentName(name, ext);
-  const relativePath = path.posix.join(...ATTACHMENT_DIR.split(path.sep), safeName);
-  const target = safeNewWorkspacePath(cwd, relativePath);
-  if (!target) return { ok: false, error: "图片附件路径超出当前工作区" };
-  fs.mkdirSync(path.dirname(target), { recursive: true, mode: 0o700 });
-  fs.writeFileSync(target, buffer, { mode: 0o600 });
-  try { fs.chmodSync(target, 0o600); } catch {}
-  const verified = safeExistingWorkspacePath(cwd, target);
-  if (!verified) {
-    try { fs.rmSync(target, { force: true }); } catch {}
-    return { ok: false, error: "图片附件写入后路径校验失败" };
-  }
+function attachmentResult(record) {
   return {
     ok: true,
-    name: safeName,
-    path: verified,
-    relativePath,
-    mime,
-    size: buffer.length,
+    id: record.id,
+    name: record.name,
+    kind: record.kind,
+    mimeType: record.mimeType,
+    mime: record.mimeType,
+    size: record.size,
+    sha256: record.sha256,
   };
-}
-
-function safeAttachmentName(name, ext) {
-  const base = path.basename(String(name || "image")).replace(/\.[^.]+$/, "");
-  const cleaned = base
-    .normalize("NFKD")
-    .replace(/[^\w.-]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 64) || "image";
-  const nonce = Math.random().toString(36).slice(2, 8);
-  return `${Date.now()}-${nonce}-${cleaned}${ext}`;
-}
-
-function safeExistingWorkspacePath(cwd, filePath) {
-  const cwdReal = fs.realpathSync.native(cwd);
-  const real = fs.realpathSync.native(filePath);
-  return isPathInside(cwdReal, real) ? real : null;
-}
-
-function safeNewWorkspacePath(cwd, relativePath) {
-  const cwdReal = fs.realpathSync.native(cwd);
-  const normalized = String(relativePath || "").replace(/\\/g, "/");
-  if (!normalized || normalized.includes("\0") || path.isAbsolute(normalized)) return null;
-  const target = path.resolve(cwd, normalized);
-  const workspaceAbs = path.resolve(cwd);
-  if (!isPathInside(workspaceAbs, target)) return null;
-
-  let nearest = path.dirname(target);
-  while (!fs.existsSync(nearest)) {
-    const next = path.dirname(nearest);
-    if (next === nearest) return null;
-    nearest = next;
-  }
-  const nearestReal = fs.realpathSync.native(nearest);
-  if (!isPathInside(cwdReal, nearestReal)) return null;
-  return target;
-}
-
-function isPathInside(root, candidate) {
-  const rel = path.relative(root, candidate);
-  return !rel || (!rel.startsWith("..") && !path.isAbsolute(rel));
 }
 
 function shouldOmitTemperatureForBaseURL(baseURL) {
@@ -591,6 +554,19 @@ function formatSessionMessages(stored) {
   if (!stored?.messages) return [];
   return stored.messages
     .filter((m) => m.role === "user" || m.role === "assistant")
-    .map((m) => ({ role: m.role, text: contentText(m.content).trim() }))
-    .filter((m) => m.text.length > 0 && !m.text.startsWith("[Earlier conversation summary]"));
+    .map((m) => formatSessionMessage(m))
+    .filter((m) => (m.text.length > 0 || m.attachments?.length) && !m.text.startsWith("[Earlier conversation summary]"));
+}
+
+function formatSessionMessage(message) {
+  if (!Array.isArray(message.content)) return { role: message.role, text: String(message.content || "").trim() };
+  const attachments = message.content
+    .filter((part) => part?.type === "attachment_ref" && part.attachment)
+    .map((part) => ({ ...part.attachment }));
+  const text = message.content
+    .filter((part) => part?.type !== "attachment_ref")
+    .map((part) => part?.type === "text" ? part.text : "[image]")
+    .join(" ")
+    .trim();
+  return { role: message.role, text, ...(attachments.length ? { attachments } : {}) };
 }

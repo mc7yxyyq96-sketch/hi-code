@@ -18,11 +18,20 @@ export function estimateTokens(messages: ChatMessage[]): number {
     chars += contentText(m.content).length;
     // Images dominate token cost; approximate each at ~1000 tokens (4000 chars).
     if (Array.isArray(m.content)) chars += m.content.filter((p) => p.type === "image_url").length * 4000;
-    if (Array.isArray(m.content)) chars += m.content.filter((p) => p.type === "attachment_ref").reduce((sum, p) => sum + Math.min(p.attachment.size, 4000), 0);
+    if (Array.isArray(m.content)) {
+      chars += m.content
+        .filter((p) => p.type === "attachment_ref")
+        .reduce((sum, p) => sum + attachmentEstimateChars(p.attachment.kind, p.attachment.size), 0);
+    }
     if (m.tool_calls) for (const tc of m.tool_calls) chars += tc.function.arguments.length + tc.function.name.length;
     chars += 8;
   }
   return Math.ceil(chars / 4);
+}
+
+function attachmentEstimateChars(kind: string, size: number): number {
+  if (kind === "text") return Math.min(Math.max(0, size), 256 * 1024);
+  return 4000;
 }
 
 export interface Session {

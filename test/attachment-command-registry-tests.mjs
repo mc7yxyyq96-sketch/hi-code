@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 
@@ -12,6 +13,9 @@ import {
   createDefaultCommandRegistry,
 } from "../dist/command-registry.js";
 import { FileRuntimeStore } from "../dist/runtime-stores.js";
+import { createRuntime } from "../dist/runtime.js";
+import { deleteSession } from "../dist/session-store.js";
+import { estimateTokens } from "../dist/context.js";
 
 let pass = 0;
 let fail = 0;
@@ -33,6 +37,20 @@ function throwsCode(name, fn, code) {
   } catch (error) {
     check(name, error?.code === code, `${error?.code || "no-code"}: ${error?.message || error}`);
   }
+}
+
+async function rejectsCode(name, fn, code) {
+  try {
+    await fn();
+    check(name, false, "expected rejection");
+  } catch (error) {
+    check(name, error?.code === code, `${error?.code || "no-code"}: ${error?.message || error}`);
+  }
+}
+
+async function listen(server) {
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  return server.address().port;
 }
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), "hicode-attachments-"));
@@ -180,6 +198,87 @@ check(
   rebuilt?.messages?.[0]?.content?.[1]?.type === "attachment_ref" && rebuilt.messages[0].content[1].attachment.id === duplicate.id,
   JSON.stringify(rebuilt?.messages?.[0]),
 );
+const smallTextEstimate = estimateTokens([{ role: "user", content: [attachmentReference(text)] }]);
+const largeTextReference = attachmentReference({ ...text, size: 64 * 1024 });
+const largeTextEstimate = estimateTokens([{ role: "user", content: [largeTextReference] }]);
+check("text attachment budget scales with materialized byte size", largeTextEstimate > smallTextEstimate + 10_000);
+
+console.log("\n[attachment-runtime] real Runtime and provider path");
+const modelRequests = [];
+const server = http.createServer(async (request, response) => {
+  let raw = "";
+  for await (const chunk of request) raw += chunk;
+  modelRequests.push(JSON.parse(raw));
+  response.writeHead(200, { "content-type": "text/event-stream" });
+  response.write(`data: ${JSON.stringify({ choices: [{ delta: { content: "Attachment received." }, finish_reason: null }] })}\n\n`);
+  response.write(`data: ${JSON.stringify({ choices: [{ delta: {}, finish_reason: "stop" }], usage: { prompt_tokens: 8, completion_tokens: 2 } })}\n\n`);
+  response.end("data: [DONE]\n\n");
+});
+const port = await listen(server);
+const runtimeEvents = [];
+const cfg = {
+  profiles: {
+    default: {
+      name: "runtime-attachment",
+      baseURL: `http://127.0.0.1:${port}/v1`,
+      apiKey: "unused-local-key",
+      model: "vision-runtime-fixture",
+      contextWindow: 8192,
+      temperature: 0,
+      protocol: "chat_completions",
+    },
+  },
+  defaultProfile: "default",
+  roleModels: {},
+  councilMembers: ["default"],
+  councilSynthesizer: "default",
+  compactThreshold: 0.9,
+  reasoningLevel: "medium",
+  sandbox: false,
+  mcpServers: {},
+};
+const attachmentRuntime = createRuntime({
+  cfg,
+  cwd: root,
+  mode: "yolo",
+  systemPrompt: "Test system",
+  ask: async () => "y",
+  eventSink: { emit: (event) => runtimeEvents.push(event) },
+  legacyAssistantOutput: false,
+  persistRuntimeEvents: false,
+  attachmentStore: store,
+  commandSurface: "desktop",
+});
+const runtimeImage = store.putBuffer({ sessionId: attachmentRuntime.sessionId, name: "runtime-image.png", data: png });
+await attachmentRuntime.handleInput("Inspect the image", { attachmentIds: [runtimeImage.id] });
+const providerUser = modelRequests[0]?.messages?.find((message) => message.role === "user");
+check("Runtime sends a verified image to the real provider path", providerUser?.content?.some((part) => part.type === "image_url"));
+check("Runtime persists only the durable reference", attachmentRuntime.session.messages[0]?.content?.some((part) => part.type === "attachment_ref") && !JSON.stringify(attachmentRuntime.session.messages[0]).includes("base64"));
+check("Runtime event carries the durable attachment reference", runtimeEvents.some((event) => event.type === "message:appended" && event.payload?.message?.content?.some?.((part) => part.type === "attachment_ref")));
+
+const runtimePdf = store.putBuffer({ sessionId: attachmentRuntime.sessionId, name: "runtime-drawing.pdf", data: Buffer.from("%PDF-1.7\n%%EOF") });
+const messagesBeforePdf = attachmentRuntime.session.messages.length;
+const requestsBeforePdf = modelRequests.length;
+await rejectsCode(
+  "Runtime rejects unsupported PDF before a provider request",
+  () => attachmentRuntime.handleInput("Inspect the PDF", { attachmentIds: [runtimePdf.id] }),
+  "attachment_capability_unsupported",
+);
+check("failed attachment preflight does not poison session history", attachmentRuntime.session.messages.length === messagesBeforePdf);
+check("failed attachment preflight makes no network request", modelRequests.length === requestsBeforePdf);
+
+let unknownCommandRejected = false;
+try {
+  await attachmentRuntime.handleInput("/definitely-not-a-command");
+} catch (error) {
+  unknownCommandRejected = /Unknown command/.test(error?.message || "");
+}
+check("Runtime reports unknown slash commands without contacting the model", unknownCommandRejected && modelRequests.length === requestsBeforePdf);
+await attachmentRuntime.handleInput("运行测试");
+check("ordinary coding language reaches the agent route", modelRequests.length === requestsBeforePdf + 1);
+attachmentRuntime.shutdown();
+deleteSession(attachmentRuntime.sessionId);
+await new Promise((resolve) => server.close(resolve));
 
 console.log("\n[command-registry] one routing contract for all surfaces");
 const registry = createDefaultCommandRegistry({

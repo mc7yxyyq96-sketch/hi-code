@@ -7,10 +7,11 @@ export function createRuntimeService({ getRuntime, inputQueue, askResolvers, sen
   if (typeof send !== "function") throw new Error("runtime-service requires send");
 
   return {
-    enqueueInput(text) {
+    enqueueInput(input) {
       if (!getRuntime()) return { ok: false, error: "runtime not ready" };
-      const value = ipcString(text).trim();
-      if (!value) return { ok: false, error: "input is empty" };
+      const normalized = normalizeRuntimeInput(input);
+      if (!normalized.ok) return normalized;
+      const { text: value, attachmentIds } = normalized;
       let jobCenterJob = null;
       if (jobStore) {
         try {
@@ -22,14 +23,19 @@ export function createRuntimeService({ getRuntime, inputQueue, askResolvers, sen
             executor: "hicode-runtime",
             cwd: typeof getCwd === "function" ? getCwd() : undefined,
             tasks: [{ title: "Run runtime input", executor: "hicode-runtime" }],
-            metadata: { inputPreview: summarizeRuntimeInput(value) },
+            metadata: { inputPreview: summarizeRuntimeInput(value), attachmentCount: attachmentIds.length },
           });
         } catch (err) {
           send("output", `\nJob Center error: ${err?.message || String(err)}\n`);
           return { ok: false, error: "job center create failed" };
         }
       }
-      const runtimeJob = inputQueue.enqueue(value, jobCenterJob ? { jobCenterId: jobCenterJob.id, source: "runtime_queue" } : undefined);
+      const metadata = {
+        ...(jobCenterJob ? { jobCenterId: jobCenterJob.id } : {}),
+        source: "runtime_queue",
+        ...(attachmentIds.length ? { attachmentIds } : {}),
+      };
+      const runtimeJob = inputQueue.enqueue(value, metadata);
       return { ok: true, jobId: runtimeJob.id, jobCenterId: jobCenterJob?.id };
     },
 
@@ -63,6 +69,26 @@ export function createRuntimeService({ getRuntime, inputQueue, askResolvers, sen
       return { ok: true, interrupted: false };
     },
   };
+}
+
+function normalizeRuntimeInput(input) {
+  if (typeof input === "string") {
+    const text = input.trim();
+    if (!text) return { ok: false, error: "input is empty" };
+    if (text.length > 200_000) return { ok: false, error: "input is too large" };
+    return { ok: true, text, attachmentIds: [] };
+  }
+  const payload = ipcObject(input);
+  const attachmentIds = Array.isArray(payload.attachmentIds)
+    ? payload.attachmentIds.filter((id) => typeof id === "string")
+    : [];
+  if (!Array.isArray(payload.attachmentIds) && payload.attachmentIds !== undefined) return { ok: false, error: "attachmentIds must be an array" };
+  if (attachmentIds.length > 8 || attachmentIds.length !== new Set(attachmentIds).size) return { ok: false, error: "attachmentIds must contain at most 8 unique ids" };
+  if (attachmentIds.some((id) => !/^att-[a-f0-9-]{36}$/.test(id))) return { ok: false, error: "attachment id is invalid" };
+  const text = ipcString(payload.text).trim() || (attachmentIds.length ? "请分析这些附件。" : "");
+  if (!text) return { ok: false, error: "input is empty" };
+  if (text.length > 200_000) return { ok: false, error: "input is too large" };
+  return { ok: true, text, attachmentIds };
 }
 
 function summarizeRuntimeInput(input) {

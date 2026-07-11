@@ -133,6 +133,14 @@ export class CommandRegistry {
     if (!agent) return invalid(raw, "command_route_missing", "No agent route is registered for this surface.");
     return { ok: true, route: "agent", commandId: agent.id, input: raw, args: text };
   }
+
+  resolveAgent(input: string, context: CommandResolveContext): CommandResolution {
+    const raw = String(input ?? "");
+    const surface = validateSurface(context?.surface);
+    const agent = Array.from(this.descriptors.values()).find((descriptor) => descriptor.route === "agent" && descriptor.surfaces.includes(surface));
+    if (!agent) return invalid(raw, "command_route_missing", "No agent route is registered for this surface.");
+    return { ok: true, route: "agent", commandId: agent.id, input: raw, args: raw.trim() };
+  }
 }
 
 export function createDefaultCommandRegistry(options: { nativeCommands?: NativeCommandDescriptor[] } = {}): CommandRegistry {

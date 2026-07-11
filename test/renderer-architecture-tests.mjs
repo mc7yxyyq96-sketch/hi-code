@@ -116,9 +116,11 @@ check("store detail exposes uninstall and local translation affordance", bootstr
 check("store detail re-translates mixed backend summaries", !bootstrap.includes("translatedCandidate && translatedCandidate !== originalSummary") && bootstrap.includes("translatedSummary: translatedCandidate || \"\""));
 check("toast controller deduplicates and limits repeated errors", toastSource.includes("maxVisible = 3") && toastSource.includes("active = new Map") && toastSource.includes("（${existing.count} 次）") && toastSource.includes("target.children.length > maxVisible"));
 check("demo browser shim uses neutral paths", !bootstrap.includes("/Users/liu") && bootstrap.includes("/demo/hicode-project") && bootstrap.includes("/demo/hicode-data"));
-check("composer exposes real image attachment tray", html.includes('id="attachmentTray"') && html.includes('title="添加图片附件"') && css.includes(".attachment-tray") && css.includes(".attachment-chip"));
-check("composer attach button uses image attachment API", bootstrap.includes("attachBtn.onclick = chooseImageAttachment") && bootstrap.includes("api.attachImage({})") && bootstrap.includes("pendingAttachments"));
-check("composer sends image attachments through workspace-relative refs", bootstrap.includes("inputTextWithAttachments") && bootstrap.includes("`@${attachment.relativePath}`") && bootstrap.includes("displayText"));
+check("composer exposes a real typed attachment tray", html.includes('id="attachmentTray"') && html.includes('title="添加附件"') && css.includes(".attachment-tray") && css.includes(".attachment-chip"));
+check("composer attach button uses durable attachment API", bootstrap.includes("attachBtn.onclick = chooseAttachment") && bootstrap.includes("api.attachFile({})") && bootstrap.includes("pendingAttachments"));
+check("session changes discard unsent attachment records before switching", bootstrap.includes("async function discardPendingAttachments()") && bootstrap.includes("await discardPendingAttachments();") && bootstrap.includes("api.removeAttachment(attachment.id)"));
+check("composer sends attachment ids without workspace path injection", bootstrap.includes("attachmentIds") && bootstrap.includes("{ text, attachmentIds }") && !bootstrap.includes("inputTextWithAttachments"));
+check("queued composer inputs preserve attachment metadata", bootstrap.includes("queuedInputs.push({ text, options:") && bootstrap.includes("runLine(next.text, next.options"));
 check("composer supports pasted and dropped images", bootstrap.includes('input.addEventListener("paste"') && bootstrap.includes('composer.addEventListener("drop"') && bootstrap.includes("readImageFileAsDataUrl"));
 check("run status keeps runtime output errors visible", bootstrap.includes("function detectRuntimeOutputError") && bootstrap.includes("lastRunErrorDetail") && bootstrap.includes('label: "模型请求失败"') && bootstrap.includes('runState.status === "error" || lastRunErrorDetail'));
 check("model connection test surfaces vision capability hint", bootstrap.includes("function modelCapabilityHint") && bootstrap.includes("visionCapabilityNotice") && bootstrap.includes("图片输入：当前模型可能不支持") && bootstrap.includes("currentModel.capabilities"));
@@ -142,7 +144,9 @@ const errors = [];
 const api = createHiCodeApi({
   testModel: async () => ({ ok: true, value: 1 }),
   saveConfig: async () => ({ ok: false, error: "bad request" }),
-  attachImage: async () => ({ ok: true, relativePath: ".hicode/attachments/test.png" }),
+  attachFile: async () => ({ ok: true, id: "att-00000000-0000-4000-8000-000000000001", kind: "text" }),
+  attachImage: async () => ({ ok: true, id: "att-00000000-0000-4000-8000-000000000002", kind: "image" }),
+  removeAttachment: async () => ({ ok: true }),
   newSession: async () => ({ ok: true, sessionId: "session-new" }),
   listJobs: async () => ({ ok: true, jobs: [] }),
   getJob: async (id) => ({ ok: true, job: { id } }),
@@ -203,7 +207,8 @@ const bad = await api.saveConfig("{}");
 check("api wrapper returns failed API result", bad?.ok === false && /bad request/.test(bad.error || ""));
 const missing = await api.gitStatus();
 check("api wrapper returns standardized missing-method error", missing?.ok === false && /gitStatus/.test(missing.error || ""));
-check("api wrapper exposes image attachment bridge", (await api.attachImage({})).relativePath === ".hicode/attachments/test.png");
+check("api wrapper exposes durable file attachment bridge", (await api.attachFile({})).id === "att-00000000-0000-4000-8000-000000000001");
+check("api wrapper preserves legacy image attachment bridge", (await api.attachImage({})).id === "att-00000000-0000-4000-8000-000000000002");
 check("api wrapper exposes new session bridge", (await api.newSession()).sessionId === "session-new");
 const missingIndustrialApi = createHiCodeApi({}, { onError: (message) => errors.push(message) });
 check("industrial project API does not fake success when preload is missing", (await missingIndustrialApi.getIndustrialProject()).ok === false);

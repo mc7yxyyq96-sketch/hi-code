@@ -23,6 +23,18 @@ import {
 } from "./events.js";
 import { createRuntimeProtocolEvent } from "./runtime-protocol.js";
 import { appendRuntimeProtocolEvent, readRuntimeProtocolEvents } from "./runtime-event-store.js";
+import {
+  attachmentReference,
+  type AttachmentReader,
+  type AttachmentRecord,
+} from "./attachment-store.js";
+import {
+  createDefaultCommandRegistry,
+  type CommandRegistry,
+  type CommandResolution,
+  type CommandSurface,
+} from "./command-registry.js";
+import { materializeAttachmentMessages } from "./attachment-materializer.js";
 
 /** System prompt for the agent, including project notes and git status. */
 export function buildSystemPrompt(cwd: string, model?: string, reasoningLevel: VibeConfig["reasoningLevel"] = "medium"): string {
@@ -82,7 +94,24 @@ export interface RuntimeOpts {
   legacyAssistantOutput?: boolean;
   allowProcessExit?: boolean;
   persistRuntimeEvents?: boolean;
+  attachmentStore?: AttachmentReader;
+  commandRegistry?: CommandRegistry;
+  commandSurface?: CommandSurface;
 }
+
+export interface RuntimeInputOptions {
+  attachmentIds?: string[];
+  /** Host-precomputed resolution from the same registry, used for native fallback without re-matching. */
+  resolvedCommand?: CommandResolution;
+}
+
+export interface RuntimeDisplayMessage {
+  role: string;
+  text: string;
+  attachments?: AttachmentReferencePartDisplay[];
+}
+
+export type AttachmentReferencePartDisplay = ReturnType<typeof attachmentReference>["attachment"];
 
 export interface Runtime {
   cfg: VibeConfig;
@@ -91,7 +120,7 @@ export interface Runtime {
   cmdEnv: CommandEnv;
   sessionId: string;
   /** Run one line of input: `!shell`, `/command`, or a model turn. */
-  handleInput: (input: string) => Promise<void>;
+  handleInput: (input: string, options?: RuntimeInputOptions) => Promise<void>;
   /** Cancel an in-flight turn. Returns true if something was aborted. */
   abort: () => boolean;
   isBusy: () => boolean;
@@ -101,7 +130,7 @@ export interface Runtime {
   /** Start a fresh empty conversation without reusing the previous session id. */
   startNewSession: () => { sessionId: string };
   /** Load a saved session into the runtime (no output) and return its messages for display. */
-  resume: (id: string) => { role: string; text: string }[];
+  resume: (id: string) => RuntimeDisplayMessage[];
 }
 
 /** Build the shared session runtime used by both the readline and Ink frontends. */
@@ -110,6 +139,8 @@ export function createRuntime(opts: RuntimeOpts): Runtime {
 
   const session = newSession(systemPrompt);
   const perms = newPermissionState(mode);
+  const commandRegistry = opts.commandRegistry ?? createDefaultCommandRegistry();
+  const commandSurface = opts.commandSurface ?? "runtime";
   let sessionId = restored?.id ?? newSessionId();
   if (restored) {
     session.messages = restored.messages;
@@ -172,6 +203,7 @@ export function createRuntime(opts: RuntimeOpts): Runtime {
     sessionId,
     turnId: currentTurnId,
     legacyAssistantOutput: opts.legacyAssistantOutput !== false,
+    attachmentStore: opts.attachmentStore,
     emitEvent: emitRuntimeEvent,
     recordChange: (file, before, diffId) => turnChanges.push({ file, before, diffId }),
   };
@@ -236,6 +268,8 @@ export function createRuntime(opts: RuntimeOpts): Runtime {
     execEnv,
     sessionId,
     allowProcessExit: opts.allowProcessExit !== false,
+    commandRegistry,
+    commandSurface,
     resumeStoredSession: loadStoredSessionIntoRuntime,
     undo,
   };
@@ -264,9 +298,10 @@ export function createRuntime(opts: RuntimeOpts): Runtime {
     cmdEnv.sessionId = sessionId;
   }
 
-  function turnTitle(input: string): string {
-    if (input.startsWith("!")) return "Shell command";
-    if (input.startsWith("/")) return "Command";
+  function turnTitle(resolution: CommandResolution): string {
+    if (resolution.ok && resolution.route === "shell") return "Shell command";
+    if (resolution.ok && resolution.route === "slash") return "Command";
+    if (resolution.ok && resolution.route === "native") return "Native command";
     return "Agent turn";
   }
 
@@ -306,9 +341,14 @@ export function createRuntime(opts: RuntimeOpts): Runtime {
     return text.length > 120 ? text.slice(0, 117) + "..." : text;
   }
 
-  async function handleInput(input: string): Promise<void> {
+  async function handleInput(input: string, inputOptions: RuntimeInputOptions = {}): Promise<void> {
+    const resolution = inputOptions.resolvedCommand ?? commandRegistry.resolve(input, { surface: commandSurface });
     beginTurn();
     turnChanges = [];
+    let attachments: AttachmentRecord[] = [];
+    const requestedAttachmentIds = Array.isArray(inputOptions.attachmentIds)
+      ? inputOptions.attachmentIds.filter((id): id is string => typeof id === "string").slice(0, 8)
+      : [];
     const turnStartedAt = Date.now();
     if (protocolSequence === 0) {
       const payload: RuntimeMessageAppendedPayload = {
@@ -326,17 +366,28 @@ export function createRuntime(opts: RuntimeOpts): Runtime {
     const turnStartId = emitRuntimeEvent({
       type: "turn:start",
       tool: "agent",
-      title: turnTitle(input),
+      title: turnTitle(resolution),
       summary: summarizeInput(input),
       status: "running",
-      payload: { input: summarizeInput(input), retryInput: retryInput(input), startedAt: turnStartedAt },
+      payload: {
+        input: summarizeInput(input),
+        retryInput: retryInput(input),
+        attachmentIds: requestedAttachmentIds,
+        startedAt: turnStartedAt,
+      },
     });
     let finalStatus: ToolEventStatus = "done";
     let finalSummary = "done";
 
     try {
-      if (input.startsWith("!")) {
-        const command = input.slice(1);
+      attachments = resolveInputAttachments(inputOptions.attachmentIds);
+      if (attachments.length && (!resolution.ok || resolution.route !== "agent")) {
+        throw new Error("Attachments can only be sent to an agent request, not a shell, slash, or native command.");
+      }
+      if (!resolution.ok) throw new Error(resolution.message);
+
+      if (resolution.route === "shell") {
+        const command = resolution.args;
         const title = `Run ${command.slice(0, 80) || "bash"}`;
         const startId = emitRuntimeEvent({
           type: "tool:start",
@@ -413,13 +464,17 @@ export function createRuntime(opts: RuntimeOpts): Runtime {
         return;
       }
 
-      const handled = await handleCommand(input, cmdEnv);
+      const handled = await handleCommand(input, cmdEnv, resolution);
       if (handled) {
         finalSummary = "command handled";
         return;
       }
 
-      const content = buildUserContent(input, cwd);
+      if (resolution.route === "native") throw new Error("Native command must be handled by the desktop host.");
+      const content = buildUserContent(input, cwd, attachments);
+      if (attachments.length && opts.attachmentStore) {
+        materializeAttachmentMessages([{ role: "user", content }], opts.attachmentStore, defaultProfile(cfg));
+      }
       const controller = startAbortableWork();
       try {
         await runTurn(cfg, session, execEnv, content, controller.signal, persist);
@@ -452,6 +507,23 @@ export function createRuntime(opts: RuntimeOpts): Runtime {
         },
       });
     }
+  }
+
+  function resolveInputAttachments(ids: string[] | undefined): AttachmentRecord[] {
+    if (ids === undefined) return [];
+    if (!Array.isArray(ids) || ids.length > 8 || ids.some((id) => typeof id !== "string")) {
+      throw new Error("Attachment ids must be an array containing at most 8 ids.");
+    }
+    const unique = Array.from(new Set(ids));
+    if (unique.length !== ids.length) throw new Error("Attachment ids must be unique.");
+    if (!unique.length) return [];
+    if (!opts.attachmentStore) throw new Error("Attachment storage is unavailable for this runtime.");
+    return unique.map((id) => {
+      const record = opts.attachmentStore?.get(id);
+      if (!record) throw new Error(`Attachment no longer exists: ${id}`);
+      if (record.sessionId !== sessionId) throw new Error(`Attachment ${record.name} belongs to a different conversation.`);
+      return record;
+    });
   }
 
   return {
@@ -502,7 +574,7 @@ export function createRuntime(opts: RuntimeOpts): Runtime {
       if (!stored) return [];
       return stored.messages
         .filter((m) => m.role === "user" || m.role === "assistant")
-        .map((m) => ({ role: m.role, text: contentText(m.content).trim() }))
+        .map((m) => formatRuntimeDisplayMessage(m.role, m.content))
         .filter((m) => m.text.length > 0 && !m.text.startsWith("[Earlier conversation summary]"));
     },
   };
@@ -540,7 +612,7 @@ const IMAGE_EXT: Record<string, string> = {
  * multimodal image parts (for vision-capable models). Returns a plain string
  * when there are no images, or a content-part array when there are.
  */
-export function buildUserContent(input: string, cwd: string): string | ContentPart[] {
+export function buildUserContent(input: string, cwd: string, attachments: AttachmentRecord[] = []): string | ContentPart[] {
   const images: ContentPart[] = [];
   const refs = input.match(/(?:^|\s)@([^\s]+)/g) ?? [];
   for (const raw of refs) {
@@ -562,8 +634,20 @@ export function buildUserContent(input: string, cwd: string): string | ContentPa
   }
 
   const text = expandFileRefs(input, cwd); // text @files still get inlined
-  if (!images.length) return text;
-  return [{ type: "text", text }, ...images];
+  const references = attachments.map(attachmentReference);
+  if (!images.length && !references.length) return text;
+  return [{ type: "text", text }, ...images, ...references];
+}
+
+function formatRuntimeDisplayMessage(role: string, content: import("./llm.js").ChatMessage["content"]): RuntimeDisplayMessage {
+  if (!Array.isArray(content)) return { role, text: contentText(content).trim() };
+  const attachments = content.filter((part) => part.type === "attachment_ref").map((part) => ({ ...part.attachment }));
+  const text = content
+    .filter((part) => part.type !== "attachment_ref")
+    .map((part) => part.type === "text" ? part.text : "[image]")
+    .join(" ")
+    .trim();
+  return { role, text, ...(attachments.length ? { attachments } : {}) };
 }
 
 /** Inline the contents of any @path references found in the input. */

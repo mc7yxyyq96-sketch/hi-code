@@ -13,6 +13,7 @@ import {
   type AssistantDeltaPayload,
   type RuntimeMessageAppendedPayload,
 } from "./events.js";
+import { AttachmentMaterializationError, hasAttachmentReferences, materializeAttachmentMessages } from "./attachment-materializer.js";
 
 export interface LoopOpts {
   /** Restrict the toolset (e.g. read-only tools for an architect subagent). */
@@ -88,7 +89,12 @@ export async function runLoop(
 
     let turn;
     try {
-      const history = fullHistory(session);
+      const persistedHistory = fullHistory(session);
+      const history = hasAttachmentReferences(persistedHistory)
+        ? env.attachmentStore
+          ? materializeAttachmentMessages(persistedHistory, env.attachmentStore, p)
+          : missingAttachmentStore()
+        : persistedHistory;
       turn = await streamModelProfile(
         p,
         history,
@@ -250,6 +256,10 @@ export async function runLoop(
 
   if (legacyOutput) ui.warn(`  ↳ stopped after ${maxSteps} tool steps (possible loop)`);
   return finalText;
+}
+
+function missingAttachmentStore(): never {
+  throw new AttachmentMaterializationError("attachment_store_unavailable", "Attachment storage is unavailable for this runtime.");
 }
 
 function emitProviderRuntimeEvent(

@@ -26,6 +26,19 @@ function checkedInvoke(channel, value, field = "value") {
   return checked.ok ? safeInvoke(channel, checked.value) : Promise.resolve(checked);
 }
 
+function runtimeInput(value) {
+  if (typeof value === "string") return value.trim() && value.length <= 200000 ? { ok: true, value } : { ok: false, error: "input must be a non-empty bounded string" };
+  if (!value || typeof value !== "object" || Array.isArray(value)) return { ok: false, error: "input must be a string or object" };
+  const text = typeof value.text === "string" ? value.text : "";
+  const attachmentIds = Array.isArray(value.attachmentIds) ? value.attachmentIds : [];
+  if (text.length > 200000 || attachmentIds.length > 8 || attachmentIds.some((id) => typeof id !== "string" || !/^att-[a-f0-9-]{36}$/.test(id))) {
+    return { ok: false, error: "runtime input is invalid" };
+  }
+  if (!text.trim() && !attachmentIds.length) return { ok: false, error: "input is empty" };
+  if (new Set(attachmentIds).size !== attachmentIds.length) return { ok: false, error: "attachment ids must be unique" };
+  return { ok: true, value: { text, attachmentIds: [...attachmentIds] } };
+}
+
 contextBridge.exposeInMainWorld("hicode", {
   onOutput: (cb) => typeof cb === "function" && ipcRenderer.on("output", (_e, s) => cb(String(s || ""))),
   onReady: (cb) => typeof cb === "function" && ipcRenderer.on("ready", (_e, d) => cb(optionalObject(d))),
@@ -34,8 +47,11 @@ contextBridge.exposeInMainWorld("hicode", {
   onToolEvent: (cb) => typeof cb === "function" && ipcRenderer.on("tool-event", (_e, d) => cb(optionalObject(d))),
   onDiffsChanged: (cb) => typeof cb === "function" && ipcRenderer.on("diffs-changed", (_e, d) => cb(Array.isArray(d) ? d : [])),
   onRuntimeQueue: (cb) => typeof cb === "function" && ipcRenderer.on("runtime-queue", (_e, d) => cb(optionalObject(d))),
-  send: (text) => {
-    if (typeof text === "string") ipcRenderer.send("input", text);
+  send: (input) => {
+    const checked = runtimeInput(input);
+    if (!checked.ok) return checked;
+    ipcRenderer.send("input", checked.value);
+    return { ok: true };
   },
   answer: (id, value) => {
     if ((typeof id === "number" || typeof id === "string") && typeof value === "string") {
@@ -75,7 +91,10 @@ contextBridge.exposeInMainWorld("hicode", {
   gitCommitMessage: () => safeInvoke("git:commit-message"),
   gitCommit: (message) => checkedInvoke("git:commit", message, "message"),
   pickFolder: () => safeInvoke("pick-folder"),
+  attachFile: (payload) => safeInvoke("attach-file", optionalObject(payload)),
   attachImage: (payload) => safeInvoke("attach-image", optionalObject(payload)),
+  listAttachments: (sessionId) => sessionId === undefined ? safeInvoke("attachments:list") : checkedInvoke("attachments:list", sessionId, "sessionId"),
+  removeAttachment: (id) => checkedInvoke("attachment:remove", id, "attachmentId"),
   getCwd: () => safeInvoke("get-cwd"),
   listDir: (dir) => checkedInvoke("list-dir", dir, "dir"),
   readFile: (p) => checkedInvoke("read-file", p, "path"),

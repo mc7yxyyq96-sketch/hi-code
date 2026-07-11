@@ -21,6 +21,10 @@ export class AttachmentMaterializationError extends Error {
   }
 }
 
+export function hasAttachmentReferences(messages: ChatMessage[]): boolean {
+  return messages.some((message) => Array.isArray(message.content) && message.content.some((part) => part.type === "attachment_ref"));
+}
+
 export function materializeAttachmentMessages(
   messages: ChatMessage[],
   store: AttachmentReader,
