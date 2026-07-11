@@ -211,7 +211,10 @@
       "dependencies": ["HC-RUN-201", "HC-QA-101"],
       "deliverables": ["new app shell", "legacy panel adapter", "routing/state boundaries"],
       "acceptance": ["no big-bang rewrite", "existing views remain available", "720-1920 layouts pass"],
-      "status": "ready"
+      "status": "in_progress",
+      "startedAt": "2026-07-11T07:52:25Z",
+      "branch": "codex/desktop-ux/hc-ui-301",
+      "taskManifest": "reports/tasks/HC-UI-301.md"
     },
     {
       "id": "HC-UI-302",

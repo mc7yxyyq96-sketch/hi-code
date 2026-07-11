@@ -64,6 +64,7 @@ const requiredFiles = [
   "reports/tasks/HC-PROV-211.md",
   "reports/tasks/HC-PROV-212.md",
   "reports/tasks/HC-RUN-220.md",
+  "reports/tasks/HC-UI-301.md",
   "reports/tasks/HC-REL-ALPHA-7.md",
   "reports/evidence/baseline/manifest.json",
   "reports/evidence/HC-QA-101/manifest.json",
@@ -139,6 +140,7 @@ const modelProviderBoardTask = board.tasks.find((task) => task.id === "HC-PROV-2
 const openAIResponsesBoardTask = board.tasks.find((task) => task.id === "HC-PROV-211");
 const anthropicOllamaBoardTask = board.tasks.find((task) => task.id === "HC-PROV-212");
 const attachmentCommandBoardTask = board.tasks.find((task) => task.id === "HC-RUN-220");
+const uiShellBoardTask = board.tasks.find((task) => task.id === "HC-UI-301");
 
 console.log("\n[program-control] board and evidence contract");
 check("backlog records immutable source commit", /^[0-9a-f]{40}$/.test(backlog.sourceCommit || ""));
@@ -219,7 +221,18 @@ check(
     alpha8ReleaseBoardTask?.evidence === "reports/evidence/HC-REL-ALPHA-8/manifest.json",
   JSON.stringify(alpha8ReleaseTask),
 );
-check("HC-UI-301 is dependency-ready", uiShellTask?.status === "ready" && uiShellTask?.dependencies?.every((id) => backlog.tasks.find((task) => task.id === id)?.status === "completed"));
+check(
+  "HC-UI-301 is active only after completed dependencies",
+  uiShellTask?.status === "in_progress" &&
+    uiShellTask?.branch === "codex/desktop-ux/hc-ui-301" &&
+    Boolean(uiShellTask?.startedAt) &&
+    uiShellTask?.taskManifest === "reports/tasks/HC-UI-301.md" &&
+    uiShellTask?.dependencies?.every((id) => backlog.tasks.find((task) => task.id === id)?.status === "completed") &&
+    uiShellBoardTask?.status === "in_progress" &&
+    uiShellBoardTask?.taskManifest === "reports/tasks/HC-UI-301.md",
+  JSON.stringify(uiShellTask),
+);
+check("React App Shell gate is tracked without a pass claim", board.gates?.find((gate) => gate.id === "react-app-shell")?.status === "in_progress");
 check("alpha.8 version is synchronized", packageJson.version === "0.6.0-alpha.8" && packageLock.version === packageJson.version && packageLock.packages?.[""]?.version === packageJson.version && fs.readFileSync(path.join(root, "VERSION"), "utf8").trim() === packageJson.version);
 check("alpha.8 release candidate gate passed", board.currentRelease === packageJson.version && board.candidate?.version === packageJson.version && board.candidate?.branch === "codex/release/0.6.0-alpha.8" && board.candidate?.status === "passed" && board.candidate?.evidence === "reports/evidence/HC-REL-ALPHA-8/manifest.json" && board.gates?.find((gate) => gate.id === "alpha-8-release-candidate")?.status === "passed");
 check("historical alpha.7 release candidate gate remains passed", board.gates?.find((gate) => gate.id === "alpha-7-release-candidate")?.status === "passed");
