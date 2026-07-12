@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "program": "Hi Code Product-Grade Desktop and Industrial Workbench",
-  "updatedAt": "2026-07-11T17:58:50Z",
+  "updatedAt": "2026-07-12T02:53:12Z",
   "status": "active",
   "source": {
     "version": "0.6.0-alpha.6",
@@ -123,6 +123,12 @@
       "taskId": "HC-UI-311",
       "branch": "codex/desktop-ux/hc-ui-311",
       "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-hc-ui-311",
+      "mode": "completed-worktree"
+    },
+    {
+      "taskId": "HC-UI-312",
+      "branch": "codex/desktop-ux/hc-ui-312",
+      "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-hc-ui-312",
       "mode": "completed-worktree"
     }
   ],
@@ -300,6 +306,19 @@
       "taskManifest": "reports/tasks/HC-UI-311.md",
       "evidence": "reports/evidence/HC-UI-311/manifest.json",
       "ciEvidence": "reports/evidence/HC-UI-311/ci-matrix.json"
+    },
+    {
+      "id": "HC-UI-312",
+      "owner": "desktop-ux",
+      "priority": "P1",
+      "status": "completed",
+      "dependencies": ["HC-UI-301", "HC-PLAT-110"],
+      "branch": "codex/desktop-ux/hc-ui-312",
+      "startedAt": "2026-07-12T02:53:12Z",
+      "completedAt": "2026-07-12T05:41:01Z",
+      "taskManifest": "reports/tasks/HC-UI-312.md",
+      "evidence": "reports/evidence/HC-UI-312/manifest.json",
+      "ciEvidence": "reports/evidence/HC-UI-312/ci-matrix.json"
     }
   ],
   "gates": [
@@ -409,6 +428,14 @@
       "verifiedAt": "2026-07-11T20:35:56Z",
       "evidence": "reports/evidence/HC-UI-311/manifest.json",
       "ciEvidence": "reports/evidence/HC-UI-311/ci-matrix.json"
+    },
+    {
+      "id": "secure-app-preview",
+      "status": "passed",
+      "owner": "HC-UI-312",
+      "verifiedAt": "2026-07-12T05:41:01Z",
+      "evidence": "reports/evidence/HC-UI-312/manifest.json",
+      "ciEvidence": "reports/evidence/HC-UI-312/ci-matrix.json"
     }
   ],
   "nextReleaseSlices": [

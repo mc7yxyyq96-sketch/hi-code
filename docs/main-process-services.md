@@ -71,6 +71,10 @@ Sprint 1A splits Electron main-process IPC registration into service modules wit
   - Binds one terminal to one renderer owner and the current workspace; workspace/window/app close ends the session
   - Uses the shared safe child environment, 64 KiB IPC bounds, a one MiB in-memory transcript tail, and redacted metadata-only logs
   - Terminal startup is one explicit authorization unit. Commands typed after startup are not approved one by one, and the shell retains the desktop user's OS permissions
+- `electron/services/preview-service.mjs`
+  - Owns canonical loopback-HTTP validation, isolated child BrowserWindows, preview lifecycle, DOM checks, screenshots, and owner-only evidence
+  - Binds each preview to one renderer owner and canonical workspace; owner/window/workspace/app close destroys its live window
+  - Denies preload access, Node integration, DevTools, permissions, downloads, popups, webviews, external navigation, and cross-origin network resources
 - `electron/services/security-service.mjs`
   - Auth IPC registration
   - Path guard and sensitive log redaction utilities
@@ -111,6 +115,7 @@ The normalized error path redacts API keys, bearer tokens, password-like fields,
 - Integrated editor open/save uses the same workspace path authority. It rejects symlink escapes, binary or invalid UTF-8 content, oversized files, and stale normal saves. A force save is available only through an explicit typed request after visible user confirmation.
 - Integrated terminal creation uses the same Runtime permission state and a main-process-owned PTY. The renderer cannot select an executable, cwd, arguments, or environment. The terminal starts in the active workspace and is closed before workspace changes; this workspace binding is not an OS filesystem sandbox.
 - Terminal children receive a minimal safe environment and never inherit API keys, tokens, passwords, unknown variables, or `SSH_AUTH_SOCK`. Raw input, output, and transcripts are not persisted in logs.
+- App Preview accepts only `http:` loopback targets. Every page runs in a unique non-persistent sandboxed session with no preload or Node access. The trusted renderer never navigates to preview content, and failed verification checks remain failed.
 - Attachment records and content-addressed blobs stay under app data, use owner permissions, and are revalidated on read. Attachment IDs are session-owned and bounded before Runtime queueing.
 - Store install validation continues to block remote `sourcePath` and `sourceRoot`.
 - Remote downloads continue to require HTTPS.
@@ -148,6 +153,7 @@ Renderer and preload channels are unchanged:
 - `git:status`, `git:diff`, `git:stage`, `git:unstage`, `git:commit-message`, `git:commit`
 - `editor:file:open`, `editor:file:save`
 - `terminal:capabilities`, `terminal:create`, `terminal:status`, `terminal:write`, `terminal:resize`, `terminal:close`
+- `preview:capabilities`, `preview:open`, `preview:list`, `preview:reopen`, `preview:reload`, `preview:verify`, `preview:close`, `preview:remove`
 - `pick-folder`, `get-cwd`, `list-dir`, `read-file`
 - `attach-file`, `attach-image`, `attachments:list`, `attachment:remove`
 - `list-sessions`, `resume-session`, `delete-session`
@@ -170,6 +176,7 @@ node test/feature-tests.mjs
 node test/main-process-services-tests.mjs
 npm run test:editor-workbench
 npm run test:terminal
+npm run test:preview
 node test/patch-arena-tests.mjs
 node test/industrial-project-tests.mjs
 node test/domain-pack-tests.mjs
@@ -178,4 +185,5 @@ node test/industrial-tool-tests.mjs
 node test/release-builder-tests.mjs
 node --check electron/main.mjs
 node --check electron/preload.cjs
+npm run test:electron-e2e
 ```

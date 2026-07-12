@@ -1,0 +1,37 @@
+$ npm run test:preview
+
+> hi-code@0.6.0-alpha.8 test:preview
+> node test/preview-service-tests.mjs && tsx test/preview-workbench-tests.ts
+
+
+[preview-service] URL and isolation policy
+  ✓ only canonical loopback HTTP URLs are accepted
+  ✓ open creates an isolated owner-scoped preview window
+  ✓ permissions downloads and external resources fail closed
+  ✓ external navigation is blocked and reported to the owner
+
+[preview-service] evidence and lifecycle
+  ✓ DOM and screenshot verification writes owner-only truthful evidence
+  ✓ missing selector remains failed rather than fake passed
+  ✓ reload uses the live isolated window and returns to ready
+  ✓ closed previews can be reopened without reusing stale windows
+  ✓ renderer crashes destroy the stale native window and remain failed
+  ✓ cross-owner and switched-workspace access is rejected
+  ✓ owner destruction closes windows and removes registry state
+  ✓ load failures stay visible and do not leave a live window
+
+=== 12 passed, 0 failed ===
+
+[preview-workbench] typed renderer API
+  ✓ browser-only mode fails closed with an actionable reason
+  ✓ open payload and selector list are normalized and bounded
+  ✓ bridge exceptions return a visible error result
+  ✓ failed verification remains failed with its evidence checks
+  ✓ preview events are typed and unsubscribed
+
+[preview-workbench] production integration contract
+  ✓ preview route is reachable and mounted by the typed App Shell
+  ✓ preview UI exposes only real lifecycle and verification actions
+  ✓ preview layout has compact single-column behavior
+
+=== 8 passed, 0 failed ===

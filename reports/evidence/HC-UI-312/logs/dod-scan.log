@@ -1,0 +1,16 @@
+$ npm run scan:dod
+
+> hi-code@0.6.0-alpha.8 scan:dod
+> node scripts/scan-dod.mjs
+
+{
+  "ok": true,
+  "checkedAt": 1783833510069,
+  "summary": {
+    "total": 0,
+    "blocking": 0,
+    "warning": 0,
+    "info": 0
+  },
+  "findings": []
+}

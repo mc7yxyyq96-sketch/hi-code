@@ -7,6 +7,7 @@ export type ShellRouteId =
   | "agents"
   | "mcp"
   | "terminal"
+  | "preview"
   | "commands"
   | "git"
   | "jobs"
@@ -39,6 +40,7 @@ export const DEFAULT_SHELL_ROUTES = Object.freeze([
   { id: "agents", label: "智能体", panelId: "capabilityView", mainClass: "capability", navId: "agentsBtn", triggerId: "agentsBtn", iconClass: "i-users", directNavigable: true },
   { id: "mcp", label: "MCP", panelId: "capabilityView", mainClass: "capability", navId: "mcpBtn", triggerId: "mcpBtn", iconClass: "i-network", directNavigable: true },
   { id: "terminal", label: "终端", panelId: "terminalView", mainClass: "terminal", navId: "terminalBtn", triggerId: "terminalBtn", iconClass: "i-command", directNavigable: true },
+  { id: "preview", label: "应用预览", panelId: "previewView", mainClass: "preview", navId: "previewBtn", triggerId: "previewBtn", iconClass: "i-preview", directNavigable: true },
   { id: "commands", label: "命令", panelId: "commandView", mainClass: "commands", navId: "cmdBtn", triggerId: "cmdBtn", iconClass: "i-command", directNavigable: true },
   { id: "git", label: "Git", panelId: "gitView", mainClass: "git", navId: "gitBtn", triggerId: "gitBtn", iconClass: "i-git", directNavigable: true },
   { id: "jobs", label: "任务", panelId: "jobView", mainClass: "jobs", navId: "jobsBtn", triggerId: "jobsBtn", iconClass: "i-stack", directNavigable: true },

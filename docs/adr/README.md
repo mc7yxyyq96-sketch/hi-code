@@ -40,3 +40,4 @@ The file name is `ADR-NNNN-short-title.md`. Numbers are never reused. An accepte
 | [ADR-0011](ADR-0011-typed-session-workbench.md) | Accepted | Migrate the session workbench behind one typed store with bounded long-conversation rendering |
 | [ADR-0012](ADR-0012-conflict-safe-integrated-editor.md) | Accepted | Use workspace-confined revision tokens and atomic replacement, then route line review comments through the existing Runtime |
 | [ADR-0013](ADR-0013-policy-bound-integrated-terminal.md) | Accepted | Keep real PTY ownership in a policy-bound main-process service with minimal environment and process-tree cleanup |
+| [ADR-0014](ADR-0014-isolated-loopback-app-preview.md) | Accepted | Open local applications in owner-scoped sandboxed child windows and persist truthful verification evidence |

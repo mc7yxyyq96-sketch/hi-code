@@ -21,6 +21,8 @@ let userDataDir;
 let modelServer;
 let modelBaseURL = "";
 let modelServerRequests = 0;
+let previewServer;
+let previewBaseURL = "";
 let embeddedRuntime = null;
 let editorFixturePath = "";
 
@@ -75,6 +77,35 @@ async function startModelServer() {
   modelBaseURL = `http://127.0.0.1:${address.port}/v1`;
 }
 
+async function startPreviewServer() {
+  previewServer = http.createServer((request, response) => {
+    if (request.url === "/app.js") {
+      response.writeHead(200, { "Content-Type": "application/javascript; charset=utf-8", "Cache-Control": "no-store" });
+      response.end('document.querySelector("#app").dataset.ready = "true";');
+      return;
+    }
+    if (request.url !== "/") {
+      response.writeHead(404).end("not found");
+      return;
+    }
+    response.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
+    response.end(`<!doctype html>
+      <html lang="zh-CN">
+        <head><meta charset="utf-8"><title>Hi Code Preview Fixture</title></head>
+        <body><main id="app"><h1>Secure Preview Fixture</h1><button id="externalNav">External navigation</button></main>
+        <script src="/app.js"></script>
+        <script>document.querySelector("#externalNav").onclick=()=>location.assign("https://navigation-blocked.invalid/")</script>
+      </body></html>`);
+  });
+  await new Promise((resolve, reject) => {
+    previewServer.once("error", reject);
+    previewServer.listen(0, "127.0.0.1", resolve);
+  });
+  const address = previewServer.address();
+  assert.ok(address && typeof address === "object", "Preview test server did not bind a TCP port");
+  previewBaseURL = `http://127.0.0.1:${address.port}/`;
+}
+
 function record(name, status, detail = "") {
   results.push({ name, status, detail });
   console.log(`  ${status === "passed" ? "✓" : "✗"} ${name}${detail ? ` — ${detail}` : ""}`);
@@ -92,7 +123,7 @@ async function check(name, action) {
 
 async function setContentSize(width, height) {
   await electronApp.evaluate(({ BrowserWindow }, size) => {
-    const window = BrowserWindow.getAllWindows()[0];
+    const window = BrowserWindow.getAllWindows().find((candidate) => candidate.getTitle() === "Hi Code");
     if (!window) throw new Error("Electron window is missing");
     window.setContentSize(size.width, size.height);
   }, { width, height });
@@ -523,6 +554,118 @@ async function verifyIntegratedTerminal(page) {
   }
 }
 
+async function verifySecureAppPreview(page) {
+  await setContentSize(1024, baseline.height);
+  const previewNav = page.locator("#previewBtn");
+  await previewNav.scrollIntoViewIfNeeded();
+  await previewNav.click();
+  const workbench = await waitVisible(page, '[data-testid="app-preview"]');
+  await workbench.getByLabel("地址").fill(previewBaseURL);
+  await workbench.getByLabel("名称").fill("E2E Local App");
+  await workbench.getByLabel("DOM 检查").fill("#app\n[data-ready=true]");
+
+  const childPromise = electronApp.waitForEvent("window");
+  await workbench.getByRole("button", { name: "打开隔离预览" }).click();
+  const previewPage = await childPromise;
+  await previewPage.waitForLoadState("domcontentloaded");
+  await previewPage.locator("#app[data-ready=true]").waitFor({ state: "visible" });
+  assert.equal(previewPage.url(), previewBaseURL);
+
+  const isolation = await previewPage.evaluate(() => ({
+    hicode: typeof window.hicode,
+    nodeProcess: typeof window.process,
+    nodeRequire: typeof window.require,
+  }));
+  assert.deepEqual(isolation, { hicode: "undefined", nodeProcess: "undefined", nodeRequire: "undefined" });
+  const preferences = await electronApp.evaluate(({ BrowserWindow }) => {
+    const previewWindow = BrowserWindow.getAllWindows().find((window) => window.getTitle().startsWith("Hi Code Preview"));
+    if (!previewWindow) throw new Error("Preview BrowserWindow is missing");
+    const prefs = previewWindow.webContents.getLastWebPreferences();
+    return {
+      contextIsolation: prefs.contextIsolation,
+      nodeIntegration: prefs.nodeIntegration,
+      sandbox: prefs.sandbox,
+      preload: prefs.preload || "",
+    };
+  });
+  assert.deepEqual(preferences, { contextIsolation: true, nodeIntegration: false, sandbox: true, preload: "" });
+  const devToolsOpened = await electronApp.evaluate(async ({ BrowserWindow }) => {
+    const previewWindow = BrowserWindow.getAllWindows().find((window) => window.getTitle().startsWith("Hi Code Preview"));
+    if (!previewWindow) throw new Error("Preview BrowserWindow is missing");
+    previewWindow.webContents.openDevTools({ mode: "detach" });
+    await new Promise((resolve) => setTimeout(resolve, 120));
+    return previewWindow.webContents.isDevToolsOpened();
+  });
+  assert.equal(devToolsOpened, false);
+
+  const reloadFinished = previewPage.waitForEvent("domcontentloaded");
+  await workbench.getByRole("button", { name: "重新加载" }).click();
+  await reloadFinished;
+  assert.equal(previewPage.url(), previewBaseURL);
+
+  const popupCount = await electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().length);
+  await previewPage.evaluate(() => window.open("https://window-blocked.invalid/", "_blank"));
+  await previewPage.waitForTimeout(100);
+  assert.equal(await electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().length), popupCount);
+
+  await previewPage.locator("#externalNav").click({ noWaitAfter: true });
+  await previewPage.waitForTimeout(120);
+  assert.equal(previewPage.url(), previewBaseURL);
+  await page.bringToFront();
+  await waitVisible(page, ".preview-blocked");
+  assert.match(await page.locator(".preview-blocked").innerText(), /navigation-blocked\.invalid/);
+
+  await workbench.getByRole("button", { name: "截图并验证" }).click();
+  await page.waitForFunction(() => document.querySelector(".preview-verification")?.getAttribute("data-status") === "passed", undefined, { timeout: 10_000 });
+  const state = await page.evaluate(() => window.hicode.listPreviews());
+  assert.equal(state.ok, true);
+  assert.equal(state.previews.length, 1);
+  const verification = state.previews[0].lastVerification;
+  assert.equal(verification.status, "passed");
+  assert.equal(verification.checks.every((check) => check.status === "passed"), true);
+  const canonicalUserDataDir = fs.realpathSync.native ? fs.realpathSync.native(userDataDir) : fs.realpathSync(userDataDir);
+  const allowedEvidenceRoots = [".hicode", ".vibe"].map((directory) => path.join(canonicalUserDataDir, directory, "preview-evidence"));
+  assert.ok(
+    allowedEvidenceRoots.some((rootPath) => verification.screenshot.path.startsWith(`${rootPath}${path.sep}`)),
+    `Preview screenshot escaped the isolated app-data roots: ${verification.screenshot.path}`,
+  );
+  assert.ok(
+    allowedEvidenceRoots.some((rootPath) => verification.evidencePath.startsWith(`${rootPath}${path.sep}`)),
+    `Preview evidence escaped the isolated app-data roots: ${verification.evidencePath}`,
+  );
+  assert.ok(fs.existsSync(verification.screenshot.path));
+  assert.ok(fs.statSync(verification.screenshot.path).size > 1_000);
+  assert.ok(fs.existsSync(verification.evidencePath));
+  const evidence = JSON.parse(fs.readFileSync(verification.evidencePath, "utf8"));
+  assert.equal(evidence.status, "passed");
+  assert.equal(evidence.checks.filter((check) => check.id.startsWith("selector:")).length, 2);
+
+  await setContentSize(720, baseline.height);
+  const compactLayout = await workbench.evaluate((element) => ({ width: element.clientWidth, scrollWidth: element.scrollWidth }));
+  assert.ok(compactLayout.scrollWidth <= compactLayout.width + 1, `Compact preview overflows horizontally: ${JSON.stringify(compactLayout)}`);
+  const compactImage = await page.screenshot({ path: path.join(resultDir, "secure-preview-720.png"), animations: "disabled" });
+  assert.ok(compactImage.length > 12_000, "Compact preview screenshot is unexpectedly small");
+
+  const closePromise = previewPage.waitForEvent("close");
+  await workbench.getByRole("button", { name: "关闭窗口" }).click();
+  await closePromise;
+  await page.waitForFunction(() => document.querySelector('[data-testid="app-preview"]')?.getAttribute("data-state") === "closed");
+
+  const reopenedPromise = electronApp.waitForEvent("window");
+  await workbench.getByRole("button", { name: "重新打开" }).click();
+  const reopenedPage = await reopenedPromise;
+  await reopenedPage.waitForLoadState("domcontentloaded");
+  assert.equal(reopenedPage.url(), previewBaseURL);
+  await page.bringToFront();
+  const reopenedClosePromise = reopenedPage.waitForEvent("close");
+  await workbench.getByRole("button", { name: "关闭窗口" }).click();
+  await reopenedClosePromise;
+  await workbench.getByRole("button", { name: "移除记录" }).click();
+  await page.waitForFunction(() => document.querySelectorAll(".preview-registry-item").length === 0);
+  assert.equal(await electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().length), 1);
+  await returnHome(page);
+}
+
 async function main() {
   fs.rmSync(resultDir, { recursive: true, force: true });
   fs.mkdirSync(resultDir, { recursive: true, mode: 0o755 });
@@ -531,6 +674,7 @@ async function main() {
   fs.mkdirSync(path.dirname(editorFixturePath), { recursive: true });
   fs.writeFileSync(editorFixturePath, "export const editorValue = 1;\n");
   await startModelServer();
+  await startPreviewServer();
 
   console.log("\n[electron-e2e] real Electron smoke");
   electronApp = await electron.launch({
@@ -619,6 +763,10 @@ async function main() {
     await verifyIntegratedTerminal(page);
   });
 
+  await check("secure app preview isolates local content and writes truthful evidence", async () => {
+    await verifySecureAppPreview(page);
+  });
+
   await check("renderer produced no uncaught page errors", async () => {
     assert.deepEqual(pageErrors, []);
   });
@@ -655,5 +803,6 @@ try {
 } finally {
   if (electronApp) await electronApp.close().catch(() => {});
   if (modelServer) await new Promise((resolve) => modelServer.close(resolve));
+  if (previewServer) await new Promise((resolve) => previewServer.close(resolve));
   if (userDataDir) fs.rmSync(userDataDir, { recursive: true, force: true });
 }
