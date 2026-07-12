@@ -53,6 +53,15 @@ export class RuntimeJobQueue<T = string> {
   }
 
   enqueue(input: T, metadata?: Record<string, unknown>): RuntimeJob<T> {
+    return this.enqueueAt(input, metadata, "tail");
+  }
+
+  /** Queue work immediately after the active job without preempting it. */
+  enqueueNext(input: T, metadata?: Record<string, unknown>): RuntimeJob<T> {
+    return this.enqueueAt(input, metadata, "next");
+  }
+
+  private enqueueAt(input: T, metadata: Record<string, unknown> | undefined, position: "tail" | "next"): RuntimeJob<T> {
     const job: RuntimeJob<T> = {
       id: `job-${Date.now().toString(36)}-${++this.nextId}`,
       input,
@@ -60,7 +69,8 @@ export class RuntimeJobQueue<T = string> {
       queuedAt: Date.now(),
       metadata,
     };
-    this.queue.push(job);
+    if (position === "next") this.queue.unshift(job);
+    else this.queue.push(job);
     this.emitState();
     void this.drain();
     return { ...job };

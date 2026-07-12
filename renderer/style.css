@@ -4900,6 +4900,33 @@ body.sidebar-nav-collapsed .side-foot {
 .cb-icon:hover, .cb-pill:hover { color: var(--fg); border-color: var(--border-strong); background: var(--surface-2); }
 .cb-pill .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--amber); }
 .cb-pill.full .dot { background: var(--green); }
+.cb-pill.active {
+  color: var(--fg);
+  border-color: rgba(76, 105, 154, .55);
+  background: rgba(86, 119, 172, .12);
+}
+.cb-pill.steer {
+  color: #7d4a19;
+  border-color: rgba(190, 126, 49, .42);
+  background: rgba(222, 159, 75, .1);
+}
+.i-plan {
+  width: 11px;
+  height: 11px;
+  border: 1.5px solid currentColor;
+  border-radius: 2px;
+  position: relative;
+}
+.i-plan::after {
+  content: "";
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  top: 3px;
+  height: 1px;
+  background: currentColor;
+  box-shadow: 0 3px currentColor;
+}
 #modelName { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .model-picker {
   position: absolute;

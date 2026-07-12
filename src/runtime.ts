@@ -101,6 +101,8 @@ export interface RuntimeOpts {
 
 export interface RuntimeInputOptions {
   attachmentIds?: string[];
+  /** `plan` exposes only read-only inspection tools for this turn. */
+  executionMode?: "default" | "plan";
   /** Host-precomputed resolution from the same registry, used for native fallback without re-matching. */
   resolvedCommand?: CommandResolution;
 }
@@ -203,6 +205,7 @@ export function createRuntime(opts: RuntimeOpts): Runtime {
     sessionId,
     turnId: currentTurnId,
     legacyAssistantOutput: opts.legacyAssistantOutput !== false,
+    executionMode: "default",
     attachmentStore: opts.attachmentStore,
     emitEvent: emitRuntimeEvent,
     recordChange: (file, before, diffId) => turnChanges.push({ file, before, diffId }),
@@ -342,8 +345,10 @@ export function createRuntime(opts: RuntimeOpts): Runtime {
   }
 
   async function handleInput(input: string, inputOptions: RuntimeInputOptions = {}): Promise<void> {
+    const executionMode = inputOptions.executionMode === "plan" ? "plan" : "default";
     const resolution = inputOptions.resolvedCommand ?? commandRegistry.resolve(input, { surface: commandSurface });
     beginTurn();
+    execEnv.executionMode = executionMode;
     turnChanges = [];
     let attachments: AttachmentRecord[] = [];
     const requestedAttachmentIds = Array.isArray(inputOptions.attachmentIds)
@@ -372,6 +377,7 @@ export function createRuntime(opts: RuntimeOpts): Runtime {
       payload: {
         input: summarizeInput(input),
         retryInput: retryInput(input),
+        executionMode,
         attachmentIds: requestedAttachmentIds,
         startedAt: turnStartedAt,
       },
@@ -385,6 +391,9 @@ export function createRuntime(opts: RuntimeOpts): Runtime {
         throw new Error("Attachments can only be sent to an agent request, not a shell, slash, or native command.");
       }
       if (!resolution.ok) throw new Error(resolution.message);
+      if (executionMode === "plan" && resolution.route !== "agent") {
+        throw new Error("Plan mode only accepts agent requests and cannot run shell, slash, or native commands.");
+      }
 
       if (resolution.route === "shell") {
         const command = resolution.args;
@@ -504,8 +513,10 @@ export function createRuntime(opts: RuntimeOpts): Runtime {
           parentId: turnStartId,
           durationMs: Date.now() - turnStartedAt,
           changeCount: turnChanges.length,
+          executionMode,
         },
       });
+      execEnv.executionMode = "default";
     }
   }
 

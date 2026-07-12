@@ -49,6 +49,7 @@ export function createHiCodeApi(rawApi = window.hicode, { onError = null } = {})
   return {
     has: (name) => typeof api[name] === "function",
     send: (text) => call("send", [text], { ok: false }),
+    steer: (text) => call("steer", [text], { ok: false }),
     answer: (id, value) => call("answer", [id, value], { ok: false }),
     interrupt: () => call("interrupt", [], { ok: false }),
     clearRuntimeQueue: () => call("clearRuntimeQueue", [], { ok: false, count: 0 }),

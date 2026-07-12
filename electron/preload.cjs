@@ -31,12 +31,18 @@ function runtimeInput(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return { ok: false, error: "input must be a string or object" };
   const text = typeof value.text === "string" ? value.text : "";
   const attachmentIds = Array.isArray(value.attachmentIds) ? value.attachmentIds : [];
+  const executionMode = value.executionMode === undefined || value.executionMode === "default"
+    ? "default"
+    : value.executionMode === "plan"
+      ? "plan"
+      : "";
   if (text.length > 200000 || attachmentIds.length > 8 || attachmentIds.some((id) => typeof id !== "string" || !/^att-[a-f0-9-]{36}$/.test(id))) {
     return { ok: false, error: "runtime input is invalid" };
   }
   if (!text.trim() && !attachmentIds.length) return { ok: false, error: "input is empty" };
   if (new Set(attachmentIds).size !== attachmentIds.length) return { ok: false, error: "attachment ids must be unique" };
-  return { ok: true, value: { text, attachmentIds: [...attachmentIds] } };
+  if (!executionMode) return { ok: false, error: "runtime execution mode is invalid" };
+  return { ok: true, value: { text, attachmentIds: [...attachmentIds], executionMode } };
 }
 
 function editorOpenRequest(value) {
@@ -198,9 +204,11 @@ contextBridge.exposeInMainWorld("hicode", {
   },
   send: (input) => {
     const checked = runtimeInput(input);
-    if (!checked.ok) return checked;
-    ipcRenderer.send("input", checked.value);
-    return { ok: true };
+    return checked.ok ? safeInvoke("runtime:enqueue", checked.value) : Promise.resolve(checked);
+  },
+  steer: (input) => {
+    const checked = runtimeInput(input);
+    return checked.ok ? safeInvoke("runtime:steer", checked.value) : Promise.resolve(checked);
   },
   answer: (id, value) => {
     if ((typeof id === "number" || typeof id === "string") && typeof value === "string") {

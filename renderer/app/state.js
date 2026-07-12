@@ -6,8 +6,9 @@ const initialState = {
   cwd: "",
   inChat: false,
   currentModel: { model: "", baseURL: "", capabilities: null },
-  queuedInputs: [],
   runtimeQueueState: { running: null, queued: [] },
+  executionMode: "default",
+  activeRuntimeJobId: "",
   cfgText: "",
   selectedProvider: "deepseek",
   authMode: "login",
@@ -64,7 +65,7 @@ export function subscribe(listener) {
 
 export function resetState() {
   for (const key of Object.keys(state)) delete state[key];
-  Object.assign(state, { ...initialState, queuedInputs: [], runtimeQueueState: { running: null, queued: [] } });
+  Object.assign(state, { ...initialState, runtimeQueueState: { running: null, queued: [] } });
   for (const listener of listeners) listener(state, {});
   return state;
 }

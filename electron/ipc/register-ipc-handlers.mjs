@@ -29,7 +29,7 @@ export function registerIpcHandlers({ services, ipcMain, dialog, shell, logger =
   if (!ipcMain) throw new Error("registerIpcHandlers requires ipcMain");
   const register = createIpcRegistrar(ipcMain, { logger });
 
-  registerRuntimeIpcEvents({ ipcMain, runtime: services.runtime });
+  registerRuntimeIpcEvents({ ipcMain, register, runtime: services.runtime });
   registerQueueIpc({ register, queue: services.queue });
   registerSecurityIpc({ register, security: services.security });
   registerMcpIpc({ register, mcp: services.mcp });

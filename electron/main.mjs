@@ -345,6 +345,9 @@ function publicJobState(job) {
     finishedAt: job.finishedAt,
     error: job.error,
     summary: summarizeQueuedInput(job.input),
+    source: job.metadata?.source === "steer" ? "steer" : "runtime_queue",
+    executionMode: job.metadata?.executionMode === "plan" ? "plan" : "default",
+    steeredFromRuntimeJobId: typeof job.metadata?.steeredFromRuntimeJobId === "string" ? job.metadata.steeredFromRuntimeJobId : undefined,
   };
 }
 
@@ -2271,10 +2274,11 @@ async function runRuntimeInput(text, metadata = {}) {
   if (!runtime) return;
   try {
     const attachmentIds = Array.isArray(metadata.attachmentIds) ? metadata.attachmentIds : [];
+    const executionMode = metadata.executionMode === "plan" ? "plan" : "default";
     const executionCwd = typeof metadata.executionCwd === "string" ? metadata.executionCwd : "";
     if (executionCwd && path.resolve(executionCwd) !== path.resolve(cwd)) {
       if (attachmentIds.length) throw new Error("Attachments cannot be forwarded into an isolated runtime workspace.");
-      await runRuntimeInputInIsolatedCwd(text, executionCwd);
+      await runRuntimeInputInIsolatedCwd(text, executionCwd, executionMode);
     } else {
       const resolution = desktopCommandRegistry.resolve(text, { surface: "desktop" });
       if (resolution.ok && resolution.route === "native") {
@@ -2282,11 +2286,12 @@ async function runRuntimeInput(text, metadata = {}) {
         if (!handledNative) {
           await runtime.handleInput(text, {
             attachmentIds,
+            executionMode,
             resolvedCommand: desktopCommandRegistry.resolveAgent(text, { surface: "desktop" }),
           });
         }
       } else {
-        await runtime.handleInput(text, { attachmentIds, resolvedCommand: resolution });
+        await runtime.handleInput(text, { attachmentIds, executionMode, resolvedCommand: resolution });
       }
     }
   } catch (err) {
@@ -2296,7 +2301,7 @@ async function runRuntimeInput(text, metadata = {}) {
   }
 }
 
-async function runRuntimeInputInIsolatedCwd(text, executionCwd) {
+async function runRuntimeInputInIsolatedCwd(text, executionCwd, executionMode = "default") {
   const cfg = loadConfig();
   const ask = makeRendererAsk();
   const p = defaultProfile(cfg);
@@ -2312,7 +2317,7 @@ async function runRuntimeInputInIsolatedCwd(text, executionCwd) {
   });
   send("output", `\n[isolated] ${executionCwd}\n`);
   try {
-    await isolatedRuntime.handleInput(text);
+    await isolatedRuntime.handleInput(text, { executionMode });
   } finally {
     isolatedRuntime.shutdown();
   }
