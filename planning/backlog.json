@@ -334,7 +334,10 @@
       "dependencies": ["HC-PLAT-110"],
       "deliverables": ["policy kernel", "macOS/Linux/Windows backends", "capability diagnostics"],
       "acceptance": ["filesystem/env/network policies tested", "weak isolation is explicitly reported", "process tree termination works"],
-      "status": "planned"
+      "status": "in_progress",
+      "startedAt": "2026-07-12T15:15:48Z",
+      "branch": "codex/security-release/hc-sec-402",
+      "taskManifest": "reports/tasks/HC-SEC-402.md"
     },
     {
       "id": "HC-MCP-410",

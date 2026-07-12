@@ -351,6 +351,16 @@
       "taskManifest": "reports/tasks/HC-SEC-401.md",
       "evidence": "reports/evidence/HC-SEC-401/manifest.json",
       "ciEvidence": "reports/evidence/HC-SEC-401/ci-matrix.json"
+    },
+    {
+      "id": "HC-SEC-402",
+      "owner": "security-release",
+      "priority": "P0",
+      "status": "in_progress",
+      "dependencies": ["HC-PLAT-110"],
+      "branch": "codex/security-release/hc-sec-402",
+      "startedAt": "2026-07-12T15:15:48Z",
+      "taskManifest": "reports/tasks/HC-SEC-402.md"
     }
   ],
   "gates": [
