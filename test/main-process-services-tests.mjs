@@ -77,6 +77,9 @@ const queue = createQueueService({
 check("queue service clears runtime queue", queue.clearRuntimeQueue().count === 2 && cleared);
 
 let gitCwd = "";
+let pullRequestDecision = "deny";
+let pullRequestCalls = 0;
+const gitAuditEvents = [];
 const git = createGitService({
   getCwd: () => "/tmp/project",
   gitWorkflowStatus: (cwd) => ({ ok: true, cwd }),
@@ -88,9 +91,29 @@ const git = createGitService({
     return { ok: true, message: "msg" };
   },
   gitCommit: (cwd, message) => ({ cwd, message }),
+  collaboration: {
+    listBranches: (cwd) => ({ ok: true, root: cwd, current: "main", branches: [{ name: "main", current: true }] }),
+    createBranch: (cwd, name) => ({ ok: true, root: cwd, branch: name }),
+    switchBranch: (cwd, name) => ({ ok: true, root: cwd, branch: name }),
+    getCollaborationStatus: () => ({ ok: true, available: true, pullRequest: null, checks: [], ci: { status: "unknown", total: 0 } }),
+    createPullRequest: (cwd, request) => {
+      pullRequestCalls++;
+      return { ok: true, cwd, ...request, url: "https://github.com/example/project/pull/1" };
+    },
+  },
+  authorizePullRequest: async () => pullRequestDecision,
+  logger: (event, payload) => gitAuditEvents.push({ event, payload }),
 });
 check("git service preserves cwd boundary", git.commitMessage().message === "msg" && gitCwd === "/tmp/project");
 check("git service validates path arrays", git.stage(["a.js", 1, "b.js"]).files.join(",") === "a.js,b.js");
+check("git service exposes branch state through the current workspace", git.branches().root === "/tmp/project" && git.branches().current === "main");
+check("git service creates validated branches through collaboration core", git.createBranch({ name: "feature/runtime" }).branch === "feature/runtime");
+const deniedPullRequest = await git.createPullRequest({ title: "Secure delivery", body: "private body", base: "main", draft: true });
+check("git service requires fresh Pull Request confirmation", deniedPullRequest.denied === true && pullRequestCalls === 0);
+pullRequestDecision = "allow";
+const createdPullRequest = await git.createPullRequest({ title: "Secure delivery", body: "private body", base: "main", draft: true });
+check("git service creates Pull Request only after confirmation", createdPullRequest.ok === true && pullRequestCalls === 1 && createdPullRequest.draft === true);
+check("git service audit logs omit Pull Request body", gitAuditEvents.every((entry) => !JSON.stringify(entry.payload).includes("private body")));
 
 let runtimeMetadata = null;
 const runtimeService = createRuntimeService({
@@ -311,7 +334,7 @@ registerIpcHandlers({
     },
   },
 });
-for (const channel of ["runtime:enqueue", "runtime:steer", "runtime-queue:clear", "auth-status", "list-store", "store:item", "store:enable", "store:disable", "store:uninstall", "job:create", "job:list", "job:get", "job:cancel", "job:retry", "job:pause", "job:resume", "job:events", "job:artifacts", "job:artifact:preview", "job:artifact:open", "provider:list", "provider:get", "provider:configure", "provider:run", "provider:cancel", "worktree:create", "worktree:run", "worktree:collectChanges", "worktree:cleanup", "arena:list", "arena:get", "arena:create", "arena:acceptCandidate", "arena:rejectCandidate", "arena:mergeCandidate", "arena:artifact:preview", "arena:artifact:open", "industrial-project:schema", "industrial-project:get", "industrial-project:validate", "industrial-project:save", "industrial-requirement:draft", "industrial-requirement:add", "industrial-requirement:criteria:update", "industrial-requirement:artifact-plan", "industrial-requirement:test-plan", "industrial-requirement:spec-package", "industrial-requirement:approve", "industrial-project:artifact:add", "industrial-project:traceability:add", "industrial-project:gate:add", "domain-pack:list", "domain-pack:get", "domain-pack:validate", "domain-pack:install", "domain-pack:update", "domain-pack:enable", "domain-pack:disable", "domain-pack:uninstall", "domain-pack:recommend", "agent-team:profiles", "agent-team:profile:get", "agent-team:plan:create", "agent-team:plan:list", "agent-team:plan:get", "agent-team:job:create", "toolchain:list", "toolchain:detect", "toolchain:capabilities", "toolchain:validate-adapter", "toolchain:run", "quality-gate:list", "quality-gate:run", "quality-gate:approve", "release:readiness", "release:build", "release:open", "sample:industrial-control-box:create", "diffs:list", "git:status", "editor:file:open", "editor:file:save", "terminal:capabilities", "terminal:create", "terminal:status", "terminal:write", "terminal:resize", "terminal:close", "preview:capabilities", "preview:open", "preview:list", "preview:reopen", "preview:reload", "preview:verify", "preview:close", "preview:remove", "attach-file", "attach-image", "attachments:list", "attachment:remove", "read-file", "read-session", "new-session", "app:info", "app:open-data-dir", "app:reveal-config", "app:open-page", "app:check-updates", "usage:stats"]) {
+for (const channel of ["runtime:enqueue", "runtime:steer", "runtime-queue:clear", "auth-status", "list-store", "store:item", "store:enable", "store:disable", "store:uninstall", "job:create", "job:list", "job:get", "job:cancel", "job:retry", "job:pause", "job:resume", "job:events", "job:artifacts", "job:artifact:preview", "job:artifact:open", "provider:list", "provider:get", "provider:configure", "provider:run", "provider:cancel", "worktree:create", "worktree:run", "worktree:collectChanges", "worktree:cleanup", "arena:list", "arena:get", "arena:create", "arena:acceptCandidate", "arena:rejectCandidate", "arena:mergeCandidate", "arena:artifact:preview", "arena:artifact:open", "industrial-project:schema", "industrial-project:get", "industrial-project:validate", "industrial-project:save", "industrial-requirement:draft", "industrial-requirement:add", "industrial-requirement:criteria:update", "industrial-requirement:artifact-plan", "industrial-requirement:test-plan", "industrial-requirement:spec-package", "industrial-requirement:approve", "industrial-project:artifact:add", "industrial-project:traceability:add", "industrial-project:gate:add", "domain-pack:list", "domain-pack:get", "domain-pack:validate", "domain-pack:install", "domain-pack:update", "domain-pack:enable", "domain-pack:disable", "domain-pack:uninstall", "domain-pack:recommend", "agent-team:profiles", "agent-team:profile:get", "agent-team:plan:create", "agent-team:plan:list", "agent-team:plan:get", "agent-team:job:create", "toolchain:list", "toolchain:detect", "toolchain:capabilities", "toolchain:validate-adapter", "toolchain:run", "quality-gate:list", "quality-gate:run", "quality-gate:approve", "release:readiness", "release:build", "release:open", "sample:industrial-control-box:create", "diffs:list", "git:status", "git:branches", "git:branch:create", "git:branch:switch", "git:collaboration", "git:pr:create", "editor:file:open", "editor:file:save", "terminal:capabilities", "terminal:create", "terminal:status", "terminal:write", "terminal:resize", "terminal:close", "preview:capabilities", "preview:open", "preview:list", "preview:reopen", "preview:reload", "preview:verify", "preview:close", "preview:remove", "attach-file", "attach-image", "attachments:list", "attachment:remove", "read-file", "read-session", "new-session", "app:info", "app:open-data-dir", "app:reveal-config", "app:open-page", "app:check-updates", "usage:stats"]) {
   check(`register-ipc-handlers exposes ${channel}`, ipc2.handles.has(channel));
 }
 for (const channel of ["input", "ask-response", "interrupt"]) {

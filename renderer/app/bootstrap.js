@@ -1343,6 +1343,9 @@ const releaseCenterSummary = $("releaseCenterSummary"), releaseCenterDetail = $(
 const gitFiles = $("gitFiles"), gitSelected = $("gitSelected"), gitDiffView = $("gitDiffView"), gitCommitMessage = $("gitCommitMessage"), gitCommitStatus = $("gitCommitStatus");
 const gitRefresh = $("gitRefresh"), gitStageAll = $("gitStageAll"), gitUnstageAll = $("gitUnstageAll"), gitWorktreeMode = $("gitWorktreeMode"), gitStagedMode = $("gitStagedMode");
 const gitGenerateMessage = $("gitGenerateMessage"), gitCommitBtn = $("gitCommitBtn");
+const gitBranchSelect = $("gitBranchSelect"), gitBranchName = $("gitBranchName"), gitCreateBranchBtn = $("gitCreateBranch"), gitSwitchBranchBtn = $("gitSwitchBranch");
+const gitCollaborationRefresh = $("gitCollaborationRefresh"), gitCollaborationStatus = $("gitCollaborationStatus"), gitChecks = $("gitChecks");
+const gitPrTitle = $("gitPrTitle"), gitPrBase = $("gitPrBase"), gitPrBody = $("gitPrBody"), gitPrDraft = $("gitPrDraft"), gitCreatePr = $("gitCreatePr");
 const storeConfirm = $("storeConfirm"), storeConfirmTitle = $("storeConfirmTitle"), storeConfirmSub = $("storeConfirmSub");
 const storeConfirmSummary = $("storeConfirmSummary"), storeConfirmChanges = $("storeConfirmChanges"), storeConfirmPerms = $("storeConfirmPerms"), storeConfirmWarnings = $("storeConfirmWarnings");
 const storeConfirmClose = $("storeConfirmClose"), storeConfirmCancel = $("storeConfirmCancel"), storeConfirmInstall = $("storeConfirmInstall");
@@ -1412,6 +1415,7 @@ let pendingStoreInstall = null;
 let toolEvents = [], recoverableTasks = [], diffs = [], selectedDiffId = null, showArchivedDiffs = false;
 let runState = null, runTimer = null, runHideTimer = null, lastRunErrorDetail = "";
 let gitState = null, selectedGitPath = "", selectedGitStaged = false;
+let gitBranchState = null, gitCollaborationState = null;
 let storeSearchComposing = false, composerComposing = false;
 syncState({
   busy,
@@ -1444,6 +1448,8 @@ syncState({
   showArchivedDiffs,
   runState,
   gitState,
+  gitBranchState,
+  gitCollaborationState,
   selectedGitPath,
   selectedGitStaged,
 });
@@ -2059,6 +2065,7 @@ async function showGit() {
   syncState({ inChat });
   showRoute({ main, views: routeViews, route: "gitView", mainClass: "git", activeNav: "gitBtn", setActiveNav });
   await refreshGitStatus();
+  await Promise.all([refreshGitBranches(), refreshGitCollaboration()]);
 }
 
 async function showJobCenter(jobId = "") {
@@ -2870,6 +2877,86 @@ function setGitButtons(canStage, canUnstage) {
   gitUnstageAll.disabled = !canUnstage;
   gitGenerateMessage.disabled = !canUnstage;
   gitCommitBtn.disabled = !canUnstage;
+  updateGitDeliveryButtons();
+}
+
+function updateGitDeliveryButtons() {
+  const available = gitState?.ok === true;
+  const clean = available && Number(gitState?.dirty || 0) === 0;
+  const githubCliAvailable = gitCollaborationState?.available !== false;
+  gitBranchSelect.disabled = !available;
+  gitBranchName.disabled = !clean;
+  gitCreateBranchBtn.disabled = !clean;
+  gitSwitchBranchBtn.disabled = !clean || !gitBranchSelect.value;
+  gitCreatePr.disabled = !clean || !githubCliAvailable || !gitPrTitle.value.trim();
+}
+
+async function refreshGitBranches() {
+  if (!api.has("gitBranches")) return;
+  gitBranchState = await api.gitBranches();
+  syncState({ gitBranchState });
+  gitBranchSelect.innerHTML = "";
+  if (!gitBranchState?.ok) {
+    const option = document.createElement("option");
+    option.textContent = "分支不可用";
+    option.value = "";
+    gitBranchSelect.appendChild(option);
+    updateGitDeliveryButtons();
+    return;
+  }
+  for (const branch of gitBranchState.branches || []) {
+    const option = document.createElement("option");
+    option.value = branch.name;
+    option.textContent = `${branch.current ? "当前 · " : ""}${branch.name}${branch.upstream ? ` · ${branch.upstream}` : ""}`;
+    option.selected = branch.current === true;
+    gitBranchSelect.appendChild(option);
+  }
+  updateGitDeliveryButtons();
+}
+
+async function refreshGitCollaboration() {
+  if (!api.has("gitCollaboration")) return;
+  gitCollaborationStatus.textContent = "正在读取 PR/CI 状态…";
+  gitCollaborationStatus.className = "git-collaboration-status";
+  gitCollaborationState = await api.gitCollaboration();
+  syncState({ gitCollaborationState });
+  renderGitCollaboration();
+  updateGitDeliveryButtons();
+}
+
+function renderGitCollaboration() {
+  gitChecks.innerHTML = "";
+  const state = gitCollaborationState;
+  if (!state?.ok) {
+    gitCollaborationStatus.textContent = state?.error || "PR/CI 状态读取失败";
+    gitCollaborationStatus.className = "git-collaboration-status is-error";
+    return;
+  }
+  if (!state.available || !state.pullRequest) {
+    gitCollaborationStatus.textContent = state.reason || "当前分支还没有 Pull Request";
+    gitCollaborationStatus.className = "git-collaboration-status is-muted";
+    return;
+  }
+  const pr = state.pullRequest;
+  const ci = state.ci || {};
+  gitCollaborationStatus.textContent = `#${pr.number} ${pr.title} · ${pr.draft ? "Draft" : pr.state} · CI ${gitCiLabel(ci.status)}`;
+  gitCollaborationStatus.title = pr.url || "";
+  gitCollaborationStatus.className = `git-collaboration-status is-${ci.status || "unknown"}`;
+  for (const check of state.checks || []) {
+    const row = document.createElement("div");
+    row.className = `git-check is-${check.status || "unknown"}`;
+    const name = document.createElement("span");
+    name.textContent = check.workflow ? `${check.workflow} / ${check.name}` : check.name;
+    name.title = check.detailsUrl || "";
+    const status = document.createElement("strong");
+    status.textContent = gitCiLabel(check.status);
+    row.append(name, status);
+    gitChecks.appendChild(row);
+  }
+}
+
+function gitCiLabel(status) {
+  return ({ passed: "通过", failed: "失败", pending: "运行中", skipped: "已跳过", unknown: "未知" })[status] || "未知";
 }
 
 function gitSetStatus(text, kind = "") {
@@ -2879,6 +2966,46 @@ function gitSetStatus(text, kind = "") {
 }
 
 gitRefresh.onclick = refreshGitStatus;
+gitCollaborationRefresh.onclick = refreshGitCollaboration;
+gitBranchSelect.onchange = updateGitDeliveryButtons;
+gitPrTitle.oninput = updateGitDeliveryButtons;
+gitCreateBranchBtn.onclick = async () => {
+  const name = gitBranchName.value.trim();
+  if (!name) return gitSetStatus("请输入新分支名", "error");
+  const result = await api.gitCreateBranch({ name });
+  if (!result?.ok) return gitSetStatus(result?.error || "创建分支失败", "error");
+  gitBranchName.value = "";
+  gitSetStatus(`已切换到 ${result.branch}`, "ok");
+  await Promise.all([refreshGitStatus(), refreshGitBranches(), refreshGitCollaboration()]);
+};
+gitSwitchBranchBtn.onclick = async () => {
+  const name = gitBranchSelect.value;
+  if (!name) return;
+  const result = await api.gitSwitchBranch({ name });
+  if (!result?.ok) return gitSetStatus(result?.error || "切换分支失败", "error");
+  gitSetStatus(`已切换到 ${result.branch}`, "ok");
+  selectedGitPath = "";
+  await Promise.all([refreshGitStatus(), refreshGitBranches(), refreshGitCollaboration()]);
+};
+gitCreatePr.onclick = async () => {
+  const title = gitPrTitle.value.trim();
+  if (!title) return gitSetStatus("请输入 PR 标题", "error");
+  gitCreatePr.disabled = true;
+  gitSetStatus("等待确认并创建 Pull Request…");
+  try {
+    const result = await api.gitCreatePullRequest({
+      title,
+      body: gitPrBody.value,
+      base: gitPrBase.value.trim() || "main",
+      draft: gitPrDraft.checked,
+    });
+    if (!result?.ok) return gitSetStatus(result?.error || "创建 Pull Request 失败", "error");
+    gitSetStatus(`Pull Request 已创建：${result.url}`, "ok");
+    await refreshGitCollaboration();
+  } finally {
+    updateGitDeliveryButtons();
+  }
+};
 gitStageAll.onclick = async () => {
   const paths = (gitState?.files || []).filter((file) => file.unstaged).map((file) => file.path);
   await stageGitPaths(paths);
@@ -2904,8 +3031,10 @@ gitGenerateMessage.onclick = async () => {
 };
 gitCommitBtn.onclick = async () => {
   if (!api.has("gitCommit")) return;
-  const r = await api.gitCommit(gitCommitMessage.value);
+  const message = gitCommitMessage.value;
+  const r = await api.gitCommit(message);
   if (!r?.ok) return gitSetStatus(r?.error || "commit 失败", "error");
+  if (!gitPrTitle.value.trim()) gitPrTitle.value = message.trim();
   gitCommitMessage.value = "";
   gitSetStatus(`已提交 ${r.hash || ""}`.trim(), "ok");
   selectedGitPath = "";

@@ -54,6 +54,29 @@ function editorOpenRequest(value) {
   return { ok: true, value: { path: checkedPath.value } };
 }
 
+function gitBranchRequest(value) {
+  const data = optionalObject(value);
+  const checked = requireString(data.name, "branch");
+  if (!checked.ok) return checked;
+  const name = checked.value.trim();
+  if (!name || name.length > 160 || name.startsWith("-") || /[\u0000-\u0020\u007f]/.test(name)) {
+    return { ok: false, error: "branch is invalid" };
+  }
+  return { ok: true, value: { name } };
+}
+
+function gitPullRequest(value) {
+  const data = optionalObject(value);
+  const title = typeof data.title === "string" ? data.title.trim() : "";
+  const body = typeof data.body === "string" ? data.body.trim() : "";
+  const base = typeof data.base === "string" ? data.base.trim() : "main";
+  if (!title || title.length > 200 || body.length > 20000 || !base || base.length > 160) {
+    return { ok: false, error: "pull request input is invalid" };
+  }
+  if ([title, body, base].some((item) => item.includes("\0"))) return { ok: false, error: "pull request input is invalid" };
+  return { ok: true, value: { title, body, base, draft: data.draft !== false } };
+}
+
 function editorSaveRequest(value) {
   const opened = editorOpenRequest(value);
   if (!opened.ok) return opened;
@@ -247,6 +270,20 @@ contextBridge.exposeInMainWorld("hicode", {
   gitUnstage: (paths) => safeInvoke("git:unstage", stringArray(paths)),
   gitCommitMessage: () => safeInvoke("git:commit-message"),
   gitCommit: (message) => checkedInvoke("git:commit", message, "message"),
+  gitBranches: () => safeInvoke("git:branches"),
+  gitCreateBranch: (payload) => {
+    const checked = gitBranchRequest(payload);
+    return checked.ok ? safeInvoke("git:branch:create", checked.value) : Promise.resolve(checked);
+  },
+  gitSwitchBranch: (payload) => {
+    const checked = gitBranchRequest(payload);
+    return checked.ok ? safeInvoke("git:branch:switch", checked.value) : Promise.resolve(checked);
+  },
+  gitCollaboration: () => safeInvoke("git:collaboration"),
+  gitCreatePullRequest: (payload) => {
+    const checked = gitPullRequest(payload);
+    return checked.ok ? safeInvoke("git:pr:create", checked.value) : Promise.resolve(checked);
+  },
   pickFolder: () => safeInvoke("pick-folder"),
   attachFile: (payload) => safeInvoke("attach-file", optionalObject(payload)),
   attachImage: (payload) => safeInvoke("attach-image", optionalObject(payload)),

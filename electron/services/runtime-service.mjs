@@ -56,6 +56,7 @@ export function createRuntimeService({ getRuntime, inputQueue, askResolvers, sen
       if (!normalized.ok) return normalized;
       const interrupted = interruptActiveRuntime(getRuntime(), askResolvers);
       if (!interrupted) return { ok: false, error: "当前任务无法中断，调整指令未排队" };
+      inputQueue.interruptRunning?.("interrupted by steer");
       const activeJobCenterId = active.metadata?.jobCenterId;
       if (jobStore && typeof activeJobCenterId === "string") {
         try {
@@ -89,6 +90,7 @@ export function createRuntimeService({ getRuntime, inputQueue, askResolvers, sen
 
     interrupt() {
       if (interruptActiveRuntime(getRuntime(), askResolvers)) {
+        inputQueue.interruptRunning?.("interrupted by user");
         send("output", "\n⏹ 已请求停止当前任务。\n");
         return { ok: true, interrupted: true };
       }

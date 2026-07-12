@@ -20,6 +20,7 @@ function check(name, condition, detail = "") {
 }
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const mainSource = fs.readFileSync(path.join(process.cwd(), "electron", "main.mjs"), "utf8");
 
 console.log("\n[runtime-control] authoritative queue ordering");
 const order = [];
@@ -35,6 +36,39 @@ check(
   "steer follow-up runs immediately after the active turn",
   order.join(",") === "active,steer-follow-up,normal-follow-up",
   JSON.stringify(order),
+);
+
+const failedQueue = new RuntimeJobQueue(async () => {
+  throw new Error("provider unavailable");
+});
+failedQueue.enqueue("failing-turn");
+await failedQueue.idle();
+check(
+  "authoritative queue persists failed turns as errors",
+  failedQueue.state().history[0]?.status === "error" && failedQueue.state().history[0]?.error === "provider unavailable",
+  JSON.stringify(failedQueue.state()),
+);
+
+let finishInterruptedJob;
+const interruptedQueue = new RuntimeJobQueue(async () => new Promise((resolve) => {
+  finishInterruptedJob = resolve;
+}));
+interruptedQueue.enqueue("interrupt-me");
+await wait(5);
+const interruptedJob = interruptedQueue.interruptRunning("interrupted by steer");
+finishInterruptedJob();
+await interruptedQueue.idle();
+check(
+  "authoritative queue preserves an explicit interruption after the handler returns",
+  interruptedJob?.status === "canceled"
+    && interruptedQueue.state().history[0]?.status === "canceled"
+    && interruptedQueue.state().history[0]?.error === "interrupted by steer",
+  JSON.stringify(interruptedQueue.state()),
+);
+check(
+  "desktop runtime rethrows handled errors to the authoritative queue",
+  /catch \(err\) \{[\s\S]{0,180}send\("output"[\s\S]{0,120}throw err;/.test(mainSource)
+    && mainSource.includes('type: "runtime-queue:error"'),
 );
 
 console.log("\n[runtime-control] plan mode tool boundary");
@@ -61,6 +95,7 @@ const createdJobs = [];
 const appendedEvents = [];
 const enqueued = [];
 let aborted = 0;
+let interruptedRuntimeJob = null;
 const fakeQueue = {
   state() {
     return {
@@ -79,6 +114,10 @@ const fakeQueue = {
   },
   clearQueued() {
     return 0;
+  },
+  interruptRunning(reason) {
+    interruptedRuntimeJob = { reason };
+    return { id: "runtime-active", status: "canceled", error: reason };
   },
 };
 const runtimeService = createRuntimeService({
@@ -108,7 +147,7 @@ const runtimeService = createRuntimeService({
 const planQueued = runtimeService.enqueueInput({ text: "inspect and propose a plan", executionMode: "plan" });
 check("plan prompt is queued with durable execution metadata", planQueued.ok && enqueued[0]?.metadata?.executionMode === "plan" && createdJobs[0]?.metadata?.executionMode === "plan", JSON.stringify({ planQueued, enqueued, createdJobs }));
 const steered = runtimeService.steerInput({ text: "focus on the failing test", executionMode: "default" });
-check("steer aborts the active runtime and queues next", steered.ok && aborted === 1 && enqueued[1]?.position === "next" && enqueued[1]?.metadata?.source === "steer", JSON.stringify({ steered, aborted, enqueued }));
+check("steer aborts and marks the active runtime before queuing next", steered.ok && aborted === 1 && interruptedRuntimeJob?.reason === "interrupted by steer" && enqueued[1]?.position === "next" && enqueued[1]?.metadata?.source === "steer", JSON.stringify({ steered, aborted, interruptedRuntimeJob, enqueued }));
 check("steer records an event on the interrupted Job", appendedEvents.some((entry) => entry.jobId === "job-active" && entry.event.type === "runtime.steer.requested"), JSON.stringify(appendedEvents));
 
 console.log("\n[runtime-control] IPC contract");

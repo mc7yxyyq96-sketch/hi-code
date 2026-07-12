@@ -92,6 +92,16 @@ export class RuntimeJobQueue<T = string> {
     return count;
   }
 
+  /** Mark the active job as user-interrupted without pretending the handler failed. */
+  interruptRunning(reason = "interrupted by user"): RuntimeJob<T> | null {
+    if (!this.running || this.running.status !== "running") return null;
+    this.running.status = "canceled";
+    this.running.error = reason;
+    this.running.metadata = { ...(this.running.metadata || {}), interrupted: true };
+    this.emitState();
+    return { ...this.running, metadata: { ...this.running.metadata } };
+  }
+
   state(): RuntimeJobQueueState<T> {
     return {
       running: this.running ? { ...this.running } : null,
@@ -118,11 +128,13 @@ export class RuntimeJobQueue<T = string> {
 
         try {
           await this.handler(job);
-          job.status = "done";
+          if (!isCanceledJob(job)) job.status = "done";
         } catch (error) {
-          job.status = "error";
-          job.error = error instanceof Error ? error.message : String(error);
-          this.onError?.(error, job);
+          if (!isCanceledJob(job)) {
+            job.status = "error";
+            job.error = error instanceof Error ? error.message : String(error);
+            this.onError?.(error, job);
+          }
         } finally {
           job.finishedAt = Date.now();
           this.running = null;
@@ -174,4 +186,8 @@ export class RuntimeJobQueue<T = string> {
     const resolvers = this.idleResolvers.splice(0);
     for (const resolve of resolvers) resolve();
   }
+}
+
+function isCanceledJob<T>(job: RuntimeJob<T>): boolean {
+  return job.status === "canceled";
 }

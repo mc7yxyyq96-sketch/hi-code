@@ -30,6 +30,7 @@ import {
   gitGenerateCommitMessage,
   gitCommit,
 } from "../dist/git.js";
+import { createGitCollaborationClient } from "../dist/git-collaboration.js";
 import { registerIpcHandlers } from "./ipc/register-ipc-handlers.mjs";
 import { createRuntimeService } from "./services/runtime-service.mjs";
 import { createQueueService } from "./services/queue-service.mjs";
@@ -93,6 +94,7 @@ let askSeq = 0;
 let nativeCleanupQuitInProgress = false;
 const toolEvents = [];
 const diffService = new DiffService(() => cwd);
+const gitCollaboration = createGitCollaborationClient();
 const worktreeRunner = new WorktreeRunner({ safeRoot: WORKTREE_RUNNER_DIR });
 const patchArenaStore = new PatchArenaStore({ storePath: PATCH_ARENA_PATH });
 const domainPackManager = createDomainPackManager({ safeRoot: DOMAIN_PACK_DIR });
@@ -133,7 +135,14 @@ let activeRuntimeJobCenterId = null;
 const inputQueue = new RuntimeJobQueue(
   async (job) => runRuntimeQueueJob(job),
   (state) => handleInputQueueState(state),
-  (err) => send("output", `error: ${err?.message ?? err}\n`),
+  (err, job) => appendRuntimeLog({
+    id: `runtime-queue-error-${Date.now()}-${crypto.randomUUID()}`,
+    type: "runtime-queue:error",
+    title: "Runtime queue job failed",
+    summary: err?.message || String(err),
+    payload: { runtimeJobId: job?.id || "" },
+    createdAt: Date.now(),
+  }),
   { storePath: path.join(HICODE_DIR, "jobs", "runtime-jobs.json"), historyLimit: 100 },
 );
 
@@ -2296,6 +2305,7 @@ async function runRuntimeInput(text, metadata = {}) {
     }
   } catch (err) {
     send("output", `error: ${err?.message ?? err}\n`);
+    throw err;
   } finally {
     send("turn-done");
   }
@@ -2491,6 +2501,21 @@ async function authorizeTerminal(request) {
   });
 }
 
+async function authorizePullRequest({ title, base, draft }) {
+  if (!win || win.isDestroyed()) return "deny";
+  const result = await dialog.showMessageBox(win, {
+    type: "question",
+    title: "创建 Pull Request",
+    message: draft ? "确认发布分支并创建 Draft Pull Request？" : "确认发布分支并创建 Pull Request？",
+    detail: `标题：${String(title || "").slice(0, 200)}\n目标分支：${String(base || "main").slice(0, 160)}\n\n如果当前分支尚未发布，Hi Code 会执行非强制 git push --set-upstream origin HEAD。不会自动合并。`,
+    buttons: ["创建", "取消"],
+    defaultId: 1,
+    cancelId: 1,
+    noLink: true,
+  });
+  return result.response === 0 ? "allow" : "deny";
+}
+
 function createWindow() {
   const rendererPath = path.join(__dirname, "..", "renderer", "index.html");
   const rendererUrl = pathToFileURL(rendererPath).href;
@@ -2661,6 +2686,15 @@ function createMainServices() {
       gitUnstage,
       gitGenerateCommitMessage,
       gitCommit,
+      collaboration: gitCollaboration,
+      authorizePullRequest,
+      logger: (event, payload) => appendRuntimeLog({
+        id: `git-${Date.now()}-${crypto.randomUUID()}`,
+        type: event,
+        title: event,
+        payload,
+        createdAt: Date.now(),
+      }),
     }),
     editor: createEditorService({
       getCwd: () => cwd,
