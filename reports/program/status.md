@@ -42,7 +42,7 @@ The final machine-captured evidence is written by `npm run program:baseline` to 
 | 14 | HC-UI-310 | Completed | Desktop UX | HC-UI-302 |
 | 15 | HC-UI-311 | Completed | Desktop UX | HC-UI-301, HC-PLAT-110 |
 | 16 | HC-UI-312 | Completed | Desktop UX | HC-UI-301, HC-PLAT-110 |
-| 17 | HC-GIT-320 | In progress | Runtime Engine | HC-RUN-203, HC-UI-310 |
+| 17 | HC-GIT-320 | Completed | Runtime Engine | HC-RUN-203, HC-UI-310 |
 
 HC-QA-101 established a real Electron responsive baseline. HC-RUN-201 introduces protocol-native assistant output and concurrency isolation. No new industrial domain module is authorized before HC-RUN-201 completes.
 
@@ -82,7 +82,7 @@ HC-UI-311 completed in the isolated `codex/desktop-ux/hc-ui-311` worktree from H
 
 HC-UI-312 completed in the isolated `codex/desktop-ux/hc-ui-312` worktree from HC-UI-311 completion commit `549fc62`. A loopback-only App Preview now opens local applications in unique non-persistent sandboxed BrowserWindows with no preload, Node integration, DevTools, permissions, downloads, popups, webviews, external navigation, or cross-origin network access. Typed lifecycle controls support reload, close, reopen, and removal; owner/workspace/app/crash cleanup is deterministic. DOM selector checks and PNG/JSON evidence remain explicitly passed or failed. Fifteen local gates passed from clean implementation commit `d1138ab`, including 12/12 service checks, 8/8 renderer checks, 196/196 security checks, release check, zero-finding DoD scan, production audit, and real Electron compact-layout acceptance. GitHub Actions run `29181437110` also passed general tests and real Electron smoke on Ubuntu, macOS, and Windows for Draft PR #16. Server startup, remote browsing, Git/PR orchestration, and industrial modules remain outside this task.
 
-HC-GIT-320 started in the isolated `codex/runtime-engine/hc-git-320` worktree from HC-UI-312 completion commit `e802c15`. The clean parent passed the repository verify gate. This task will remove the renderer-owned execution queue, add explicit plan and interrupt-then-follow-up steer semantics, and complete protected branch/commit/PR/CI controls. Dirty-worktree protection, explicit PR confirmation, minimal child environments, credential non-persistence, and truthful failed/pending CI state are release-blocking constraints.
+HC-GIT-320 completed in the isolated `codex/runtime-engine/hc-git-320` worktree from HC-UI-312 completion commit `e802c15`. Plan mode now enforces a read-only tool boundary, the main process owns queued prompt order, and Steer persists cancellation before prioritizing a follow-up. Local Git delivery adds dirty-worktree-protected branches, existing stage/commit behavior, native-confirmed Draft PR creation, minimal Git/gh environments, and truthful failed/pending CI projection. Fifteen local evidence gates passed from clean implementation commit `9fad4bf`, including real Electron Plan/queue/Steer and Git stage/commit/branch acceptance at 720 and 1024 px. GitHub Actions run `29189513590` then passed the general test job and real Electron smoke on Ubuntu, macOS, and Windows for Draft PR #17. No merge, release publication, credential storage, force push, or automatic merge was performed.
 
 ## Current Product Truth
 
@@ -109,6 +109,7 @@ HC-GIT-320 started in the isolated `codex/runtime-engine/hc-git-320` worktree fr
 - Integrated editor evidence: `reports/tasks/HC-UI-310.md`, `reports/evidence/HC-UI-310/manifest.json`
 - Integrated terminal evidence: `reports/tasks/HC-UI-311.md`, `reports/evidence/HC-UI-311/manifest.json`, `reports/evidence/HC-UI-311/ci-matrix.json`
 - Secure App Preview evidence: `reports/tasks/HC-UI-312.md`, `reports/evidence/HC-UI-312/manifest.json`, `reports/evidence/HC-UI-312/ci-matrix.json`
+- Coding and Git delivery evidence: `reports/tasks/HC-GIT-320.md`, `reports/evidence/HC-GIT-320/manifest.json`, `reports/evidence/HC-GIT-320/ci-matrix.json`
 - Current risks: `reports/program/risks.json`
 - Historical final acceptance: `reports/final-acceptance-historical.md`
 - Historical audit policy: `reports/audit/README.md`

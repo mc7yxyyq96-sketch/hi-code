@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "program": "Hi Code Product-Grade Desktop and Industrial Workbench",
-  "updatedAt": "2026-07-12T06:16:00Z",
+  "updatedAt": "2026-07-12T10:47:48Z",
   "risks": [
     {
       "id": "RISK-RUN-001",
@@ -144,7 +144,7 @@
     {
       "id": "RISK-GIT-001",
       "severity": "high",
-      "status": "active",
+      "status": "mitigated",
       "owner": "runtime-engine",
       "title": "Queue and Git collaboration actions can overwrite work or report false delivery state",
       "evidence": [
@@ -153,10 +153,16 @@
         "electron/services/runtime-service.mjs",
         "electron/services/git-service.mjs",
         "src/job-queue.ts",
-        "src/git.ts"
+        "src/git.ts",
+        "src/git-collaboration.ts",
+        "test/runtime-control-tests.mjs",
+        "test/git-collaboration-tests.mjs",
+        "tests/electron-e2e/run.mjs",
+        "reports/evidence/HC-GIT-320/manifest.json",
+        "reports/evidence/HC-GIT-320/ci-matrix.json"
       ],
       "impact": "A renderer-owned follow-up queue can lose prompts, while unsafe branch changes, implicit PR mutations, leaked credentials, or flattened CI results can overwrite user work or claim delivery that did not occur.",
-      "mitigation": "HC-GIT-320 will make the main Runtime queue authoritative, model steer as an explicit interrupt-and-follow-up transition, protect dirty worktrees, require explicit PR confirmation, use minimal child environments, and preserve failed or pending CI states in the UI.",
+      "mitigation": "HC-GIT-320 makes the main Runtime queue authoritative, models Steer as a persisted cancellation and priority follow-up, protects dirty worktrees, requires fresh PR confirmation, uses minimal child environments, and preserves failed or pending CI states. Fifteen local evidence gates and GitHub Actions run 29189513590 passed, including real Electron smoke on Ubuntu, macOS, and Windows.",
       "trigger": "Any hidden renderer queue, branch switch over dirty work, unconfirmed PR mutation, credential exposure, or failed CI displayed as successful blocks HC-GIT-320 completion."
     },
     {

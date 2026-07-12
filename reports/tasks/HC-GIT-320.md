@@ -1,12 +1,18 @@
 # HC-GIT-320 Plan, Queue, And Git Delivery Loop
 
-Status: In progress
+Status: Completed
 
 Branch: `codex/runtime-engine/hc-git-320`
 
 Parent commit: `e802c15cfb27402b3d0a88bcad5fcc9b1715b1a7`
 
 Started: `2026-07-12T06:16:00Z`
+
+Completed: `2026-07-12T10:47:48Z`
+
+Evidence: `reports/evidence/HC-GIT-320/manifest.json`
+
+Cross-platform CI: `reports/evidence/HC-GIT-320/ci-matrix.json`
 
 ## Scope
 
@@ -55,7 +61,15 @@ This task does not add a remote agent provider, change repository hosting, auto-
 - `23f087f`: cancellation-preserving queue settlement, bounded Git/GitHub collaboration client, dirty-worktree branch/PR protection, native PR confirmation, failed/pending CI projection, responsive Git delivery UI, focused tests, and real Electron E2E coverage.
 - GitHub CLI failures now distinguish missing installation, missing login, absent PR, and network failure with redacted actionable Chinese guidance. The PR button is disabled when `gh` itself is unavailable.
 
-Acceptance evidence capture and cross-platform CI are still pending; the task remains in progress until both are recorded.
+## Acceptance Result
+
+- Local machine evidence captured 15/15 passing commands from clean implementation commit `9fad4bfbc47e6c0597fc1fa7bf3e8b9518caf1e5` on the isolated task branch.
+- Runtime control tests passed 13/13 and Git collaboration tests passed 13/13. Security baseline passed 205/205, Renderer architecture passed 179/179, main-process services passed 175/175, and feature tests passed 80/80 inside the recorded verify/release gates.
+- Real Electron E2E passed Plan/queue/Steer, durable Job cancellation, local Git dirty protection, stage, commit, branch creation, and 720/1024 responsive Git delivery layout.
+- Full-tree DoD scan returned zero findings. Production dependency audit returned no high or critical advisory.
+- Draft PR #17 was not merged. GitHub Actions run `29189513590` passed the general test job and real Electron smoke on Ubuntu, macOS, and Windows. The run head is evidence commit `1731dfa8d4844c698a7717f0024cddf32af615c9`.
+
+All acceptance criteria are satisfied. Remote PR creation remains user-confirmed and was validated with deterministic core/service tests rather than an E2E side effect.
 
 ## Rollback
 

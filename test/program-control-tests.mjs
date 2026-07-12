@@ -53,6 +53,8 @@ const requiredFiles = [
   "docs/integrated-terminal.md",
   "docs/secure-app-preview.md",
   "docs/adr/ADR-0014-isolated-loopback-app-preview.md",
+  "docs/git-delivery-loop.md",
+  "docs/adr/ADR-0015-authoritative-coding-and-git-delivery-loop.md",
   "docs/attachments-and-command-registry.md",
   "docs/anthropic-ollama-adapters.md",
   "docs/model-provider-adapters.md",
@@ -79,6 +81,7 @@ const requiredFiles = [
   "reports/tasks/HC-UI-310.md",
   "reports/tasks/HC-UI-311.md",
   "reports/tasks/HC-UI-312.md",
+  "reports/tasks/HC-GIT-320.md",
   "reports/tasks/HC-REL-ALPHA-7.md",
   "reports/evidence/baseline/manifest.json",
   "reports/evidence/HC-QA-101/manifest.json",
@@ -100,6 +103,8 @@ const requiredFiles = [
   "reports/evidence/HC-UI-311/ci-matrix.json",
   "reports/evidence/HC-UI-312/manifest.json",
   "reports/evidence/HC-UI-312/ci-matrix.json",
+  "reports/evidence/HC-GIT-320/manifest.json",
+  "reports/evidence/HC-GIT-320/ci-matrix.json",
   "scripts/electron-compatibility.mjs",
   "scripts/run-electron-builder.mjs",
   "test/electron-compatibility-tests.mjs",
@@ -145,6 +150,8 @@ const terminalManifest = readJson(root, "reports/evidence/HC-UI-311/manifest.jso
 const terminalCiEvidence = readJson(root, "reports/evidence/HC-UI-311/ci-matrix.json");
 const previewManifest = readJson(root, "reports/evidence/HC-UI-312/manifest.json");
 const previewCiEvidence = readJson(root, "reports/evidence/HC-UI-312/ci-matrix.json");
+const gitDeliveryManifest = readJson(root, "reports/evidence/HC-GIT-320/manifest.json");
+const gitDeliveryCiEvidence = readJson(root, "reports/evidence/HC-GIT-320/ci-matrix.json");
 const packageJson = readJson(root, "package.json");
 const packageLock = readJson(root, "package-lock.json");
 const programTask = backlog.tasks.find((task) => task.id === "HC-PROG-100");
@@ -162,6 +169,7 @@ const uiWorkbenchTask = backlog.tasks.find((task) => task.id === "HC-UI-302");
 const editorWorkbenchTask = backlog.tasks.find((task) => task.id === "HC-UI-310");
 const terminalTask = backlog.tasks.find((task) => task.id === "HC-UI-311");
 const previewTask = backlog.tasks.find((task) => task.id === "HC-UI-312");
+const gitDeliveryTask = backlog.tasks.find((task) => task.id === "HC-GIT-320");
 const qaTask = board.tasks.find((task) => task.id === "HC-QA-101");
 const runtimeTask = board.tasks.find((task) => task.id === "HC-RUN-201");
 const runtimeStoreTask = board.tasks.find((task) => task.id === "HC-RUN-202");
@@ -177,6 +185,7 @@ const uiWorkbenchBoardTask = board.tasks.find((task) => task.id === "HC-UI-302")
 const editorWorkbenchBoardTask = board.tasks.find((task) => task.id === "HC-UI-310");
 const terminalBoardTask = board.tasks.find((task) => task.id === "HC-UI-311");
 const previewBoardTask = board.tasks.find((task) => task.id === "HC-UI-312");
+const gitDeliveryBoardTask = board.tasks.find((task) => task.id === "HC-GIT-320");
 
 console.log("\n[program-control] board and evidence contract");
 check("backlog records immutable source commit", /^[0-9a-f]{40}$/.test(backlog.sourceCommit || ""));
@@ -412,6 +421,45 @@ for (const command of previewManifest.commands || []) {
   const absolute = path.join(root, command.logPath || "");
   check(`HC-UI-312 ${command.id} log exists`, Boolean(command.logPath) && fs.existsSync(absolute));
   if (fs.existsSync(absolute)) check(`HC-UI-312 ${command.id} log hash matches`, digest(absolute) === command.logSha256);
+}
+check(
+  "HC-GIT-320 completed only after its dependencies and evidence",
+  gitDeliveryTask?.status === "completed" &&
+    gitDeliveryTask?.branch === "codex/runtime-engine/hc-git-320" &&
+    Boolean(gitDeliveryTask?.startedAt) &&
+    Boolean(gitDeliveryTask?.completedAt) &&
+    gitDeliveryTask?.taskManifest === "reports/tasks/HC-GIT-320.md" &&
+    gitDeliveryTask?.evidenceManifest === "reports/evidence/HC-GIT-320/manifest.json" &&
+    gitDeliveryTask?.ciEvidence === "reports/evidence/HC-GIT-320/ci-matrix.json" &&
+    gitDeliveryTask?.dependencies?.every((id) => backlog.tasks.find((task) => task.id === id)?.status === "completed") &&
+    gitDeliveryBoardTask?.status === "completed" &&
+    gitDeliveryBoardTask?.taskManifest === "reports/tasks/HC-GIT-320.md" &&
+    gitDeliveryBoardTask?.evidence === "reports/evidence/HC-GIT-320/manifest.json" &&
+    gitDeliveryBoardTask?.ciEvidence === "reports/evidence/HC-GIT-320/ci-matrix.json",
+  JSON.stringify(gitDeliveryTask),
+);
+check("Authoritative coding and Git delivery gate passed with committed evidence", board.gates?.find((gate) => gate.id === "authoritative-coding-git-delivery")?.status === "passed" && board.gates?.find((gate) => gate.id === "authoritative-coding-git-delivery")?.evidence === "reports/evidence/HC-GIT-320/manifest.json" && board.gates?.find((gate) => gate.id === "authoritative-coding-git-delivery")?.ciEvidence === "reports/evidence/HC-GIT-320/ci-matrix.json");
+check("HC-GIT-320 queue and collaboration risk is evidence-backed and mitigated", risks.risks?.some((risk) => risk.id === "RISK-GIT-001" && risk.status === "mitigated" && risk.evidence?.includes("reports/evidence/HC-GIT-320/manifest.json") && risk.evidence?.includes("reports/evidence/HC-GIT-320/ci-matrix.json")));
+check("HC-GIT-320 evidence records every command passing from a clean tree", gitDeliveryManifest.summary?.allPassed === true && gitDeliveryManifest.summary?.total === 15 && gitDeliveryManifest.capture?.workingTreeClean === true, JSON.stringify(gitDeliveryManifest.summary));
+check("HC-GIT-320 evidence is captured from its isolated branch", gitDeliveryManifest.source?.branch === "codex/runtime-engine/hc-git-320" && gitDeliveryManifest.source?.parentCommit === "9fad4bfbc47e6c0597fc1fa7bf3e8b9518caf1e5");
+check(
+  "HC-GIT-320 CI passed general tests and real Electron smoke on every target platform",
+  gitDeliveryCiEvidence.event === "pull_request" &&
+    gitDeliveryCiEvidence.pullRequest === 17 &&
+    gitDeliveryCiEvidence.status === "completed" &&
+    gitDeliveryCiEvidence.conclusion === "success" &&
+    gitDeliveryCiEvidence.headSha === "1731dfa8d4844c698a7717f0024cddf32af615c9" &&
+    ["ubuntu-latest", "macos-latest", "windows-latest"].every((platform) => gitDeliveryCiEvidence.jobs?.some((job) => job.platform === platform && job.name === `Electron smoke (${platform})` && job.conclusion === "success" && job.electronSmoke === "success" && job.artifactUpload === "success")) &&
+    gitDeliveryCiEvidence.jobs?.some((job) => job.name === "test" && job.conclusion === "success" && job.testSuites === "success" && job.dodScan === "success"),
+  JSON.stringify(gitDeliveryCiEvidence),
+);
+for (const requiredCommand of ["build", "runtime-control", "git-collaboration", "service-tests", "renderer-tests", "security-tests", "verify", "release-check", "feature-tests", "dod-tests", "dod-scan", "production-audit", "electron-e2e", "program-control", "git-diff-check"]) {
+  check(`HC-GIT-320 captured ${requiredCommand}`, gitDeliveryManifest.commands?.some((command) => command.id === requiredCommand && command.status === "passed"));
+}
+for (const command of gitDeliveryManifest.commands || []) {
+  const absolute = path.join(root, command.logPath || "");
+  check(`HC-GIT-320 ${command.id} log exists`, Boolean(command.logPath) && fs.existsSync(absolute));
+  if (fs.existsSync(absolute)) check(`HC-GIT-320 ${command.id} log hash matches`, digest(absolute) === command.logSha256);
 }
 check("alpha.8 version is synchronized", packageJson.version === "0.6.0-alpha.8" && packageLock.version === packageJson.version && packageLock.packages?.[""]?.version === packageJson.version && fs.readFileSync(path.join(root, "VERSION"), "utf8").trim() === packageJson.version);
 check("alpha.8 release candidate gate passed", board.currentRelease === packageJson.version && board.candidate?.version === packageJson.version && board.candidate?.branch === "codex/release/0.6.0-alpha.8" && board.candidate?.status === "passed" && board.candidate?.evidence === "reports/evidence/HC-REL-ALPHA-8/manifest.json" && board.gates?.find((gate) => gate.id === "alpha-8-release-candidate")?.status === "passed");
