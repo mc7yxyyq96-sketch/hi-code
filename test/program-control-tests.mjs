@@ -55,6 +55,8 @@ const requiredFiles = [
   "docs/adr/ADR-0014-isolated-loopback-app-preview.md",
   "docs/git-delivery-loop.md",
   "docs/adr/ADR-0015-authoritative-coding-and-git-delivery-loop.md",
+  "docs/adr/ADR-0016-keychain-backed-secret-references.md",
+  "docs/credential-storage.md",
   "docs/attachments-and-command-registry.md",
   "docs/anthropic-ollama-adapters.md",
   "docs/model-provider-adapters.md",
@@ -82,6 +84,7 @@ const requiredFiles = [
   "reports/tasks/HC-UI-311.md",
   "reports/tasks/HC-UI-312.md",
   "reports/tasks/HC-GIT-320.md",
+  "reports/tasks/HC-SEC-401.md",
   "reports/tasks/HC-REL-ALPHA-7.md",
   "reports/evidence/baseline/manifest.json",
   "reports/evidence/HC-QA-101/manifest.json",
@@ -105,6 +108,8 @@ const requiredFiles = [
   "reports/evidence/HC-UI-312/ci-matrix.json",
   "reports/evidence/HC-GIT-320/manifest.json",
   "reports/evidence/HC-GIT-320/ci-matrix.json",
+  "reports/evidence/HC-SEC-401/manifest.json",
+  "reports/evidence/HC-SEC-401/ci-matrix.json",
   "scripts/electron-compatibility.mjs",
   "scripts/run-electron-builder.mjs",
   "test/electron-compatibility-tests.mjs",
@@ -152,6 +157,8 @@ const previewManifest = readJson(root, "reports/evidence/HC-UI-312/manifest.json
 const previewCiEvidence = readJson(root, "reports/evidence/HC-UI-312/ci-matrix.json");
 const gitDeliveryManifest = readJson(root, "reports/evidence/HC-GIT-320/manifest.json");
 const gitDeliveryCiEvidence = readJson(root, "reports/evidence/HC-GIT-320/ci-matrix.json");
+const secretStorageManifest = readJson(root, "reports/evidence/HC-SEC-401/manifest.json");
+const secretStorageCiEvidence = readJson(root, "reports/evidence/HC-SEC-401/ci-matrix.json");
 const packageJson = readJson(root, "package.json");
 const packageLock = readJson(root, "package-lock.json");
 const programTask = backlog.tasks.find((task) => task.id === "HC-PROG-100");
@@ -170,6 +177,7 @@ const editorWorkbenchTask = backlog.tasks.find((task) => task.id === "HC-UI-310"
 const terminalTask = backlog.tasks.find((task) => task.id === "HC-UI-311");
 const previewTask = backlog.tasks.find((task) => task.id === "HC-UI-312");
 const gitDeliveryTask = backlog.tasks.find((task) => task.id === "HC-GIT-320");
+const secretStorageTask = backlog.tasks.find((task) => task.id === "HC-SEC-401");
 const qaTask = board.tasks.find((task) => task.id === "HC-QA-101");
 const runtimeTask = board.tasks.find((task) => task.id === "HC-RUN-201");
 const runtimeStoreTask = board.tasks.find((task) => task.id === "HC-RUN-202");
@@ -186,6 +194,7 @@ const editorWorkbenchBoardTask = board.tasks.find((task) => task.id === "HC-UI-3
 const terminalBoardTask = board.tasks.find((task) => task.id === "HC-UI-311");
 const previewBoardTask = board.tasks.find((task) => task.id === "HC-UI-312");
 const gitDeliveryBoardTask = board.tasks.find((task) => task.id === "HC-GIT-320");
+const secretStorageBoardTask = board.tasks.find((task) => task.id === "HC-SEC-401");
 
 console.log("\n[program-control] board and evidence contract");
 check("backlog records immutable source commit", /^[0-9a-f]{40}$/.test(backlog.sourceCommit || ""));
@@ -461,6 +470,44 @@ for (const command of gitDeliveryManifest.commands || []) {
   check(`HC-GIT-320 ${command.id} log exists`, Boolean(command.logPath) && fs.existsSync(absolute));
   if (fs.existsSync(absolute)) check(`HC-GIT-320 ${command.id} log hash matches`, digest(absolute) === command.logSha256);
 }
+check(
+  "HC-SEC-401 completed only after its dependency and committed evidence",
+  secretStorageTask?.status === "completed" &&
+    secretStorageTask?.branch === "codex/security-release/hc-sec-401" &&
+    Boolean(secretStorageTask?.startedAt) &&
+    Boolean(secretStorageTask?.completedAt) &&
+    secretStorageTask?.taskManifest === "reports/tasks/HC-SEC-401.md" &&
+    secretStorageTask?.evidenceManifest === "reports/evidence/HC-SEC-401/manifest.json" &&
+    secretStorageTask?.ciEvidence === "reports/evidence/HC-SEC-401/ci-matrix.json" &&
+    secretStorageTask?.dependencies?.every((id) => backlog.tasks.find((task) => task.id === id)?.status === "completed") &&
+    secretStorageBoardTask?.status === "completed" &&
+    secretStorageBoardTask?.evidence === "reports/evidence/HC-SEC-401/manifest.json" &&
+    secretStorageBoardTask?.ciEvidence === "reports/evidence/HC-SEC-401/ci-matrix.json",
+  JSON.stringify(secretStorageTask),
+);
+check("Keychain secret-reference gate passed with committed evidence", board.gates?.find((gate) => gate.id === "keychain-secret-references")?.status === "passed" && board.gates?.find((gate) => gate.id === "keychain-secret-references")?.evidence === "reports/evidence/HC-SEC-401/manifest.json" && board.gates?.find((gate) => gate.id === "keychain-secret-references")?.ciEvidence === "reports/evidence/HC-SEC-401/ci-matrix.json");
+check("HC-SEC-401 plaintext credential risk is evidence-backed and mitigated", risks.risks?.some((risk) => risk.id === "RISK-SEC-001" && risk.status === "mitigated" && risk.evidence?.includes("reports/evidence/HC-SEC-401/manifest.json") && risk.evidence?.includes("reports/evidence/HC-SEC-401/ci-matrix.json")));
+check("HC-SEC-401 evidence records every command passing from a clean tree", secretStorageManifest.summary?.allPassed === true && secretStorageManifest.summary?.total === 16 && secretStorageManifest.capture?.workingTreeClean === true, JSON.stringify(secretStorageManifest.summary));
+check("HC-SEC-401 evidence is captured from its isolated branch", secretStorageManifest.source?.branch === "codex/security-release/hc-sec-401" && secretStorageManifest.source?.parentCommit === "c107121c32ee7bafc4dc76cd718ff9e73f2640f1");
+check(
+  "HC-SEC-401 CI passed general tests and real Electron smoke on every target platform",
+  secretStorageCiEvidence.event === "pull_request" &&
+    secretStorageCiEvidence.pullRequest === 18 &&
+    secretStorageCiEvidence.status === "completed" &&
+    secretStorageCiEvidence.conclusion === "success" &&
+    secretStorageCiEvidence.headSha === "1e78ead559ae84d83af748c5c3409bdfeaa1cee4" &&
+    ["ubuntu-latest", "macos-latest", "windows-latest"].every((platform) => secretStorageCiEvidence.jobs?.some((job) => job.platform === platform && job.name === `Electron smoke (${platform})` && job.conclusion === "success" && job.electronSmoke === "success" && job.artifactUpload === "success")) &&
+    secretStorageCiEvidence.jobs?.some((job) => job.name === "test" && job.conclusion === "success" && job.testSuites === "success" && job.dodScan === "success"),
+  JSON.stringify(secretStorageCiEvidence),
+);
+for (const requiredCommand of ["build", "secret-references", "secret-store", "provider-tests", "service-tests", "renderer-tests", "security-tests", "verify", "release-check", "feature-tests", "dod-tests", "dod-scan", "production-audit", "electron-e2e", "program-control", "git-diff-check"]) {
+  check(`HC-SEC-401 captured ${requiredCommand}`, secretStorageManifest.commands?.some((command) => command.id === requiredCommand && command.status === "passed"));
+}
+for (const command of secretStorageManifest.commands || []) {
+  const absolute = path.join(root, command.logPath || "");
+  check(`HC-SEC-401 ${command.id} log exists`, Boolean(command.logPath) && fs.existsSync(absolute));
+  if (fs.existsSync(absolute)) check(`HC-SEC-401 ${command.id} log hash matches`, digest(absolute) === command.logSha256);
+}
 check("alpha.8 version is synchronized", packageJson.version === "0.6.0-alpha.8" && packageLock.version === packageJson.version && packageLock.packages?.[""]?.version === packageJson.version && fs.readFileSync(path.join(root, "VERSION"), "utf8").trim() === packageJson.version);
 check("alpha.8 release candidate gate passed", board.currentRelease === packageJson.version && board.candidate?.version === packageJson.version && board.candidate?.branch === "codex/release/0.6.0-alpha.8" && board.candidate?.status === "passed" && board.candidate?.evidence === "reports/evidence/HC-REL-ALPHA-8/manifest.json" && board.gates?.find((gate) => gate.id === "alpha-8-release-candidate")?.status === "passed");
 check("historical alpha.7 release candidate gate remains passed", board.gates?.find((gate) => gate.id === "alpha-7-release-candidate")?.status === "passed");
@@ -493,6 +540,7 @@ check("Integrated terminal evidence capture is reproducible", packageJson.script
 check("Secure App Preview tests are part of global verification", packageJson.scripts["test:preview"]?.includes("test/preview-service-tests.mjs") && packageJson.scripts["test:preview"]?.includes("test/preview-workbench-tests.ts") && fs.readFileSync(path.join(root, "scripts/verify.mjs"), "utf8").includes("test/preview-service-tests.mjs") && fs.readFileSync(path.join(root, "scripts/verify.mjs"), "utf8").includes("test/preview-workbench-tests.ts"));
 check("Secure App Preview evidence capture is reproducible", packageJson.scripts["program:evidence:preview"] === "node scripts/capture-task-evidence.mjs --task=HC-UI-312" && fs.readFileSync(path.join(root, "scripts/capture-task-evidence.mjs"), "utf8").includes('"HC-UI-312"'));
 check("Coding and Git delivery evidence capture is reproducible", packageJson.scripts["program:evidence:git-loop"] === "node scripts/capture-task-evidence.mjs --task=HC-GIT-320" && fs.readFileSync(path.join(root, "scripts/capture-task-evidence.mjs"), "utf8").includes('"HC-GIT-320"'));
+check("Credential storage evidence capture is reproducible", packageJson.scripts["program:evidence:secrets"] === "node scripts/capture-task-evidence.mjs --task=HC-SEC-401" && fs.readFileSync(path.join(root, "scripts/capture-task-evidence.mjs"), "utf8").includes('"HC-SEC-401"'));
 check("Task evidence commands cannot be shadowed by a project-local npm binary", fs.readFileSync(path.join(root, "scripts/capture-task-evidence.mjs"), "utf8").includes("sanitizeEvidencePath") && fs.readFileSync(path.join(root, "scripts/capture-task-evidence.mjs"), "utf8").includes('path.resolve(root, "node_modules", ".bin")'));
 check("Task evidence executes the locked npm CLI with the current Node runtime", fs.readFileSync(path.join(root, "scripts/capture-task-evidence.mjs"), "utf8").includes('path.join(root, "node_modules", "npm", "bin", "npm-cli.js")') && fs.readFileSync(path.join(root, "scripts/capture-task-evidence.mjs"), "utf8").includes("isNpmCommand ? node : spec.command"));
 check(

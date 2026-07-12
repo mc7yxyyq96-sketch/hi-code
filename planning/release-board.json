@@ -343,11 +343,14 @@
       "id": "HC-SEC-401",
       "owner": "security-release",
       "priority": "P0",
-      "status": "in_progress",
+      "status": "completed",
       "dependencies": ["HC-PLAT-110"],
       "branch": "codex/security-release/hc-sec-401",
       "startedAt": "2026-07-12T11:27:16Z",
-      "taskManifest": "reports/tasks/HC-SEC-401.md"
+      "completedAt": "2026-07-12T14:37:48Z",
+      "taskManifest": "reports/tasks/HC-SEC-401.md",
+      "evidence": "reports/evidence/HC-SEC-401/manifest.json",
+      "ciEvidence": "reports/evidence/HC-SEC-401/ci-matrix.json"
     }
   ],
   "gates": [
@@ -473,6 +476,14 @@
       "verifiedAt": "2026-07-12T10:47:48Z",
       "evidence": "reports/evidence/HC-GIT-320/manifest.json",
       "ciEvidence": "reports/evidence/HC-GIT-320/ci-matrix.json"
+    },
+    {
+      "id": "keychain-secret-references",
+      "status": "passed",
+      "owner": "HC-SEC-401",
+      "verifiedAt": "2026-07-12T14:37:48Z",
+      "evidence": "reports/evidence/HC-SEC-401/manifest.json",
+      "ciEvidence": "reports/evidence/HC-SEC-401/ci-matrix.json"
     }
   ],
   "nextReleaseSlices": [

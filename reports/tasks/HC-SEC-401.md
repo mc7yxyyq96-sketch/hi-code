@@ -1,12 +1,14 @@
 # HC-SEC-401 Keychain-Backed Secrets And Credential Migration
 
-Status: In Progress
+Status: Completed
 
 Branch: `codex/security-release/hc-sec-401`
 
 Parent commit: `6059a6d6fe8d9aeb8f187ccfd70a1195b58162d4`
 
 Started: `2026-07-12T11:27:16Z`
+
+Completed: `2026-07-12T14:37:48Z`
 
 ## Scope
 
@@ -94,7 +96,20 @@ This task does not implement MCP HTTP/OAuth, remote vault synchronization, accou
   corrected to count requests produced by its own step, and the complete rerun
   passed.
 
-Final machine-captured evidence remains required before task completion.
+## Acceptance Evidence
+
+- `reports/evidence/HC-SEC-401/manifest.json` records 16/16 local acceptance
+  commands passing from clean source commit `c107121c32ee7bafc4dc76cd718ff9e73f2640f1`.
+- Build, complete verify, release check, feature tests, focused credential,
+  Provider, service, Renderer, security, DoD, production audit, program-control,
+  and real Electron E2E all passed.
+- The full-tree DoD scan reported zero findings.
+- GitHub Actions run `29196545587` for Draft PR #18 passed the general test job
+  and real Electron smoke on Ubuntu, macOS, and Windows. The immutable CI
+  projection is `reports/evidence/HC-SEC-401/ci-matrix.json`.
+
+All acceptance criteria are satisfied. Formal merge, release promotion,
+signing, and publication remain separately approval-gated.
 
 ## Rollback
 
