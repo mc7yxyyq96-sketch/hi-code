@@ -2,7 +2,7 @@
 // projects typed runtime events to the renderer over the existing IPC surface.
 process.env.FORCE_COLOR = "1"; // make chalk emit ANSI even without a TTY
 
-import { app, BrowserWindow, ipcMain, dialog, shell } from "electron";
+import { app, BrowserWindow, ipcMain, dialog, shell, safeStorage } from "electron";
 import path from "node:path";
 import os from "node:os";
 import fs from "node:fs";
@@ -56,6 +56,7 @@ import { createPreviewService } from "./services/preview-service.mjs";
 import { createSecurityService, redactSensitive } from "./services/security-service.mjs";
 import { createAppInfoService } from "./services/app-info-service.mjs";
 import { createUsageService } from "./services/usage-service.mjs";
+import { createElectronSecretStore } from "./services/secret-store-service.mjs";
 import { recordUsage } from "../dist/usage-store.js";
 import { RuntimeEventBus } from "../dist/runtime-event-sink.js";
 import { connectAssistantTextOutput } from "../dist/runtime-client-adapters.js";
@@ -71,6 +72,7 @@ const AUTH_PATH = path.join(HICODE_DIR, "auth.json");
 const STORE_PATH = path.join(HICODE_DIR, "store.json");
 const STORE_DIR = path.join(HICODE_DIR, "store");
 const LOG_DIR = path.join(HICODE_DIR, "logs");
+const SECRET_DIR = path.join(HICODE_DIR, "secrets");
 const JOB_CENTER_PATH = path.join(HICODE_DIR, "jobs", "job-center.json");
 const PROVIDER_CONFIG_PATH = path.join(HICODE_DIR, "providers", "providers.json");
 const PROVIDER_RUN_DIR = path.join(HICODE_DIR, "providers", "runs");
@@ -92,6 +94,7 @@ let mainServices = null;
 const askResolvers = new Map();
 let askSeq = 0;
 let nativeCleanupQuitInProgress = false;
+let credentialStartupState = { ok: true, status: "pending" };
 const toolEvents = [];
 const diffService = new DiffService(() => cwd);
 const gitCollaboration = createGitCollaborationClient();
@@ -125,6 +128,40 @@ const runtimeEventBus = new RuntimeEventBus({
     createdAt: Date.now(),
   }),
 });
+const desktopSecretStore = createElectronSecretStore({
+  safeStorage,
+  rootDir: SECRET_DIR,
+  configPath: CONFIG_PATH,
+  logger: (event, payload) => appendRuntimeLog({
+    id: `secret-${Date.now()}-${crypto.randomUUID()}`,
+    type: event,
+    title: event,
+    payload,
+    createdAt: Date.now(),
+  }),
+});
+
+function loadDesktopConfig() {
+  return loadConfig({
+    resolveSecret: (secretRef) => desktopSecretStore.resolve(secretRef),
+    allowLegacyPlaintext: false,
+    onSecretResolutionError: ({ secretRef, location, error }) => appendRuntimeLog({
+      id: `secret-resolution-${Date.now()}-${crypto.randomUUID()}`,
+      type: "secret.resolve.failed",
+      title: "secret.resolve.failed",
+      payload: { secretRef, location, error },
+      createdAt: Date.now(),
+    }),
+  });
+}
+
+function credentialStatusSnapshot() {
+  try {
+    return { ...desktopSecretStore.configCredentialStatus(), startup: credentialStartupState };
+  } catch (error) {
+    return { ok: false, error: error?.message || "凭据状态不可用", references: [], startup: credentialStartupState };
+  }
+}
 runtimeEventBus.subscribe(handleRuntimeEvent);
 connectAssistantTextOutput(runtimeEventBus, {
   write: (text) => send("output", text),
@@ -1364,9 +1401,7 @@ function installMcp(item, source) {
     args: withNpmMirrorArgs(Array.isArray(server.args) ? server.args : [], source),
     ...(server.env ? { env: server.env } : {}),
   };
-  fs.mkdirSync(path.dirname(CONFIG_PATH), { recursive: true, mode: 0o700 });
-  fs.writeFileSync(CONFIG_PATH, JSON.stringify(cfg, null, 2), { mode: 0o600 });
-  try { fs.chmodSync(CONFIG_PATH, 0o600); } catch {}
+  desktopSecretStore.persistConfig(cfg);
   buildRuntime();
   return { server: server.name, mcpConfig: cfg.mcpServers[server.name] };
 }
@@ -1820,9 +1855,7 @@ function removeConfiguredMcpServer(record) {
   const cfg = readJsonFile(CONFIG_PATH, {});
   if (!cfg.mcpServers?.[serverName]) return false;
   delete cfg.mcpServers[serverName];
-  fs.mkdirSync(path.dirname(CONFIG_PATH), { recursive: true, mode: 0o700 });
-  fs.writeFileSync(CONFIG_PATH, JSON.stringify(cfg, null, 2), { mode: 0o600 });
-  try { fs.chmodSync(CONFIG_PATH, 0o600); } catch {}
+  desktopSecretStore.persistConfig(cfg);
   buildRuntime();
   return true;
 }
@@ -1834,9 +1867,7 @@ function restoreConfiguredMcpServer(record) {
   const cfg = readJsonFile(CONFIG_PATH, {});
   if (!cfg.mcpServers || typeof cfg.mcpServers !== "object") cfg.mcpServers = {};
   cfg.mcpServers[serverName] = mcpConfig;
-  fs.mkdirSync(path.dirname(CONFIG_PATH), { recursive: true, mode: 0o700 });
-  fs.writeFileSync(CONFIG_PATH, JSON.stringify(cfg, null, 2), { mode: 0o600 });
-  try { fs.chmodSync(CONFIG_PATH, 0o600); } catch {}
+  desktopSecretStore.persistConfig(cfg);
   buildRuntime();
   return true;
 }
@@ -2165,7 +2196,7 @@ function pluginDescription(name) {
 }
 
 function listConfiguredMcpServers() {
-  const cfg = loadConfig();
+  const cfg = loadDesktopConfig();
   const servers = Object.entries(cfg.mcpServers || {}).map(([name, server]) => ({
     name,
     command: server.command,
@@ -2312,7 +2343,7 @@ async function runRuntimeInput(text, metadata = {}) {
 }
 
 async function runRuntimeInputInIsolatedCwd(text, executionCwd, executionMode = "default") {
-  const cfg = loadConfig();
+  const cfg = loadDesktopConfig();
   const ask = makeRendererAsk();
   const p = defaultProfile(cfg);
   const isolatedRuntime = createRuntime({
@@ -2445,7 +2476,7 @@ function shouldForwardRuntimeOutput(text) {
 }
 
 function buildRuntime() {
-  const cfg = loadConfig();
+  const cfg = loadDesktopConfig();
   const ask = makeRendererAsk();
   const p = defaultProfile(cfg);
   runtime = createRuntime({
@@ -2469,6 +2500,7 @@ function buildRuntime() {
     version: app.getVersion(),
     sessionId: runtime?.sessionId || "",
     capabilities: modelCapabilityHint(p),
+    credentialStatus: credentialStatusSnapshot(),
   });
   sendInputQueueState();
 }
@@ -2577,16 +2609,32 @@ function ensureMainWindow() {
   return win;
 }
 
-mainServices = createMainServices();
-registerIpcHandlers({
-  services: mainServices,
-  ipcMain,
-  dialog,
-  shell,
-  logger: (event, payload) => appendRuntimeLog({ id: `ipc-${Date.now()}`, type: event, title: event, payload, createdAt: Date.now() }),
-});
-
 app.whenReady().then(() => {
+  try {
+    credentialStartupState = desktopSecretStore.migrateLegacyConfig();
+  } catch (error) {
+    credentialStartupState = {
+      ok: false,
+      status: "migration_blocked",
+      error: error?.message || "凭据迁移失败",
+      code: error?.code || "secret_migration_failed",
+    };
+    appendRuntimeLog({
+      id: `secret-startup-${Date.now()}-${crypto.randomUUID()}`,
+      type: "secret.migration.blocked",
+      title: "secret.migration.blocked",
+      payload: { code: credentialStartupState.code, error: credentialStartupState.error },
+      createdAt: Date.now(),
+    });
+  }
+  mainServices = createMainServices();
+  registerIpcHandlers({
+    services: mainServices,
+    ipcMain,
+    dialog,
+    shell,
+    logger: (event, payload) => appendRuntimeLog({ id: `ipc-${Date.now()}`, type: event, title: event, payload, createdAt: Date.now() }),
+  });
   if (legacyStdoutBridgeEnabled) installBridge();
   else setSpinnerEnabled(false);
   ensureMainWindow();
@@ -2633,7 +2681,7 @@ function createMainServices() {
     }),
     mcp: createMcpService({
       initMcp,
-      loadConfig,
+      loadConfig: loadDesktopConfig,
       listLocalPlugins,
       listLocalSkills,
       listConfiguredMcpServers,
@@ -2658,6 +2706,7 @@ function createMainServices() {
       getCwd: () => cwd,
       configPath: PROVIDER_CONFIG_PATH,
       runArtifactDir: PROVIDER_RUN_DIR,
+      secretStore: desktopSecretStore,
       interruptRuntime: () => mainServices?.runtime?.interrupt(),
       logger: (event, payload) => appendRuntimeLog({ id: `provider-${Date.now()}`, type: event, title: event, payload, createdAt: Date.now() }),
     }),
@@ -2743,11 +2792,12 @@ function createMainServices() {
       replaySessionMessages,
       getRuntime: () => runtime,
       configPath: CONFIG_PATH,
-      loadConfig,
+      loadConfig: loadDesktopConfig,
       defaultProfile,
       buildSystemPrompt,
       send,
       attachmentStore,
+      secretStore: desktopSecretStore,
     }),
     appInfo: createAppInfoService({
       getVersion: () => app.getVersion(),

@@ -2,7 +2,9 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import {
+  findPlaintextConfigSecrets,
   isCredentialPlaceholder,
+  isSensitiveEnvName,
   isSecretReferenceRecord,
   mcpSecretEnvName,
   profileApiKeyEnvName,
@@ -59,6 +61,8 @@ export interface LoadConfigOptions {
   env?: NodeJS.ProcessEnv;
   resolveSecret?: (secretRef: string) => string | undefined;
   onSecretResolutionError?: (details: { secretRef: string; location: string; error: string }) => void;
+  /** Desktop disables this after attempting secure migration; CLI retains read compatibility. */
+  allowLegacyPlaintext?: boolean;
 }
 
 /**
@@ -250,7 +254,7 @@ function resolveModelCredential({
     if (resolved) return resolved;
   }
 
-  if (typeof persisted.apiKey === "string" && !isCredentialPlaceholder(persisted.apiKey)) {
+  if (options.allowLegacyPlaintext !== false && typeof persisted.apiKey === "string" && !isCredentialPlaceholder(persisted.apiKey)) {
     return persisted.apiKey;
   }
   return profileNeedsNoCredential(profile) ? "sk-no-key-required" : "";
@@ -271,6 +275,7 @@ function normalizeMcpServers(value: unknown, env: NodeJS.ProcessEnv, options: Lo
       const resolvedEnv: Record<string, string> = {};
       for (const [envName, rawValue] of Object.entries(persisted.env as Record<string, unknown>)) {
         if (typeof rawValue === "string") {
+          if (options.allowLegacyPlaintext === false && isSensitiveEnvName(envName) && !isCredentialPlaceholder(rawValue)) continue;
           resolvedEnv[envName] = rawValue;
           continue;
         }
@@ -332,20 +337,31 @@ export function normalizeModelTransportProtocol(value: unknown): ModelTransportP
 /** Persist the default profile's model (used by /model <name>). */
 export function saveModel(model: string, profileKey = "default"): void {
   try {
-    fs.mkdirSync(CONFIG_DIR, { recursive: true, mode: 0o700 });
-    let cfg: any = {};
-    if (fs.existsSync(CONFIG_PATH)) cfg = JSON.parse(fs.readFileSync(CONFIG_PATH, "utf8"));
-    if (cfg.profiles && typeof cfg.profiles === "object") {
-      const key = cfg.defaultProfile || profileKey;
-      cfg.defaultProfile = key;
-      cfg.profiles[key] = { ...(cfg.profiles[key] ?? {}), model };
-    } else {
-      cfg.model = model; // legacy flat field, read back into the default profile
-    }
-    fs.writeFileSync(CONFIG_PATH, JSON.stringify(cfg, null, 2), { mode: 0o600 });
+    saveModelToConfig(CONFIG_PATH, model, profileKey);
   } catch (e) {
-    console.error(`[vibe] failed to save model: ${(e as Error).message}`);
+    console.error(`[hicode] failed to save model: ${(e as Error).message}`);
   }
+}
+
+/** Update a persisted model selection without ever rewriting plaintext credentials. */
+export function saveModelToConfig(configPath: string, model: string, profileKey = "default"): void {
+  const targetPath = path.resolve(configPath);
+  fs.mkdirSync(path.dirname(targetPath), { recursive: true, mode: 0o700 });
+  let cfg: any = {};
+  if (fs.existsSync(targetPath)) cfg = JSON.parse(fs.readFileSync(targetPath, "utf8"));
+  const plaintext = findPlaintextConfigSecrets(cfg);
+  if (plaintext.length) {
+    throw new Error(`refusing to rewrite plaintext credentials (${plaintext.join(", ")}); migrate them in the desktop app or use CLI environment variables`);
+  }
+  if (cfg.profiles && typeof cfg.profiles === "object") {
+    const key = cfg.defaultProfile || profileKey;
+    cfg.defaultProfile = key;
+    cfg.profiles[key] = { ...(cfg.profiles[key] ?? {}), model };
+  } else {
+    cfg.model = model;
+  }
+  fs.writeFileSync(targetPath, JSON.stringify(cfg, null, 2), { mode: 0o600 });
+  try { fs.chmodSync(targetPath, 0o600); } catch {}
 }
 
 export { CONFIG_PATH, CONFIG_DIR };

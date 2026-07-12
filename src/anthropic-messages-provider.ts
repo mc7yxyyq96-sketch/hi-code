@@ -106,7 +106,7 @@ export function createAnthropicMessagesAdapter(
         transport: "server-sent-events",
         anthropicVersion: ANTHROPIC_VERSION,
         reasoningPersistence: "disabled",
-        credentialStorage: "model-profile",
+        credentialStorage: "secret-reference-or-environment",
       },
     },
     async run(request, sink, signal) {

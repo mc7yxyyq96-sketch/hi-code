@@ -1,6 +1,6 @@
 export const SECRET_REFERENCE_PREFIX = "hicode-secret:v1";
 
-export type SecretReferenceScope = "model" | "mcp";
+export type SecretReferenceScope = "model" | "mcp" | "provider";
 
 export interface SecretReferenceRecord {
   secretRef: string;
@@ -19,7 +19,38 @@ export interface PreparedSecretConfig {
   changed: boolean;
 }
 
-const SECRET_REFERENCE_PATTERN = /^hicode-secret:v1:(model|mcp):([A-Za-z0-9_-]{1,342})(?::([A-Za-z0-9_-]{1,342}))?$/;
+export interface EncryptedSecretVaultEntry {
+  ciphertext: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EncryptedSecretMigrationRecord {
+  ciphertext: string;
+  createdAt: string;
+  status: "completed" | "rolled_back";
+  rolledBackAt?: string;
+}
+
+export interface EncryptedSecretVault {
+  version: 1;
+  entries: Record<string, EncryptedSecretVaultEntry>;
+  migrations: Record<string, EncryptedSecretMigrationRecord>;
+}
+
+export interface SecretMigrationJournalRecord {
+  id: string;
+  version: 1;
+  status: "completed" | "rolled_back";
+  createdAt: string;
+  rolledBackAt?: string;
+  findingCount: number;
+  refs: string[];
+  originalSha256: string;
+  migratedSha256: string;
+}
+
+const SECRET_REFERENCE_PATTERN = /^hicode-secret:v1:(model|mcp|provider):([A-Za-z0-9_-]{1,342})(?::([A-Za-z0-9_-]{1,342}))?$/;
 const SENSITIVE_ENV_PATTERN = /(?:^|_)(?:API_?KEY|TOKEN|SECRET|PASSWORD|PASSCODE|PRIVATE_?KEY|CLIENT_?SECRET)(?:$|_)/i;
 const MAX_SECRET_VALUE_LENGTH = 128 * 1024;
 
@@ -31,6 +62,10 @@ export function mcpEnvSecretRef(serverName: string, envName: string): string {
   return `${SECRET_REFERENCE_PREFIX}:mcp:${encodeSegment(serverName, "MCP server name")}:${encodeSegment(envName, "MCP environment name")}`;
 }
 
+export function providerSecretRef(providerId: string, fieldName: string): string {
+  return `${SECRET_REFERENCE_PREFIX}:provider:${encodeSegment(providerId, "provider id")}:${encodeSegment(fieldName, "provider secret field")}`;
+}
+
 export function validateSecretRef(value: unknown, expectedScope?: SecretReferenceScope): string {
   if (typeof value !== "string" || value.length > 1024 || /[\0\r\n]/.test(value)) {
     throw new Error("secretRef must be a bounded string");
@@ -39,7 +74,7 @@ export function validateSecretRef(value: unknown, expectedScope?: SecretReferenc
   if (!match) throw new Error("secretRef uses an unsupported or malformed scheme");
   if (expectedScope && match[1] !== expectedScope) throw new Error(`secretRef must use the ${expectedScope} scope`);
   if (match[1] === "model" && match[3]) throw new Error("model secretRef has too many segments");
-  if (match[1] === "mcp" && !match[3]) throw new Error("MCP secretRef is missing an environment segment");
+  if ((match[1] === "mcp" || match[1] === "provider") && !match[3]) throw new Error(`${match[1]} secretRef is missing a field segment`);
   decodeSegment(match[2], "secretRef segment");
   if (match[3]) decodeSegment(match[3], "secretRef segment");
   return value;

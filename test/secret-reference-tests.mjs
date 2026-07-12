@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { loadConfig } from "../dist/config.js";
+import { loadConfig, saveModelToConfig } from "../dist/config.js";
 import {
   findPlaintextConfigSecrets,
   isSensitiveEnvName,
@@ -12,6 +12,7 @@ import {
   modelSecretRef,
   prepareConfigForSecretPersistence,
   profileApiKeyEnvName,
+  providerSecretRef,
   validateSecretRef,
 } from "../dist/secret-references.js";
 
@@ -35,12 +36,15 @@ try {
   const defaultRef = modelSecretRef("default");
   const coderRef = modelSecretRef("coder one");
   const mcpRef = mcpEnvSecretRef("brave-search", "BRAVE_API_KEY");
+  const providerRef = providerSecretRef("local-model", "apiKey");
 
   check("model and MCP references are versioned and scope validated", () => {
     assert.equal(validateSecretRef(defaultRef, "model"), defaultRef);
     assert.equal(validateSecretRef(mcpRef, "mcp"), mcpRef);
+    assert.equal(validateSecretRef(providerRef, "provider"), providerRef);
     assert.throws(() => validateSecretRef("file:///tmp/key"), /unsupported|malformed/);
     assert.throws(() => validateSecretRef(defaultRef, "mcp"), /mcp scope/);
+    assert.throws(() => validateSecretRef(`${defaultRef}:extra`, "model"), /too many segments/);
   });
 
   check("CLI fallback environment names are deterministic and bounded", () => {
@@ -183,6 +187,24 @@ try {
     }));
     const cfg = loadConfig({ configPath, env: {} });
     assert.equal(cfg.profiles.default.apiKey, "legacy-secret");
+    const desktopCfg = loadConfig({ configPath, env: {}, allowLegacyPlaintext: false });
+    assert.equal(desktopCfg.profiles.default.apiKey, "");
+  });
+
+  check("CLI model selection never rewrites a plaintext credential", () => {
+    fs.writeFileSync(configPath, JSON.stringify({
+      defaultProfile: "default",
+      profiles: { default: { baseURL: "https://api.example.test", model: "old", secretRef: defaultRef } },
+    }, null, 2));
+    saveModelToConfig(configPath, "new-model");
+    const secureText = fs.readFileSync(configPath, "utf8");
+    assert.equal(JSON.parse(secureText).profiles.default.model, "new-model");
+    assert.equal(JSON.parse(secureText).profiles.default.secretRef, defaultRef);
+
+    const legacyText = JSON.stringify({ apiKey: "must-not-be-rewritten", model: "old" }, null, 2);
+    fs.writeFileSync(configPath, legacyText);
+    assert.throws(() => saveModelToConfig(configPath, "new-model"), /refusing to rewrite plaintext credentials/);
+    assert.equal(fs.readFileSync(configPath, "utf8"), legacyText);
   });
 
   check("malformed persisted references are rejected instead of treated as values", () => {

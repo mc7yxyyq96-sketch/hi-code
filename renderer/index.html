@@ -632,7 +632,7 @@
               <div class="setup-steps" id="settingsSteps">
                 <span><b>1</b> 选服务商</span>
                 <span><b>2</b> 粘贴 API Key</span>
-                <span><b>3</b> 保存即用</span>
+                <span><b>3</b> 安全保存</span>
               </div>
 
               <div class="provider-grid" id="providerGrid">
@@ -656,8 +656,9 @@
                 <div id="providerHint" class="provider-hint"></div>
                 <label class="api-key-label">
                   <span>API Key</span>
-                  <input id="quickApiKey" type="password" spellcheck="false" autocomplete="off" placeholder="sk-..." />
+                  <input id="quickApiKey" type="password" spellcheck="false" autocomplete="off" placeholder="sk-..." aria-describedby="modelCredentialHint" />
                 </label>
+                <div class="settings-hint" id="modelCredentialHint">API Key 不写入 config.json。桌面端使用系统安全存储；CLI 可使用 HICODE_API_KEY 或 profile 专用环境变量。</div>
                 <label class="advanced-provider-field">
                   <span>Base URL</span>
                   <input id="quickBaseURL" spellcheck="false" autocomplete="off" />
