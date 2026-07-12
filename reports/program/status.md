@@ -43,6 +43,7 @@ The final machine-captured evidence is written by `npm run program:baseline` to 
 | 15 | HC-UI-311 | Completed | Desktop UX | HC-UI-301, HC-PLAT-110 |
 | 16 | HC-UI-312 | Completed | Desktop UX | HC-UI-301, HC-PLAT-110 |
 | 17 | HC-GIT-320 | Completed | Runtime Engine | HC-RUN-203, HC-UI-310 |
+| 18 | HC-SEC-401 | In Progress | Security And Release | HC-PLAT-110 |
 
 HC-QA-101 established a real Electron responsive baseline. HC-RUN-201 introduces protocol-native assistant output and concurrency isolation. No new industrial domain module is authorized before HC-RUN-201 completes.
 
@@ -83,6 +84,8 @@ HC-UI-311 completed in the isolated `codex/desktop-ux/hc-ui-311` worktree from H
 HC-UI-312 completed in the isolated `codex/desktop-ux/hc-ui-312` worktree from HC-UI-311 completion commit `549fc62`. A loopback-only App Preview now opens local applications in unique non-persistent sandboxed BrowserWindows with no preload, Node integration, DevTools, permissions, downloads, popups, webviews, external navigation, or cross-origin network access. Typed lifecycle controls support reload, close, reopen, and removal; owner/workspace/app/crash cleanup is deterministic. DOM selector checks and PNG/JSON evidence remain explicitly passed or failed. Fifteen local gates passed from clean implementation commit `d1138ab`, including 12/12 service checks, 8/8 renderer checks, 196/196 security checks, release check, zero-finding DoD scan, production audit, and real Electron compact-layout acceptance. GitHub Actions run `29181437110` also passed general tests and real Electron smoke on Ubuntu, macOS, and Windows for Draft PR #16. Server startup, remote browsing, Git/PR orchestration, and industrial modules remain outside this task.
 
 HC-GIT-320 completed in the isolated `codex/runtime-engine/hc-git-320` worktree from HC-UI-312 completion commit `e802c15`. Plan mode now enforces a read-only tool boundary, the main process owns queued prompt order, and Steer persists cancellation before prioritizing a follow-up. Local Git delivery adds dirty-worktree-protected branches, existing stage/commit behavior, native-confirmed Draft PR creation, minimal Git/gh environments, and truthful failed/pending CI projection. Fifteen local evidence gates passed from clean implementation commit `9fad4bf`, including real Electron Plan/queue/Steer and Git stage/commit/branch acceptance at 720 and 1024 px. GitHub Actions run `29189513590` then passed the general test job and real Electron smoke on Ubuntu, macOS, and Windows for Draft PR #17. No merge, release publication, credential storage, force push, or automatic merge was performed.
+
+HC-SEC-401 started in the isolated `codex/security-release/hc-sec-401` worktree from HC-GIT-320 completion commit `6059a6d`. Its clean baseline verify passed. The audit confirmed model keys and sensitive MCP environment values can still enter `~/.hicode/config.json`; implementation is now constrained to validated secret references, OS-backed Electron encryption, environment-only CLI fallback, atomic reversible migration, and no secret return path to the renderer.
 
 ## Current Product Truth
 

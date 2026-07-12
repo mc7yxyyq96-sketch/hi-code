@@ -166,6 +166,22 @@
       "trigger": "Any hidden renderer queue, branch switch over dirty work, unconfirmed PR mutation, credential exposure, or failed CI displayed as successful blocks HC-GIT-320 completion."
     },
     {
+      "id": "RISK-SEC-001",
+      "severity": "critical",
+      "status": "open",
+      "owner": "security-release",
+      "title": "Model and MCP credentials can be persisted as plaintext config fields",
+      "evidence": [
+        "reports/tasks/HC-SEC-401.md",
+        "src/config.ts",
+        "electron/services/workspace-service.mjs",
+        "renderer/app/bootstrap.js"
+      ],
+      "impact": "A local config disclosure, support bundle, backup, or accidental repository copy can expose reusable model or MCP credentials.",
+      "mitigation": "HC-SEC-401 introduces validated secret references, OS-backed Electron encryption, environment-only CLI fallback, atomic migration, encrypted rollback snapshots, and redaction tests.",
+      "trigger": "Any successful config save or migration that leaves a plaintext model API key or sensitive MCP environment value blocks HC-SEC-401 and the rc.1 release line."
+    },
+    {
       "id": "RISK-PLAT-001",
       "severity": "high",
       "status": "mitigated",

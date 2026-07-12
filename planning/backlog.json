@@ -316,7 +316,10 @@
       "dependencies": ["HC-PLAT-110"],
       "deliverables": ["secret store", "config secretRef", "migration", "redaction tests"],
       "acceptance": ["API keys are not stored in config JSON", "CLI has secure fallback", "migration is reversible"],
-      "status": "planned"
+      "status": "in_progress",
+      "startedAt": "2026-07-12T11:27:16Z",
+      "branch": "codex/security-release/hc-sec-401",
+      "taskManifest": "reports/tasks/HC-SEC-401.md"
     },
     {
       "id": "HC-SEC-402",
