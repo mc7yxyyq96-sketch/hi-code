@@ -53,6 +53,15 @@ export class RuntimeJobQueue<T = string> {
   }
 
   enqueue(input: T, metadata?: Record<string, unknown>): RuntimeJob<T> {
+    return this.enqueueAt(input, metadata, "tail");
+  }
+
+  /** Queue work immediately after the active job without preempting it. */
+  enqueueNext(input: T, metadata?: Record<string, unknown>): RuntimeJob<T> {
+    return this.enqueueAt(input, metadata, "next");
+  }
+
+  private enqueueAt(input: T, metadata: Record<string, unknown> | undefined, position: "tail" | "next"): RuntimeJob<T> {
     const job: RuntimeJob<T> = {
       id: `job-${Date.now().toString(36)}-${++this.nextId}`,
       input,
@@ -60,7 +69,8 @@ export class RuntimeJobQueue<T = string> {
       queuedAt: Date.now(),
       metadata,
     };
-    this.queue.push(job);
+    if (position === "next") this.queue.unshift(job);
+    else this.queue.push(job);
     this.emitState();
     void this.drain();
     return { ...job };
@@ -80,6 +90,16 @@ export class RuntimeJobQueue<T = string> {
     this.emitState();
     this.resolveIdleIfNeeded();
     return count;
+  }
+
+  /** Mark the active job as user-interrupted without pretending the handler failed. */
+  interruptRunning(reason = "interrupted by user"): RuntimeJob<T> | null {
+    if (!this.running || this.running.status !== "running") return null;
+    this.running.status = "canceled";
+    this.running.error = reason;
+    this.running.metadata = { ...(this.running.metadata || {}), interrupted: true };
+    this.emitState();
+    return { ...this.running, metadata: { ...this.running.metadata } };
   }
 
   state(): RuntimeJobQueueState<T> {
@@ -108,11 +128,13 @@ export class RuntimeJobQueue<T = string> {
 
         try {
           await this.handler(job);
-          job.status = "done";
+          if (!isCanceledJob(job)) job.status = "done";
         } catch (error) {
-          job.status = "error";
-          job.error = error instanceof Error ? error.message : String(error);
-          this.onError?.(error, job);
+          if (!isCanceledJob(job)) {
+            job.status = "error";
+            job.error = error instanceof Error ? error.message : String(error);
+            this.onError?.(error, job);
+          }
         } finally {
           job.finishedAt = Date.now();
           this.running = null;
@@ -164,4 +186,8 @@ export class RuntimeJobQueue<T = string> {
     const resolvers = this.idleResolvers.splice(0);
     for (const resolve of resolvers) resolve();
   }
+}
+
+function isCanceledJob<T>(job: RuntimeJob<T>): boolean {
+  return job.status === "canceled";
 }

@@ -20,6 +20,7 @@ The production Renderer uses a gradual compatibility architecture. `renderer/ren
 - `renderer/app/router.js`: shared view switching helper for Home, Chat, Capabilities/Store, Git, Job Center, Patch Arena, and Industrial Project views.
 - `renderer/api/hicode-api.js`: safe wrapper around `window.hicode` preload APIs.
 - `renderer/components/runtime-panel.js`: runtime queue and run-status helpers.
+- The composer publishes Plan/default mode, queued prompts, and Steer requests through `hicode-api.js`; main-process queue state is the only execution-order authority.
 - `renderer/components/file-tree.js`: file browser plus integrated editor state for open, dirty, save, reload, conflict, and confirmed force overwrite.
 - `renderer/components/diff-viewer.js`: legacy/shared diff helpers for non-workbench consumers; the production workbench Inspector uses typed lines in `app-shell/workspace/diff.ts`.
 - `renderer/components/job-center-panel.js`: Job Center list/detail/timeline/artifact/gate UI.
@@ -74,6 +75,8 @@ The terminal route uses `createTerminalApi()` over the bounded preload methods. 
 
 The App Preview route uses `createPreviewApi()` over bounded preload methods. URLs, selectors, records, checks, and events are normalized again before React receives them. The workbench never embeds an iframe or webview and never navigates the trusted renderer. Browser-only mode fails closed with an actionable availability reason.
 
+The Git view uses the wrapped branch, Pull Request, and collaboration-status APIs. It disables branch and PR mutations while the worktree is dirty, disables PR creation when GitHub CLI is unavailable, and renders failed and pending checks without rewriting their conclusions. Native confirmation, command execution, credentials, and repository authority remain outside the renderer.
+
 ## Panel Development
 
 New or changed panels should expose a mount/update style API:
@@ -95,6 +98,8 @@ npm run test:workspace-shell
 npm run test:editor-workbench
 npm run test:terminal
 npm run test:preview
+npm run test:runtime-control
+npm run test:git-collaboration
 npm run verify
 node test/feature-tests.mjs
 node --check renderer/renderer.js
@@ -103,4 +108,4 @@ node test/renderer-architecture-tests.mjs
 npm run test:electron-e2e
 ```
 
-See `docs/app-shell.md`, `docs/session-workbench.md`, `docs/code-editor.md`, `docs/integrated-terminal.md`, `docs/secure-app-preview.md`, ADR-0010, ADR-0011, ADR-0012, ADR-0013, and ADR-0014 for route, ownership, performance, editor-conflict, terminal-policy, preview-isolation, and migration contracts. Sprint 1B did not introduce Job Center, Patch Arena, or industrial domain modules. Later sprints added them as separate modules; HC-UI-301 preserves those views behind the adapter, HC-UI-302 migrates the session workbench, HC-UI-310 adds the bounded editor/review loop, HC-UI-311 adds a real policy-bound PTY, and HC-UI-312 adds isolated local-app verification without changing Runtime persistence authority.
+See `docs/app-shell.md`, `docs/session-workbench.md`, `docs/code-editor.md`, `docs/integrated-terminal.md`, `docs/secure-app-preview.md`, `docs/git-delivery-loop.md`, ADR-0010 through ADR-0015 for route, ownership, performance, editor-conflict, terminal-policy, preview-isolation, runtime-control, and delivery contracts. Sprint 1B did not introduce Job Center, Patch Arena, or industrial domain modules. Later sprints added them as separate modules; HC-UI-301 preserves those views behind the adapter, HC-UI-302 migrates the session workbench, HC-UI-310 adds the bounded editor/review loop, HC-UI-311 adds a real policy-bound PTY, HC-UI-312 adds isolated local-app verification, and HC-GIT-320 completes the main-process-authoritative coding and protected Git delivery loop.

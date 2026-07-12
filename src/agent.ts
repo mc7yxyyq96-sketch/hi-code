@@ -2,7 +2,7 @@ import type { VibeConfig, ModelProfile } from "./config.js";
 import { defaultProfile } from "./config.js";
 import type { ChatMessage, ToolSchema, ContentPart } from "./llm.js";
 import { streamModelProfile, type ModelProviderEvent } from "./model-provider.js";
-import { TOOL_SCHEMAS, executeTool, type ExecEnv } from "./tools/index.js";
+import { TOOL_SCHEMAS, executeTool, isPlanModeToolName, type ExecEnv } from "./tools/index.js";
 import { mcpToolSchemas } from "./mcp.js";
 import { ui, startSpinner, stopSpinner } from "./ui.js";
 import { type Session, fullHistory, estimateTokens, compact } from "./context.js";
@@ -41,7 +41,10 @@ export async function runLoop(
   opts: LoopOpts = {},
 ): Promise<string> {
   // The lead agent (default toolset) also gets any connected MCP tools.
-  const tools = opts.tools ?? [...TOOL_SCHEMAS, ...mcpToolSchemas()];
+  const defaultTools = env.executionMode === "plan"
+    ? TOOL_SCHEMAS.filter((tool) => isPlanModeToolName(tool.function.name))
+    : [...TOOL_SCHEMAS, ...mcpToolSchemas()];
+  const tools = opts.tools ?? defaultTools;
   const maxSteps = opts.maxSteps ?? 50;
   const p = opts.profile ?? defaultProfile(cfg);
   const quiet = env.quiet === true;

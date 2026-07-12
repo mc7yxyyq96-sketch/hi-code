@@ -5,7 +5,7 @@
   "sourceCommit": "6ed9ed666bb817f8d1e863c76b0bf61b31c7b52d",
   "horizonDays": 90,
   "status": "active",
-  "updatedAt": "2026-07-11T05:03:45Z",
+  "updatedAt": "2026-07-12T10:47:48Z",
   "principles": [
     "Runtime Protocol is the single source of truth",
     "No big-bang rewrite",
@@ -298,7 +298,13 @@
       "dependencies": ["HC-RUN-203", "HC-UI-310"],
       "deliverables": ["plan mode", "steer/queued prompt", "commit/PR", "CI status"],
       "acceptance": ["end-to-end coding loop passes Electron E2E", "worktree state is protected", "failed CI is visible"],
-      "status": "planned"
+      "status": "completed",
+      "startedAt": "2026-07-12T06:16:00Z",
+      "completedAt": "2026-07-12T10:47:48Z",
+      "branch": "codex/runtime-engine/hc-git-320",
+      "taskManifest": "reports/tasks/HC-GIT-320.md",
+      "evidenceManifest": "reports/evidence/HC-GIT-320/manifest.json",
+      "ciEvidence": "reports/evidence/HC-GIT-320/ci-matrix.json"
     },
     {
       "id": "HC-SEC-401",

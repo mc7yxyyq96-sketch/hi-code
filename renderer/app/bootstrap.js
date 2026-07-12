@@ -482,7 +482,8 @@ if (!window.hicode) {
     onToolEvent: (cb) => toolEventHandlers.push(cb),
     onDiffsChanged: (cb) => diffsChangedHandlers.push(cb),
     onRuntimeQueue: (cb) => runtimeQueueHandlers.push(cb),
-    send: (text) => {
+    send: (inputPayload) => {
+      const text = typeof inputPayload === "string" ? inputPayload : String(inputPayload?.text || "");
       const now = Date.now();
       const evt = {
         id: `evt-demo-${now}`,
@@ -512,6 +513,7 @@ if (!window.hicode) {
         }
       };
       setTimeout(tick, 80);
+      return { ok: true, jobId: `demo-runtime-${now}` };
     },
     answer: () => {},
     interrupt: () => turnDoneHandlers.forEach((cb) => cb()),
@@ -1341,6 +1343,9 @@ const releaseCenterSummary = $("releaseCenterSummary"), releaseCenterDetail = $(
 const gitFiles = $("gitFiles"), gitSelected = $("gitSelected"), gitDiffView = $("gitDiffView"), gitCommitMessage = $("gitCommitMessage"), gitCommitStatus = $("gitCommitStatus");
 const gitRefresh = $("gitRefresh"), gitStageAll = $("gitStageAll"), gitUnstageAll = $("gitUnstageAll"), gitWorktreeMode = $("gitWorktreeMode"), gitStagedMode = $("gitStagedMode");
 const gitGenerateMessage = $("gitGenerateMessage"), gitCommitBtn = $("gitCommitBtn");
+const gitBranchSelect = $("gitBranchSelect"), gitBranchName = $("gitBranchName"), gitCreateBranchBtn = $("gitCreateBranch"), gitSwitchBranchBtn = $("gitSwitchBranch");
+const gitCollaborationRefresh = $("gitCollaborationRefresh"), gitCollaborationStatus = $("gitCollaborationStatus"), gitChecks = $("gitChecks");
+const gitPrTitle = $("gitPrTitle"), gitPrBase = $("gitPrBase"), gitPrBody = $("gitPrBody"), gitPrDraft = $("gitPrDraft"), gitCreatePr = $("gitCreatePr");
 const storeConfirm = $("storeConfirm"), storeConfirmTitle = $("storeConfirmTitle"), storeConfirmSub = $("storeConfirmSub");
 const storeConfirmSummary = $("storeConfirmSummary"), storeConfirmChanges = $("storeConfirmChanges"), storeConfirmPerms = $("storeConfirmPerms"), storeConfirmWarnings = $("storeConfirmWarnings");
 const storeConfirmClose = $("storeConfirmClose"), storeConfirmCancel = $("storeConfirmCancel"), storeConfirmInstall = $("storeConfirmInstall");
@@ -1385,6 +1390,9 @@ const modelPill = composer.querySelector("#modelPill");
 const modelName = composer.querySelector("#modelName");
 const accessBtn = composer.querySelector("#access");
 const accessLabel = composer.querySelector("#accessLabel");
+const planModeBtn = composer.querySelector("#planMode");
+const planModeLabel = composer.querySelector("#planModeLabel");
+const steerBtn = composer.querySelector("#steer");
 const queueStatus = composer.querySelector("#queueStatus");
 const queueCount = composer.querySelector("#queueCount");
 const queuePreview = composer.querySelector("#queuePreview");
@@ -1394,8 +1402,10 @@ const queueClear = composer.querySelector("#queueClear");
 let busy = false, activeAssistantMessageId = null, agentRaw = "", yolo = false, cwd = "", inChat = false;
 let currentModel = { model: "", baseURL: "", capabilities: null };
 let pendingAttachments = [];
-let queuedInputs = [];
 let runtimeQueueState = { running: null, queued: [] };
+let executionMode = "default";
+let activeRuntimeJobId = "";
+const queuedInputPresentations = new Map();
 let cfgText = "", selectedProvider = "deepseek", settingsMode = "model";
 let authMode = "login", currentCapability = "";
 let capabilityCache = null;
@@ -1405,6 +1415,7 @@ let pendingStoreInstall = null;
 let toolEvents = [], recoverableTasks = [], diffs = [], selectedDiffId = null, showArchivedDiffs = false;
 let runState = null, runTimer = null, runHideTimer = null, lastRunErrorDetail = "";
 let gitState = null, selectedGitPath = "", selectedGitStaged = false;
+let gitBranchState = null, gitCollaborationState = null;
 let storeSearchComposing = false, composerComposing = false;
 syncState({
   busy,
@@ -1414,8 +1425,9 @@ syncState({
   cwd,
   inChat,
   pendingAttachments,
-  queuedInputs,
   runtimeQueueState,
+  executionMode,
+  activeRuntimeJobId,
   cfgText,
   selectedProvider,
   authMode,
@@ -1436,6 +1448,8 @@ syncState({
   showArchivedDiffs,
   runState,
   gitState,
+  gitBranchState,
+  gitCollaborationState,
   selectedGitPath,
   selectedGitStaged,
 });
@@ -2051,6 +2065,7 @@ async function showGit() {
   syncState({ inChat });
   showRoute({ main, views: routeViews, route: "gitView", mainClass: "git", activeNav: "gitBtn", setActiveNav });
   await refreshGitStatus();
+  await Promise.all([refreshGitBranches(), refreshGitCollaboration()]);
 }
 
 async function showJobCenter(jobId = "") {
@@ -2256,26 +2271,33 @@ function setBusy(v) {
   sendBtn.classList.remove("hidden");
   sendBtn.title = v ? "加入待发送队列" : "发送";
   stopBtn.classList.toggle("hidden", !v);
+  steerBtn?.classList.toggle("hidden", !v);
   input.disabled = false;
   input.focus();
 }
 function runLine(text, options = {}) {
   if (!text) return;
   if (busy) return enqueueInput(text, options);
+  const mode = options.executionMode === "plan" ? "plan" : executionMode;
   showChat();
-  beginRunStatus(text);
+  beginRunStatus(text, mode);
   addUserMessage(options.displayText || text, options.attachments || []); startAgentMessage(); setBusy(true);
   runningSessionId = activeRuntimeSessionId || runningSessionId || currentSessionId;
   if (runningSessionId && !currentSessionId) currentSessionId = runningSessionId;
   liveSessionSnapshot = null;
   renderSessions(searchInput.value.trim());
   const attachmentIds = (options.attachments || []).map((attachment) => attachment.id).filter(Boolean);
-  const payload = attachmentIds.length ? { text, attachmentIds } : text;
+  const payload = { text, attachmentIds, executionMode: mode };
   void api.send(payload).then((result) => {
     if (result?.ok === false) {
       toast.error(result.error || "消息发送失败");
       finishAgentMessageIfEmpty("error", result.error || "消息发送失败");
       setBusy(false);
+      return;
+    }
+    if (result?.jobId) {
+      activeRuntimeJobId = result.jobId;
+      syncState({ activeRuntimeJobId });
     }
   });
 }
@@ -2291,37 +2313,53 @@ function submit() {
   runLine(displayText, { displayText, attachments });
 }
 
-function enqueueInput(text, options = {}) {
-  queuedInputs.push({ text, options: { ...options, attachments: [...(options.attachments || [])] } });
-  syncState({ queuedInputs });
+async function enqueueInput(text, options = {}) {
+  const mode = options.executionMode === "plan" ? "plan" : executionMode;
+  const attachments = [...(options.attachments || [])];
+  const attachmentIds = attachments.map((attachment) => attachment.id).filter(Boolean);
+  const result = await api.send({ text, attachmentIds, executionMode: mode });
+  if (!result?.ok) {
+    toast.error(result?.error || "加入队列失败");
+    return result;
+  }
+  if (result.jobId) queuedInputPresentations.set(result.jobId, { text, mode, attachments, displayText: options.displayText || text });
   renderQueueStatus();
   updateRunStatus({
     label: "当前任务执行中",
-    detail: `已排队 ${queuedInputs.length} 条，当前任务结束后自动发送`,
+    detail: `${mode === "plan" ? "计划" : "执行"}请求已进入主队列`,
     status: "running",
   });
+  return result;
 }
 
-function runNextQueuedInput() {
-  if (busy || !queuedInputs.length) return;
-  const next = queuedInputs.shift();
-  syncState({ queuedInputs });
-  renderQueueStatus();
-  if (next?.text) runLine(next.text, next.options || {});
+function beginQueuedRuntimeJob(job) {
+  const presentation = queuedInputPresentations.get(job.id) || {};
+  queuedInputPresentations.delete(job.id);
+  const text = presentation.text || job.summary || "排队任务";
+  const mode = presentation.mode || job.executionMode || "default";
+  showChat();
+  beginRunStatus(text, mode);
+  addUserMessage(presentation.displayText || text, presentation.attachments || []);
+  startAgentMessage();
+  setBusy(true);
+  activeRuntimeJobId = job.id;
+  runningSessionId = activeRuntimeSessionId || runningSessionId || currentSessionId;
+  liveSessionSnapshot = null;
+  syncState({ activeRuntimeJobId });
+  renderSessions(searchInput.value.trim());
 }
 
 function renderQueueStatus() {
   if (!queueStatus || !queueCount || !queuePreview) return;
   const runtimeQueued = Array.isArray(runtimeQueueState?.queued) ? runtimeQueueState.queued : [];
   const runtimeRunning = runtimeQueueState?.running || null;
-  const total = queuedInputs.length + runtimeQueued.length + (runtimeRunning ? 1 : 0);
+  const total = runtimeQueued.length + (runtimeRunning ? 1 : 0);
   queueStatus.classList.toggle("hidden", total === 0);
   const labels = [];
-  if (runtimeRunning) labels.push("运行中 1 条");
-  if (queuedInputs.length) labels.push(`待发送 ${queuedInputs.length} 条`);
-  if (runtimeQueued.length) labels.push(`主队列 ${runtimeQueued.length} 条`);
+  if (runtimeRunning) labels.push(`${runtimeRunning.executionMode === "plan" ? "计划" : "执行"}中 1 条`);
+  if (runtimeQueued.length) labels.push(`待执行 ${runtimeQueued.length} 条`);
   queueCount.textContent = labels.join(" · ") || "没有排队任务";
-  const preview = runtimeRunning?.summary || queuedInputs[0]?.text || runtimeQueued[0]?.summary || "";
+  const preview = runtimeRunning?.summary || runtimeQueued[0]?.summary || "";
   queuePreview.textContent = preview.slice(0, 90);
   const jobCenterId = runtimeRunning?.jobCenterId || runtimeQueued.find((job) => job.jobCenterId)?.jobCenterId || "";
   if (queueOpenJob) {
@@ -2330,13 +2368,13 @@ function renderQueueStatus() {
   }
 }
 
-function beginRunStatus(inputText) {
+function beginRunStatus(inputText, mode = executionMode) {
   clearTimeout(runHideTimer);
   lastRunErrorDetail = "";
   runState = {
     active: true,
     status: "running",
-    label: inputText.startsWith("!") ? "准备执行命令" : "发送给模型",
+    label: mode === "plan" ? "生成只读计划" : inputText.startsWith("!") ? "准备执行命令" : "发送给模型",
     detail: inputText,
     startedAt: Date.now(),
     updatedAt: Date.now(),
@@ -2839,6 +2877,86 @@ function setGitButtons(canStage, canUnstage) {
   gitUnstageAll.disabled = !canUnstage;
   gitGenerateMessage.disabled = !canUnstage;
   gitCommitBtn.disabled = !canUnstage;
+  updateGitDeliveryButtons();
+}
+
+function updateGitDeliveryButtons() {
+  const available = gitState?.ok === true;
+  const clean = available && Number(gitState?.dirty || 0) === 0;
+  const githubCliAvailable = gitCollaborationState?.available !== false;
+  gitBranchSelect.disabled = !available;
+  gitBranchName.disabled = !clean;
+  gitCreateBranchBtn.disabled = !clean;
+  gitSwitchBranchBtn.disabled = !clean || !gitBranchSelect.value;
+  gitCreatePr.disabled = !clean || !githubCliAvailable || !gitPrTitle.value.trim();
+}
+
+async function refreshGitBranches() {
+  if (!api.has("gitBranches")) return;
+  gitBranchState = await api.gitBranches();
+  syncState({ gitBranchState });
+  gitBranchSelect.innerHTML = "";
+  if (!gitBranchState?.ok) {
+    const option = document.createElement("option");
+    option.textContent = "分支不可用";
+    option.value = "";
+    gitBranchSelect.appendChild(option);
+    updateGitDeliveryButtons();
+    return;
+  }
+  for (const branch of gitBranchState.branches || []) {
+    const option = document.createElement("option");
+    option.value = branch.name;
+    option.textContent = `${branch.current ? "当前 · " : ""}${branch.name}${branch.upstream ? ` · ${branch.upstream}` : ""}`;
+    option.selected = branch.current === true;
+    gitBranchSelect.appendChild(option);
+  }
+  updateGitDeliveryButtons();
+}
+
+async function refreshGitCollaboration() {
+  if (!api.has("gitCollaboration")) return;
+  gitCollaborationStatus.textContent = "正在读取 PR/CI 状态…";
+  gitCollaborationStatus.className = "git-collaboration-status";
+  gitCollaborationState = await api.gitCollaboration();
+  syncState({ gitCollaborationState });
+  renderGitCollaboration();
+  updateGitDeliveryButtons();
+}
+
+function renderGitCollaboration() {
+  gitChecks.innerHTML = "";
+  const state = gitCollaborationState;
+  if (!state?.ok) {
+    gitCollaborationStatus.textContent = state?.error || "PR/CI 状态读取失败";
+    gitCollaborationStatus.className = "git-collaboration-status is-error";
+    return;
+  }
+  if (!state.available || !state.pullRequest) {
+    gitCollaborationStatus.textContent = state.reason || "当前分支还没有 Pull Request";
+    gitCollaborationStatus.className = "git-collaboration-status is-muted";
+    return;
+  }
+  const pr = state.pullRequest;
+  const ci = state.ci || {};
+  gitCollaborationStatus.textContent = `#${pr.number} ${pr.title} · ${pr.draft ? "Draft" : pr.state} · CI ${gitCiLabel(ci.status)}`;
+  gitCollaborationStatus.title = pr.url || "";
+  gitCollaborationStatus.className = `git-collaboration-status is-${ci.status || "unknown"}`;
+  for (const check of state.checks || []) {
+    const row = document.createElement("div");
+    row.className = `git-check is-${check.status || "unknown"}`;
+    const name = document.createElement("span");
+    name.textContent = check.workflow ? `${check.workflow} / ${check.name}` : check.name;
+    name.title = check.detailsUrl || "";
+    const status = document.createElement("strong");
+    status.textContent = gitCiLabel(check.status);
+    row.append(name, status);
+    gitChecks.appendChild(row);
+  }
+}
+
+function gitCiLabel(status) {
+  return ({ passed: "通过", failed: "失败", pending: "运行中", skipped: "已跳过", unknown: "未知" })[status] || "未知";
 }
 
 function gitSetStatus(text, kind = "") {
@@ -2848,6 +2966,46 @@ function gitSetStatus(text, kind = "") {
 }
 
 gitRefresh.onclick = refreshGitStatus;
+gitCollaborationRefresh.onclick = refreshGitCollaboration;
+gitBranchSelect.onchange = updateGitDeliveryButtons;
+gitPrTitle.oninput = updateGitDeliveryButtons;
+gitCreateBranchBtn.onclick = async () => {
+  const name = gitBranchName.value.trim();
+  if (!name) return gitSetStatus("请输入新分支名", "error");
+  const result = await api.gitCreateBranch({ name });
+  if (!result?.ok) return gitSetStatus(result?.error || "创建分支失败", "error");
+  gitBranchName.value = "";
+  gitSetStatus(`已切换到 ${result.branch}`, "ok");
+  await Promise.all([refreshGitStatus(), refreshGitBranches(), refreshGitCollaboration()]);
+};
+gitSwitchBranchBtn.onclick = async () => {
+  const name = gitBranchSelect.value;
+  if (!name) return;
+  const result = await api.gitSwitchBranch({ name });
+  if (!result?.ok) return gitSetStatus(result?.error || "切换分支失败", "error");
+  gitSetStatus(`已切换到 ${result.branch}`, "ok");
+  selectedGitPath = "";
+  await Promise.all([refreshGitStatus(), refreshGitBranches(), refreshGitCollaboration()]);
+};
+gitCreatePr.onclick = async () => {
+  const title = gitPrTitle.value.trim();
+  if (!title) return gitSetStatus("请输入 PR 标题", "error");
+  gitCreatePr.disabled = true;
+  gitSetStatus("等待确认并创建 Pull Request…");
+  try {
+    const result = await api.gitCreatePullRequest({
+      title,
+      body: gitPrBody.value,
+      base: gitPrBase.value.trim() || "main",
+      draft: gitPrDraft.checked,
+    });
+    if (!result?.ok) return gitSetStatus(result?.error || "创建 Pull Request 失败", "error");
+    gitSetStatus(`Pull Request 已创建：${result.url}`, "ok");
+    await refreshGitCollaboration();
+  } finally {
+    updateGitDeliveryButtons();
+  }
+};
 gitStageAll.onclick = async () => {
   const paths = (gitState?.files || []).filter((file) => file.unstaged).map((file) => file.path);
   await stageGitPaths(paths);
@@ -2873,8 +3031,10 @@ gitGenerateMessage.onclick = async () => {
 };
 gitCommitBtn.onclick = async () => {
   if (!api.has("gitCommit")) return;
-  const r = await api.gitCommit(gitCommitMessage.value);
+  const message = gitCommitMessage.value;
+  const r = await api.gitCommit(message);
   if (!r?.ok) return gitSetStatus(r?.error || "commit 失败", "error");
+  if (!gitPrTitle.value.trim()) gitPrTitle.value = message.trim();
   gitCommitMessage.value = "";
   gitSetStatus(`已提交 ${r.hash || ""}`.trim(), "ok");
   selectedGitPath = "";
@@ -2917,12 +3077,12 @@ api.onTurnDone(() => {
     liveSessionSnapshot = null;
   }
   runningSessionId = null;
+  activeRuntimeJobId = "";
   if (currentSessionId === null && activeRuntimeSessionId) currentSessionId = activeRuntimeSessionId;
   activeAssistantMessageId = null;
-  syncState({ activeAssistantMessageId });
+  syncState({ activeAssistantMessageId, activeRuntimeJobId });
   loadSessions();
   refreshWorkbench();
-  setTimeout(runNextQueuedInput, 80);
 });
 api.onToolEvent?.((event) => addToolEvent(event));
 api.onDiffsChanged?.((nextDiffs) => setDiffs(nextDiffs));
@@ -2930,6 +3090,14 @@ api.onRuntimeQueue?.((state) => {
   runtimeQueueState = normalizeRuntimeQueue(state);
   syncState({ runtimeQueueState });
   renderQueueStatus();
+  const running = runtimeQueueState.running;
+  if (!running) return;
+  if (busy && !activeRuntimeJobId) {
+    activeRuntimeJobId = running.id || "";
+    syncState({ activeRuntimeJobId });
+    return;
+  }
+  if (!busy && running.id && running.id !== activeRuntimeJobId) beginQueuedRuntimeJob(running);
 });
 api.onAsk(({ id, q }) => {
   askQ.textContent = q; askBox.classList.remove("hidden");
@@ -3441,15 +3609,44 @@ accessBtn.onclick = () => {
   accessLabel.textContent = yolo ? "完全访问" : "需确认";
   api.send("/yolo");
 };
+planModeBtn.onclick = () => {
+  executionMode = executionMode === "plan" ? "default" : "plan";
+  planModeBtn.classList.toggle("active", executionMode === "plan");
+  planModeLabel.textContent = executionMode === "plan" ? "计划" : "执行";
+  planModeBtn.setAttribute("aria-pressed", executionMode === "plan" ? "true" : "false");
+  syncState({ executionMode });
+};
 sendBtn.onclick = submit;
 if (queueClear) queueClear.onclick = async () => {
-  queuedInputs = [];
-  syncState({ queuedInputs });
   try {
-    if (api.has("clearRuntimeQueue")) await api.clearRuntimeQueue();
+    if (api.has("clearRuntimeQueue")) {
+      const queuedIds = new Set((runtimeQueueState.queued || []).map((job) => job.id));
+      const result = await api.clearRuntimeQueue();
+      if (result?.ok) for (const id of queuedIds) queuedInputPresentations.delete(id);
+    }
   } finally {
     renderQueueStatus();
   }
+};
+steerBtn.onclick = async () => {
+  if (!busy) return;
+  const text = input.value.trim();
+  if (!text && !pendingAttachments.length) {
+    toast.info("先输入要调整的方向");
+    input.focus();
+    return;
+  }
+  const attachments = pendingAttachments.slice();
+  const displayText = text || "请根据这些附件调整当前方向。";
+  const attachmentIds = attachments.map((attachment) => attachment.id).filter(Boolean);
+  const result = await api.steer({ text: displayText, attachmentIds, executionMode });
+  if (!result?.ok) return;
+  if (result.jobId) queuedInputPresentations.set(result.jobId, { text: displayText, displayText, attachments, mode: executionMode });
+  input.value = "";
+  input.style.height = "auto";
+  clearPendingAttachments();
+  updateRunStatus({ label: "正在调整方向", detail: "当前任务已中断，调整指令将作为下一条执行", status: "interrupted" });
+  renderQueueStatus();
 };
 stopBtn.onclick = () => {
   if (!busy) return;

@@ -1,6 +1,7 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { buildSafeChildEnv } from "./process-env.js";
 
 export interface GitInfo {
   branch: string;
@@ -53,7 +54,15 @@ export interface GitCommitResult extends GitActionResult {
 }
 
 function git(cwd: string, args: string[]): { ok: boolean; out: string; err: string; status: number | null } {
-  const r = spawnSync("git", args, { cwd, encoding: "utf8", maxBuffer: 10 * 1024 * 1024 });
+  const r = spawnSync("git", args, {
+    cwd,
+    encoding: "utf8",
+    env: buildSafeChildEnv({ extraEnv: { GIT_TERMINAL_PROMPT: "0", NO_COLOR: "1" } }),
+    shell: false,
+    windowsHide: true,
+    timeout: 30_000,
+    maxBuffer: 10 * 1024 * 1024,
+  });
   return {
     ok: r.status === 0,
     out: (r.stdout ?? "").replace(/\s+$/, ""),

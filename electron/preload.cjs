@@ -31,12 +31,18 @@ function runtimeInput(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return { ok: false, error: "input must be a string or object" };
   const text = typeof value.text === "string" ? value.text : "";
   const attachmentIds = Array.isArray(value.attachmentIds) ? value.attachmentIds : [];
+  const executionMode = value.executionMode === undefined || value.executionMode === "default"
+    ? "default"
+    : value.executionMode === "plan"
+      ? "plan"
+      : "";
   if (text.length > 200000 || attachmentIds.length > 8 || attachmentIds.some((id) => typeof id !== "string" || !/^att-[a-f0-9-]{36}$/.test(id))) {
     return { ok: false, error: "runtime input is invalid" };
   }
   if (!text.trim() && !attachmentIds.length) return { ok: false, error: "input is empty" };
   if (new Set(attachmentIds).size !== attachmentIds.length) return { ok: false, error: "attachment ids must be unique" };
-  return { ok: true, value: { text, attachmentIds: [...attachmentIds] } };
+  if (!executionMode) return { ok: false, error: "runtime execution mode is invalid" };
+  return { ok: true, value: { text, attachmentIds: [...attachmentIds], executionMode } };
 }
 
 function editorOpenRequest(value) {
@@ -46,6 +52,29 @@ function editorOpenRequest(value) {
     return { ok: false, error: "path must be a non-empty bounded string" };
   }
   return { ok: true, value: { path: checkedPath.value } };
+}
+
+function gitBranchRequest(value) {
+  const data = optionalObject(value);
+  const checked = requireString(data.name, "branch");
+  if (!checked.ok) return checked;
+  const name = checked.value.trim();
+  if (!name || name.length > 160 || name.startsWith("-") || /[\u0000-\u0020\u007f]/.test(name)) {
+    return { ok: false, error: "branch is invalid" };
+  }
+  return { ok: true, value: { name } };
+}
+
+function gitPullRequest(value) {
+  const data = optionalObject(value);
+  const title = typeof data.title === "string" ? data.title.trim() : "";
+  const body = typeof data.body === "string" ? data.body.trim() : "";
+  const base = typeof data.base === "string" ? data.base.trim() : "main";
+  if (!title || title.length > 200 || body.length > 20000 || !base || base.length > 160) {
+    return { ok: false, error: "pull request input is invalid" };
+  }
+  if ([title, body, base].some((item) => item.includes("\0"))) return { ok: false, error: "pull request input is invalid" };
+  return { ok: true, value: { title, body, base, draft: data.draft !== false } };
 }
 
 function editorSaveRequest(value) {
@@ -198,9 +227,11 @@ contextBridge.exposeInMainWorld("hicode", {
   },
   send: (input) => {
     const checked = runtimeInput(input);
-    if (!checked.ok) return checked;
-    ipcRenderer.send("input", checked.value);
-    return { ok: true };
+    return checked.ok ? safeInvoke("runtime:enqueue", checked.value) : Promise.resolve(checked);
+  },
+  steer: (input) => {
+    const checked = runtimeInput(input);
+    return checked.ok ? safeInvoke("runtime:steer", checked.value) : Promise.resolve(checked);
   },
   answer: (id, value) => {
     if ((typeof id === "number" || typeof id === "string") && typeof value === "string") {
@@ -239,6 +270,20 @@ contextBridge.exposeInMainWorld("hicode", {
   gitUnstage: (paths) => safeInvoke("git:unstage", stringArray(paths)),
   gitCommitMessage: () => safeInvoke("git:commit-message"),
   gitCommit: (message) => checkedInvoke("git:commit", message, "message"),
+  gitBranches: () => safeInvoke("git:branches"),
+  gitCreateBranch: (payload) => {
+    const checked = gitBranchRequest(payload);
+    return checked.ok ? safeInvoke("git:branch:create", checked.value) : Promise.resolve(checked);
+  },
+  gitSwitchBranch: (payload) => {
+    const checked = gitBranchRequest(payload);
+    return checked.ok ? safeInvoke("git:branch:switch", checked.value) : Promise.resolve(checked);
+  },
+  gitCollaboration: () => safeInvoke("git:collaboration"),
+  gitCreatePullRequest: (payload) => {
+    const checked = gitPullRequest(payload);
+    return checked.ok ? safeInvoke("git:pr:create", checked.value) : Promise.resolve(checked);
+  },
   pickFolder: () => safeInvoke("pick-folder"),
   attachFile: (payload) => safeInvoke("attach-file", optionalObject(payload)),
   attachImage: (payload) => safeInvoke("attach-image", optionalObject(payload)),

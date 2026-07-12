@@ -25,6 +25,8 @@ export interface ExecEnv {
   turnId?: string;
   /** Abort signal for the active turn; long-running tools should stop when it fires. */
   signal?: AbortSignal;
+  /** Plan mode is read-only even when the permission state is yolo. */
+  executionMode?: "default" | "plan";
   /** Temporary terminal renderer used while clients migrate to structured assistant events. */
   legacyAssistantOutput?: boolean;
   /** Durable attachment source used to materialize model input immediately before transport. */
@@ -181,6 +183,12 @@ export const TOOL_SCHEMAS: ToolSchema[] = [
   },
 ];
 
+const PLAN_MODE_TOOL_NAMES = new Set(["read_file", "ls", "glob", "grep"]);
+
+export function isPlanModeToolName(name: string): boolean {
+  return PLAN_MODE_TOOL_NAMES.has(name);
+}
+
 // No-op reporter used when an agent runs quietly (e.g. in a parallel batch),
 // so several concurrent agents don't garble the terminal.
 const NOOP = () => {};
@@ -292,6 +300,16 @@ async function executeToolInner(
   eventMeta?: { startId?: string | void; title: string; startedAt: number },
 ): Promise<ToolOutcome> {
   const out = reporter(env);
+
+  if (env.executionMode === "plan" && !isPlanModeToolName(name)) {
+    const message = `Plan mode is read-only; ${name} was not executed.`;
+    out.warn(message);
+    return {
+      content: message,
+      summary: "denied",
+      metadata: { blockedBy: "plan_mode", executionMode: "plan" },
+    };
+  }
 
   switch (name) {
     case "read_file": {

@@ -5,6 +5,7 @@ import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 import process from "node:process";
+import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { _electron as electron } from "playwright";
 import { ELECTRON_COMPATIBILITY_TARGET } from "../../scripts/electron-compatibility.mjs";
@@ -21,10 +22,12 @@ let userDataDir;
 let modelServer;
 let modelBaseURL = "";
 let modelServerRequests = 0;
+const modelServerPrompts = [];
 let previewServer;
 let previewBaseURL = "";
 let embeddedRuntime = null;
 let editorFixturePath = "";
+let workspaceDir = "";
 
 function safeElectronEnv(isolatedHome) {
   const allowed = [
@@ -55,17 +58,29 @@ async function startModelServer() {
       return;
     }
     modelServerRequests++;
-    request.resume();
+    const chunks = [];
+    request.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
     request.on("end", () => {
+      let prompt = "";
+      try {
+        const payload = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+        const userMessage = [...(Array.isArray(payload.messages) ? payload.messages : [])].reverse().find((message) => message?.role === "user");
+        prompt = typeof userMessage?.content === "string" ? userMessage.content : JSON.stringify(userMessage?.content || "");
+      } catch {
+        prompt = "<invalid-request>";
+      }
+      modelServerPrompts.push(prompt);
+      const responseDelay = prompt.includes("E2E_SLOW_PLAN") ? 650 : 12;
       response.writeHead(200, {
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache",
       });
       response.write(`data: ${JSON.stringify({ choices: [{ delta: { content: "protocol-native " } }] })}\n\n`);
       setTimeout(() => {
+        if (response.destroyed) return;
         response.write(`data: ${JSON.stringify({ choices: [{ delta: { content: "desktop response" } }] })}\n\n`);
         response.end("data: [DONE]\n\n");
-      }, 12);
+      }, responseDelay);
     });
   });
   await new Promise((resolve, reject) => {
@@ -75,6 +90,50 @@ async function startModelServer() {
   const address = modelServer.address();
   assert.ok(address && typeof address === "object", "Model test server did not bind a TCP port");
   modelBaseURL = `http://127.0.0.1:${address.port}/v1`;
+}
+
+function runFixtureGit(args) {
+  const result = spawnSync("git", args, {
+    cwd: workspaceDir,
+    encoding: "utf8",
+    shell: false,
+    windowsHide: true,
+    env: safeElectronEnv(userDataDir),
+  });
+  assert.equal(result.status, 0, `Fixture git ${args.join(" ")} failed: ${result.stderr || result.stdout}`);
+  return String(result.stdout || "").trim();
+}
+
+function createGitWorkspace() {
+  workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "hicode-electron-workspace-"));
+  editorFixturePath = path.join(workspaceDir, "src", "editor-e2e.ts");
+  fs.mkdirSync(path.dirname(editorFixturePath), { recursive: true });
+  fs.writeFileSync(editorFixturePath, "export const editorValue = 1;\n");
+  fs.writeFileSync(path.join(workspaceDir, "README.md"), "# Hi Code Electron fixture\n");
+  runFixtureGit(["init"]);
+  runFixtureGit(["config", "user.name", "Hi Code E2E"]);
+  runFixtureGit(["config", "user.email", "hicode-e2e@example.invalid"]);
+  runFixtureGit(["add", "--", "README.md", "src/editor-e2e.ts"]);
+  runFixtureGit(["commit", "-m", "Initialize Electron fixture"]);
+  runFixtureGit(["branch", "-M", "main"]);
+}
+
+async function selectFixtureWorkspace(page) {
+  await electronApp.evaluate(({ dialog }, target) => {
+    globalThis.__hicodeOriginalShowOpenDialog = dialog.showOpenDialog;
+    dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [target] });
+  }, workspaceDir);
+  try {
+    const selected = await page.evaluate(() => window.hicode.pickFolder());
+    assert.equal(selected, workspaceDir);
+  } finally {
+    await electronApp.evaluate(({ dialog }) => {
+      if (globalThis.__hicodeOriginalShowOpenDialog) dialog.showOpenDialog = globalThis.__hicodeOriginalShowOpenDialog;
+      delete globalThis.__hicodeOriginalShowOpenDialog;
+    });
+  }
+  await page.waitForFunction(async (target) => (await window.hicode.getCwd()) === target, workspaceDir);
+  await page.waitForFunction((name) => (document.querySelector("#currentProject")?.textContent || "").includes(name), path.basename(workspaceDir));
 }
 
 async function startPreviewServer() {
@@ -285,6 +344,110 @@ async function verifyProtocolNativeDesktopTurn(page) {
   const assistantText = await page.locator(".msg.agent .agent-body").allTextContents();
   assert.ok(assistantText.some((text) => text.includes("protocol-native desktop response")), JSON.stringify(assistantText));
   assert.equal(modelServerRequests, 1, "Desktop turn did not reach the isolated model server exactly once");
+}
+
+async function verifyPlanQueueAndSteer(page) {
+  await setContentSize(1024, baseline.height);
+  await returnHome(page);
+  const initialPromptCount = modelServerPrompts.length;
+  const input = page.locator("#input");
+  const planMode = page.locator("#planMode");
+  await planMode.click();
+  assert.equal(await planMode.getAttribute("aria-pressed"), "true");
+  assert.equal(await page.locator("#planModeLabel").textContent(), "计划");
+
+  await input.fill("E2E_SLOW_PLAN inspect the repository without changes");
+  await page.locator("#send").click();
+  await waitVisible(page, "#chatview");
+  await waitVisible(page, "#steer");
+  await page.waitForTimeout(80);
+  await page.waitForFunction((count) => document.querySelector("#queueStatus")?.classList.contains("hidden") === false && count > 0, 1);
+
+  await planMode.click();
+  assert.equal(await planMode.getAttribute("aria-pressed"), "false");
+  await input.fill("E2E_NORMAL_FOLLOWUP summarize the final state");
+  await page.locator("#send").click();
+  await page.waitForFunction(() => /待执行\s+1\s+条/.test(document.querySelector("#queueCount")?.textContent || ""));
+
+  await input.fill("E2E_STEER_FOLLOWUP prioritize the collaboration checks");
+  await page.locator("#steer").click();
+  await page.waitForFunction(() => (document.querySelector("#input")?.value || "") === "");
+  await page.waitForFunction(() => document.querySelector("#queueStatus")?.classList.contains("hidden") === true, undefined, { timeout: 12_000 });
+  await page.waitForFunction(() => document.querySelector("#steer")?.classList.contains("hidden") === true, undefined, { timeout: 12_000 });
+
+  const promptSlice = modelServerPrompts.slice(initialPromptCount);
+  assert.ok(promptSlice[0]?.includes("E2E_SLOW_PLAN"), JSON.stringify(promptSlice));
+  assert.ok(promptSlice[1]?.includes("E2E_STEER_FOLLOWUP"), `Steer did not run next: ${JSON.stringify(promptSlice)}`);
+  assert.ok(promptSlice[2]?.includes("E2E_NORMAL_FOLLOWUP"), `Normal follow-up did not remain queued: ${JSON.stringify(promptSlice)}`);
+
+  await page.waitForFunction(async () => {
+    const result = await window.hicode.listJobs({ limit: 50 });
+    const jobs = (result?.jobs || []).filter((job) => /E2E_(?:SLOW_PLAN|NORMAL_FOLLOWUP|STEER_FOLLOWUP)/.test(job.title || ""));
+    return jobs.length === 3 && jobs.every((job) => ["cancelled", "succeeded"].includes(job.status));
+  }, undefined, { timeout: 10_000 });
+  const jobEvidence = await page.evaluate(async () => {
+    const result = await window.hicode.listJobs({ limit: 50 });
+    const jobs = (result?.jobs || []).filter((job) => /E2E_(?:SLOW_PLAN|NORMAL_FOLLOWUP|STEER_FOLLOWUP)/.test(job.title || ""));
+    const details = await Promise.all(jobs.map((job) => window.hicode.getJob(job.id)));
+    return { jobs, details };
+  });
+  const planJob = jobEvidence.jobs.find((job) => job.title.includes("E2E_SLOW_PLAN"));
+  assert.equal(planJob?.metadata?.executionMode, "plan");
+  assert.equal(planJob?.status, "cancelled", "Interrupted plan job must not be marked succeeded");
+  const planDetail = jobEvidence.details.find((entry) => entry?.job?.id === planJob?.id);
+  assert.ok(planDetail?.job?.events?.some((event) => event.type === "runtime.steer.requested"), "Steer event was not persisted on the interrupted Job");
+}
+
+async function verifyGitDeliveryLoop(page) {
+  await setContentSize(1024, baseline.height);
+  await page.locator("#gitBtn").scrollIntoViewIfNeeded();
+  await page.locator("#gitBtn").click();
+  await waitVisible(page, "#gitView");
+  await page.waitForFunction(() => document.querySelector("#gitBranchSelect")?.value === "main");
+
+  fs.writeFileSync(path.join(workspaceDir, "delivery-e2e.txt"), "Git delivery evidence\n");
+  await page.locator("#gitRefresh").click();
+  await page.waitForFunction(() => document.querySelector("#gitCreateBranch")?.disabled === true && document.querySelector("#gitCreatePr")?.disabled === true);
+  assert.ok(Number(await page.locator("#gitDirty").textContent()) >= 1, "Git panel did not expose the dirty workspace");
+
+  await page.locator("#gitStageAll").click();
+  await page.waitForFunction(() => Number(document.querySelector("#gitStaged")?.textContent || "0") >= 1);
+  await page.locator("#gitCommitMessage").fill("Add Git delivery evidence");
+  await page.locator("#gitCommitBtn").click();
+  await page.waitForFunction(() => (document.querySelector("#gitBranchName")?.disabled === false));
+  assert.equal(runFixtureGit(["log", "-1", "--pretty=%s"]), "Add Git delivery evidence");
+
+  await page.locator("#gitBranchName").fill("codex/e2e-delivery");
+  await page.locator("#gitCreateBranch").click();
+  await page.waitForFunction(() => document.querySelector("#gitBranchSelect")?.value === "codex/e2e-delivery");
+  assert.equal(runFixtureGit(["branch", "--show-current"]), "codex/e2e-delivery");
+
+  await page.locator("#gitPrTitle").fill("Electron Git delivery evidence");
+  assert.equal(await page.locator("#gitCreatePr").isEnabled(), true, "Clean branch should expose the confirmed PR action");
+  const desktopLayout = await page.locator("#gitView").evaluate((element) => ({ width: element.clientWidth, scrollWidth: element.scrollWidth }));
+  assert.ok(desktopLayout.scrollWidth <= desktopLayout.width + 1, `Git view overflows at 1024px: ${JSON.stringify(desktopLayout)}`);
+  const desktopImage = await page.screenshot({ path: path.join(resultDir, "git-delivery-1024.png"), animations: "disabled" });
+  assert.ok(desktopImage.length > 12_000, "Git delivery screenshot is unexpectedly small");
+
+  await setContentSize(720, baseline.height);
+  await page.locator("#gitCreatePr").scrollIntoViewIfNeeded();
+  const compactLayout = await page.locator("#gitView").evaluate((element) => {
+    const bounds = element.getBoundingClientRect();
+    const offenders = [...element.querySelectorAll("*")].map((child) => {
+      const rect = child.getBoundingClientRect();
+      return {
+        selector: child.id ? `#${child.id}` : `${child.tagName.toLowerCase()}.${[...child.classList].join(".")}`,
+        right: Math.round((rect.right - bounds.right) * 10) / 10,
+        ownOverflow: child.scrollWidth - child.clientWidth,
+      };
+    }).filter((item) => item.right > 1 || item.ownOverflow > 1).slice(0, 12);
+    return { width: element.clientWidth, scrollWidth: element.scrollWidth, offenders };
+  });
+  assert.ok(compactLayout.scrollWidth <= compactLayout.width + 1, `Git view overflows at 720px: ${JSON.stringify(compactLayout)}`);
+  assert.equal(await page.locator("#gitCreatePr").isVisible(), true, "Compact Git view hides the PR action");
+  const compactImage = await page.screenshot({ path: path.join(resultDir, "git-delivery-720.png"), animations: "disabled" });
+  assert.ok(compactImage.length > 12_000, "Compact Git delivery screenshot is unexpectedly small");
+  await returnHome(page);
 }
 
 async function verifyResponsivePanels(page) {
@@ -670,9 +833,7 @@ async function main() {
   fs.rmSync(resultDir, { recursive: true, force: true });
   fs.mkdirSync(resultDir, { recursive: true, mode: 0o755 });
   userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), "hicode-electron-e2e-"));
-  editorFixturePath = path.join(userDataDir, "src", "editor-e2e.ts");
-  fs.mkdirSync(path.dirname(editorFixturePath), { recursive: true });
-  fs.writeFileSync(editorFixturePath, "export const editorValue = 1;\n");
+  createGitWorkspace();
   await startModelServer();
   await startPreviewServer();
 
@@ -694,6 +855,7 @@ async function main() {
 
   if (await page.locator("#auth").isVisible()) await page.locator("#skipAuth").click();
   await waitVisible(page, "#app");
+  await selectFixtureWorkspace(page);
   await page.addStyleTag({ content: "*,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important}" });
 
   await check("launches the real local Electron renderer", async () => {
@@ -722,6 +884,10 @@ async function main() {
 
   await check("streams a desktop turn with the compatibility stdout bridge disabled", async () => {
     await verifyProtocolNativeDesktopTurn(page);
+  });
+
+  await check("Plan queue and Steer use the authoritative runtime and durable Job records", async () => {
+    await verifyPlanQueueAndSteer(page);
   });
 
   const observed = {};
@@ -757,6 +923,10 @@ async function main() {
 
   await check("diff review comment enters the real Runtime revision loop", async () => {
     await verifyDiffCommentRevisionRequest(page);
+  });
+
+  await check("Git delivery protects dirty worktrees and completes commit and branch actions", async () => {
+    await verifyGitDeliveryLoop(page);
   });
 
   await check("integrated terminal runs real PTY input output resize and close", async () => {
@@ -805,4 +975,5 @@ try {
   if (modelServer) await new Promise((resolve) => modelServer.close(resolve));
   if (previewServer) await new Promise((resolve) => previewServer.close(resolve));
   if (userDataDir) fs.rmSync(userDataDir, { recursive: true, force: true });
+  if (workspaceDir) fs.rmSync(workspaceDir, { recursive: true, force: true });
 }
