@@ -46,6 +46,8 @@ npm run test:app-shell
 npm run test:openai-responses
 npm run test:terminal
 npm run test:preview
+npm run test:runtime-control
+npm run test:git-collaboration
 npm run check:syntax
 npm run verify
 ```
@@ -82,6 +84,8 @@ The current script also runs entrypoint/security tests and production dependency
 - Unsupported PDF or general-file transport must fail before provider network I/O and must not be reported as processed.
 - Input classification must use the shared Command Registry. Unknown slash commands and ambiguous native matchers fail closed; ordinary coding requests must remain on the agent route.
 - Bash, MCP servers, and industrial adapters must not inherit the whole host environment. Bash uses the allowlist in `src/tools/bash.ts`; MCP/tool adapters use `src/process-env.ts` and only receive explicitly configured extra env.
+- Git and GitHub CLI children use the same minimal environment and argument-array rule. Ambient tokens, model keys, package credentials, cloud secrets, and `SSH_AUTH_SOCK` must not be inherited; GitHub login remains in the external `gh` credential store.
+- Plan mode cannot execute mutating tools. Prompt order lives only in the main-process Runtime queue, and Steer must remain an explicit cancelled turn followed by a new queued instruction.
 - Integrated terminal startup must pass the existing execution permission state. The renderer never receives a raw PTY or generic IPC surface, and shell/cwd/env selection remains main-process-owned.
 - Terminal input after startup executes under the one visible session authorization and is not re-approved command by command. The terminal starts in the active workspace but is not an operating-system filesystem sandbox; changing workspace or closing its owner must end the full process tree.
 - Terminal children use the same minimal child-environment policy. Input, output, full env maps, and transcript content must not enter persisted logs.

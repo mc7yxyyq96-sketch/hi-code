@@ -86,6 +86,7 @@
     "program:evidence:editor-workbench": "node scripts/capture-task-evidence.mjs --task=HC-UI-310",
     "program:evidence:terminal": "node scripts/capture-task-evidence.mjs --task=HC-UI-311",
     "program:evidence:preview": "node scripts/capture-task-evidence.mjs --task=HC-UI-312",
+    "program:evidence:git-loop": "node scripts/capture-task-evidence.mjs --task=HC-GIT-320",
     "program:evidence:alpha7": "node scripts/capture-task-evidence.mjs --task=HC-REL-ALPHA-7",
     "program:evidence:alpha8": "node scripts/capture-task-evidence.mjs --task=HC-REL-ALPHA-8",
     "store:export": "node scripts/export-store-catalog.mjs",

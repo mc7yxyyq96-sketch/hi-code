@@ -1,6 +1,6 @@
 # Main Process Services
 
-Date: 2026-07-04
+Date: 2026-07-12
 
 Sprint 1A splits Electron main-process IPC registration into service modules without changing renderer/preload channels or user data locations.
 
@@ -14,9 +14,10 @@ Sprint 1A splits Electron main-process IPC registration into service modules wit
 - `electron/ipc/register-ipc-handlers.mjs`
   - Single registration entrypoint for all main-process channels
 - `electron/services/runtime-service.mjs`
-  - Runtime input, permission answer, and interrupt event channels
+  - Runtime input, Plan-mode queue submission, permission answer, truthful interrupt, and Steer follow-up channels
+  - Delegates execution order to the main-process `RuntimeJobQueue`; the renderer never owns an execution queue
 - `electron/services/queue-service.mjs`
-  - Existing runtime queue clear/snapshot behavior
+  - Runtime queue clear/snapshot behavior and persisted queue projection
   - This is not a DAG or Job Center implementation
 - `electron/services/mcp-service.mjs`
   - Configured MCP server initialization
@@ -56,7 +57,8 @@ Sprint 1A splits Electron main-process IPC registration into service modules wit
   - Release readiness, release package build, and open release folder channels
   - Uses `src/release-builder.ts`, reads `.hicode/project.json` plus Job Center gate results, writes `releases/<version>/*`, records release build Job events/gates, and stores `release-manifest.json` as a `release_package` Job artifact
 - `electron/services/git-service.mjs`
-  - Existing Git status, diff, stage, unstage, commit message, and commit channels
+  - Git status, diff, stage, unstage, commit message, commit, local branch, Pull Request, and CI-status channels
+  - Refuses dirty branch/PR mutations and requires a fresh native confirmation before PR creation
 - `electron/services/diff-service.mjs`
   - Existing tool events, recoverable tasks, and diff accept/reject channels
 - `electron/services/workspace-service.mjs`
@@ -116,6 +118,8 @@ The normalized error path redacts API keys, bearer tokens, password-like fields,
 - Integrated terminal creation uses the same Runtime permission state and a main-process-owned PTY. The renderer cannot select an executable, cwd, arguments, or environment. The terminal starts in the active workspace and is closed before workspace changes; this workspace binding is not an OS filesystem sandbox.
 - Terminal children receive a minimal safe environment and never inherit API keys, tokens, passwords, unknown variables, or `SSH_AUTH_SOCK`. Raw input, output, and transcripts are not persisted in logs.
 - App Preview accepts only `http:` loopback targets. Every page runs in a unique non-persistent sandboxed session with no preload or Node access. The trusted renderer never navigates to preview content, and failed verification checks remain failed.
+- Plan mode remains read-only at the tool boundary even in higher-trust permission modes. Steer is persisted as cancel-and-follow-up; an interrupted queue item cannot later become successful.
+- Git and GitHub commands use bounded argument arrays, `shell: false`, timeouts, and the minimal child environment. Branch switching and PR creation refuse dirty worktrees. PR creation allows only a confirmed non-force upstream push and never auto-merges.
 - Attachment records and content-addressed blobs stay under app data, use owner permissions, and are revalidated on read. Attachment IDs are session-owned and bounded before Runtime queueing.
 - Store install validation continues to block remote `sourcePath` and `sourceRoot`.
 - Remote downloads continue to require HTTPS.
@@ -132,9 +136,9 @@ The normalized error path redacts API keys, bearer tokens, password-like fields,
 
 ## Compatibility Boundary
 
-Renderer and preload channels are unchanged:
+Public renderer and preload channels include:
 
-- `runtime-queue:clear`
+- `runtime:enqueue`, `runtime:steer`, `runtime-queue:clear`
 - `auth-status`, `register`, `login`, `logout`
 - `list-capabilities`
 - `list-store`, `set-store-source`, `preview-store-item`, `install-store-item`
@@ -150,7 +154,7 @@ Renderer and preload channels are unchanged:
 - `release:readiness`, `release:build`, `release:open`
 - `tool-events:list`, `recoverable-tasks:list`
 - `diffs:list`, `diffs:accept`, `diffs:reject`, `diffs:accept-all`, `diffs:reject-all`, `diffs:clear-archived`
-- `git:status`, `git:diff`, `git:stage`, `git:unstage`, `git:commit-message`, `git:commit`
+- `git:status`, `git:diff`, `git:stage`, `git:unstage`, `git:commit-message`, `git:commit`, `git:branches`, `git:branch:create`, `git:branch:switch`, `git:collaboration`, `git:pr:create`
 - `editor:file:open`, `editor:file:save`
 - `terminal:capabilities`, `terminal:create`, `terminal:status`, `terminal:write`, `terminal:resize`, `terminal:close`
 - `preview:capabilities`, `preview:open`, `preview:list`, `preview:reopen`, `preview:reload`, `preview:verify`, `preview:close`, `preview:remove`
@@ -177,6 +181,8 @@ node test/main-process-services-tests.mjs
 npm run test:editor-workbench
 npm run test:terminal
 npm run test:preview
+npm run test:runtime-control
+npm run test:git-collaboration
 node test/patch-arena-tests.mjs
 node test/industrial-project-tests.mjs
 node test/domain-pack-tests.mjs

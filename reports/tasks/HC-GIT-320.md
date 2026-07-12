@@ -23,7 +23,7 @@ This task does not add a remote agent provider, change repository hosting, auto-
 - Git status, branch creation/switching, staging, commit, pull-request creation, and CI status use bounded argument arrays in the selected repository.
 - Branch switching refuses a dirty worktree. Pull-request creation requires an explicit user confirmation and never stores or logs credentials.
 - Missing GitHub CLI, missing authentication, detached HEAD, absent upstream, failed CI, and pending CI are visible states rather than false success.
-- A real Electron E2E fixture completes plan/queue/steer and local Git commit/branch behavior, then displays deterministic PR/CI fixture states through the same production command path.
+- A real Electron E2E fixture completes plan/queue/steer and local Git commit/branch behavior. Deterministic Pull Request and failed/pending CI fixtures exercise the same production Git collaboration client without creating remote test resources.
 
 ## Baseline
 
@@ -48,6 +48,14 @@ This task does not add a remote agent provider, change repository hosting, auto-
 - Renderer App Shell tests for plan, queue, steer, branch, PR confirmation, and failed CI visibility.
 - Security baseline, centralized IPC contract, build, verify, release check, feature tests, DoD unit, full-tree DoD scan, production audit, and program-control checks.
 - Real Electron E2E for the complete local coding loop and responsive layout.
+
+## Implemented Slices
+
+- `7683ca9`: main-process-authoritative Plan/queue/Steer control, read-only Plan tool boundary, durable Job metadata, and renderer queue projection.
+- `23f087f`: cancellation-preserving queue settlement, bounded Git/GitHub collaboration client, dirty-worktree branch/PR protection, native PR confirmation, failed/pending CI projection, responsive Git delivery UI, focused tests, and real Electron E2E coverage.
+- GitHub CLI failures now distinguish missing installation, missing login, absent PR, and network failure with redacted actionable Chinese guidance. The PR button is disabled when `gh` itself is unavailable.
+
+Acceptance evidence capture and cross-platform CI are still pending; the task remains in progress until both are recorded.
 
 ## Rollback
 

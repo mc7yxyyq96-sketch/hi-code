@@ -77,6 +77,12 @@ HC-RUN-201 moved assistant text to first-class protocol events. HC-RUN-202 adds 
 
 The Job Center is the durable execution record. Providers, isolated worktrees, Patch Arena, industrial projects, Domain Packs, agent teams, tool adapters, quality gates, sample generation, and release packaging write events and artifacts through their existing stores and Electron services.
 
+### Coding delivery loop
+
+The Electron main process owns prompt order through `RuntimeJobQueue`. Plan mode is durable queue metadata plus a read-only tool boundary. Steer records a Job event, cancels the active queue item, aborts the active Runtime, and inserts a new follow-up; it is not represented as in-stream provider mutation. Ordinary Runtime failures are rethrown to the queue so they remain persisted failures.
+
+Local delivery uses `src/git.ts`, `src/git-collaboration.ts`, and `electron/services/git-service.mjs`. Branch and Pull Request mutations require a clean selected repository, GitHub calls use the external `gh` credential store with a minimal child environment, and PR creation requires fresh native confirmation. No coding-loop operation performs stash, reset, clean, force push, merge, rebase, auto-merge, or release publication. CI projection preserves failed, pending, skipped, and unknown states.
+
 ## Persistence Map
 
 | Data | Current location | Authority today | Migration direction |
