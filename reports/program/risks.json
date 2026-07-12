@@ -123,14 +123,22 @@
     {
       "id": "RISK-UI-006",
       "severity": "high",
-      "status": "active",
+      "status": "mitigated",
       "owner": "desktop-ux",
       "title": "Previewed applications can escape their origin or inherit trusted renderer capabilities",
       "evidence": [
-        "reports/tasks/HC-UI-312.md"
+        "reports/tasks/HC-UI-312.md",
+        "docs/adr/ADR-0014-isolated-loopback-app-preview.md",
+        "electron/services/preview-service.mjs",
+        "renderer/app-shell/preview/PreviewPortal.tsx",
+        "test/preview-service-tests.mjs",
+        "test/preview-workbench-tests.ts",
+        "tests/electron-e2e/run.mjs",
+        "reports/evidence/HC-UI-312/manifest.json",
+        "reports/evidence/HC-UI-312/ci-matrix.json"
       ],
       "impact": "Untrusted local web content could navigate to a remote origin, open new windows, request privileged permissions, outlive its owner, or be mistaken for verified output.",
-      "mitigation": "HC-UI-312 will isolate preview WebContents from the trusted renderer, accept only canonical loopback HTTP origins, deny popups/downloads/permissions/external navigation, bind lifecycle to owner and workspace, and produce explicit bounded screenshot/DOM evidence.",
+      "mitigation": "HC-UI-312 isolates every loopback-only preview in a unique non-persistent sandboxed BrowserWindow with no preload, Node integration, DevTools, permissions, downloads, popups, webviews, external navigation, or cross-origin resources. Owner/workspace/app cleanup, bounded owner-only PNG/DOM evidence, failed-check preservation, local Electron acceptance, and Linux/macOS/Windows CI are committed as evidence.",
       "trigger": "Any preview with a preload bridge, Node integration, non-loopback origin, unbounded evidence, external navigation, stale owner, or false verification result blocks HC-UI-312 completion."
     },
     {
