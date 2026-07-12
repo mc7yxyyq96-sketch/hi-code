@@ -42,3 +42,4 @@ The file name is `ADR-NNNN-short-title.md`. Numbers are never reused. An accepte
 | [ADR-0013](ADR-0013-policy-bound-integrated-terminal.md) | Accepted | Keep real PTY ownership in a policy-bound main-process service with minimal environment and process-tree cleanup |
 | [ADR-0014](ADR-0014-isolated-loopback-app-preview.md) | Accepted | Open local applications in owner-scoped sandboxed child windows and persist truthful verification evidence |
 | [ADR-0015](ADR-0015-authoritative-coding-and-git-delivery-loop.md) | Accepted | Keep Plan, queued prompts, Steer, and protected Git delivery behind main-process authorities and truthful state |
+| [ADR-0016](ADR-0016-keychain-backed-secret-references.md) | Accepted | Persist scoped references while Electron safeStorage encrypts desktop credentials with atomic reversible migration |

@@ -12,7 +12,6 @@ The transport is explicit in each model profile. Existing profiles with no selec
     "anthropic": {
       "name": "anthropic",
       "baseURL": "https://api.anthropic.com/v1",
-      "apiKey": "sk-ant-REPLACE-ME",
       "model": "claude-sonnet-5",
       "contextWindow": 1000000,
       "temperature": 0.2,
@@ -21,7 +20,6 @@ The transport is explicit in each model profile. Existing profiles with no selec
     "ollama": {
       "name": "ollama",
       "baseURL": "http://127.0.0.1:11434",
-      "apiKey": "sk-no-key-required",
       "model": "qwen3",
       "contextWindow": 32768,
       "temperature": 0.2,
@@ -31,6 +29,18 @@ The transport is explicit in each model profile. Existing profiles with no selec
   "defaultProfile": "anthropic"
 }
 ```
+
+The desktop Model API form stores the Anthropic credential in operating-system
+secure storage and persists only a `secretRef`. CLI users can supply it without
+editing JSON:
+
+```bash
+export HICODE_PROFILE_ANTHROPIC_API_KEY='...'
+hicode
+```
+
+Loopback Ollama requires no key. Hi Code supplies its internal no-key sentinel
+at runtime and does not persist or transmit it as authorization.
 
 The desktop settings page has native Anthropic and Ollama presets. Advanced JSON remains available for gateways and custom model IDs. Saving another existing profile does not silently change its protocol.
 

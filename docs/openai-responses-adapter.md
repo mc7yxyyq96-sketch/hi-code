@@ -19,7 +19,6 @@ Select Responses explicitly on one model profile:
     "openai": {
       "name": "openai",
       "baseURL": "https://api.openai.com/v1",
-      "apiKey": "sk-...",
       "model": "gpt-4.1",
       "contextWindow": 128000,
       "temperature": 0.2,
@@ -27,6 +26,15 @@ Select Responses explicitly on one model profile:
     }
   }
 }
+```
+
+The example intentionally omits the credential. In the desktop app, enter it
+in Model API settings; Hi Code stores an opaque `secretRef` in config and keeps
+the encrypted value in operating-system secure storage. For CLI use:
+
+```bash
+export HICODE_PROFILE_OPENAI_API_KEY='...'
+hicode
 ```
 
 Supported values are:
@@ -74,6 +82,8 @@ Input, output, total, cached-input, and reasoning token counts are normalized wi
 - Remote endpoints must use HTTPS. Plain HTTP is accepted only for loopback development fixtures.
 - URLs containing embedded credentials, query parameters, or fragments are rejected.
 - API keys are used only in the Authorization request header.
+- Desktop config stores only a secret reference; CLI credentials come from the
+  explicit environment fallback.
 - Provider descriptors, events, errors, Runtime Protocol records, and task evidence do not contain credentials.
 - Error codes are bounded to a safe character set before persistence.
 - Retry is limited to rate limits, upstream server failures, and transient network failures.

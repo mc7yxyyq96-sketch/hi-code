@@ -1,6 +1,6 @@
 # Hi Code Runtime Security Baseline
 
-Last updated: 2026-07-04
+Last updated: 2026-07-12
 
 This document records the security baseline that must hold before Hi Code is
 treated as a distributable desktop coding agent.
@@ -37,6 +37,22 @@ treated as a distributable desktop coding agent.
 - Logs must use redacted environment summaries; keys containing token, secret,
   password, auth, credential, or API key semantics must be masked.
 - Reviewer/read-only bash runs through macOS `sandbox-exec` where available.
+
+## Credential Persistence Boundary
+
+- Desktop config files contain versioned `secretRef` values, not model API
+  keys, sensitive MCP environment values, or Agent Provider secrets.
+- Electron main encrypts values through `safeStorage`. macOS uses Keychain,
+  Windows uses DPAPI, and Linux must provide a supported secret-service backend.
+- Unavailable encryption and Linux `basic_text` are rejected. Hi Code does not
+  fall back to plaintext.
+- Renderer/preload can read sanitized config and configured status only. No
+  secret getter exists and saved keys are not repopulated into form inputs.
+- Migration runs before Runtime startup, writes config and vault atomically,
+  and records an encrypted reversible snapshot plus a value-free hash journal.
+- CLI fallback is environment-only for new secure configurations. Model
+  selection refuses to rewrite a config that still contains plaintext secrets.
+- See `docs/credential-storage.md` for reference formats, recovery, and tests.
 
 ## Store / Extension Boundary
 

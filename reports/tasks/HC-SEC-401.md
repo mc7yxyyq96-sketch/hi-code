@@ -54,6 +54,48 @@ This task does not implement MCP HTTP/OAuth, remote vault synchronization, accou
 - Renderer tests proving saved credentials are not retained or repopulated and configured state remains visible.
 - Build, verify, release check, feature, security, DoD unit, full-tree DoD scan, production audit, program-control, and real Electron E2E gates.
 
+## Implemented Delivery
+
+- `src/secret-references.ts` defines bounded versioned model, MCP, and Agent
+  Provider references, persistence sanitization, plaintext discovery, and
+  deterministic CLI fallback names.
+- `electron/services/secret-store-service.mjs` implements the Electron
+  `safeStorage` vault, owner-private atomic config/vault writes, status-only
+  projection, startup migration, encrypted snapshot, value-free journal, and
+  exact controlled rollback.
+- `electron/main.mjs` migrates credentials after Electron readiness and before
+  service/Runtime construction. Desktop config loading rejects legacy plaintext
+  and resolves references only in the main process.
+- Workspace config IPC returns sanitized JSON plus configured status. Model
+  connection testing accepts either a newly entered in-memory key or an existing
+  reference. Preload exposes no credential getter.
+- Renderer settings clear key inputs after save, preserve only references that
+  the secure store reports as configured, and surface fail-closed migration
+  errors without receiving decrypted values.
+- Agent Provider secret fields are externalized before Provider state is
+  persisted. Legacy state migrates transactionally; blank or omitted fields
+  preserve prior references.
+- CLI profile and MCP environment fallbacks work without Electron. `/model`
+  refuses to rewrite a legacy config containing plaintext credentials.
+- Provider metadata now reports `secret-reference-or-environment` rather than
+  implying config-file credential storage.
+
+## Focused Verification Result
+
+- Secret reference suite: 13 passed.
+- Electron secret-store suite: 11 passed.
+- Agent Provider suite: 35 passed.
+- Main-process service suite: 178 passed.
+- Renderer architecture suite: 183 passed.
+- Security baseline: 214 passed.
+- Real Electron E2E: passed credential persistence/fail-closed behavior and all
+  existing desktop workbench checks. The first run exposed a test-isolation
+  counter that included the new credential connection test; the assertion was
+  corrected to count requests produced by its own step, and the complete rerun
+  passed.
+
+Final machine-captured evidence remains required before task completion.
+
 ## Rollback
 
 Revert the HC-SEC-401 implementation commits. A completed migration also has an encrypted snapshot that can restore the exact pre-migration config through the tested rollback operation while the same OS user and secure-storage backend remain available.

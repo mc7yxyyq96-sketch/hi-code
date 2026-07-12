@@ -80,6 +80,10 @@ Sprint 1A splits Electron main-process IPC registration into service modules wit
 - `electron/services/security-service.mjs`
   - Auth IPC registration
   - Path guard and sensitive log redaction utilities
+- `electron/services/secret-store-service.mjs`
+  - Electron `safeStorage` vault for model, MCP, and Agent Provider credentials
+  - Atomic sanitized-config persistence, startup migration, encrypted recovery
+    snapshot, controlled rollback, and status-only renderer projection
 
 ## IPC Registration Rule
 
@@ -113,6 +117,9 @@ The normalized error path redacts API keys, bearer tokens, password-like fields,
 - Renderer sandbox remains enabled.
 - Renderer still has no raw `ipcRenderer`.
 - Preload validates parameter shape before invoking main-process channels.
+- Config IPC returns only sanitized JSON and credential-reference status.
+  Desktop secrets are decrypted in main-process service paths only; no preload
+  or renderer secret getter exists.
 - Workspace file reads use the existing workspace path confinement.
 - Integrated editor open/save uses the same workspace path authority. It rejects symlink escapes, binary or invalid UTF-8 content, oversized files, and stale normal saves. A force save is available only through an explicit typed request after visible user confirmation.
 - Integrated terminal creation uses the same Runtime permission state and a main-process-owned PTY. The renderer cannot select an executable, cwd, arguments, or environment. The terminal starts in the active workspace and is closed before workspace changes; this workspace binding is not an OS filesystem sandbox.
@@ -161,7 +168,7 @@ Public renderer and preload channels include:
 - `pick-folder`, `get-cwd`, `list-dir`, `read-file`
 - `attach-file`, `attach-image`, `attachments:list`, `attachment:remove`
 - `list-sessions`, `resume-session`, `delete-session`
-- `get-config`, `save-config`, `test-model`
+- `get-config`, `config:credential-status`, `save-config`, `test-model`
 
 The event channels also remain unchanged:
 
