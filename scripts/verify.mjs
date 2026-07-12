@@ -41,6 +41,8 @@ const testFiles = [
   ["test:editor-workbench", "test/editor-workbench-tests.ts", tsx],
   ["test:terminal-service", "test/terminal-service-tests.mjs"],
   ["test:terminal-renderer", "test/terminal-workbench-tests.ts", tsx],
+  ["test:preview-service", "test/preview-service-tests.mjs"],
+  ["test:preview-renderer", "test/preview-workbench-tests.ts", tsx],
   ["test:entrypoints", "test/entrypoint-tests.mjs"],
   ["test:program", "test/program-control-tests.mjs"],
   ["test:security", "test/security-baseline.mjs"],

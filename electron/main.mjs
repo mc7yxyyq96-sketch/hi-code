@@ -51,6 +51,7 @@ import { createDiffIpcService } from "./services/diff-service.mjs";
 import { createWorkspaceService, modelCapabilityHint } from "./services/workspace-service.mjs";
 import { createEditorService } from "./services/editor-service.mjs";
 import { createTerminalService } from "./services/terminal-service.mjs";
+import { createPreviewService } from "./services/preview-service.mjs";
 import { createSecurityService, redactSensitive } from "./services/security-service.mjs";
 import { createAppInfoService } from "./services/app-info-service.mjs";
 import { createUsageService } from "./services/usage-service.mjs";
@@ -78,6 +79,7 @@ const PATCH_ARENA_ARTIFACT_DIR = path.join(HICODE_DIR, "patch-arena", "artifacts
 const DOMAIN_PACK_DIR = path.join(HICODE_DIR, "domain-packs");
 const AGENT_TEAM_DIR = path.join(HICODE_DIR, "agent-team");
 const ATTACHMENT_STORE_DIR = path.join(HICODE_DIR, "attachments-v2");
+const PREVIEW_EVIDENCE_DIR = path.join(HICODE_DIR, "preview-evidence");
 const CODEX_DIR = path.join(os.homedir(), ".codex");
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -88,7 +90,7 @@ let cwd = os.homedir();
 let mainServices = null;
 const askResolvers = new Map();
 let askSeq = 0;
-let terminalQuitInProgress = false;
+let nativeCleanupQuitInProgress = false;
 const toolEvents = [];
 const diffService = new DiffService(() => cwd);
 const worktreeRunner = new WorktreeRunner({ safeRoot: WORKTREE_RUNNER_DIR });
@@ -2507,7 +2509,10 @@ function createWindow() {
   });
   win.on("close", () => {
     const ownerId = win?.webContents?.id;
-    if (ownerId) void mainServices?.terminal?.closeAllForOwner(ownerId, "window_closed");
+    if (ownerId) {
+      void mainServices?.terminal?.closeAllForOwner(ownerId, "window_closed");
+      void mainServices?.preview?.closeAllForOwner(ownerId, "window_closed");
+    }
   });
   win.once("ready-to-show", () => {
     win?.show();
@@ -2535,11 +2540,7 @@ function createWindow() {
 }
 
 function ensureMainWindow() {
-  const existing = BrowserWindow.getAllWindows().find((window) => !window.isDestroyed());
-  if (!existing) {
-    return createWindow();
-  }
-  win = existing;
+  if (!win || win.isDestroyed()) return createWindow();
   if (win.isMinimized()) win.restore();
   if (!win.isVisible()) win.show();
   win.focus();
@@ -2572,10 +2573,14 @@ app.on("window-all-closed", () => {
 
 app.on("before-quit", (event) => {
   const terminal = mainServices?.terminal;
-  if (terminalQuitInProgress || !terminal?.activeCount?.()) return;
+  const preview = mainServices?.preview;
+  if (nativeCleanupQuitInProgress || (!terminal?.activeCount?.() && !preview?.activeCount?.())) return;
   event.preventDefault();
-  terminalQuitInProgress = true;
-  Promise.resolve(terminal.closeAll("app_quit")).finally(() => app.quit());
+  nativeCleanupQuitInProgress = true;
+  Promise.all([
+    Promise.resolve(terminal?.closeAll?.("app_quit")),
+    Promise.resolve(preview?.closeAll?.("app_quit")),
+  ]).finally(() => app.quit());
 });
 
 function createMainServices() {
@@ -2667,12 +2672,28 @@ function createMainServices() {
         createdAt: Date.now(),
       }),
     }),
+    preview: createPreviewService({
+      getCwd: () => cwd,
+      evidenceRoot: PREVIEW_EVIDENCE_DIR,
+      windowFactory: (options) => new BrowserWindow(options),
+      getParentWindow: (owner) => BrowserWindow.fromWebContents(owner),
+      logger: (event, payload) => appendRuntimeLog({
+        id: `preview-${Date.now()}-${crypto.randomUUID()}`,
+        type: event,
+        title: event,
+        payload,
+        createdAt: Date.now(),
+      }),
+    }),
     workspace: createWorkspaceService({
       dialog,
       getWindow: () => win,
       getCwd: () => cwd,
       setCwd: async (nextCwd) => {
-        await mainServices?.terminal?.closeAll("workspace_changed");
+        await Promise.all([
+          mainServices?.terminal?.closeAll("workspace_changed"),
+          mainServices?.preview?.closeAll("workspace_changed"),
+        ]);
         cwd = nextCwd;
       },
       buildRuntime,

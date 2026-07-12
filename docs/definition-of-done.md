@@ -80,6 +80,7 @@ Patch Arena candidates write:
 - Release Center shows the DoD checklist and skeleton findings.
 - Patch Arena shows candidate skeleton risk and DoD evidence path.
 - Industrial Project shows artifact completeness: total, complete real artifacts, simulated/dry-run artifacts, missing paths, release-required artifacts, and gate-linked artifacts.
+- App Preview writes a real PNG plus bounded DOM/check evidence. Missing selectors, failed captures, and incomplete document state remain failed and cannot be represented as verified UI.
 
 ## Agent Guidance
 

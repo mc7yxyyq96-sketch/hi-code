@@ -9,6 +9,8 @@ import type { CodeEditorFactory } from "./editor/code-editor.ts";
 import { buildRevisionRequest } from "./workspace/review.ts";
 import { createTerminalApi, type RawTerminalBridge } from "./terminal/api.ts";
 import { TerminalPortal } from "./terminal/TerminalPortal.tsx";
+import { createPreviewApi, type RawPreviewBridge } from "./preview/api.ts";
+import { PreviewPortal } from "./preview/PreviewPortal.tsx";
 
 export interface HiCodeAppShellBridge {
   readonly ownsNavigation: true;
@@ -48,6 +50,7 @@ export function mountHiCodeAppShell() {
     },
   });
   const terminalApi = createTerminalApi((window as Window & { hicode?: RawTerminalBridge }).hicode);
+  const previewApi = createPreviewApi((window as Window & { hicode?: RawPreviewBridge }).hicode);
 
   window.hicodeAppShell = Object.freeze({
     ownsNavigation: true as const,
@@ -68,6 +71,7 @@ export function mountHiCodeAppShell() {
       <AppShell adapter={adapter} store={store} />
       <WorkspacePortals controller={workspaceController} store={workspaceStore} />
       <TerminalPortal api={terminalApi} />
+      <PreviewPortal api={previewApi} />
     </>,
   );
   adapter.applyLegacyRoute({ route: "home", mainClass: "home", activeNav: "newChat" });

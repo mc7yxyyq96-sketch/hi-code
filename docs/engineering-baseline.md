@@ -45,6 +45,7 @@ npm run test:security
 npm run test:app-shell
 npm run test:openai-responses
 npm run test:terminal
+npm run test:preview
 npm run check:syntax
 npm run verify
 ```
@@ -84,6 +85,7 @@ The current script also runs entrypoint/security tests and production dependency
 - Integrated terminal startup must pass the existing execution permission state. The renderer never receives a raw PTY or generic IPC surface, and shell/cwd/env selection remains main-process-owned.
 - Terminal input after startup executes under the one visible session authorization and is not re-approved command by command. The terminal starts in the active workspace but is not an operating-system filesystem sandbox; changing workspace or closing its owner must end the full process tree.
 - Terminal children use the same minimal child-environment policy. Input, output, full env maps, and transcript content must not enter persisted logs.
+- App Preview must remain loopback-HTTP-only and main-process-owned. Preview pages run in sandboxed child windows with no preload, no Node integration, no DevTools, no permissions, no downloads, and no external navigation. Failed checks must not be promoted to passed.
 - Store installs must write only into app data directories such as `~/.vibe/store`.
 - Remote catalog entries must not read local `sourcePath` or `sourceRoot`.
 - Remote downloads must use HTTPS.

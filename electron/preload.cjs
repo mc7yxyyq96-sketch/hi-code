@@ -118,6 +118,54 @@ function terminalEvent(value) {
   return null;
 }
 
+function previewId(value) {
+  const checked = requireString(value, "previewId");
+  if (!checked.ok || !/^preview-[a-f0-9-]{36}$/.test(checked.value)) {
+    return { ok: false, error: "previewId is invalid" };
+  }
+  return checked;
+}
+
+function previewSelectors(value) {
+  if (value === undefined || value === null) return { ok: true, value: [] };
+  if (!Array.isArray(value) || value.length > 12) return { ok: false, error: "preview selectors are invalid" };
+  const selectors = [];
+  for (const item of value) {
+    if (typeof item !== "string") return { ok: false, error: "preview selector must be a string" };
+    const selector = item.trim();
+    if (!selector || selector.length > 256 || /[\u0000-\u001f\u007f]/.test(selector)) return { ok: false, error: "preview selector is invalid" };
+    selectors.push(selector);
+  }
+  if (new Set(selectors).size !== selectors.length) return { ok: false, error: "preview selectors must be unique" };
+  return { ok: true, value: selectors };
+}
+
+function previewOpenRequest(value) {
+  const data = optionalObject(value);
+  const checkedUrl = requireString(data.url, "url");
+  if (!checkedUrl.ok || !checkedUrl.value.trim() || checkedUrl.value.length > 2048 || /[\u0000-\u001f\u007f]/.test(checkedUrl.value)) {
+    return { ok: false, error: "preview URL is invalid" };
+  }
+  const checkedLabel = data.label === undefined ? { ok: true, value: "" } : requireString(data.label, "label");
+  if (!checkedLabel.ok || checkedLabel.value.length > 120) return { ok: false, error: "preview label is invalid" };
+  const checkedSelectors = previewSelectors(data.selectors);
+  if (!checkedSelectors.ok) return checkedSelectors;
+  return { ok: true, value: { url: checkedUrl.value.trim(), label: checkedLabel.value.trim(), selectors: checkedSelectors.value } };
+}
+
+function previewVerificationRequest(value) {
+  const checked = previewSelectors(optionalObject(value).selectors);
+  return checked.ok ? { ok: true, value: { selectors: checked.value } } : checked;
+}
+
+function previewEvent(value) {
+  const data = optionalObject(value);
+  const preview = optionalObject(data.preview);
+  if (!["state", "navigation-blocked", "verification"].includes(data.type)) return null;
+  if (!/^preview-[a-f0-9-]{36}$/.test(String(preview.id || ""))) return null;
+  return { type: data.type, preview };
+}
+
 function utf8Length(value) {
   return new TextEncoder().encode(String(value)).byteLength;
 }
@@ -138,6 +186,15 @@ contextBridge.exposeInMainWorld("hicode", {
     };
     ipcRenderer.on("terminal:event", handler);
     return () => ipcRenderer.removeListener("terminal:event", handler);
+  },
+  onPreviewEvent: (cb) => {
+    if (typeof cb !== "function") return () => {};
+    const handler = (_event, value) => {
+      const normalized = previewEvent(value);
+      if (normalized) cb(normalized);
+    };
+    ipcRenderer.on("preview:event", handler);
+    return () => ipcRenderer.removeListener("preview:event", handler);
   },
   send: (input) => {
     const checked = runtimeInput(input);
@@ -222,6 +279,37 @@ contextBridge.exposeInMainWorld("hicode", {
     const checkedReason = requireString(reason, "reason");
     if (!checkedReason.ok || !/^[a-z0-9_-]{1,64}$/i.test(checkedReason.value)) return Promise.resolve({ ok: false, error: "terminal close reason is invalid" });
     return safeInvoke("terminal:close", checkedId.value, checkedReason.value);
+  },
+  getPreviewCapabilities: () => safeInvoke("preview:capabilities"),
+  openPreview: (payload) => {
+    const checked = previewOpenRequest(payload);
+    return checked.ok ? safeInvoke("preview:open", checked.value) : Promise.resolve(checked);
+  },
+  listPreviews: () => safeInvoke("preview:list"),
+  reopenPreview: (id) => {
+    const checked = previewId(id);
+    return checked.ok ? safeInvoke("preview:reopen", checked.value) : Promise.resolve(checked);
+  },
+  reloadPreview: (id) => {
+    const checked = previewId(id);
+    return checked.ok ? safeInvoke("preview:reload", checked.value) : Promise.resolve(checked);
+  },
+  verifyPreview: (id, payload) => {
+    const checkedId = previewId(id);
+    if (!checkedId.ok) return Promise.resolve(checkedId);
+    const checkedPayload = previewVerificationRequest(payload);
+    return checkedPayload.ok ? safeInvoke("preview:verify", checkedId.value, checkedPayload.value) : Promise.resolve(checkedPayload);
+  },
+  closePreview: (id, reason = "user_closed") => {
+    const checkedId = previewId(id);
+    if (!checkedId.ok) return Promise.resolve(checkedId);
+    const checkedReason = requireString(reason, "reason");
+    if (!checkedReason.ok || !/^[a-z0-9_-]{1,64}$/i.test(checkedReason.value)) return Promise.resolve({ ok: false, error: "preview close reason is invalid" });
+    return safeInvoke("preview:close", checkedId.value, checkedReason.value);
+  },
+  removePreview: (id) => {
+    const checked = previewId(id);
+    return checked.ok ? safeInvoke("preview:remove", checked.value) : Promise.resolve(checked);
   },
   listSessions: () => safeInvoke("list-sessions"),
   resumeSession: (id) => checkedInvoke("resume-session", id, "sessionId"),

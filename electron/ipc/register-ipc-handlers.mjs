@@ -19,6 +19,7 @@ import { registerDiffIpc } from "../services/diff-service.mjs";
 import { registerWorkspaceIpc } from "../services/workspace-service.mjs";
 import { registerEditorIpc } from "../services/editor-service.mjs";
 import { registerTerminalIpc } from "../services/terminal-service.mjs";
+import { registerPreviewIpc } from "../services/preview-service.mjs";
 import { registerSecurityIpc } from "../services/security-service.mjs";
 import { registerAppInfoIpc } from "../services/app-info-service.mjs";
 import { registerUsageIpc } from "../services/usage-service.mjs";
@@ -48,6 +49,7 @@ export function registerIpcHandlers({ services, ipcMain, dialog, shell, logger =
   registerGitIpc({ register, git: services.git });
   registerEditorIpc({ register, editor: services.editor });
   registerTerminalIpc({ register, terminal: services.terminal });
+  registerPreviewIpc({ register, preview: services.preview });
   registerWorkspaceIpc({ register, workspace: services.workspace, dialog, shell });
   registerAppInfoIpc({ register, appInfo: services.appInfo });
   registerUsageIpc({ register, usage: services.usage });

@@ -1319,6 +1319,7 @@ const filesModal = $("files"), filePath = $("filePath"), fileList = $("fileList"
 const capabilityView = $("capabilityView"), capTitle = $("capTitle"), capSubtitle = $("capSubtitle"), capSummary = $("capSummary"), capList = $("capList"), capActions = $("capActions");
 const commandView = $("commandView"), commandSearch = $("commandSearch"), commandSummary = $("commandSummary"), commandList = $("commandList"), commandComposerSlot = $("commandComposerSlot"), commandFocusInput = $("commandFocusInput"), commandRunInput = $("commandRunInput");
 const terminalView = $("terminalView");
+const previewView = $("previewView");
 const gitView = $("gitView"), gitSub = $("gitSub"), gitBranch = $("gitBranch"), gitDirty = $("gitDirty"), gitStaged = $("gitStaged"), gitUnstaged = $("gitUnstaged");
 const jobView = $("jobView"), jobSummary = $("jobSummary"), jobList = $("jobList"), jobDetail = $("jobDetail"), jobRefresh = $("jobRefresh"), jobStatusText = $("jobStatusText");
 const arenaView = $("arenaView"), arenaSummary = $("arenaSummary"), arenaRunList = $("arenaRunList"), arenaCandidateList = $("arenaCandidateList"), arenaDetail = $("arenaDetail");
@@ -1368,7 +1369,7 @@ const aboutRepoBtn = $("aboutRepoBtn"), aboutReleasesBtn = $("aboutReleasesBtn")
 const providerHint = $("providerHint");
 const quickBaseURL = $("quickBaseURL"), quickApiKey = $("quickApiKey"), quickModel = $("quickModel"), quickContext = $("quickContext");
 const advancedConfig = $("advanced-config");
-const routeViews = { home, chatview, capabilityView, commandView, terminalView, gitView, jobView, arenaView, industrialView };
+const routeViews = { home, chatview, capabilityView, commandView, terminalView, previewView, gitView, jobView, arenaView, industrialView };
 
 // Build the single composer from the template, start it in the home slot.
 const composer = $("composer-tpl").content.firstElementChild.cloneNode(true);
@@ -2021,6 +2022,20 @@ function showTerminal() {
   syncState({ inChat });
   showRoute({ main, views: routeViews, route: "terminalView", mainClass: "terminal", activeNav: "terminalBtn", setActiveNav });
   window.hicodeAppShell?.terminal?.focus();
+}
+
+function showPreview() {
+  jobCenter.stop();
+  patchArena.stop();
+  industrialProject.stop();
+  domainPacks.stop();
+  agentTeam.stop();
+  toolchain.stop();
+  qualityGates.stop();
+  releaseCenter.stop();
+  inChat = false;
+  syncState({ inChat });
+  showRoute({ main, views: routeViews, route: "previewView", mainClass: "preview", activeNav: "previewBtn", setActiveNav });
 }
 
 async function showGit() {
@@ -3298,6 +3313,7 @@ $("searchToggle").onclick = () => {
 };
 $("cmdBtn").onclick = showCommandCenter;
 $("terminalBtn").onclick = showTerminal;
+$("previewBtn").onclick = showPreview;
 commandSearch.addEventListener("input", () => renderCommandCenter(commandSearch.value.trim()));
 commandFocusInput.onclick = () => {
   if (!input.value.trim()) input.value = "/";

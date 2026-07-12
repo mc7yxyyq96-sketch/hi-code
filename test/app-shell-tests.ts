@@ -98,7 +98,7 @@ await check("registry preserves every production shell destination", () => {
   const registry = createRouteRegistry(DEFAULT_SHELL_ROUTES);
   assert.deepEqual(
     registry.list().map((route) => route.id),
-    ["home", "chat", "store", "plugins", "skills", "agents", "mcp", "terminal", "commands", "git", "jobs", "arena", "industrial"],
+    ["home", "chat", "store", "plugins", "skills", "agents", "mcp", "terminal", "preview", "commands", "git", "jobs", "arena", "industrial"],
   );
   assert.equal(registry.resolveLegacy("capabilityView", "skillsBtn")?.id, "skills");
   assert.equal(registry.resolveLegacy("capabilityView", "storeBtn")?.id, "store");
