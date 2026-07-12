@@ -20,6 +20,7 @@ const testFiles = [
   ["test:runtime-clients", "test/runtime-client-adapter-tests.mjs"],
   ["test:runtime-control", "test/runtime-control-tests.mjs"],
   ["test:git-collaboration", "test/git-collaboration-tests.mjs"],
+  ["test:secrets", "test/secret-reference-tests.mjs"],
   ["test:services", "test/main-process-services-tests.mjs"],
   ["test:jobs", "test/job-center-tests.mjs"],
   ["test:providers", "test/provider-tests.mjs"],

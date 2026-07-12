@@ -1,6 +1,13 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import {
+  isCredentialPlaceholder,
+  isSecretReferenceRecord,
+  mcpSecretEnvName,
+  profileApiKeyEnvName,
+  validateSecretRef,
+} from "./secret-references.js";
 
 /** One model endpoint + its parameters. The unit the LLM client speaks. */
 export const MODEL_TRANSPORT_PROTOCOLS = ["chat_completions", "responses", "anthropic_messages", "ollama_chat"] as const;
@@ -9,7 +16,10 @@ export type ModelTransportProtocol = (typeof MODEL_TRANSPORT_PROTOCOLS)[number];
 export interface ModelProfile {
   name: string;
   baseURL: string;
+  /** Runtime-only resolved credential. Persisted profiles use secretRef. */
   apiKey: string;
+  /** Opaque persisted credential reference; never contains the secret value. */
+  secretRef?: string;
   model: string;
   contextWindow: number;
   temperature: number;
@@ -42,6 +52,13 @@ export interface McpServerConfig {
   command: string;
   args?: string[];
   env?: Record<string, string>;
+}
+
+export interface LoadConfigOptions {
+  configPath?: string;
+  env?: NodeJS.ProcessEnv;
+  resolveSecret?: (secretRef: string) => string | undefined;
+  onSecretResolutionError?: (details: { secretRef: string; location: string; error: string }) => void;
 }
 
 /**
@@ -77,22 +94,36 @@ const BASE_PROFILE: ModelProfile = {
  * Supports both the new multi-profile schema and the legacy flat schema
  * ({ baseURL, apiKey, model }), which is treated as the "default" profile.
  */
-export function loadConfig(): VibeConfig {
+export function loadConfig(options: LoadConfigOptions = {}): VibeConfig {
+  const configPath = options.configPath || CONFIG_PATH;
   let f: any = {};
   try {
-    if (fs.existsSync(CONFIG_PATH)) f = JSON.parse(fs.readFileSync(CONFIG_PATH, "utf8"));
+    if (fs.existsSync(configPath)) f = JSON.parse(fs.readFileSync(configPath, "utf8"));
   } catch (e) {
-    console.error(`[hicode] failed to read ${CONFIG_PATH}: ${(e as Error).message}`);
+    console.error(`[hicode] failed to read ${configPath}: ${(e as Error).message}`);
   }
 
+  const env = options.env || process.env;
   const profiles: Record<string, ModelProfile> = {};
   if (f.profiles && typeof f.profiles === "object") {
     for (const [k, v] of Object.entries<any>(f.profiles)) {
-      profiles[k] = {
+      const profile = {
         ...BASE_PROFILE,
-        ...clean(v),
+        ...clean(withoutCredentialFields(v)),
         name: k,
         protocol: normalizeModelTransportProtocol(v?.protocol),
+      };
+      const secretRef = normalizeProfileSecretRef(v?.secretRef);
+      profiles[k] = {
+        ...profile,
+        apiKey: resolveModelCredential({
+          profileKey: k,
+          persisted: v,
+          profile,
+          env,
+          options,
+        }),
+        ...(secretRef ? { secretRef } : {}),
       };
     }
   }
@@ -101,25 +132,38 @@ export function loadConfig(): VibeConfig {
   // fields (or the base) only when it's missing — don't inject a phantom one.
   const defaultKey = (f.defaultProfile as string) || "default";
   if (!profiles[defaultKey]) {
-    profiles[defaultKey] = {
+    const legacy = {
+      baseURL: f.baseURL,
+      apiKey: f.apiKey,
+      secretRef: f.secretRef,
+      model: f.model,
+      contextWindow: f.contextWindow,
+      temperature: f.temperature,
+      protocol: f.protocol,
+    };
+    const profile = {
       ...BASE_PROFILE,
-      ...clean({
-        baseURL: f.baseURL,
-        apiKey: f.apiKey,
-        model: f.model,
-        contextWindow: f.contextWindow,
-        temperature: f.temperature,
-        protocol: f.protocol,
-      }),
+      ...clean(withoutCredentialFields(legacy)),
       name: defaultKey,
       protocol: normalizeModelTransportProtocol(f.protocol),
+    };
+    const secretRef = normalizeProfileSecretRef(f.secretRef);
+    profiles[defaultKey] = {
+      ...profile,
+      apiKey: resolveModelCredential({
+        profileKey: defaultKey,
+        persisted: legacy,
+        profile,
+        env,
+        options,
+      }),
+      ...(secretRef ? { secretRef } : {}),
     };
   }
 
   const defaultProfile = defaultKey;
 
   // Environment variables override the default profile.
-  const env = process.env;
   const def = profiles[defaultProfile];
   Object.assign(
     def,
@@ -148,7 +192,7 @@ export function loadConfig(): VibeConfig {
     compactThreshold: typeof f.compactThreshold === "number" ? f.compactThreshold : 0.75,
     reasoningLevel: normalizeReasoningLevel(f.reasoningLevel),
     sandbox: f.sandbox === true,
-    mcpServers: (f.mcpServers as Record<string, McpServerConfig>) ?? {},
+    mcpServers: normalizeMcpServers(f.mcpServers, env, options),
   };
 }
 
@@ -172,6 +216,101 @@ function clean<T extends object>(o: T): Partial<T> {
     if (v !== undefined && v !== null && v !== "") (out as any)[k] = v;
   }
   return out;
+}
+
+function withoutCredentialFields(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const { apiKey: _apiKey, secretRef: _secretRef, ...rest } = value as Record<string, unknown>;
+  return rest;
+}
+
+function normalizeProfileSecretRef(value: unknown): string | undefined {
+  return value === undefined ? undefined : validateSecretRef(value, "model");
+}
+
+function resolveModelCredential({
+  profileKey,
+  persisted,
+  profile,
+  env,
+  options,
+}: {
+  profileKey: string;
+  persisted: Record<string, unknown>;
+  profile: Pick<ModelProfile, "baseURL" | "protocol">;
+  env: NodeJS.ProcessEnv;
+  options: LoadConfigOptions;
+}): string {
+  const profileEnv = env[profileApiKeyEnvName(profileKey)];
+  if (profileEnv) return profileEnv;
+
+  if (persisted.secretRef !== undefined) {
+    const secretRef = validateSecretRef(persisted.secretRef, "model");
+    const resolved = resolveReferencedSecret(secretRef, `profiles.${profileKey}.secretRef`, options);
+    if (resolved) return resolved;
+  }
+
+  if (typeof persisted.apiKey === "string" && !isCredentialPlaceholder(persisted.apiKey)) {
+    return persisted.apiKey;
+  }
+  return profileNeedsNoCredential(profile) ? "sk-no-key-required" : "";
+}
+
+function normalizeMcpServers(value: unknown, env: NodeJS.ProcessEnv, options: LoadConfigOptions): Record<string, McpServerConfig> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const servers: Record<string, McpServerConfig> = {};
+  for (const [serverName, raw] of Object.entries(value as Record<string, unknown>)) {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) continue;
+    const persisted = raw as Record<string, unknown>;
+    if (typeof persisted.command !== "string" || !persisted.command.trim()) continue;
+    const server: McpServerConfig = {
+      command: persisted.command,
+      ...(Array.isArray(persisted.args) ? { args: persisted.args.filter((arg): arg is string => typeof arg === "string") } : {}),
+    };
+    if (persisted.env && typeof persisted.env === "object" && !Array.isArray(persisted.env)) {
+      const resolvedEnv: Record<string, string> = {};
+      for (const [envName, rawValue] of Object.entries(persisted.env as Record<string, unknown>)) {
+        if (typeof rawValue === "string") {
+          resolvedEnv[envName] = rawValue;
+          continue;
+        }
+        if (!isSecretReferenceRecord(rawValue)) continue;
+        const secretRef = validateSecretRef(rawValue.secretRef, "mcp");
+        const resolved = resolveReferencedSecret(secretRef, `mcpServers.${serverName}.env.${envName}`, options)
+          || env[mcpSecretEnvName(serverName, envName)]
+          || env[envName];
+        if (resolved) resolvedEnv[envName] = resolved;
+      }
+      if (Object.keys(resolvedEnv).length) server.env = resolvedEnv;
+    }
+    servers[serverName] = server;
+  }
+  return servers;
+}
+
+function resolveReferencedSecret(secretRef: string, location: string, options: LoadConfigOptions): string | undefined {
+  if (!options.resolveSecret) return undefined;
+  try {
+    const value = options.resolveSecret(secretRef);
+    return typeof value === "string" && value ? value : undefined;
+  } catch (error) {
+    options.onSecretResolutionError?.({
+      secretRef,
+      location,
+      error: (error as Error).message,
+    });
+    return undefined;
+  }
+}
+
+function profileNeedsNoCredential(profile: Pick<ModelProfile, "baseURL" | "protocol">): boolean {
+  if (profile.protocol === "ollama_chat") return true;
+  try {
+    const url = new URL(profile.baseURL);
+    return url.hostname === "127.0.0.1" || url.hostname === "localhost" || url.hostname === "::1";
+  } catch {
+    return false;
+  }
 }
 
 function normalizeReasoningLevel(value: unknown): VibeConfig["reasoningLevel"] {
