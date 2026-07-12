@@ -280,7 +280,10 @@
       "dependencies": ["HC-UI-301", "HC-PLAT-110"],
       "deliverables": ["preview manager", "local server registry", "WebContents isolation", "screenshot/DOM evidence"],
       "acceptance": ["local app opens safely", "external navigation uses allowlist", "preview lifecycle is recoverable"],
-      "status": "planned"
+      "status": "in_progress",
+      "startedAt": "2026-07-12T02:53:12Z",
+      "branch": "codex/desktop-ux/hc-ui-312",
+      "taskManifest": "reports/tasks/HC-UI-312.md"
     },
     {
       "id": "HC-GIT-320",

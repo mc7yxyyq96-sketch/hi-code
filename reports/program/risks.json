@@ -121,6 +121,19 @@
       "trigger": "Any PTY spawn without policy approval, inherited secret, unbounded transcript, cross-workspace session, or surviving process tree blocks HC-UI-311 completion."
     },
     {
+      "id": "RISK-UI-006",
+      "severity": "high",
+      "status": "active",
+      "owner": "desktop-ux",
+      "title": "Previewed applications can escape their origin or inherit trusted renderer capabilities",
+      "evidence": [
+        "reports/tasks/HC-UI-312.md"
+      ],
+      "impact": "Untrusted local web content could navigate to a remote origin, open new windows, request privileged permissions, outlive its owner, or be mistaken for verified output.",
+      "mitigation": "HC-UI-312 will isolate preview WebContents from the trusted renderer, accept only canonical loopback HTTP origins, deny popups/downloads/permissions/external navigation, bind lifecycle to owner and workspace, and produce explicit bounded screenshot/DOM evidence.",
+      "trigger": "Any preview with a preload bridge, Node integration, non-loopback origin, unbounded evidence, external navigation, stale owner, or false verification result blocks HC-UI-312 completion."
+    },
+    {
       "id": "RISK-PLAT-001",
       "severity": "high",
       "status": "mitigated",

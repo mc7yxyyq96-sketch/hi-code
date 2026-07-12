@@ -41,6 +41,7 @@ The final machine-captured evidence is written by `npm run program:baseline` to 
 | 13 | HC-UI-302 | Completed | Desktop UX | HC-UI-301, HC-RUN-202 |
 | 14 | HC-UI-310 | Completed | Desktop UX | HC-UI-302 |
 | 15 | HC-UI-311 | Completed | Desktop UX | HC-UI-301, HC-PLAT-110 |
+| 16 | HC-UI-312 | In Progress | Desktop UX | HC-UI-301, HC-PLAT-110 |
 
 HC-QA-101 established a real Electron responsive baseline. HC-RUN-201 introduces protocol-native assistant output and concurrency isolation. No new industrial domain module is authorized before HC-RUN-201 completes.
 
@@ -77,6 +78,8 @@ HC-UI-302 completed in the isolated `codex/desktop-ux/hc-ui-302` worktree from H
 HC-UI-310 completed in the isolated `codex/desktop-ux/hc-ui-310` worktree from HC-UI-302 completion commit `8b13b88`. A lazy local CodeMirror editor now opens, edits, saves, and reloads bounded UTF-8 workspace files. SHA-256 revision comparison, atomic sibling replacement, sticky conflict state, and explicit confirmed force overwrite prevent silent stale writes. Typed line comments enter the existing conversation and Runtime revision path. Fifteen machine-captured gates passed from clean source commit `cfd75e1`, including build, verify, release check, security, DoD, production audit, and real Electron acceptance at 720 px with an external disk mutation. The completed ten-hour HC-RUN-220 evidence was reused rather than rerun.
 
 HC-UI-311 completed in the isolated `codex/desktop-ux/hc-ui-311` worktree from HC-UI-310 completion commit `115ea61`. A real xterm/node-pty terminal now runs through typed IPC, explicit Runtime-policy authorization, owner/workspace confinement, trusted profile-free shells, minimal child environment, bounded non-persisted output, and deterministic process-tree cleanup. Stale starts are cancelled if the owner closes or workspace changes. Eighteen machine-captured gates passed from clean source commit `d970367`, including 12/12 terminal service checks, 188/188 security checks, real Electron keyboard/compact-layout acceptance, macOS native package inspection, production audit, release check, and a zero-finding DoD scan. GitHub Actions run `29167924876` then passed the general test job and real Electron smoke on Ubuntu, macOS, and Windows for Draft PR #15. The completed ten-hour HC-RUN-220 evidence was not rerun. App preview and Git/PR workflow features remain separate tasks.
+
+HC-UI-312 is active in the isolated `codex/desktop-ux/hc-ui-312` worktree from HC-UI-311 completion commit `549fc62`. The task is limited to loopback-only app preview, isolated WebContents, owner/workspace lifecycle, and truthful screenshot/DOM verification evidence. Git/PR/CI orchestration and industrial modules remain outside this task.
 
 ## Current Product Truth
 
