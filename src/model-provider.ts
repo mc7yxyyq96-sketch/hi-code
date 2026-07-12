@@ -499,7 +499,7 @@ export function createLegacyOpenAICompatibleAdapter(
       interruption: { support: "supported" },
     },
     limits: { contextTokens: positiveInteger(profile.contextWindow) ? profile.contextWindow : undefined },
-    metadata: { migrationSource: "ModelProfile", credentialStorage: "legacy-config" },
+    metadata: { migrationSource: "ModelProfile", credentialStorage: "secret-reference-or-environment" },
   };
 
   return {

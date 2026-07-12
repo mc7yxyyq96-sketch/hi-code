@@ -94,6 +94,7 @@ export function createHiCodeApi(rawApi = window.hicode, { onError = null } = {})
     readSession: (id) => call("readSession", [id], []),
     deleteSession: (id) => call("deleteSession", [id], false),
     getConfig: () => call("getConfig", [], ""),
+    getCredentialStatus: () => call("getCredentialStatus", [], { ok: false, references: [], error: "凭据状态不可用" }, { silent: true }),
     saveConfig: (text) => call("saveConfig", [text]),
     testModel: (profile) => call("testModel", [profile]),
     getAppInfo: () => call("getAppInfo", [], { ok: false, error: "应用信息不可用" }),

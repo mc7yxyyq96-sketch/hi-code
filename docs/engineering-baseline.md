@@ -48,6 +48,8 @@ npm run test:terminal
 npm run test:preview
 npm run test:runtime-control
 npm run test:git-collaboration
+npm run test:secrets
+npm run test:secret-store
 npm run check:syntax
 npm run verify
 ```
@@ -78,6 +80,14 @@ The current script also runs entrypoint/security tests and production dependency
 - Preload APIs must validate argument types before calling main-process IPC.
 - Main-process IPC handlers must use normalized error returns instead of leaking thrown exceptions.
 - Model profiles must select non-default wire protocols explicitly. Omitted `protocol` remains `chat_completions`; only `protocol: "responses"` may route to `/responses`.
+- Desktop model, sensitive MCP, and Agent Provider credentials must persist as
+  validated `secretRef` values. Electron `safeStorage` owns encrypted values;
+  unavailable encryption and Linux `basic_text` must fail closed.
+- Renderer/preload APIs may expose sanitized config and reference status only.
+  They must not expose a credential getter or repopulate saved keys.
+- CLI credentials use `HICODE_API_KEY`, profile-specific
+  `HICODE_PROFILE_<PROFILE>_API_KEY`, or MCP-specific fallback variables. CLI
+  config writes must refuse to rewrite detected plaintext credentials.
 - Remote Responses endpoints must use HTTPS. Loopback HTTP is permitted only for local services and tests; credentials must not enter provider events or logs.
 - File previews and diff operations must stay confined to the selected workspace.
 - Desktop attachments must use the app-data `attachments-v2` store. Renderer and queue payloads carry bounded opaque IDs, source paths are not persisted, and each blob read must pass size and SHA-256 verification.
@@ -94,6 +104,11 @@ The current script also runs entrypoint/security tests and production dependency
 - Remote catalog entries must not read local `sourcePath` or `sourceRoot`.
 - Remote downloads must use HTTPS.
 - Download entries should provide `sha256`; `signature` and `signatureAlgorithm` fields are reserved for stronger verification.
+
+Migration must run after Electron readiness and before Runtime/service startup.
+Config and encrypted vault writes are one atomic operation. A reversible,
+encrypted migration snapshot must preserve exact prior config bytes and vault
+entries; journal and logs must contain no secret values.
 
 ## Store Install Baseline
 

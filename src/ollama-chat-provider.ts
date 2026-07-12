@@ -82,7 +82,7 @@ export function createOllamaChatAdapter(
       metadata: {
         transport: "application/x-ndjson",
         reasoningPersistence: "disabled",
-        credentialStorage: "model-profile",
+        credentialStorage: "secret-reference-or-environment",
       },
     },
     async run(request, sink, signal) {

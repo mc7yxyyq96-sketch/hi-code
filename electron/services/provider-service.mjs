@@ -6,6 +6,13 @@ import {
   AgentProviderRegistry,
   createPlaceholderProvider,
 } from "../../dist/agent-provider.js";
+import {
+  isCredentialPlaceholder,
+  isSecretReferenceRecord,
+  isSensitiveEnvName,
+  providerSecretRef,
+  validateSecretRef,
+} from "../../dist/secret-references.js";
 import { ipcObject, ipcString } from "../ipc/ipc-utils.mjs";
 
 export function createProviderService({
@@ -16,6 +23,7 @@ export function createProviderService({
   getCwd,
   configPath,
   runArtifactDir,
+  secretStore,
   interruptRuntime = null,
   logger = null,
 }) {
@@ -24,6 +32,7 @@ export function createProviderService({
   if (typeof getCwd !== "function") throw new Error("provider-service requires getCwd");
   if (!configPath) throw new Error("provider-service requires configPath");
   if (!runArtifactDir) throw new Error("provider-service requires runArtifactDir");
+  if (!secretStore?.persistSecretWrites) throw new Error("provider-service requires secretStore");
 
   const registry = new AgentProviderRegistry();
   registry.registerProvider(createInternalProvider({
@@ -71,7 +80,7 @@ export function createProviderService({
     metadata: { adapter: "local-model", availability: "not_configured" },
   }));
 
-  registry.applyState(readProviderState(configPath));
+  registry.applyState(migrateProviderState(configPath, registry, secretStore));
 
   return {
     listProviders() {
@@ -87,19 +96,26 @@ export function createProviderService({
       const id = ipcString(providerId);
       if (!id) return { ok: false, error: "providerId is required" };
       const input = ipcObject(payload);
+      let secretTransaction = null;
+      const previousState = registry.exportState();
       try {
         if (Object.prototype.hasOwnProperty.call(input, "config")) {
-          registry.configureProvider(id, ipcObject(input.config));
+          const prepared = prepareProviderConfig(id, ipcObject(input.config), registry.getProviderImpl(id));
+          secretTransaction = secretStore.persistSecretWrites(prepared.writes);
+          registry.configureProvider(id, prepared.config);
         }
         if (input.enabled === true) registry.enableProvider(id);
         if (input.enabled === false) registry.disableProvider(id);
         persistProviderState(configPath, registry.exportState());
+        secretTransaction?.commit();
         return {
           ok: true,
           provider: registry.getProvider(id),
           validation: registry.validateProviderConfig(id),
         };
       } catch (error) {
+        secretTransaction?.rollback();
+        registry.applyState(previousState);
         return { ok: false, error: providerErrorMessage(error) };
       }
     },
@@ -506,6 +522,71 @@ function readProviderState(file) {
   } catch {
     return { schemaVersion: 1, providers: {} };
   }
+}
+
+function migrateProviderState(file, registry, secretStore) {
+  const state = readProviderState(file);
+  const next = JSON.parse(JSON.stringify(state));
+  const writes = [];
+  let changed = false;
+  for (const [providerId, providerState] of Object.entries(next.providers || {})) {
+    if (!providerState?.config || typeof providerState.config !== "object" || Array.isArray(providerState.config)) continue;
+    const prepared = prepareProviderConfig(providerId, providerState.config, registry.getProviderImpl(providerId));
+    providerState.config = prepared.config;
+    writes.push(...prepared.writes);
+    changed = changed || prepared.changed;
+  }
+  if (!changed) return next;
+  const transaction = secretStore.persistSecretWrites(writes);
+  try {
+    persistProviderState(file, next);
+    transaction.commit();
+    return next;
+  } catch (error) {
+    transaction.rollback();
+    throw error;
+  }
+}
+
+function prepareProviderConfig(providerId, input, descriptor) {
+  const config = JSON.parse(JSON.stringify(input || {}));
+  const previousConfig = descriptor?.config && typeof descriptor.config === "object" && !Array.isArray(descriptor.config)
+    ? descriptor.config
+    : {};
+  const sensitiveFields = new Set(
+    (descriptor?.configSchema || [])
+      .filter((field) => field?.sensitive === true || field?.type === "secret")
+      .map((field) => field.key),
+  );
+  const writes = [];
+  let changed = false;
+  for (const key of sensitiveFields) {
+    if (Object.prototype.hasOwnProperty.call(config, key)) continue;
+    const previous = previousConfig[key];
+    if (!isSecretReferenceRecord(previous)) continue;
+    config[key] = { secretRef: validateSecretRef(previous.secretRef, "provider") };
+    changed = true;
+  }
+  for (const [key, value] of Object.entries(config)) {
+    if (!sensitiveFields.has(key) && !isSensitiveEnvName(key)) continue;
+    if (isSecretReferenceRecord(value)) {
+      value.secretRef = validateSecretRef(value.secretRef, "provider");
+      continue;
+    }
+    if (typeof value !== "string") throw new Error(`provider credential ${key} must be a string or secretRef`);
+    if (isCredentialPlaceholder(value)) {
+      const previous = previousConfig[key];
+      if (isSecretReferenceRecord(previous)) config[key] = { secretRef: validateSecretRef(previous.secretRef, "provider") };
+      else delete config[key];
+      changed = true;
+      continue;
+    }
+    const ref = providerSecretRef(providerId, key);
+    config[key] = { secretRef: ref };
+    writes.push({ ref, value: value.trim(), location: `providers.${providerId}.config.${key}`, scope: "provider" });
+    changed = true;
+  }
+  return { config, writes, changed };
 }
 
 function persistProviderState(file, state) {

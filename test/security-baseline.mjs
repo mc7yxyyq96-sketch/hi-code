@@ -67,6 +67,9 @@ const context = fs.readFileSync(path.join(root, "src", "context.ts"), "utf8");
 const council = fs.readFileSync(path.join(root, "src", "agents", "council.ts"), "utf8");
 const manager = fs.readFileSync(path.join(root, "src", "agents", "manager.ts"), "utf8");
 const workspaceService = fs.readFileSync(path.join(root, "electron", "services", "workspace-service.mjs"), "utf8");
+const secretStoreService = fs.readFileSync(path.join(root, "electron", "services", "secret-store-service.mjs"), "utf8");
+const secretReferences = fs.readFileSync(path.join(root, "src", "secret-references.ts"), "utf8");
+const configSource = fs.readFileSync(path.join(root, "src", "config.ts"), "utf8");
 const editorService = fs.readFileSync(path.join(root, "electron", "services", "editor-service.mjs"), "utf8");
 const terminalService = fs.readFileSync(path.join(root, "electron", "services", "terminal-service.mjs"), "utf8");
 const previewService = fs.readFileSync(path.join(root, "electron", "services", "preview-service.mjs"), "utf8");
@@ -98,7 +101,7 @@ check("Responses credentials stay out of descriptors and persisted events", !ope
 check("Responses tool streams reject unannounced items", openAIResponsesProvider.includes("provider_tool_sequence_invalid") && openAIResponsesProvider.includes("function-call item was not announced"));
 check("native provider endpoints require HTTPS or loopback HTTP", providerHttpTransport.includes('url.protocol !== "https:"') && providerHttpTransport.includes('url.protocol === "http:" && loopback') && providerHttpTransport.includes("provider_endpoint_insecure"));
 check("native provider response readers are bounded", providerHttpTransport.includes("MAX_JSON_BYTES") && providerHttpTransport.includes("MAX_STREAM_BYTES") && providerHttpTransport.includes("MAX_STREAM_BUFFER_BYTES") && providerHttpTransport.includes("provider_stream_too_large"));
-check("Anthropic credentials stay in request headers only", anthropicMessagesProvider.includes('"x-api-key"') && !anthropicMessagesProvider.includes("metadata: { apiKey") && anthropicMessagesProvider.includes('credentialStorage: "model-profile"'));
+check("Anthropic credentials stay in request headers only", anthropicMessagesProvider.includes('"x-api-key"') && !anthropicMessagesProvider.includes("metadata: { apiKey") && anthropicMessagesProvider.includes('credentialStorage: "secret-reference-or-environment"'));
 check("Anthropic tool streams require announced content blocks", anthropicMessagesProvider.includes("provider_tool_sequence_invalid") && anthropicMessagesProvider.includes("delta has no announced content block"));
 check("Ollama raw thinking is disabled and never emitted", ollamaChatProvider.includes("think: false") && ollamaChatProvider.includes("message.thinking is intentionally discarded") && !ollamaChatProvider.includes("sink.emit({ type: \"reasoning"));
 check("Ollama placeholder key is not sent as authorization", ollamaChatProvider.includes("NO_KEY_PLACEHOLDER") && ollamaChatProvider.includes("key !== NO_KEY_PLACEHOLDER"));
@@ -107,6 +110,7 @@ check("preload does not expose ipcRenderer", !/ipcRenderer[,}]/.test(preload) &&
 check("preload does not expose generic invoke", !/invoke:\s*\(/.test(preload));
 check("preload validates string parameters", preload.includes("requireString(") && preload.includes("checkedInvoke("));
 check("preload normalizes object parameters", preload.includes("optionalObject(") && preload.includes("stringArray("));
+check("preload exposes read-only credential status without a secret getter", preload.includes('getCredentialStatus: () => safeInvoke("config:credential-status")') && !preload.includes("getSecret:"));
 check("preload exposes bounded typed attachment API", preload.includes("function runtimeInput") && preload.includes("attachmentIds.length > 8") && preload.includes('attachFile: (payload) => safeInvoke("attach-file", optionalObject(payload))') && preload.includes('removeAttachment: (id) => checkedInvoke("attachment:remove"'));
 check("preload exposes Industrial Project API", [
   "getIndustrialProjectSchema",
@@ -205,8 +209,14 @@ check("attachment store enforces owner permissions and integrity", attachmentSto
 check("attachment capability checks happen before transport", agent.includes("materializeAttachmentMessages") && attachmentMaterializer.indexOf("negotiateModelProviderCapabilities") < attachmentMaterializer.indexOf("store.read(record.id)"));
 check("command registry fails closed on alias and route conflicts", commandRegistry.includes("command_alias_conflict") && commandRegistry.includes("command_route_conflict") && runtime.includes("commandRegistry.resolve"));
 check("workspace image compatibility path still restricts data URL formats and size", workspaceService.includes("MAX_ATTACHMENT_BYTES") && workspaceService.includes("image\\/(?:png|jpe?g|gif|webp)") && workspaceService.includes("parseImageDataUrl"));
+check("workspace config writes are delegated to the secure store", workspaceService.includes("secretStore.persistConfig(parsed)") && workspaceService.includes("secretStore.readConfigForRenderer()") && !workspaceService.includes("fs.writeFileSync(configPath"));
+check("secret references are versioned validated and separate from values", secretReferences.includes('SECRET_REFERENCE_PREFIX = "hicode-secret:v1"') && secretReferences.includes("validateSecretRef") && secretReferences.includes("findPlaintextConfigSecrets") && secretReferences.includes("prepareConfigForSecretPersistence"));
+check("desktop secrets use Electron safeStorage and reject Linux basic_text", main.includes("safeStorage") && main.includes("desktopSecretStore.migrateLegacyConfig()") && secretStoreService.includes("safeStorage.encryptString") && secretStoreService.includes("safeStorage.decryptString") && secretStoreService.includes('backend === "basic_text"'));
+check("credential migration is atomic and reversibly encrypted", secretStoreService.includes("rollbackMigration") && secretStoreService.includes("migration-journal.json") && secretStoreService.includes("restoreOptionalFile") && secretStoreService.includes("atomicWritePrivate") && secretStoreService.includes("ciphertext: encrypt(JSON.stringify(snapshot))"));
+check("desktop config loading rejects legacy plaintext after migration attempt", main.includes("allowLegacyPlaintext: false") && configSource.includes("options.allowLegacyPlaintext !== false"));
+check("CLI credential fallback is environment-only and profile specific", configSource.includes("profileApiKeyEnvName(profileKey)") && secretReferences.includes("HICODE_PROFILE_") && !secretStoreService.includes("masterPassword"));
 check("model image rejection returns actionable guidance", llm.includes("当前模型或服务商接口拒绝了图片输入") && llm.includes("hasImageContent(messages)"));
-check("model provider descriptors exclude credentials", modelProvider.includes('credentialStorage: "legacy-config"') && !/metadata:\s*\{[^}]*apiKey/s.test(modelProvider));
+check("model provider descriptors exclude credentials", modelProvider.includes('credentialStorage: "secret-reference-or-environment"') && !/metadata:\s*\{[^}]*apiKey/s.test(modelProvider));
 check("model provider errors redact authorization and secret fields", modelProvider.includes("redactSensitiveText") && modelProvider.includes("sanitizeDetails") && modelProvider.includes("authorization\\s*:\\s*bearer"));
 check("model capability negotiation happens before adapter execution", modelProvider.indexOf("negotiateModelProviderCapabilities(adapter.descriptor, requirements)") < modelProvider.indexOf("await adapter.run({"));
 check("production orchestration uses the model provider facade", agent.includes("streamModelProfile") && context.includes("completeModelProfile") && council.includes("completeModelProfile") && manager.includes("completeModelProfile") && !agent.includes("streamChat("));
@@ -226,6 +236,7 @@ check("MCP server process uses safe child env", mcp.includes("buildSafeChildEnv"
 check("FreeCAD execution uses safe child env", freeCadAdapter.includes("buildSafeChildEnv") && !freeCadAdapter.includes("...process.env, HICODE_FREECAD_OUTPUT_DIR"));
 check("Electron E2E isolates HOME and USERPROFILE", electronE2e.includes("safeElectronEnv(isolatedHome)") && electronE2e.includes("env.HOME = isolatedHome") && electronE2e.includes("env.USERPROFILE = isolatedHome") && !electronE2e.includes('"PATH", "HOME"'));
 check("Electron E2E rejects inherited secret variables", electronE2e.includes("sensitiveKeys") && electronE2e.includes("TOKEN|SECRET|PASSWORD|API_KEY|PRIVATE_KEY") && electronE2e.includes("assert.deepEqual(environment.sensitiveKeys, [])"));
+check("Electron E2E verifies secure credential persistence or fail-closed behavior", electronE2e.includes("verifySecureCredentialStorage") && electronE2e.includes("contains plaintext credential") && electronE2e.includes("secure storage is unavailable"));
 check("Electron E2E enters chat through a local command", electronE2e.includes('await input.fill("/help")') && !electronE2e.includes('await input.fill("Electron responsive smoke")'));
 check("Store rejects remote local paths", main.includes("validateLocalInstallPath") && main.includes("远程 catalog 不得引用本机路径"));
 check("Store rejects remote sourceRoot paths", main.includes("plugin manifest.sourceRoot") && main.includes("validateLocalInstallPath(item.install?.manifest?.sourceRoot"));
@@ -317,6 +328,7 @@ check("verify script includes feature tests", verifyScript.includes('"test:featu
 check("verify script includes runtime protocol tests", verifyScript.includes('"test:runtime-protocol"') && verifyScript.includes("test/runtime-protocol-tests.mjs"));
 check("verify script includes authoritative runtime control tests", verifyScript.includes('"test:runtime-control"') && verifyScript.includes("test/runtime-control-tests.mjs"));
 check("verify script includes protected Git collaboration tests", verifyScript.includes('"test:git-collaboration"') && verifyScript.includes("test/git-collaboration-tests.mjs"));
+check("verify script includes secret reference and safeStorage tests", verifyScript.includes('"test:secrets"') && verifyScript.includes('"test:secret-store"'));
 check("verify script includes typed runtime store tests", verifyScript.includes('"test:runtime-stores"') && verifyScript.includes("test/runtime-store-tests.mjs"));
 check("verify script includes runtime store integration tests", verifyScript.includes('"test:runtime-store-integration"') && verifyScript.includes("test/runtime-store-integration-tests.mjs"));
 check("verify script includes turn recovery tests", verifyScript.includes('"test:turn-recovery"') && verifyScript.includes("test/turn-recovery-tests.mjs"));

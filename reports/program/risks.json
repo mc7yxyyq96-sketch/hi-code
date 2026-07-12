@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "program": "Hi Code Product-Grade Desktop and Industrial Workbench",
-  "updatedAt": "2026-07-12T10:47:48Z",
+  "updatedAt": "2026-07-12T14:37:48Z",
   "risks": [
     {
       "id": "RISK-RUN-001",
@@ -164,6 +164,25 @@
       "impact": "A renderer-owned follow-up queue can lose prompts, while unsafe branch changes, implicit PR mutations, leaked credentials, or flattened CI results can overwrite user work or claim delivery that did not occur.",
       "mitigation": "HC-GIT-320 makes the main Runtime queue authoritative, models Steer as a persisted cancellation and priority follow-up, protects dirty worktrees, requires fresh PR confirmation, uses minimal child environments, and preserves failed or pending CI states. Fifteen local evidence gates and GitHub Actions run 29189513590 passed, including real Electron smoke on Ubuntu, macOS, and Windows.",
       "trigger": "Any hidden renderer queue, branch switch over dirty work, unconfirmed PR mutation, credential exposure, or failed CI displayed as successful blocks HC-GIT-320 completion."
+    },
+    {
+      "id": "RISK-SEC-001",
+      "severity": "critical",
+      "status": "mitigated",
+      "owner": "security-release",
+      "title": "Model and MCP credentials can be persisted as plaintext config fields",
+      "evidence": [
+        "reports/tasks/HC-SEC-401.md",
+        "reports/evidence/HC-SEC-401/manifest.json",
+        "reports/evidence/HC-SEC-401/ci-matrix.json",
+        "electron/services/secret-store-service.mjs",
+        "src/config.ts",
+        "electron/services/workspace-service.mjs",
+        "renderer/app/bootstrap.js"
+      ],
+      "impact": "A local config disclosure, support bundle, backup, or accidental repository copy can expose reusable model or MCP credentials.",
+      "mitigation": "HC-SEC-401 now persists validated references, encrypts desktop values through Electron safeStorage, rejects unavailable or Linux basic_text storage, keeps CLI fallback environment-only, migrates atomically with encrypted exact rollback, and exposes status rather than values. Sixteen local gates plus Linux, macOS, and Windows Electron CI passed.",
+      "trigger": "Any successful config save or migration that leaves a plaintext model API key or sensitive MCP environment value blocks HC-SEC-401 and the rc.1 release line."
     },
     {
       "id": "RISK-PLAT-001",

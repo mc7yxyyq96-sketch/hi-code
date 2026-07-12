@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "workflow": "CI",
+  "event": "pull_request",
+  "pullRequest": 18,
+  "runId": 29196545587,
+  "status": "completed",
+  "conclusion": "success",
+  "headSha": "1e78ead559ae84d83af748c5c3409bdfeaa1cee4",
+  "createdAt": "2026-07-12T14:35:42Z",
+  "updatedAt": "2026-07-12T14:37:48Z",
+  "url": "https://github.com/mc7yxyyq96-sketch/hi-code/actions/runs/29196545587",
+  "jobs": [
+    {
+      "name": "test",
+      "platform": "ubuntu-latest",
+      "status": "completed",
+      "conclusion": "success",
+      "jobId": 86660439334,
+      "url": "https://github.com/mc7yxyyq96-sketch/hi-code/actions/runs/29196545587/job/86660439334",
+      "build": "success",
+      "testSuites": "success",
+      "dodScan": "success"
+    },
+    {
+      "name": "Electron smoke (ubuntu-latest)",
+      "platform": "ubuntu-latest",
+      "status": "completed",
+      "conclusion": "success",
+      "jobId": 86660439354,
+      "url": "https://github.com/mc7yxyyq96-sketch/hi-code/actions/runs/29196545587/job/86660439354",
+      "build": "success",
+      "electronSmoke": "success",
+      "artifactUpload": "success"
+    },
+    {
+      "name": "Electron smoke (macos-latest)",
+      "platform": "macos-latest",
+      "status": "completed",
+      "conclusion": "success",
+      "jobId": 86660439372,
+      "url": "https://github.com/mc7yxyyq96-sketch/hi-code/actions/runs/29196545587/job/86660439372",
+      "build": "success",
+      "electronSmoke": "success",
+      "artifactUpload": "success"
+    },
+    {
+      "name": "Electron smoke (windows-latest)",
+      "platform": "windows-latest",
+      "status": "completed",
+      "conclusion": "success",
+      "jobId": 86660439348,
+      "url": "https://github.com/mc7yxyyq96-sketch/hi-code/actions/runs/29196545587/job/86660439348",
+      "build": "success",
+      "electronSmoke": "success",
+      "artifactUpload": "success"
+    }
+  ],
+  "annotations": [
+    {
+      "severity": "warning",
+      "area": "github-actions-toolchain",
+      "message": "GitHub currently forces actions/checkout@v4, actions/setup-node@v4, and actions/upload-artifact@v4 from their deprecated Node 20 runtime to Node 24. This did not fail project tests and should be removed by upgrading action majors in a dedicated CI maintenance task."
+    }
+  ]
+}

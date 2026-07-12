@@ -23,9 +23,13 @@ export function createWorkspaceService({
   buildSystemPrompt,
   send,
   attachmentStore,
+  secretStore,
   fetchImpl = fetch,
 }) {
   if (!attachmentStore?.putBuffer || !attachmentStore?.get) throw new Error("workspace-service requires attachmentStore");
+  if (!secretStore?.persistConfig || !secretStore?.readConfigForRenderer || !secretStore?.resolve) {
+    throw new Error("workspace-service requires secretStore");
+  }
 
   const attachFile = async (payload = {}) => {
     try {
@@ -193,9 +197,17 @@ export function createWorkspaceService({
 
     getConfig() {
       try {
-        return fs.existsSync(configPath) ? fs.readFileSync(configPath, "utf8") : "";
+        return secretStore.readConfigForRenderer();
       } catch {
         return "";
+      }
+    },
+
+    getCredentialStatus() {
+      try {
+        return secretStore.configCredentialStatus();
+      } catch (error) {
+        return { ok: false, error: error?.message ?? "凭据状态不可用", references: [] };
       }
     },
 
@@ -204,9 +216,7 @@ export function createWorkspaceService({
         const configText = ipcString(text);
         const parsed = JSON.parse(configText);
         validateModelProtocolConfig(parsed);
-        fs.mkdirSync(path.dirname(configPath), { recursive: true, mode: 0o700 });
-        fs.writeFileSync(configPath, configText, { mode: 0o600 });
-        try { fs.chmodSync(configPath, 0o600); } catch {}
+        const persisted = secretStore.persistConfig(parsed);
         const cfg = loadConfig();
         const profile = defaultProfile(cfg);
         const runtime = getRuntime();
@@ -223,7 +233,11 @@ export function createWorkspaceService({
         } else {
           buildRuntime();
         }
-        return { ok: true };
+        return {
+          ok: true,
+          configText: persisted.text,
+          credentials: secretStore.configCredentialStatus(),
+        };
       } catch (error) {
         return { ok: false, error: error?.message ?? "invalid JSON" };
       }
@@ -232,7 +246,15 @@ export function createWorkspaceService({
     async testModel(profile) {
       const data = ipcObject(profile);
       const baseURL = ipcString(data.baseURL).replace(/\/+$/, "");
-      const apiKey = ipcString(data.apiKey);
+      let apiKey = ipcString(data.apiKey);
+      const secretRef = ipcString(data.secretRef).trim();
+      if (!apiKey && secretRef) {
+        try {
+          apiKey = secretStore.resolve(secretRef) || "";
+        } catch (error) {
+          return { ok: false, error: error?.message ?? "无法读取已保存的 API Key" };
+        }
+      }
       const model = ipcString(data.model);
       let protocol;
       try {
@@ -310,6 +332,7 @@ export function registerWorkspaceIpc({ register, workspace }) {
   register.handle("delete-session", (_event, id) => workspace.deleteSession(id));
   register.handle("read-session", (_event, id) => workspace.readSession(id));
   register.handle("get-config", () => workspace.getConfig());
+  register.handle("config:credential-status", () => workspace.getCredentialStatus());
   register.handle("save-config", (_event, text) => workspace.saveConfig(text));
   register.handle("test-model", (_event, profile) => workspace.testModel(profile));
 }

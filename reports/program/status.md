@@ -43,6 +43,7 @@ The final machine-captured evidence is written by `npm run program:baseline` to 
 | 15 | HC-UI-311 | Completed | Desktop UX | HC-UI-301, HC-PLAT-110 |
 | 16 | HC-UI-312 | Completed | Desktop UX | HC-UI-301, HC-PLAT-110 |
 | 17 | HC-GIT-320 | Completed | Runtime Engine | HC-RUN-203, HC-UI-310 |
+| 18 | HC-SEC-401 | Completed | Security And Release | HC-PLAT-110 |
 
 HC-QA-101 established a real Electron responsive baseline. HC-RUN-201 introduces protocol-native assistant output and concurrency isolation. No new industrial domain module is authorized before HC-RUN-201 completes.
 
@@ -84,6 +85,8 @@ HC-UI-312 completed in the isolated `codex/desktop-ux/hc-ui-312` worktree from H
 
 HC-GIT-320 completed in the isolated `codex/runtime-engine/hc-git-320` worktree from HC-UI-312 completion commit `e802c15`. Plan mode now enforces a read-only tool boundary, the main process owns queued prompt order, and Steer persists cancellation before prioritizing a follow-up. Local Git delivery adds dirty-worktree-protected branches, existing stage/commit behavior, native-confirmed Draft PR creation, minimal Git/gh environments, and truthful failed/pending CI projection. Fifteen local evidence gates passed from clean implementation commit `9fad4bf`, including real Electron Plan/queue/Steer and Git stage/commit/branch acceptance at 720 and 1024 px. GitHub Actions run `29189513590` then passed the general test job and real Electron smoke on Ubuntu, macOS, and Windows for Draft PR #17. No merge, release publication, credential storage, force push, or automatic merge was performed.
 
+HC-SEC-401 completed in the isolated `codex/security-release/hc-sec-401` worktree from HC-GIT-320 completion commit `6059a6d`. Model, sensitive MCP, and Agent Provider credentials now persist as validated references; Electron `safeStorage` encrypts values and rejects unavailable or Linux `basic_text` storage. Startup migration is atomic and exactly reversible through an encrypted snapshot, CLI fallback is environment-only, and Renderer/preload receive status rather than values. Sixteen local evidence commands passed from clean source commit `c107121`, including a zero-finding DoD scan and real Electron E2E. GitHub Actions run `29196545587` passed general tests and real Electron smoke on Ubuntu, macOS, and Windows for Draft PR #18.
+
 ## Current Product Truth
 
 - Core Electron, CLI/TUI, runtime, tool, security, Job Center, Provider, Worktree, Arena, industrial, gate, sample, and release tests pass.
@@ -91,6 +94,9 @@ HC-GIT-320 completed in the isolated `codex/runtime-engine/hc-git-320` worktree 
 - External Codex/Claude providers are not configured production providers.
 - SolidWorks and AVEVA are bridge/external-required integrations, not automatic deep integrations.
 - Real Electron multi-width and protocol-native output E2E now runs locally and in the Linux/Xvfb CI job.
+- Desktop config and Agent Provider state contain secret references rather than
+  plaintext credentials; OS secure storage or explicit CLI environment fallback
+  is required.
 
 ## Evidence And Historical Material
 
@@ -110,6 +116,7 @@ HC-GIT-320 completed in the isolated `codex/runtime-engine/hc-git-320` worktree 
 - Integrated terminal evidence: `reports/tasks/HC-UI-311.md`, `reports/evidence/HC-UI-311/manifest.json`, `reports/evidence/HC-UI-311/ci-matrix.json`
 - Secure App Preview evidence: `reports/tasks/HC-UI-312.md`, `reports/evidence/HC-UI-312/manifest.json`, `reports/evidence/HC-UI-312/ci-matrix.json`
 - Coding and Git delivery evidence: `reports/tasks/HC-GIT-320.md`, `reports/evidence/HC-GIT-320/manifest.json`, `reports/evidence/HC-GIT-320/ci-matrix.json`
+- Credential storage evidence: `reports/tasks/HC-SEC-401.md`, `reports/evidence/HC-SEC-401/manifest.json`, `reports/evidence/HC-SEC-401/ci-matrix.json`
 - Current risks: `reports/program/risks.json`
 - Historical final acceptance: `reports/final-acceptance-historical.md`
 - Historical audit policy: `reports/audit/README.md`

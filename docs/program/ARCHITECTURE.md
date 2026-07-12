@@ -2,7 +2,7 @@
 
 Status: Current-state map plus accepted migration target
 
-Baseline: verified `0.6.0-alpha.7` candidate at `b044fdcecf1a153393cce29d7267eb2205c99dec`
+Baseline: verified `0.6.0-alpha.8` development line
 
 ## Architectural Objective
 
@@ -67,6 +67,12 @@ HC-RUN-201 moved assistant text to first-class protocol events. HC-RUN-202 adds 
 
 `electron/preload.cjs` exposes a bounded API. The renderer never receives raw `ipcRenderer` or Node access.
 
+`electron/services/secret-store-service.mjs` owns desktop credential
+persistence. Config and Agent Provider state contain only scoped references;
+encrypted values remain in an owner-private `safeStorage` vault. Migration runs
+after Electron is ready and before services or Runtime start. The renderer sees
+sanitized config and configured/not-configured status only.
+
 ### Renderer
 
 `renderer/app-shell/` owns the typed React shell route and compact-navigation state. Vite creates a local production bundle during build; generated code is not committed. `renderer/app-shell/legacy-panel-adapter.ts` validates the current panel DOM and is the production shell-level visibility writer. It sends new navigation intent through existing real triggers, so no business panel is duplicated. CodeMirror and xterm are separate lazy chunks; their Renderer modules own presentation only, while workspace files and PTY processes remain main-process services.
@@ -87,7 +93,8 @@ Local delivery uses `src/git.ts`, `src/git-collaboration.ts`, and `electron/serv
 
 | Data | Current location | Authority today | Migration direction |
 | --- | --- | --- | --- |
-| User config and credentials | Hi Code app data / config files with restricted permissions | Config service | Move secret material to platform secure storage |
+| User config | Hi Code app-data `config.json` and `providers/providers.json` | Config/workspace and Provider services | Persist non-secret settings plus versioned `secretRef` values |
+| Desktop credentials | Hi Code app-data `secrets/vault.json` encrypted with Electron `safeStorage` | Secret Store service in Electron main | Retain encrypted snapshots and value-free migration journal for controlled rollback |
 | Full chat sessions | Local session JSON plus typed message snapshots | Compatibility write plus complete resume source | Remove legacy authority only after a later verified migration |
 | Runtime events | Legacy `~/.hicode/runtime-events/<session>.jsonl` plus typed event records | Append-only execution authority with non-destructive import | Retain legacy source for rollback during v0.6 |
 | Typed runtime context | `~/.hicode/runtime-store-v2/<session>/` | Thread metadata, exact model messages, normalized events | Backend remains replaceable behind interfaces |
@@ -154,6 +161,10 @@ Electron keeps its existing `output` and `tool-event` IPC channels while changin
 - Store and Domain Pack remote installs require HTTPS, safe destinations, and manifest validation. Remote manifests cannot inject local source paths or automatic scripts.
 - Commercial adapters never bypass licensing, VPN, identity, or enterprise authorization. Plaintext credentials are not persisted.
 - Logs and evidence redact secret-like data before persistence.
+- Desktop model, MCP, and Provider credentials are encrypted through Electron
+  `safeStorage`; Linux `basic_text` and unavailable backends fail closed. CLI
+  credentials use explicit environment variables and are never copied into
+  config by model-selection writes.
 
 ## Quality And Release Architecture
 

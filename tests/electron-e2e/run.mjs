@@ -165,6 +165,62 @@ async function startPreviewServer() {
   previewBaseURL = `http://127.0.0.1:${address.port}/`;
 }
 
+async function verifySecureCredentialStorage(page) {
+  const secret = `e2e-secret-${Date.now()}`;
+  const profile = {
+    name: "e2e",
+    baseURL: modelBaseURL,
+    apiKey: secret,
+    model: "hicode-e2e-model",
+    contextWindow: 65_536,
+    temperature: 0,
+  };
+  const statusBefore = await page.evaluate(() => window.hicode.getCredentialStatus());
+  const saved = await page.evaluate((value) => window.hicode.saveConfig(JSON.stringify({
+    defaultProfile: "e2e",
+    profiles: { e2e: value },
+    roleModels: {},
+    councilMembers: ["e2e"],
+    councilSynthesizer: "e2e",
+    compactThreshold: 0.75,
+    reasoningLevel: "medium",
+    sandbox: false,
+    mcpServers: {},
+  })), profile);
+  const appInfo = await page.evaluate(() => window.hicode.getAppInfo());
+  assert.equal(typeof appInfo.configPath, "string");
+
+  if (statusBefore.secureStorage?.available === true) {
+    assert.equal(saved.ok, true, saved.error || "secure config save failed");
+    assert.equal(saved.configText.includes(secret), false);
+    const persistedText = fs.readFileSync(appInfo.configPath, "utf8");
+    assert.equal(persistedText.includes(secret), false);
+    const persisted = JSON.parse(persistedText);
+    const secretRef = persisted.profiles.e2e.secretRef;
+    assert.match(secretRef, /^hicode-secret:v1:model:/);
+    const statusAfter = await page.evaluate(() => window.hicode.getCredentialStatus());
+    assert.equal(statusAfter.references.some((entry) => entry.secretRef === secretRef && entry.configured === true), true);
+    assert.equal(JSON.stringify(statusAfter).includes(secret), false);
+    const tested = await page.evaluate((value) => window.hicode.testModel(value), {
+      ...profile,
+      apiKey: "",
+      secretRef,
+    });
+    assert.equal(tested.ok, true, tested.error || "referenced credential connection test failed");
+    for (const file of [
+      appInfo.configPath,
+      path.join(path.dirname(appInfo.configPath), "secrets", "vault.json"),
+      path.join(path.dirname(appInfo.configPath), "secrets", "migration-journal.json"),
+    ]) {
+      if (fs.existsSync(file)) assert.equal(fs.readFileSync(file, "utf8").includes(secret), false, `${file} contains plaintext credential`);
+    }
+  } else {
+    assert.equal(saved.ok, false, "credential persistence must fail when OS secure storage is unavailable");
+    assert.match(saved.error || "", /secure storage|basic_text|安全存储|credential/i);
+    if (fs.existsSync(appInfo.configPath)) assert.equal(fs.readFileSync(appInfo.configPath, "utf8").includes(secret), false);
+  }
+}
+
 function record(name, status, detail = "") {
   results.push({ name, status, detail });
   console.log(`  ${status === "passed" ? "✓" : "✗"} ${name}${detail ? ` — ${detail}` : ""}`);
@@ -333,6 +389,7 @@ async function openLocalChat(page) {
 async function verifyProtocolNativeDesktopTurn(page) {
   await setContentSize(1024, baseline.height);
   await returnHome(page);
+  const initialRequestCount = modelServerRequests;
   const input = page.locator("#input");
   await input.fill("render the protocol-native desktop response");
   await page.locator("#send").click();
@@ -343,7 +400,7 @@ async function verifyProtocolNativeDesktopTurn(page) {
   }, undefined, { timeout: 8_000 });
   const assistantText = await page.locator(".msg.agent .agent-body").allTextContents();
   assert.ok(assistantText.some((text) => text.includes("protocol-native desktop response")), JSON.stringify(assistantText));
-  assert.equal(modelServerRequests, 1, "Desktop turn did not reach the isolated model server exactly once");
+  assert.equal(modelServerRequests - initialRequestCount, 1, "Desktop turn did not reach the isolated model server exactly once");
 }
 
 async function verifyPlanQueueAndSteer(page) {
@@ -880,6 +937,10 @@ async function main() {
     assert.equal(environment.userProfile, userDataDir);
     assert.equal(environment.legacyStdoutBridge, "0");
     assert.deepEqual(environment.sensitiveKeys, []);
+  });
+
+  await check("stores desktop credentials only through OS secure storage or fails closed", async () => {
+    await verifySecureCredentialStorage(page);
   });
 
   await check("streams a desktop turn with the compatibility stdout bridge disabled", async () => {

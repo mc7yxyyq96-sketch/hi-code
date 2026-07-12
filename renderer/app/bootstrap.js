@@ -1406,7 +1406,8 @@ let runtimeQueueState = { running: null, queued: [] };
 let executionMode = "default";
 let activeRuntimeJobId = "";
 const queuedInputPresentations = new Map();
-let cfgText = "", selectedProvider = "deepseek", settingsMode = "model";
+let cfgText = "", selectedProvider = "deepseek", settingsMode = "model", credentialStartupWarningShown = false;
+let credentialStatusCache = { ok: true, references: [] };
 let authMode = "login", currentCapability = "";
 let capabilityCache = null;
 let storeCache = null, storeCacheKey = "", storeKind = "all", storeCategory = "all", storeQuery = "", storeMessage = "", storeSearchTimer = null, storeRequestSeq = 0;
@@ -3044,6 +3045,7 @@ gitCommitBtn.onclick = async () => {
 /* ---------- IPC in ---------- */
 api.onReady((d) => {
   cwd = d.cwd;
+  if (d.credentialStatus) credentialStatusCache = d.credentialStatus;
   syncState({ cwd });
   setCurrentModelDisplay(d);
   setSidebarVersion(d.version);
@@ -3053,6 +3055,11 @@ api.onReady((d) => {
   currentProject.textContent = shortPath(d.cwd);
   loadSessions();
   refreshWorkbench();
+  const credentialStartup = d.credentialStatus?.startup;
+  if (credentialStartup?.ok === false && !credentialStartupWarningShown) {
+    credentialStartupWarningShown = true;
+    toast.error(`API Key 安全迁移未完成：${credentialStartup.error || "系统安全存储不可用"}。桌面端不会读取旧明文密钥，请在模型设置中重新保存，或为 CLI 配置环境变量。`);
+  }
 });
 api.onOutput((s) => appendOutput(s));
 api.onTurnDone(() => {
@@ -4336,7 +4343,7 @@ function restoreStoreSearchFocus(inputEl) {
 /* ---------- settings ---------- */
 const SETTINGS_TAB_META = {
   usage: ["用量与统计", "Token 消耗、活动热力图与会话概览"],
-  model: ["接入模型 API", "默认写入 ~/.hicode/config.json"],
+  model: ["接入模型 API", "配置保存引用，API Key 由系统安全存储加密"],
   chat: ["对话与推理", "推理深度与上下文压缩策略"],
   safety: ["权限与安全", "命令沙箱与始终生效的安全边界"],
   mcp: ["MCP 服务器", "只编辑 ~/.hicode/config.json 里的 mcpServers"],
@@ -4346,7 +4353,9 @@ const SETTINGS_TAB_META = {
 
 async function openSettings(tab = "usage") {
   setCfgStatus("");
-  cfgText = (await api.getConfig()) || "";
+  const [configText, credentialStatus] = await Promise.all([api.getConfig(), api.getCredentialStatus()]);
+  cfgText = configText || "";
+  credentialStatusCache = credentialStatus || { ok: false, references: [] };
   syncState({ cfgText });
   cfg.value = cfgText || JSON.stringify(makeConfigFromQuick({}), null, 2);
   hydrateQuickForm(cfg.value);
@@ -4656,9 +4665,12 @@ function reasoningLabel(level) {
 async function saveConfigText(text, okMessage, options = {}) {
   const r = await api.saveConfig(text);
   if (r.ok) {
-    cfgText = text;
+    cfgText = r.configText || (await api.getConfig()) || "";
+    credentialStatusCache = r.credentials || (await api.getCredentialStatus()) || { ok: false, references: [] };
+    cfg.value = cfgText;
     syncState({ cfgText });
-    setCurrentModelDisplay(defaultProfileFromConfig(parseConfig(text)));
+    setCurrentModelDisplay(defaultProfileFromConfig(parseConfig(cfgText)));
+    hydrateQuickForm(cfgText);
     if (options.closeSettings !== false) settings.classList.add("hidden");
     if (inChat) addSystemNote(okMessage);
   } else {
@@ -4736,7 +4748,8 @@ function hydrateQuickForm(text) {
   syncState({ selectedProvider });
   setProviderActive(selectedProvider);
   quickBaseURL.value = current.baseURL || PROVIDERS[selectedProvider].baseURL;
-  quickApiKey.value = current.apiKey || PROVIDERS[selectedProvider].apiKey;
+  quickApiKey.value = "";
+  quickApiKey.dataset.configured = isConfiguredSecretRef(current.secretRef) ? "true" : "false";
   quickModel.value = current.model || PROVIDERS[selectedProvider].model;
   quickContext.value = String(current.contextWindow || PROVIDERS[selectedProvider].contextWindow);
   syncProviderFormMode();
@@ -4750,6 +4763,7 @@ function defaultProfileFromConfig(config) {
   return {
     baseURL: config.baseURL,
     apiKey: config.apiKey,
+    secretRef: config.secretRef,
     model: config.model,
     contextWindow: config.contextWindow,
     temperature: config.temperature,
@@ -4759,6 +4773,10 @@ function defaultProfileFromConfig(config) {
 
 function quickProfile() {
   const preset = PROVIDERS[selectedProvider] || PROVIDERS.custom;
+  const saved = savedProfileForProvider(selectedProvider);
+  const savedRef = isConfiguredSecretRef(saved?.secretRef)
+    ? saved.secretRef
+    : savedSecretRefForProvider(selectedProvider);
   const baseURL = quickBaseURL.value.trim() || preset.baseURL;
   const apiKey = quickApiKey.value.trim() || (isLocalEndpoint(baseURL) ? "sk-no-key-required" : preset.apiKey);
   const protocol = configuredQuickProtocol();
@@ -4769,6 +4787,9 @@ function quickProfile() {
     model: quickModel.value.trim() || preset.model,
     contextWindow: Number(quickContext.value) || preset.contextWindow,
     temperature: typeof preset.temperature === "number" ? preset.temperature : 0.2,
+    ...(!apiKey && savedRef
+      ? { secretRef: savedRef }
+      : {}),
     ...(protocol ? { protocol } : {}),
   };
 }
@@ -4831,7 +4852,7 @@ function applyProvider(key, overwrite, previousKey = selectedProvider) {
   selectedProvider = key;
   syncState({ selectedProvider });
   const saved = overwrite ? savedProfileForProvider(key) : null;
-  const savedApiKey = saved?.apiKey || savedApiKeyForProvider(key);
+  const savedSecretRef = isConfiguredSecretRef(saved?.secretRef) ? saved.secretRef : savedSecretRefForProvider(key);
   setProviderActive(key);
   if (overwrite || !quickBaseURL.value) quickBaseURL.value = saved?.baseURL || preset.baseURL;
   if (overwrite || !quickModel.value) quickModel.value = saved?.model || preset.model;
@@ -4840,9 +4861,10 @@ function applyProvider(key, overwrite, previousKey = selectedProvider) {
     && quickApiKey.value
     && providerCredentialGroup(previousKey) === providerCredentialGroup(key)
     && !preset.apiKey
-    && !savedApiKey;
-  if (overwrite && !keepApiKey) quickApiKey.value = savedApiKey || preset.apiKey || "";
+    && !savedSecretRef;
+  if (overwrite && !keepApiKey) quickApiKey.value = preset.apiKey || "";
   else if (!quickApiKey.value && preset.apiKey) quickApiKey.value = preset.apiKey;
+  quickApiKey.dataset.configured = savedSecretRef ? "true" : "false";
   syncProviderFormMode();
   setCfgStatus("");
 }
@@ -4855,12 +4877,18 @@ function savedProfileForProvider(key) {
   return Object.values(profiles).find((profile) => guessProvider(profile?.baseURL || "") === key);
 }
 
-function savedApiKeyForProvider(key) {
+function savedSecretRefForProvider(key) {
   const preset = PROVIDERS[key] || PROVIDERS.custom;
   if (!preset.credentialGroup) return "";
   const config = normalizeConfig(parseConfig(cfg.value || cfgText));
   const profiles = Object.values(config.profiles || {});
-  return profiles.find((profile) => providerCredentialGroup(guessProvider(profile?.baseURL || "")) === preset.credentialGroup)?.apiKey || "";
+  return profiles.find((profile) => providerCredentialGroup(guessProvider(profile?.baseURL || "")) === preset.credentialGroup
+    && isConfiguredSecretRef(profile?.secretRef))?.secretRef || "";
+}
+
+function isConfiguredSecretRef(secretRef) {
+  if (!secretRef || credentialStatusCache?.ok !== true) return false;
+  return (credentialStatusCache.references || []).some((entry) => entry.secretRef === secretRef && entry.configured === true);
 }
 
 function setCfgStatus(text, ok = false) {
@@ -4904,7 +4932,9 @@ function syncProviderFormMode() {
   const card = settings.querySelector(".settings-card");
   const apiOnly = providerIsApiOnly(selectedProvider);
   card.classList.toggle("api-key-only", apiOnly);
-  quickApiKey.placeholder = preset.keyPlaceholder || "sk-...";
+  quickApiKey.placeholder = quickApiKey.dataset.configured === "true"
+    ? "已安全保存，留空保持不变"
+    : (preset.keyPlaceholder || "sk-...");
   providerHint.textContent = apiOnly
     ? `${preset.label} 已内置 Base URL、默认模型和上下文窗口，只需要粘贴 API Key。${preset.note ? " " + preset.note : ""}`
     : preset.note || "";

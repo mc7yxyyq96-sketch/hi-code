@@ -16,6 +16,7 @@ import { renderDefinitionOfDoneChecklist, renderReleaseCenterMarkup, summarizeRe
 import { renderSampleProjectResultMarkup, summarizeSampleProjectResult } from "../renderer/components/sample-project-panel.js";
 import { capabilityActionLabel, capabilityDescription, capabilityLifecycleState, CAPABILITY_META } from "../renderer/components/mcp-panel.js";
 import { storeChineseSummary, storeInstallActionState, storeQueryOptions } from "../renderer/components/store-panel.js";
+import { validateQuickProfileFields } from "../renderer/utils/validation.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
@@ -144,6 +145,9 @@ check("run status keeps runtime output errors visible", bootstrap.includes("func
 check("model connection test surfaces vision capability hint", bootstrap.includes("function modelCapabilityHint") && bootstrap.includes("visionCapabilityNotice") && bootstrap.includes("图片输入：当前模型可能不支持") && bootstrap.includes("currentModel.capabilities"));
 check("settings preserve every explicit model transport protocol", bootstrap.includes("function configuredQuickProtocol") && bootstrap.includes('["responses", "chat_completions", "anthropic_messages", "ollama_chat"].includes(protocol)') && bootstrap.includes("...(protocol ? { protocol } : {})") && bootstrap.includes("protocol: config.protocol"));
 check("settings expose native Anthropic and Ollama routes", html.includes('data-provider="anthropic"') && bootstrap.includes('protocol: "anthropic_messages"') && bootstrap.includes('protocol: "ollama_chat"') && bootstrap.includes('baseURL: "http://127.0.0.1:11434"'));
+check("settings never repopulate saved API keys into the renderer", bootstrap.includes('quickApiKey.value = ""') && bootstrap.includes("r.configText || (await api.getConfig())") && bootstrap.includes("isConfiguredSecretRef") && html.includes("API Key 不写入 config.json"));
+check("settings preserve configured secret references without treating missing vault values as configured", bootstrap.includes("credentialStatusCache.references") && bootstrap.includes("entry.configured === true") && bootstrap.includes("已安全保存，留空保持不变"));
+check("model validation accepts a configured secretRef and still rejects an absent cloud credential", validateQuickProfileFields({ baseURL: "https://api.example.test", model: "x", secretRef: "hicode-secret:v1:model:ZGVmYXVsdA" }, { apiOnly: true }) === "" && /API Key/.test(validateQuickProfileFields({ baseURL: "https://api.example.test", model: "x" }, { apiOnly: true })));
 check("agent chat bubble never stays blank on empty model output", conversationView.includes("Hi Code 正在思考") && bootstrap.includes("function finishAgentMessageIfEmpty") && conversationView.includes("这次模型没有返回可显示内容") && css.includes(".agent-body.agent-empty") && css.includes(".agent-body.agent-error"));
 
 console.log("\n[renderer] state");
@@ -161,6 +165,7 @@ console.log("\n[renderer] api wrapper");
 const errors = [];
 const api = createHiCodeApi({
   testModel: async () => ({ ok: true, value: 1 }),
+  getCredentialStatus: async () => ({ ok: true, secureStorage: { available: true, backend: "keychain" }, references: [] }),
   saveConfig: async () => ({ ok: false, error: "bad request" }),
   attachFile: async () => ({ ok: true, id: "att-00000000-0000-4000-8000-000000000001", kind: "text" }),
   attachImage: async () => ({ ok: true, id: "att-00000000-0000-4000-8000-000000000002", kind: "image" }),
@@ -225,6 +230,7 @@ const api = createHiCodeApi({
 }, { onError: (message) => errors.push(message) });
 const okResult = await api.testModel({});
 check("api wrapper preserves successful result", okResult?.ok === true && okResult.value === 1);
+check("api wrapper exposes credential status without secret values", (await api.getCredentialStatus()).secureStorage.backend === "keychain");
 check("api wrapper detects missing methods", api.has("missing") === false);
 const bad = await api.saveConfig("{}");
 check("api wrapper returns failed API result", bad?.ok === false && /bad request/.test(bad.error || ""));

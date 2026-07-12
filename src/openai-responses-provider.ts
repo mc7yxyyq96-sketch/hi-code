@@ -77,7 +77,7 @@ export function createOpenAIResponsesAdapter(
       metadata: {
         transport: "server-sent-events",
         persistence: "store-disabled",
-        credentialStorage: "model-profile",
+        credentialStorage: "secret-reference-or-environment",
       },
     },
     async run(request, sink, signal) {
