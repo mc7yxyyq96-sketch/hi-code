@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "program": "Hi Code Product-Grade Desktop and Industrial Workbench",
-  "updatedAt": "2026-07-12T02:53:12Z",
+  "updatedAt": "2026-07-12T06:16:00Z",
   "status": "active",
   "source": {
     "version": "0.6.0-alpha.6",
@@ -130,6 +130,12 @@
       "branch": "codex/desktop-ux/hc-ui-312",
       "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-hc-ui-312",
       "mode": "completed-worktree"
+    },
+    {
+      "taskId": "HC-GIT-320",
+      "branch": "codex/runtime-engine/hc-git-320",
+      "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-hc-git-320",
+      "mode": "active-worktree"
     }
   ],
   "tasks": [
@@ -319,6 +325,16 @@
       "taskManifest": "reports/tasks/HC-UI-312.md",
       "evidence": "reports/evidence/HC-UI-312/manifest.json",
       "ciEvidence": "reports/evidence/HC-UI-312/ci-matrix.json"
+    },
+    {
+      "id": "HC-GIT-320",
+      "owner": "runtime-engine",
+      "priority": "P1",
+      "status": "in_progress",
+      "dependencies": ["HC-RUN-203", "HC-UI-310"],
+      "branch": "codex/runtime-engine/hc-git-320",
+      "startedAt": "2026-07-12T06:16:00Z",
+      "taskManifest": "reports/tasks/HC-GIT-320.md"
     }
   ],
   "gates": [

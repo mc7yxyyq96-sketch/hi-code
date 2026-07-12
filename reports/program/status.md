@@ -42,6 +42,7 @@ The final machine-captured evidence is written by `npm run program:baseline` to 
 | 14 | HC-UI-310 | Completed | Desktop UX | HC-UI-302 |
 | 15 | HC-UI-311 | Completed | Desktop UX | HC-UI-301, HC-PLAT-110 |
 | 16 | HC-UI-312 | Completed | Desktop UX | HC-UI-301, HC-PLAT-110 |
+| 17 | HC-GIT-320 | In progress | Runtime Engine | HC-RUN-203, HC-UI-310 |
 
 HC-QA-101 established a real Electron responsive baseline. HC-RUN-201 introduces protocol-native assistant output and concurrency isolation. No new industrial domain module is authorized before HC-RUN-201 completes.
 
@@ -80,6 +81,8 @@ HC-UI-310 completed in the isolated `codex/desktop-ux/hc-ui-310` worktree from H
 HC-UI-311 completed in the isolated `codex/desktop-ux/hc-ui-311` worktree from HC-UI-310 completion commit `115ea61`. A real xterm/node-pty terminal now runs through typed IPC, explicit Runtime-policy authorization, owner/workspace confinement, trusted profile-free shells, minimal child environment, bounded non-persisted output, and deterministic process-tree cleanup. Stale starts are cancelled if the owner closes or workspace changes. Eighteen machine-captured gates passed from clean source commit `d970367`, including 12/12 terminal service checks, 188/188 security checks, real Electron keyboard/compact-layout acceptance, macOS native package inspection, production audit, release check, and a zero-finding DoD scan. GitHub Actions run `29167924876` then passed the general test job and real Electron smoke on Ubuntu, macOS, and Windows for Draft PR #15. The completed ten-hour HC-RUN-220 evidence was not rerun. App preview and Git/PR workflow features remain separate tasks.
 
 HC-UI-312 completed in the isolated `codex/desktop-ux/hc-ui-312` worktree from HC-UI-311 completion commit `549fc62`. A loopback-only App Preview now opens local applications in unique non-persistent sandboxed BrowserWindows with no preload, Node integration, DevTools, permissions, downloads, popups, webviews, external navigation, or cross-origin network access. Typed lifecycle controls support reload, close, reopen, and removal; owner/workspace/app/crash cleanup is deterministic. DOM selector checks and PNG/JSON evidence remain explicitly passed or failed. Fifteen local gates passed from clean implementation commit `d1138ab`, including 12/12 service checks, 8/8 renderer checks, 196/196 security checks, release check, zero-finding DoD scan, production audit, and real Electron compact-layout acceptance. GitHub Actions run `29181437110` also passed general tests and real Electron smoke on Ubuntu, macOS, and Windows for Draft PR #16. Server startup, remote browsing, Git/PR orchestration, and industrial modules remain outside this task.
+
+HC-GIT-320 started in the isolated `codex/runtime-engine/hc-git-320` worktree from HC-UI-312 completion commit `e802c15`. The clean parent passed the repository verify gate. This task will remove the renderer-owned execution queue, add explicit plan and interrupt-then-follow-up steer semantics, and complete protected branch/commit/PR/CI controls. Dirty-worktree protection, explicit PR confirmation, minimal child environments, credential non-persistence, and truthful failed/pending CI state are release-blocking constraints.
 
 ## Current Product Truth
 

@@ -298,7 +298,10 @@
       "dependencies": ["HC-RUN-203", "HC-UI-310"],
       "deliverables": ["plan mode", "steer/queued prompt", "commit/PR", "CI status"],
       "acceptance": ["end-to-end coding loop passes Electron E2E", "worktree state is protected", "failed CI is visible"],
-      "status": "planned"
+      "status": "in_progress",
+      "startedAt": "2026-07-12T06:16:00Z",
+      "branch": "codex/runtime-engine/hc-git-320",
+      "taskManifest": "reports/tasks/HC-GIT-320.md"
     },
     {
       "id": "HC-SEC-401",
