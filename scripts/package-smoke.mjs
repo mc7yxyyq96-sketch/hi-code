@@ -31,6 +31,14 @@ function metadataSuffix(platform) {
   return platform === "darwin" ? "-mac.yml" : platform === "linux" ? "-linux.yml" : ".yml";
 }
 
+export function debianPackageVersion(version) {
+  const normalized = String(version || "").trim();
+  const prerelease = normalized.indexOf("-");
+  return prerelease < 0
+    ? normalized
+    : `${normalized.slice(0, prerelease)}~${normalized.slice(prerelease + 1)}`;
+}
+
 export function inspectReleaseArtifactSet({ releaseDir, version, platform }) {
   const files = fs.readdirSync(releaseDir, { withFileTypes: true }).filter((entry) => entry.isFile()).map((entry) => entry.name);
   const packages = [];
@@ -196,7 +204,10 @@ function smokeLinux(appImagePath, debPath, version) {
     const debResources = path.dirname(debAsar);
     inspectResources(debResources, version);
     const debVersion = runChecked("dpkg-deb", ["--field", debPath, "Version"]).stdout.trim();
-    if (debVersion !== version) throw new Error(`DEB version mismatch: ${debVersion}`);
+    const expectedDebVersion = debianPackageVersion(version);
+    if (debVersion !== expectedDebVersion) {
+      throw new Error(`DEB version mismatch: expected ${expectedDebVersion}, got ${debVersion}`);
+    }
     return inspected;
   } finally {
     fs.rmSync(temporary, { recursive: true, force: true });

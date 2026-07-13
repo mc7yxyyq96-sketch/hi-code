@@ -238,6 +238,9 @@ export function buildReleaseChildEnv({ env = process.env, policy, shimPath = "" 
   for (const key of BASE_BUILD_ENV) {
     if (typeof env[key] === "string") output[key] = env[key];
   }
+  if (output.SystemRoot) {
+    output.ComSpec = path.win32.join(output.SystemRoot, "System32", "cmd.exe");
+  }
   output.PATH = [shimPath, output.PATH].filter(Boolean).join(path.delimiter);
   output.HICODE_RELEASE_MODE = policy.mode;
   output.HICODE_RELEASE_CHANNEL = policy.channel;

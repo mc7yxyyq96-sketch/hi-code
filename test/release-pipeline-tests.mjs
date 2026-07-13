@@ -21,7 +21,7 @@ import {
 import { createUpdateService, validateEmbeddedReleaseManifest } from "../electron/services/update-service.mjs";
 import { createCycloneDxBom } from "../scripts/generate-sbom.mjs";
 import { createProvenanceStatement } from "../scripts/generate-provenance.mjs";
-import { inspectReleaseArtifactSet } from "../scripts/package-smoke.mjs";
+import { debianPackageVersion, inspectReleaseArtifactSet } from "../scripts/package-smoke.mjs";
 import { verifyChecksums, writeChecksums } from "../scripts/checksum-release.mjs";
 import { buildReleaseGitEnv, inspectReleaseSource } from "../scripts/release-source.mjs";
 
@@ -58,6 +58,11 @@ check("development artifacts are truthfully unsigned", developmentPolicy.ok && d
 const developmentChildEnv = buildReleaseChildEnv({ env: secretEnv, policy: developmentPolicy, shimPath: "/tmp/shim" });
 check("development builder excludes model and cloud secrets", !developmentChildEnv.OPENAI_API_KEY && !developmentChildEnv.ANTHROPIC_API_KEY && !developmentChildEnv.GITHUB_TOKEN && !developmentChildEnv.AWS_SECRET_ACCESS_KEY);
 check("development builder disables signing discovery", developmentChildEnv.CSC_IDENTITY_AUTO_DISCOVERY === "false");
+const windowsBuildEnv = buildReleaseChildEnv({
+  env: { PATH: "C:\\Windows\\System32", SystemRoot: "C:\\Windows", ComSpec: "C:\\attacker\\cmd.exe" },
+  policy: { ...developmentPolicy, platform: "win32" },
+});
+check("Windows builder derives ComSpec from SystemRoot", windowsBuildEnv.ComSpec === "C:\\Windows\\System32\\cmd.exe");
 const cleanSource = { ok: true, clean: true, commit: "a".repeat(40), changedPaths: 0 };
 const missingReleaseCredentials = createReleasePolicy({ version: "1.0.0", platform: "darwin", mode: "release", env: {}, sourceState: cleanSource });
 check("release mode fails closed without approval and signing", !missingReleaseCredentials.ok && missingReleaseCredentials.errors.length >= 3);
@@ -218,6 +223,7 @@ check("SBOM excludes development-only dependencies", !bom.components.some((item)
 check("SBOM has dependency graph and integrity hashes", bom.dependencies.length === bom.components.length + 1 && bom.components.some((item) => item.hashes?.[0]?.alg === "SHA-512"));
 
 console.log("\n[release-pipeline] artifact metadata, checksums, and provenance");
+check("Debian prerelease version preserves ordering semantics", debianPackageVersion("0.6.0-alpha.8") === "0.6.0~alpha.8" && debianPackageVersion("1.0.0") === "1.0.0");
 const releaseTmp = fs.mkdtempSync(path.join(os.tmpdir(), "hicode-release-artifacts-"));
 const fakeVersion = "1.2.3-alpha.1";
 const fakeDmg = `Hi Code-${fakeVersion}-mac-arm64.dmg`;
