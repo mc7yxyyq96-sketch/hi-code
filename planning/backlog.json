@@ -5,7 +5,7 @@
   "sourceCommit": "6ed9ed666bb817f8d1e863c76b0bf61b31c7b52d",
   "horizonDays": 90,
   "status": "active",
-  "updatedAt": "2026-07-12T10:47:48Z",
+  "updatedAt": "2026-07-13T09:49:20Z",
   "principles": [
     "Runtime Protocol is the single source of truth",
     "No big-bang rewrite",
@@ -364,10 +364,13 @@
       "dependencies": ["HC-PLAT-110", "HC-SEC-401"],
       "deliverables": ["macOS/Windows/Linux artifacts", "update channels", "SBOM", "checksums", "install smoke"],
       "acceptance": ["signed artifacts where credentials exist", "unsigned dev path is clearly marked", "upgrade/rollback smoke passes"],
-      "status": "in_progress",
+      "status": "completed",
       "startedAt": "2026-07-13T04:48:41Z",
       "branch": "codex/security-release/hc-rel-420",
-      "taskManifest": "reports/tasks/HC-REL-420.md"
+      "taskManifest": "reports/tasks/HC-REL-420.md",
+      "completedAt": "2026-07-13T09:49:20Z",
+      "evidenceManifest": "reports/evidence/HC-REL-420/manifest.json",
+      "ciEvidence": "reports/evidence/HC-REL-420/ci-matrix.json"
     },
     {
       "id": "HC-IND-501",

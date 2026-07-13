@@ -1,0 +1,38 @@
+$ npm run release:preflight -- --platform=darwin --mode=development --channel=nightly
+
+> hi-code@0.6.0-alpha.8 release:preflight
+> node scripts/release-preflight.mjs --platform=darwin --mode=development --channel=nightly
+
+{
+  "schemaVersion": 1,
+  "version": "0.6.0-alpha.8",
+  "mode": "development",
+  "channel": "nightly",
+  "updaterChannel": "alpha",
+  "platform": "darwin",
+  "approvalRecorded": false,
+  "publishRequested": false,
+  "publishAllowed": false,
+  "source": {
+    "inspectable": true,
+    "clean": false,
+    "commit": "6e42ce3e30028ba9a6e8aee920865a68704b7571",
+    "changedPaths": 1
+  },
+  "signing": {
+    "status": "not_configured",
+    "notarizationStatus": "not_configured",
+    "credentialPresence": {
+      "signingIdentity": false,
+      "notarization": false
+    }
+  },
+  "artifactTrust": "unsigned",
+  "updateEnabled": false,
+  "errors": [],
+  "warnings": [
+    "Artifacts are unsigned development/CI output and must not be promoted as signed releases"
+  ],
+  "ok": true,
+  "embeddedManifest": "build/generated/release-channel.json"
+}

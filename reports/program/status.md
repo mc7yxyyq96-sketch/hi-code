@@ -1,6 +1,6 @@
 # Hi Code Program Status
 
-Updated: 2026-07-12
+Updated: 2026-07-13
 
 Program state: Active
 
@@ -45,7 +45,7 @@ The final machine-captured evidence is written by `npm run program:baseline` to 
 | 17 | HC-GIT-320 | Completed | Runtime Engine | HC-RUN-203, HC-UI-310 |
 | 18 | HC-SEC-401 | Completed | Security And Release | HC-PLAT-110 |
 | 19 | HC-SEC-402 | Completed | Security And Release | HC-PLAT-110 |
-| 20 | HC-REL-420 | In progress | Security And Release | HC-PLAT-110, HC-SEC-401 |
+| 20 | HC-REL-420 | Completed | Security And Release | HC-PLAT-110, HC-SEC-401 |
 
 HC-QA-101 established a real Electron responsive baseline. HC-RUN-201 introduces protocol-native assistant output and concurrency isolation. No new industrial domain module is authorized before HC-RUN-201 completes.
 
@@ -91,7 +91,7 @@ HC-SEC-401 completed in the isolated `codex/security-release/hc-sec-401` worktre
 
 HC-SEC-402 completed in the isolated `codex/security-release/hc-sec-402` worktree from HC-SEC-401 completion commit `3a2328c`. A versioned policy kernel now governs command, filesystem, environment, network, limit, approval, audit, and process-tree semantics for Runtime Bash, terminal, Worktree, Patch Arena, Quality Gate, MCP, and real industrial adapter launches. Unsupported strict controls fail closed and weak/report-only isolation remains explicit. Nineteen local evidence commands passed from clean source commit `f45415f`, including 100/100 industrial tool checks and real Electron navigation at compact widths. GitHub Actions run `29221844706` passed general tests and real Electron smoke on Ubuntu, macOS, and Windows for Draft PR #19.
 
-HC-REL-420 started in the isolated `codex/security-release/hc-rel-420` worktree from HC-SEC-402 completion commit `14c5380`. The current packaging audit found macOS DMG and Windows NSIS/ZIP only, a hard-disabled macOS signing identity, no Linux target, no managed updater lifecycle, and no release SBOM/provenance or upgrade/rollback smoke. The task will add a fail-closed release policy, three-platform package contracts, explicit unsigned development artifacts, update channels, CycloneDX SBOM, checksums, provenance, and package lifecycle tests. Formal publication, notarization, and credential-backed signing remain approval-gated.
+HC-REL-420 completed in the isolated `codex/security-release/hc-rel-420` worktree from HC-SEC-402 completion commit `14c5380`. A fail-closed release policy now controls macOS DMG/ZIP, Windows NSIS/ZIP, and Linux AppImage/DEB packaging; update channels, user-confirmed packaged-app updates, CycloneDX SBOM, provenance, checksums, and native package lifecycle smoke are part of the same contract. Twenty local evidence commands passed from clean implementation commit `6e42ce3`. Draft PR #20 passed Release Packaging run `29239107911` and CI run `29239108094`, including native package smoke on all three target platforms and real Electron startup on Ubuntu, macOS, and Windows. These are unsigned, update-disabled CI/development artifacts: no formal release, tag, publication, notarization, or credential-backed signing was performed, and `RISK-REL-001` remains open.
 
 ## Current Product Truth
 
@@ -124,6 +124,7 @@ HC-REL-420 started in the isolated `codex/security-release/hc-rel-420` worktree 
 - Coding and Git delivery evidence: `reports/tasks/HC-GIT-320.md`, `reports/evidence/HC-GIT-320/manifest.json`, `reports/evidence/HC-GIT-320/ci-matrix.json`
 - Credential storage evidence: `reports/tasks/HC-SEC-401.md`, `reports/evidence/HC-SEC-401/manifest.json`, `reports/evidence/HC-SEC-401/ci-matrix.json`
 - Cross-platform execution policy evidence: `reports/tasks/HC-SEC-402.md`, `reports/evidence/HC-SEC-402/manifest.json`, `reports/evidence/HC-SEC-402/ci-matrix.json`
+- Controlled release pipeline evidence: `reports/tasks/HC-REL-420.md`, `reports/evidence/HC-REL-420/manifest.json`, `reports/evidence/HC-REL-420/ci-matrix.json`
 - Current risks: `reports/program/risks.json`
 - Historical final acceptance: `reports/final-acceptance-historical.md`
 - Historical audit policy: `reports/audit/README.md`

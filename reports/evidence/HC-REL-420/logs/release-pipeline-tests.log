@@ -1,0 +1,73 @@
+$ npm run test:release-pipeline
+
+> hi-code@0.6.0-alpha.8 test:release-pipeline
+> node test/release-pipeline-tests.mjs
+
+
+[release-pipeline] version and channel policy
+✓ semver comparison orders prerelease and stable
+✓ release channel inference is explicit
+✓ updater channel names map to electron metadata
+✓ stable cannot consume prerelease versions
+✓ verified forward update is accepted
+✓ unverified update is rejected
+✓ automatic rollback is rejected
+✓ recovery rollback requires explicit approval
+
+[release-pipeline] signing and child environment
+✓ development artifacts are truthfully unsigned
+✓ development builder excludes model and cloud secrets
+✓ development builder disables signing discovery
+✓ Windows builder derives command resolution from trusted constants
+✓ release mode fails closed without approval and signing
+✓ approved signed macOS policy enables updates
+✓ approved Linux release is integrity-verified without claiming signed
+✓ release environment summary never contains credential values
+✓ release mode rejects a dirty source tree
+✓ release source inspection excludes ambient secrets
+✓ release source inspection uses a portable isolated Git config
+✓ release source inspection detects a dirty tree
+✓ builder policy owns channel and publish arguments
+✓ builder rejects caller-controlled publishing
+✓ builder rejects trust-sensitive config overrides
+✓ builder isolates platform trust manifests
+
+[release-pipeline] embedded manifest
+✓ embedded manifest records unsigned update-disabled mode
+✓ embedded manifest validates exact app version
+
+[release-pipeline] managed updater lifecycle
+✓ signed packaged updater reports available
+✓ manual update check records available version
+✓ manual download reaches downloaded state
+✓ installation requires main-process confirmation and cleanup
+✓ selected channel persists without custom URL input
+✓ arbitrary update channel input is rejected
+✓ unsigned package cannot invoke updater transport
+✓ packaged prerelease defaults to its embedded channel
+✓ Linux DEB remains manual-update only
+✓ verified Linux AppImage can use managed updates
+
+[release-pipeline] CycloneDX production SBOM
+✓ SBOM is CycloneDX 1.7 and complete
+✓ SBOM contains runtime dependencies
+✓ SBOM excludes development-only dependencies
+✓ SBOM has dependency graph and integrity hashes
+
+[release-pipeline] artifact metadata, checksums, and provenance
+✓ Debian prerelease version preserves ordering semantics
+✓ package metadata references a matching SHA-512 artifact
+✓ checksum manifest covers packages, metadata, SBOM, and provenance
+✓ checksum verification rejects tampering
+✓ unsigned provenance is truthful and credential-free
+
+[release-pipeline] repository integration
+✓ package config has all native platform targets
+✓ NSIS lifecycle never auto-launches the installed app
+✓ preload exposes bounded update lifecycle
+✓ renderer has real update actions
+✓ CI packages and smokes all three native platforms
+✓ signed package smoke verifies platform signatures
+✓ Windows package smoke waits for the complete NSIS process tree
+
+=== 52 passed, 0 failed ===

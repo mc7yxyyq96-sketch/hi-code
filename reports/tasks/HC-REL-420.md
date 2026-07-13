@@ -1,8 +1,10 @@
 # HC-REL-420 Task Manifest
 
-Status: In progress
+Status: Completed
 
 Started: 2026-07-13T04:48:41Z
+
+Completed: 2026-07-13T09:49:20Z
 
 Branch: `codex/security-release/hc-rel-420`
 
@@ -83,3 +85,33 @@ Deliver a controlled desktop release pipeline that produces inspectable three-pl
 - Formal publish, notarization, or signing requires explicit user approval and credentials.
 - Stable update enablement is blocked until signed package smoke passes on real target machines.
 - Any updater path that can install without user confirmation blocks task completion.
+
+## Implemented
+
+- Added one fail-closed release policy for channel, source-tree, signing, notarization, publication, updater, and artifact-label decisions.
+- Added native macOS DMG/ZIP, Windows NSIS/ZIP, and Linux AppImage/DEB build contracts with development and approved-release modes.
+- Added a packaged-only, user-confirmed updater state machine with bounded channel and rollback behavior; development packages remain update-disabled.
+- Added deterministic CycloneDX SBOM, provenance, checksum generation, checksum verification, and credential-safe release child environments.
+- Added native package inspection and lifecycle smoke, including deterministic Windows NSIS install/uninstall process-tree completion.
+- Added a three-platform GitHub Actions packaging matrix without publishing artifacts as a formal release.
+
+## Focused Verification
+
+- `test/release-pipeline-tests.mjs`: 52 passed.
+- `test/security-baseline.mjs`: 229 passed.
+- Local macOS development package and lifecycle smoke: passed.
+- `npm run release:check`: passed.
+- Full-tree DoD scan: zero findings.
+- GitHub native package smoke: passed on macOS, Windows, and Linux.
+- GitHub real Electron smoke: passed on Ubuntu, macOS, and Windows.
+
+## Evidence
+
+- Local acceptance: `reports/evidence/HC-REL-420/manifest.json`
+- Source commit bound by local evidence: `6e42ce3e30028ba9a6e8aee920865a68704b7571`
+- Local result: 20 passed, 0 failed, captured from a clean worktree.
+- Cross-platform CI: `reports/evidence/HC-REL-420/ci-matrix.json`
+- Release Packaging run: `29239107911`
+- General CI run: `29239108094`
+- Draft PR: `#20`
+- CI/development packages remain unsigned and update-disabled. Formal publication, tag creation, signing, and notarization were not performed.

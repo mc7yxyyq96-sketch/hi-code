@@ -57,8 +57,10 @@ const requiredFiles = [
   "docs/adr/ADR-0015-authoritative-coding-and-git-delivery-loop.md",
   "docs/adr/ADR-0016-keychain-backed-secret-references.md",
   "docs/adr/ADR-0017-cross-platform-execution-policy.md",
+  "docs/adr/ADR-0018-controlled-desktop-release-pipeline.md",
   "docs/credential-storage.md",
   "docs/execution-policy.md",
+  "docs/release-pipeline.md",
   "docs/attachments-and-command-registry.md",
   "docs/anthropic-ollama-adapters.md",
   "docs/model-provider-adapters.md",
@@ -88,6 +90,7 @@ const requiredFiles = [
   "reports/tasks/HC-GIT-320.md",
   "reports/tasks/HC-SEC-401.md",
   "reports/tasks/HC-SEC-402.md",
+  "reports/tasks/HC-REL-420.md",
   "reports/tasks/HC-REL-ALPHA-7.md",
   "reports/evidence/baseline/manifest.json",
   "reports/evidence/HC-QA-101/manifest.json",
@@ -115,6 +118,8 @@ const requiredFiles = [
   "reports/evidence/HC-SEC-401/ci-matrix.json",
   "reports/evidence/HC-SEC-402/manifest.json",
   "reports/evidence/HC-SEC-402/ci-matrix.json",
+  "reports/evidence/HC-REL-420/manifest.json",
+  "reports/evidence/HC-REL-420/ci-matrix.json",
   "scripts/electron-compatibility.mjs",
   "scripts/run-electron-builder.mjs",
   "test/electron-compatibility-tests.mjs",
@@ -166,6 +171,8 @@ const secretStorageManifest = readJson(root, "reports/evidence/HC-SEC-401/manife
 const secretStorageCiEvidence = readJson(root, "reports/evidence/HC-SEC-401/ci-matrix.json");
 const executionPolicyManifest = readJson(root, "reports/evidence/HC-SEC-402/manifest.json");
 const executionPolicyCiEvidence = readJson(root, "reports/evidence/HC-SEC-402/ci-matrix.json");
+const releasePipelineManifest = readJson(root, "reports/evidence/HC-REL-420/manifest.json");
+const releasePipelineCiEvidence = readJson(root, "reports/evidence/HC-REL-420/ci-matrix.json");
 const packageJson = readJson(root, "package.json");
 const packageLock = readJson(root, "package-lock.json");
 const programTask = backlog.tasks.find((task) => task.id === "HC-PROG-100");
@@ -186,6 +193,7 @@ const previewTask = backlog.tasks.find((task) => task.id === "HC-UI-312");
 const gitDeliveryTask = backlog.tasks.find((task) => task.id === "HC-GIT-320");
 const secretStorageTask = backlog.tasks.find((task) => task.id === "HC-SEC-401");
 const executionPolicyTask = backlog.tasks.find((task) => task.id === "HC-SEC-402");
+const releasePipelineTask = backlog.tasks.find((task) => task.id === "HC-REL-420");
 const qaTask = board.tasks.find((task) => task.id === "HC-QA-101");
 const runtimeTask = board.tasks.find((task) => task.id === "HC-RUN-201");
 const runtimeStoreTask = board.tasks.find((task) => task.id === "HC-RUN-202");
@@ -204,6 +212,7 @@ const previewBoardTask = board.tasks.find((task) => task.id === "HC-UI-312");
 const gitDeliveryBoardTask = board.tasks.find((task) => task.id === "HC-GIT-320");
 const secretStorageBoardTask = board.tasks.find((task) => task.id === "HC-SEC-401");
 const executionPolicyBoardTask = board.tasks.find((task) => task.id === "HC-SEC-402");
+const releasePipelineBoardTask = board.tasks.find((task) => task.id === "HC-REL-420");
 
 console.log("\n[program-control] board and evidence contract");
 check("backlog records immutable source commit", /^[0-9a-f]{40}$/.test(backlog.sourceCommit || ""));
@@ -555,6 +564,106 @@ for (const command of executionPolicyManifest.commands || []) {
   check(`HC-SEC-402 ${command.id} log exists`, Boolean(command.logPath) && fs.existsSync(absolute));
   if (fs.existsSync(absolute)) check(`HC-SEC-402 ${command.id} log hash matches`, digest(absolute) === command.logSha256);
 }
+check(
+  "HC-REL-420 completed only after its dependencies and committed evidence",
+  releasePipelineTask?.status === "completed" &&
+    releasePipelineTask?.branch === "codex/security-release/hc-rel-420" &&
+    Boolean(releasePipelineTask?.startedAt) &&
+    Boolean(releasePipelineTask?.completedAt) &&
+    releasePipelineTask?.taskManifest === "reports/tasks/HC-REL-420.md" &&
+    releasePipelineTask?.evidenceManifest === "reports/evidence/HC-REL-420/manifest.json" &&
+    releasePipelineTask?.ciEvidence === "reports/evidence/HC-REL-420/ci-matrix.json" &&
+    releasePipelineTask?.dependencies?.every((id) => backlog.tasks.find((task) => task.id === id)?.status === "completed") &&
+    releasePipelineBoardTask?.status === "completed" &&
+    releasePipelineBoardTask?.evidence === "reports/evidence/HC-REL-420/manifest.json" &&
+    releasePipelineBoardTask?.ciEvidence === "reports/evidence/HC-REL-420/ci-matrix.json",
+  JSON.stringify(releasePipelineTask),
+);
+check(
+  "Controlled release-pipeline gate passed with committed evidence",
+  board.gates?.find((gate) => gate.id === "controlled-release-pipeline")?.status === "passed" &&
+    board.gates?.find((gate) => gate.id === "controlled-release-pipeline")?.evidence === "reports/evidence/HC-REL-420/manifest.json" &&
+    board.gates?.find((gate) => gate.id === "controlled-release-pipeline")?.ciEvidence === "reports/evidence/HC-REL-420/ci-matrix.json",
+);
+check(
+  "HC-REL-420 keeps commercial signing risk open and evidence-backed",
+  risks.risks?.some((risk) =>
+    risk.id === "RISK-REL-001" &&
+    risk.status === "open" &&
+    risk.evidence?.includes("reports/evidence/HC-REL-420/manifest.json") &&
+    risk.evidence?.includes("reports/evidence/HC-REL-420/ci-matrix.json")),
+);
+check(
+  "HC-REL-420 evidence records every command passing from a clean tree",
+  releasePipelineManifest.summary?.allPassed === true &&
+    releasePipelineManifest.summary?.total === 20 &&
+    releasePipelineManifest.capture?.workingTreeClean === true,
+  JSON.stringify(releasePipelineManifest.summary),
+);
+check(
+  "HC-REL-420 evidence is captured from its isolated branch",
+  releasePipelineManifest.source?.branch === "codex/security-release/hc-rel-420" &&
+    releasePipelineManifest.source?.parentCommit === "6e42ce3e30028ba9a6e8aee920865a68704b7571",
+);
+check(
+  "HC-REL-420 CI evidence binds the verified PR head and successful workflows",
+  releasePipelineCiEvidence.event === "pull_request" &&
+    releasePipelineCiEvidence.pullRequest === 20 &&
+    releasePipelineCiEvidence.status === "completed" &&
+    releasePipelineCiEvidence.conclusion === "success" &&
+    releasePipelineCiEvidence.headSha === "6e42ce3e30028ba9a6e8aee920865a68704b7571" &&
+    releasePipelineCiEvidence.runs?.some((run) => run.workflow === "Release Packaging" && run.runId === 29239107911 && run.conclusion === "success") &&
+    releasePipelineCiEvidence.runs?.some((run) => run.workflow === "CI" && run.runId === 29239108094 && run.conclusion === "success"),
+  JSON.stringify(releasePipelineCiEvidence.runs),
+);
+check(
+  "HC-REL-420 native package smoke passed on all three target platforms",
+  [
+    ["windows-latest", "Package smoke (Windows x64)"],
+    ["ubuntu-latest", "Package smoke (Linux x64)"],
+    ["macos-latest", "Package smoke (macOS)"],
+  ].every(([platform, name]) => releasePipelineCiEvidence.jobs?.some((job) =>
+    job.workflow === "Release Packaging" &&
+    job.platform === platform &&
+    job.name === name &&
+    job.conclusion === "success" &&
+    job.build === "success" &&
+    job.packageSmoke === "success" &&
+    job.sbom === "success" &&
+    job.provenance === "success" &&
+    job.checksums === "success" &&
+    job.artifactUpload === "success")),
+  JSON.stringify(releasePipelineCiEvidence.jobs),
+);
+check(
+  "HC-REL-420 CI passed general tests and real Electron smoke on every target platform",
+  ["ubuntu-latest", "macos-latest", "windows-latest"].every((platform) => releasePipelineCiEvidence.jobs?.some((job) =>
+    job.workflow === "CI" &&
+    job.platform === platform &&
+    job.name === `Electron smoke (${platform})` &&
+    job.conclusion === "success" &&
+    job.electronSmoke === "success" &&
+    job.artifactUpload === "success")) &&
+    releasePipelineCiEvidence.jobs?.some((job) => job.workflow === "CI" && job.name === "test" && job.conclusion === "success" && job.testSuites === "success" && job.dodScan === "success"),
+  JSON.stringify(releasePipelineCiEvidence.jobs),
+);
+check(
+  "HC-REL-420 CI artifacts remain truthfully unsigned",
+  releasePipelineCiEvidence.annotations?.some((annotation) => annotation.severity === "warning" && annotation.message.includes("unsigned") && annotation.message.includes("update-disabled")),
+);
+for (const requiredCommand of ["build", "release-preflight", "release-pipeline-tests", "service-tests", "security-tests", "verify", "release-check", "feature-tests", "dod-tests", "dod-scan", "production-audit", "electron-e2e", "mac-package", "mac-package-smoke", "sbom", "provenance", "checksums", "checksum-verification", "program-control", "git-diff-check"]) {
+  check(`HC-REL-420 captured ${requiredCommand}`, releasePipelineManifest.commands?.some((command) => command.id === requiredCommand && command.status === "passed"));
+}
+for (const command of releasePipelineManifest.commands || []) {
+  const absolute = path.join(root, command.logPath || "");
+  check(`HC-REL-420 ${command.id} log exists`, Boolean(command.logPath) && fs.existsSync(absolute));
+  if (fs.existsSync(absolute)) check(`HC-REL-420 ${command.id} log hash matches`, digest(absolute) === command.logSha256);
+}
+check(
+  "Controlled release-pipeline evidence capture is reproducible",
+  packageJson.scripts["program:evidence:release-pipeline"] === "node scripts/capture-task-evidence.mjs --task=HC-REL-420" &&
+    fs.readFileSync(path.join(root, "scripts/capture-task-evidence.mjs"), "utf8").includes('"HC-REL-420"'),
+);
 check("alpha.8 version is synchronized", packageJson.version === "0.6.0-alpha.8" && packageLock.version === packageJson.version && packageLock.packages?.[""]?.version === packageJson.version && fs.readFileSync(path.join(root, "VERSION"), "utf8").trim() === packageJson.version);
 check("alpha.8 release candidate gate passed", board.currentRelease === packageJson.version && board.candidate?.version === packageJson.version && board.candidate?.branch === "codex/release/0.6.0-alpha.8" && board.candidate?.status === "passed" && board.candidate?.evidence === "reports/evidence/HC-REL-ALPHA-8/manifest.json" && board.gates?.find((gate) => gate.id === "alpha-8-release-candidate")?.status === "passed");
 check("historical alpha.7 release candidate gate remains passed", board.gates?.find((gate) => gate.id === "alpha-7-release-candidate")?.status === "passed");
