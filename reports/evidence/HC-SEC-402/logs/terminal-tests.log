@@ -1,0 +1,40 @@
+$ npm run test:terminal
+
+> hi-code@0.6.0-alpha.8 test:terminal
+> node test/terminal-service-tests.mjs && tsx test/terminal-workbench-tests.ts
+
+
+[terminal-service] authorization and isolation
+  ✓ denied start creates no PTY
+  ✓ authorized start uses the current real workspace and a trusted profile-free shell
+  ✓ PTY environment is minimal and excludes parent secrets
+  ✓ session operations are owner-scoped
+  ✓ owner close during native PTY load cancels spawn
+  ✓ workspace switch during native PTY load cancels stale spawn
+
+[terminal-service] bounded data and lifecycle
+  ✓ input, resize, output events, and transcript are bounded
+  ✓ close terminates once and emits one terminal exit event
+  ✓ destroying the renderer owner tears down its PTY
+
+[terminal-service] platform contracts
+  ✓ untrusted SHELL paths are ignored
+  ✓ Windows shell selection stays under trusted roots and disables profiles
+
+[terminal-service] real PTY integration
+  ✓ real PTY executes commands without inherited secrets and closes its process tree
+
+=== 12 passed, 0 failed ===
+
+[terminal-workbench] typed renderer API
+  ✓ renderer normalizes capabilities and clamps terminal dimensions
+  ✓ bridge failures return a readable result instead of throwing
+  ✓ terminal events are typed, size-bounded, and unsubscribed
+  ✓ restored transcript is capped at one MiB
+
+[terminal-workbench] production integration contract
+  ✓ terminal route is real and browser preview fails closed
+  ✓ terminal rendering is lazy, bounded, and uses real xterm input
+  ✓ production build keeps xterm out of the initial App Shell chunk
+
+=== 7 passed, 0 failed ===

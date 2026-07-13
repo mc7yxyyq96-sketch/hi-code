@@ -1,0 +1,119 @@
+$ npm run test:industrial-tools
+
+> hi-code@0.6.0-alpha.8 test:industrial-tools
+> node test/industrial-tool-tests.mjs
+
+
+[industrial-tools] registry
+  ✓ built-in adapters include open and commercial targets
+  ✓ FreeCAD exposes Sprint 6B capabilities
+  ✓ KiCad exposes Sprint 6C capabilities
+  ✓ OpenPLC exposes Sprint 6D capabilities
+  ✓ IfcOpenShell exposes Sprint 6E capabilities
+  ✓ SolidWorks exposes Sprint 6F bridge capabilities
+  ✓ AVEVA exposes Sprint 6G bridge capabilities
+  ✓ command exists detection marks installed
+  ✓ version command output is parsed
+  ✓ capability lookup returns adapter gates
+  ✓ invalid adapter config is rejected
+  ✓ FreeCAD manual executable path is detected
+  ✓ KiCad manual executable path is detected
+  ✓ OpenPLC manual compiler path is detected
+  ✓ IfcOpenShell manual Python path is detected by module probe
+  ✓ SolidWorks non-Windows platform is unsupported
+  ✓ SolidWorks Windows detection can find local executable evidence
+  ✓ AVEVA profile evidence is detected without claiming live connection
+
+[industrial-tools] missing tools and dry-run
+  ✓ missing tool detection does not pretend installed
+  ✓ FreeCAD missing detection returns not installed
+  ✓ OpenPLC missing detection returns not installed
+  ✓ SolidWorks missing or unsupported detection does not pretend installed
+  ✓ AVEVA missing connection profile does not pretend installed
+  ✓ KiCad dry-run succeeds without installed tool
+  ✓ KiCad dry-run artifacts are persisted inside workspace
+  ✓ KiCad dry-run artifact metadata marks simulation
+  ✓ KiCad command preview includes ERC DRC and Gerber flow
+  ✓ KiCad dry-run gates are simulated
+  ✓ KiCad .kicad_pro missing check is reported without fake pass
+  ✓ KiCad project path escape is rejected
+  ✓ KiCad output path must stay in project artifact directory
+  ✓ OpenPLC dry-run generates PLC engineering artifacts
+  ✓ OpenPLC ST file is fail-safe and not device-control logic
+  ✓ OpenPLC I/O map contains requested points
+  ✓ OpenPLC artifact metadata marks compile not_run
+  ✓ OpenPLC compile gate is not marked passed when dry-run
+  ✓ OpenPLC missing emergency stop produces safety warning gate
+  ✓ OpenPLC illegal point is rejected
+  ✓ OpenPLC output path must stay in project artifact directory
+  ✓ OpenPLC installed compiler path runs approved syntax check path
+  ✓ IfcOpenShell forced missing detection does not pretend installed
+  ✓ IfcOpenShell missing install writes dry-run BIM artifacts
+  ✓ IfcOpenShell dry-run artifact metadata marks simulation
+  ✓ IfcOpenShell command preview is generated
+  ✓ IfcOpenShell dry-run gates are simulated not passed
+  ✓ IfcOpenShell illegal IFC path is rejected
+  ✓ IfcOpenShell missing targetStandard produces warning
+  ✓ IfcOpenShell missing IFC file is warning in dry-run
+  ✓ SolidWorks missing install writes bridge dry-run artifacts
+  ✓ SolidWorks macro template is generated for manual bridge execution
+  ✓ SolidWorks metadata marks simulated external requirement
+  ✓ SolidWorks dry-run gates are not marked passed
+  ✓ SolidWorks output path escape is rejected
+  ✓ SolidWorks invalid dimensions are rejected
+  ✓ AVEVA unconfigured connection writes dry-run artifacts
+  ✓ AVEVA metadata marks external required manual approval
+  ✓ AVEVA data exchange schema includes engineering templates
+  ✓ AVEVA tag list template is generated
+  ✓ AVEVA dry-run gates are not marked passed
+  ✓ AVEVA plaintext password is rejected
+  ✓ AVEVA non-HTTPS endpoint produces warning
+  ✓ AVEVA invalid allowed operation is rejected
+  ✓ AVEVA output path escape is rejected
+  ✓ FreeCAD missing install writes dry-run plan files
+  ✓ FreeCAD dry-run artifact metadata marks simulation
+  ✓ FreeCAD invalid dimensions are rejected
+  ✓ FreeCAD output path escape is rejected
+  ✓ FreeCAD output path must stay in project artifact directory
+  ✓ artifactDir path escape is rejected
+  ✓ input artifact path escape is rejected
+  ✓ missing installed tool can only dry-run
+  ✓ installed tool execution requires explicit approval
+  ✓ generic non-specialized adapters still block real execution after approval
+  - skipped real FreeCAD execution: No command, executable path, or environment marker was found for FreeCAD.
+  ✓ real FreeCAD execution test skipped with reason when FreeCAD is absent
+  - skipped real KiCad execution: No command, executable path, or environment marker was found for KiCad.
+  ✓ real KiCad execution test skipped with reason when KiCad is absent
+  - skipped real OpenPLC/IEC execution: No command, executable path, or environment marker was found for OpenPLC / IEC 61131-3.
+  ✓ real OpenPLC execution test skipped with reason when compiler is absent
+  - skipped real IfcOpenShell execution: No IfcOpenShell Python module, CLI, executable path, or environment marker was found for IfcOpenShell / IFC.
+  ✓ real IfcOpenShell execution test skipped with reason when Python module is absent
+  - skipped real SolidWorks bridge execution: unsupported_platform: SolidWorks COM/API bridge requires Windows with a licensed local SolidWorks installation.
+  ✓ real SolidWorks execution remains external and skipped without licensed Windows bridge
+  - skipped real AVEVA connector execution: AVEVA connection is not configured: no connector profile, executable bridge, or approved environment marker was found.
+  ✓ real AVEVA execution remains external and skipped without enterprise connector
+
+[industrial-tools] service, job center, project, domain pack
+  ✓ service lists adapters and project/domain-pack requirements
+  ✓ tool detection writes JobEvents and GateResults
+  ✓ service dry-run writes Job artifact
+  ✓ service dry-run writes diagnostic gate
+  ✓ service OpenPLC dry-run writes Job artifact
+  ✓ service OpenPLC dry-run writes skipped compile gate
+  ✓ service IfcOpenShell dry-run writes Job artifact
+  ✓ service IfcOpenShell dry-run writes skipped BIM gate
+  ✓ service SolidWorks bridge dry-run writes Job artifact
+  ✓ service SolidWorks bridge dry-run writes skipped authorization gate
+  ✓ service AVEVA dry-run writes Job artifact
+  ✓ service AVEVA dry-run writes skipped approval gate
+  ✓ industrial execute cannot forge Renderer approval
+
+[industrial-tools] IPC
+  ✓ IPC list returns adapters
+  ✓ IPC run calls real service path
+  ✓ IPC OpenPLC run calls real service path
+  ✓ IPC IfcOpenShell run calls real service path
+  ✓ IPC SolidWorks run calls real service path
+  ✓ IPC AVEVA run calls real service path
+
+=== 98 passed, 0 failed ===
