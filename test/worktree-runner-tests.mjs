@@ -56,7 +56,7 @@ const workspace = runner.createIsolatedWorkspace({ sourcePath: repo, mode: "auto
 const workspaceRel = path.relative(workspace.safeRoot, workspace.workspacePath);
 check("git repo creates worktree", workspace.mode === "worktree" && workspaceRel && !workspaceRel.startsWith("..") && !path.isAbsolute(workspaceRel));
 check("worktree manifest exists", fs.existsSync(path.join(workspace.workspacePath, ".hicode-worktree-runner.json")));
-const run = runner.runInIsolatedWorkspace({ workspace, command: "printf 'two\\n' > a.txt" });
+const run = runner.runInIsolatedWorkspace({ workspace, command: "printf 'two\\n' > a.txt", userApproved: true });
 check("runInIsolatedWorkspace executes command", run.ok === true);
 const changes = runner.collectChanges(workspace);
 check("collectChanges reports changed file", changes.ok && changes.changedFiles.includes("a.txt"));
@@ -74,7 +74,7 @@ fs.mkdirSync(plain, { recursive: true });
 write(path.join(plain, "src", "main.txt"), "alpha\n");
 const copyWorkspace = runner.createIsolatedWorkspace({ sourcePath: plain, mode: "auto", jobId: "copy-job" });
 check("non-git source falls back to copy sandbox", copyWorkspace.mode === "copy");
-runner.runInIsolatedWorkspace({ workspace: copyWorkspace, command: "printf 'beta\\n' > 'src/main.txt'\nprintf 'new\\n' > 'src/new.txt'" });
+runner.runInIsolatedWorkspace({ workspace: copyWorkspace, command: "printf 'beta\\n' > 'src/main.txt'\nprintf 'new\\n' > 'src/new.txt'", userApproved: true });
 const copyChanges = runner.collectChanges(copyWorkspace);
 check("copy sandbox patch includes modified file", copyChanges.patch.includes("src/main.txt") && copyChanges.patch.includes("+beta"));
 check("copy sandbox patch includes new file", copyChanges.patch.includes("src/new.txt") && copyChanges.patch.includes("+new"));
@@ -98,8 +98,9 @@ const service = createWorktreeService({
   runner,
   jobStore: serviceStore,
   getCwd: () => plain,
+  authorize: async () => "allow",
 });
-const serviceRun = service.run({
+const serviceRun = await service.run({
   sourcePath: plain,
   mode: "copy",
   command: "printf 'gamma\\n' > 'src/main.txt'",
@@ -113,6 +114,16 @@ check("worktree service writes command event", serviceJob?.events.some((event) =
 check("worktree service writes patch event", serviceJob?.events.some((event) => event.type === "worktree.patch.collected"));
 check("worktree service writes cleanup event", serviceJob?.events.some((event) => event.type === "worktree.cleaned"));
 check("worktree service records patch artifact", serviceJob?.artifacts.some((artifact) => artifact.type === "patch" && fs.existsSync(artifact.path)));
+check("worktree service records metadata-only execution policy", serviceJob?.events.some((event) => event.type === "worktree.command.finished" && event.data?.executionPolicy?.audit && !JSON.stringify(event.data).includes("gamma")));
+
+const deniedService = createWorktreeService({
+  runner,
+  jobStore: serviceStore,
+  getCwd: () => plain,
+  authorize: async () => "deny",
+});
+const deniedRun = await deniedService.run({ sourcePath: plain, mode: "copy", command: "touch should-not-run.txt" });
+check("worktree IPC cannot bypass main-process approval", deniedRun.denied === true && !fs.existsSync(path.join(plain, "should-not-run.txt")));
 
 fs.rmSync(tmp, { recursive: true, force: true });
 

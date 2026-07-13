@@ -1,7 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
-import { spawnSync } from "node:child_process";
+
+import { runIndustrialCommand } from "./industrial-execution.js";
+import type { ManagedExecutionPolicyResult } from "./execution-runner.js";
 
 import type {
   IndustrialToolAdapter,
@@ -57,6 +59,7 @@ interface KiCadCommandResult {
   exitCode: number | null;
   signal?: string | null;
   outputPath?: string;
+  executionPolicy?: ManagedExecutionPolicyResult;
 }
 
 const DEFAULT_KICAD_REQUEST: KiCadTaskRequest = {
@@ -137,7 +140,7 @@ export function runKiCadAdapterTask(input: KiCadRunInput): ToolRunResult {
   if (request.allowNetwork === true) {
     return blockedKiCadRun({ adapter, mode, detection, message: "KiCad adapter does not need network access and blocks it by default", code: "kicad.network_blocked" });
   }
-  return runKiCadCli({ adapter, resolved, detection, executablePath: detection.executablePath, inputArtifacts });
+  return runKiCadCli({ adapter, resolved, detection, executablePath: detection.executablePath, inputArtifacts, workspace, userApproved: request.userApproved === true });
 }
 
 function kiCadCapability(id: string, name: string, artifactTypes: ToolCapability["artifactTypes"], requiresInstalledTool: boolean): ToolCapability {
@@ -195,12 +198,14 @@ function writeKiCadDryRun({ adapter, request, resolved, detection, commandPrevie
   };
 }
 
-function runKiCadCli({ adapter, resolved, detection, executablePath, inputArtifacts }: {
+function runKiCadCli({ adapter, resolved, detection, executablePath, inputArtifacts, workspace, userApproved }: {
   adapter: IndustrialToolAdapter;
   resolved: ResolvedKiCadRequest;
   detection: ToolDetectionResult;
   executablePath: string;
   inputArtifacts: string[];
+  workspace: string;
+  userApproved: boolean;
 }): ToolRunResult {
   fs.mkdirSync(resolved.outputDir, { recursive: true, mode: 0o700 });
   const diagnostics = [...projectDiagnostics(resolved, "execute")];
@@ -226,7 +231,7 @@ function runKiCadCli({ adapter, resolved, detection, executablePath, inputArtifa
     };
   }
   const commands = buildKiCadCommands({ executablePath, resolved, dryRun: false });
-  const commandResults: KiCadCommandResult[] = commands.map((command) => runKiCadCommand(command));
+  const commandResults: KiCadCommandResult[] = commands.map((command) => runKiCadCommand(command, { workspace, cwd: resolved.outputDir, userApproved }));
   const log = commandResults.map((result) => renderCommandResultLog(result)).join("\n\n");
   fs.writeFileSync(logPath, redactText(log).slice(0, 200000), { mode: 0o600 });
   for (const result of commandResults) {
@@ -245,6 +250,7 @@ function runKiCadCli({ adapter, resolved, detection, executablePath, inputArtifa
     artifacts: collectKiCadArtifacts(resolved.outputDir, metadata, [inputPath, logPath, metadataPath]),
     diagnostics: [...detection.diagnostics, ...diagnostics],
     detection,
+    executionPolicy: commandResults[0]?.executionPolicy,
     error: ok ? undefined : diagnostics.filter((item) => item.severity === "error").map((item) => item.message).join("; "),
   };
 }
@@ -347,16 +353,20 @@ function buildKiCadCommands({ executablePath, resolved, dryRun }: { executablePa
   return commands;
 }
 
-function runKiCadCommand(command: string[]): KiCadCommandResult {
+function runKiCadCommand(command: string[], context: { workspace: string; cwd: string; userApproved: boolean }): KiCadCommandResult {
   const id = command.slice(1, 4).join(".");
   const outputIndex = command.indexOf("--output");
   const outputPath = outputIndex >= 0 ? command[outputIndex + 1] : undefined;
-  const result = spawnSync(command[0], command.slice(1), {
-    encoding: "utf8",
-    shell: false,
-    timeout: 120000,
-    windowsHide: true,
-    env: kiCadProcessEnv(),
+  const result = runIndustrialCommand({
+    id: `kicad.${id || "command"}`,
+    executable: command[0],
+    args: command.slice(1),
+    cwd: context.cwd,
+    workspaceRoot: context.workspace,
+    timeoutMs: 120000,
+    environment: kiCadProcessEnv(),
+    userApproved: context.userApproved,
+    network: "deny",
   });
   return {
     id,
@@ -368,6 +378,7 @@ function runKiCadCommand(command: string[]): KiCadCommandResult {
     exitCode: result.status,
     signal: result.signal,
     outputPath,
+    executionPolicy: result.executionPolicy,
   };
 }
 
@@ -432,6 +443,7 @@ function writeKiCadMetadata({ resolved, metadataPath, commands, commandResults, 
       status: result.status,
       exitCode: result.exitCode,
       outputPath: result.outputPath,
+      executionPolicy: result.executionPolicy,
     })),
     diagnostics,
     inputArtifacts,

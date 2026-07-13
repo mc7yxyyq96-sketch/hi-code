@@ -166,6 +166,7 @@ const errors = [];
 const api = createHiCodeApi({
   testModel: async () => ({ ok: true, value: 1 }),
   getCredentialStatus: async () => ({ ok: true, secureStorage: { available: true, backend: "keychain" }, references: [] }),
+  getExecutionPolicyCapabilities: async () => ({ ok: true, capabilities: { schemaVersion: 1, platform: "linux", strength: "weak", backend: { id: "none" }, controls: {} } }),
   saveConfig: async () => ({ ok: false, error: "bad request" }),
   attachFile: async () => ({ ok: true, id: "att-00000000-0000-4000-8000-000000000001", kind: "text" }),
   attachImage: async () => ({ ok: true, id: "att-00000000-0000-4000-8000-000000000002", kind: "image" }),
@@ -231,6 +232,7 @@ const api = createHiCodeApi({
 const okResult = await api.testModel({});
 check("api wrapper preserves successful result", okResult?.ok === true && okResult.value === 1);
 check("api wrapper exposes credential status without secret values", (await api.getCredentialStatus()).secureStorage.backend === "keychain");
+check("api wrapper exposes read-only execution capability diagnostics", (await api.getExecutionPolicyCapabilities()).capabilities.strength === "weak");
 check("api wrapper detects missing methods", api.has("missing") === false);
 const bad = await api.saveConfig("{}");
 check("api wrapper returns failed API result", bad?.ok === false && /bad request/.test(bad.error || ""));

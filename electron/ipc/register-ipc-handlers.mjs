@@ -21,6 +21,7 @@ import { registerEditorIpc } from "../services/editor-service.mjs";
 import { registerTerminalIpc } from "../services/terminal-service.mjs";
 import { registerPreviewIpc } from "../services/preview-service.mjs";
 import { registerSecurityIpc } from "../services/security-service.mjs";
+import { registerExecutionPolicyIpc } from "../services/execution-policy-service.mjs";
 import { registerAppInfoIpc } from "../services/app-info-service.mjs";
 import { registerUsageIpc } from "../services/usage-service.mjs";
 
@@ -32,6 +33,7 @@ export function registerIpcHandlers({ services, ipcMain, dialog, shell, logger =
   registerRuntimeIpcEvents({ ipcMain, register, runtime: services.runtime });
   registerQueueIpc({ register, queue: services.queue });
   registerSecurityIpc({ register, security: services.security });
+  registerExecutionPolicyIpc({ register, executionPolicy: services.executionPolicy });
   registerMcpIpc({ register, mcp: services.mcp });
   registerStoreIpc({ register, store: services.store });
   registerJobIpc({ register, job: services.job });

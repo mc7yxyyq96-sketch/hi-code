@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
-import { spawnSync } from "node:child_process";
-import { buildSafeChildEnv } from "./process-env.js";
+
+import { runIndustrialCommand } from "./industrial-execution.js";
 
 import type {
   IndustrialToolAdapter,
@@ -204,7 +204,7 @@ function writeFreeCadDryRun({ adapter, request, cadRequest, outputDir, detection
   };
 }
 
-function runFreeCadCommand({ adapter, request, cadRequest, outputDir, detection, inputArtifacts }: {
+function runFreeCadCommand({ adapter, request, cadRequest, workspace, outputDir, detection, inputArtifacts }: {
   adapter: IndustrialToolAdapter;
   request: ToolRunRequest;
   cadRequest: FreeCadTaskRequest;
@@ -224,19 +224,25 @@ function runFreeCadCommand({ adapter, request, cadRequest, outputDir, detection,
   fs.writeFileSync(scriptPath, FREECAD_CONTROL_BOX_SCRIPT, { mode: 0o700 });
   fs.writeFileSync(drawingPlanPath, renderDrawingPlan(cadRequest), { mode: 0o600 });
   const startedAt = Date.now();
-  const result = spawnSync(executablePath, [scriptPath, requestPath, outputDir], {
+  const result = runIndustrialCommand({
+    id: "freecad.generate-control-box",
+    executable: executablePath,
+    args: [scriptPath, requestPath, outputDir],
     cwd: outputDir,
-    encoding: "utf8",
-    shell: false,
-    timeout: 120000,
-    windowsHide: true,
-    env: buildSafeChildEnv({ extraEnv: { HICODE_FREECAD_OUTPUT_DIR: outputDir } }),
+    workspaceRoot: workspace,
+    timeoutMs: 120000,
+    environment: process.env,
+    extraEnvironment: { HICODE_FREECAD_OUTPUT_DIR: outputDir },
+    userApproved: request.userApproved === true,
+    network: "deny",
   });
   const logText = redactText([
     `$ ${redactPath(executablePath)} ${path.basename(scriptPath)} ${path.basename(requestPath)} ${redactPath(outputDir)}`,
     `exitCode=${result.status ?? "null"} signal=${result.signal || ""}`,
     result.stdout || "",
     result.stderr || "",
+    `executionIsolation=${result.executionPolicy.strength}`,
+    ...result.executionPolicy.warnings,
   ].join("\n")).slice(0, 100000);
   fs.writeFileSync(logPath, logText, { mode: 0o600 });
   if (result.error || result.status !== 0) {
@@ -257,6 +263,7 @@ function runFreeCadCommand({ adapter, request, cadRequest, outputDir, detection,
         diagnostic("freecad.execution.failed", "error", result.error ? errorMessage(result.error) : `FreeCAD exited with code ${result.status}.`, "cad_validation"),
       ],
       detection,
+      executionPolicy: result.executionPolicy,
       error: result.error ? errorMessage(result.error) : `FreeCAD exited with code ${result.status}.`,
     };
   }
@@ -281,6 +288,7 @@ function runFreeCadCommand({ adapter, request, cadRequest, outputDir, detection,
     artifacts: outputArtifacts,
     diagnostics: [...detection.diagnostics, ...quality.diagnostics],
     detection,
+    executionPolicy: result.executionPolicy,
     error: ok ? undefined : quality.diagnostics.filter((item) => item.severity === "error").map((item) => item.message).join("; "),
   };
 }

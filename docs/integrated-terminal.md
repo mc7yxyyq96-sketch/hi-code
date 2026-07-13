@@ -29,6 +29,8 @@ PTY creation calls the same `requestPermission` state used by Runtime tools. Def
 
 Approval applies to shell startup, not every command typed into the shell. This distinction is visible in the native dialog and empty-terminal guidance. Terminal input is never copied into Runtime logs or Job events.
 
+Before PTY spawn, the main process also evaluates the shared cross-platform execution policy. The terminal is intentionally `weak`: it is interactive, has no automatic timeout, permits network access, and does not claim filesystem confinement. It does retain a minimal environment, one visible startup approval, owner/workspace lifecycle binding, bounded transcript/output, and full process-tree cleanup. Settings displays these controls separately so this boundary cannot be confused with Runtime Bash or an isolated worktree.
+
 ## Environment And Shells
 
 The PTY receives `buildSafeChildEnv()` output plus terminal-only values such as `TERM`, `COLORTERM`, `PWD`, and `HICODE_TERMINAL`. API keys, tokens, passwords, unknown variables, `SSH_AUTH_SOCK`, and the complete parent environment are not inherited.

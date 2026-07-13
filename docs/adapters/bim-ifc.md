@@ -68,6 +68,8 @@ All paths must resolve inside the workspace. `outputDir` must stay under `.hicod
 
 ## IFC Inspection
 
+Python/CLI probes and real inspection are launched through the shared execution-policy runner. Child environments are minimized, network access is denied, output and runtime are bounded, and descendants are terminated as one managed process tree. On Electron, the internal sync supervisor runs explicitly in Node mode so detection cannot stall by launching another desktop process.
+
 Real execution requires:
 
 - Python with `ifcopenshell` installed

@@ -22,6 +22,8 @@ const html = fs.readFileSync(path.join(root, "renderer", "index.html"), "utf8");
 const bash = fs.readFileSync(path.join(root, "src", "tools", "bash.ts"), "utf8");
 const mcp = fs.readFileSync(path.join(root, "src", "mcp.ts"), "utf8");
 const processEnvService = fs.readFileSync(path.join(root, "src", "process-env.ts"), "utf8");
+const executionRunner = fs.readFileSync(path.join(root, "src", "execution-runner.ts"), "utf8");
+const industrialExecution = fs.readFileSync(path.join(root, "src", "industrial-execution.ts"), "utf8");
 const gitCore = fs.readFileSync(path.join(root, "src", "git.ts"), "utf8");
 const gitCollaboration = fs.readFileSync(path.join(root, "src", "git-collaboration.ts"), "utf8");
 const gitService = fs.readFileSync(path.join(root, "electron", "services", "git-service.mjs"), "utf8");
@@ -111,6 +113,8 @@ check("preload does not expose generic invoke", !/invoke:\s*\(/.test(preload));
 check("preload validates string parameters", preload.includes("requireString(") && preload.includes("checkedInvoke("));
 check("preload normalizes object parameters", preload.includes("optionalObject(") && preload.includes("stringArray("));
 check("preload exposes read-only credential status without a secret getter", preload.includes('getCredentialStatus: () => safeInvoke("config:credential-status")') && !preload.includes("getSecret:"));
+check("preload exposes read-only execution capabilities without a policy bypass", preload.includes('getExecutionPolicyCapabilities: () => safeInvoke("execution-policy:capabilities")') && !preload.includes("setExecutionPolicy") && !preload.includes("runExecutionPolicy"));
+check("execution policy IPC exposes diagnostics only", ipcRegister.includes("registerExecutionPolicyIpc") && fs.readFileSync(path.join(root, "electron/services/execution-policy-service.mjs"), "utf8").includes('register.handle("execution-policy:capabilities"') && !fs.readFileSync(path.join(root, "electron/services/execution-policy-service.mjs"), "utf8").includes('register.handle("execution-policy:run"'));
 check("preload exposes bounded typed attachment API", preload.includes("function runtimeInput") && preload.includes("attachmentIds.length > 8") && preload.includes('attachFile: (payload) => safeInvoke("attach-file", optionalObject(payload))') && preload.includes('removeAttachment: (id) => checkedInvoke("attachment:remove"'));
 check("preload exposes Industrial Project API", [
   "getIndustrialProjectSchema",
@@ -232,8 +236,8 @@ check("Pull Request creation requires a fresh main-process confirmation", gitSer
 check("Git delivery forbids force push and automatic merge", gitCollaboration.includes('"push", "--set-upstream", "origin", "HEAD"') && !/--force|\bmerge\b/.test(gitCollaboration));
 check("Git preload validates bounded branch and Pull Request payloads", preload.includes("function gitBranchRequest") && preload.includes("function gitPullRequest") && preload.includes('safeInvoke("git:pr:create", checked.value)'));
 check("failed and pending CI conclusions remain truthful", gitCollaboration.includes('return "failed"') && gitCollaboration.includes('return "pending"') && gitCollaboration.includes('counts.failed ? "failed" : counts.pending ? "pending"'));
-check("MCP server process uses safe child env", mcp.includes("buildSafeChildEnv") && !mcp.includes("...process.env"));
-check("FreeCAD execution uses safe child env", freeCadAdapter.includes("buildSafeChildEnv") && !freeCadAdapter.includes("...process.env, HICODE_FREECAD_OUTPUT_DIR"));
+check("MCP server process uses managed execution policy", mcp.includes("evaluateExecutionPolicy") && mcp.includes("createExecutionLaunchPlan") && mcp.includes("terminateExecutionProcessTree") && !mcp.includes("...process.env"));
+check("FreeCAD execution uses managed industrial policy", freeCadAdapter.includes("runIndustrialCommand") && industrialExecution.includes("runManagedExecutionSync") && !freeCadAdapter.includes("spawnSync("));
 check("Electron E2E isolates HOME and USERPROFILE", electronE2e.includes("safeElectronEnv(isolatedHome)") && electronE2e.includes("env.HOME = isolatedHome") && electronE2e.includes("env.USERPROFILE = isolatedHome") && !electronE2e.includes('"PATH", "HOME"'));
 check("Electron E2E rejects inherited secret variables", electronE2e.includes("sensitiveKeys") && electronE2e.includes("TOKEN|SECRET|PASSWORD|API_KEY|PRIVATE_KEY") && electronE2e.includes("assert.deepEqual(environment.sensitiveKeys, [])"));
 check("Electron E2E verifies secure credential persistence or fail-closed behavior", electronE2e.includes("verifySecureCredentialStorage") && electronE2e.includes("contains plaintext credential") && electronE2e.includes("secure storage is unavailable"));
@@ -300,7 +304,7 @@ check("AVEVA bridge blocks real connector execution", avevaAdapter.includes("nev
 check("AVEVA bridge checks HTTPS endpoint and allowed operations", avevaAdapter.includes("aveva.endpoint.non_https") && avevaAdapter.includes("AVEVA requested operation is not allowed by profile"));
 check("Quality Gate Runner defines required gate types", ["command_gate", "file_exists_gate", "schema_gate", "artifact_integrity_gate", "security_gate", "human_approval_gate", "adapter_gate", "documentation_gate"].every((needle) => qualityGates.includes(needle)));
 check("Quality Gate Runner defines release gate statuses", ["passed", "failed", "warning", "skipped", "simulated", "not_run", "requires_approval"].every((needle) => qualityGates.includes(`"${needle}"`)));
-check("Quality Gate command execution avoids shell syntax", qualityGates.includes("shell: false") && qualityGates.includes("hasShellSyntax") && qualityGates.includes("filteredEnv"));
+check("Quality Gate command execution avoids shell syntax", qualityGates.includes("runManagedExecution") && qualityGates.includes("hasShellSyntax") && qualityGates.includes("approval: { required: true") && executionRunner.includes("shell: false"));
 check("Quality Gate Runner confines artifact paths", qualityGates.includes("gate path escapes workspace") && qualityGates.includes("safePath(workspace"));
 check("Quality Gate simulated adapter is not passed", qualityGates.includes('simulated ? "simulated"') && qualityGates.includes("cannot pass release gate"));
 check("Release Builder confines release and artifact paths", releaseBuilder.includes("releasePath") && releaseBuilder.includes("escapes workspace") && releaseBuilder.includes("assertInside(this.workspacePath"));

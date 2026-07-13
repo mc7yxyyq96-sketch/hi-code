@@ -718,26 +718,44 @@ const service = createIndustrialToolService({
   getCwd: () => workspace,
   jobStore,
   domainPackManager,
+  authorize: async () => "allow",
 });
 const listed = service.listAdapters();
 check("service lists adapters and project/domain-pack requirements", listed.ok === true && listed.toolRequirements.some((item) => item.source === "project" && item.name === "KiCad") && listed.toolRequirements.some((item) => item.source === "project" && item.name === "OpenPLC / IEC 61131-3") && listed.toolRequirements.some((item) => item.source === "project" && item.name === "IfcOpenShell / IFC") && listed.toolRequirements.some((item) => item.source === "project" && item.name === "SolidWorks Bridge") && listed.toolRequirements.some((item) => item.source === "project" && item.name === "AVEVA Engineering Bridge") && listed.toolRequirements.some((item) => item.source === "domain-pack" && item.name === "EDA tool"), JSON.stringify(listed.toolRequirements));
 const listJob = jobStore.getJob(listed.jobId);
 check("tool detection writes JobEvents and GateResults", listJob?.events.some((event) => event.type === "industrial-tool.detected") && listJob?.gateResults.length > 0, JSON.stringify(listJob));
-const serviceRun = service.runAdapterTask({ adapterId: "kicad", task: "Plan Gerber export", mode: "dry-run", actor: "tester" });
+const serviceRun = await service.runAdapterTask({ adapterId: "kicad", task: "Plan Gerber export", mode: "dry-run", actor: "tester" });
 check("service dry-run writes Job artifact", serviceRun.ok === true && jobStore.getJob(serviceRun.jobId)?.artifacts.some((artifact) => artifact.metadata?.simulated === true), JSON.stringify(jobStore.getJob(serviceRun.jobId)));
 check("service dry-run writes diagnostic gate", jobStore.getJob(serviceRun.jobId)?.gateResults.some((gate) => gate.metadata?.adapterId === "kicad"));
-const plcServiceRun = service.runAdapterTask({ adapterId: "openplc", task: "Generate PLC draft", mode: "dry-run", actor: "tester", plcRequest: validPlcRequest(".hicode/artifacts/plc/service-dry-run") });
+const plcServiceRun = await service.runAdapterTask({ adapterId: "openplc", task: "Generate PLC draft", mode: "dry-run", actor: "tester", plcRequest: validPlcRequest(".hicode/artifacts/plc/service-dry-run") });
 check("service OpenPLC dry-run writes Job artifact", plcServiceRun.ok === true && jobStore.getJob(plcServiceRun.jobId)?.artifacts.some((artifact) => artifact.name === "plc-program.st"), JSON.stringify(jobStore.getJob(plcServiceRun.jobId)));
 check("service OpenPLC dry-run writes skipped compile gate", jobStore.getJob(plcServiceRun.jobId)?.gateResults.some((gate) => gate.metadata?.adapterId === "openplc" && gate.status === "skipped"));
-const bimServiceRun = service.runAdapterTask({ adapterId: "ifcopenshell", task: "Plan IFC inspection", mode: "dry-run", actor: "tester", bimRequest: validBimRequest(".hicode/artifacts/bim/service-dry-run") });
+const bimServiceRun = await service.runAdapterTask({ adapterId: "ifcopenshell", task: "Plan IFC inspection", mode: "dry-run", actor: "tester", bimRequest: validBimRequest(".hicode/artifacts/bim/service-dry-run") });
 check("service IfcOpenShell dry-run writes Job artifact", bimServiceRun.ok === true && jobStore.getJob(bimServiceRun.jobId)?.artifacts.some((artifact) => artifact.name === "ifc-check-plan.md"), JSON.stringify(jobStore.getJob(bimServiceRun.jobId)));
 check("service IfcOpenShell dry-run writes skipped BIM gate", jobStore.getJob(bimServiceRun.jobId)?.gateResults.some((gate) => gate.metadata?.adapterId === "ifcopenshell" && gate.status === "skipped"));
-const solidWorksServiceRun = service.runAdapterTask({ adapterId: "solidworks", task: "Generate SolidWorks bridge", mode: "dry-run", actor: "tester", solidworksRequest: validSolidWorksRequest(".hicode/artifacts/solidworks/service-bridge") });
+const solidWorksServiceRun = await service.runAdapterTask({ adapterId: "solidworks", task: "Generate SolidWorks bridge", mode: "dry-run", actor: "tester", solidworksRequest: validSolidWorksRequest(".hicode/artifacts/solidworks/service-bridge") });
 check("service SolidWorks bridge dry-run writes Job artifact", solidWorksServiceRun.ok === true && jobStore.getJob(solidWorksServiceRun.jobId)?.artifacts.some((artifact) => artifact.name === "macro-template.bas"), JSON.stringify(jobStore.getJob(solidWorksServiceRun.jobId)));
 check("service SolidWorks bridge dry-run writes skipped authorization gate", jobStore.getJob(solidWorksServiceRun.jobId)?.gateResults.some((gate) => gate.metadata?.adapterId === "solidworks" && gate.status === "skipped"));
-const avevaServiceRun = service.runAdapterTask({ adapterId: "aveva", task: "Generate AVEVA integration plan", mode: "dry-run", actor: "tester", avevaRequest: validAvevaRequest(".hicode/artifacts/aveva/service-plan") });
+const avevaServiceRun = await service.runAdapterTask({ adapterId: "aveva", task: "Generate AVEVA integration plan", mode: "dry-run", actor: "tester", avevaRequest: validAvevaRequest(".hicode/artifacts/aveva/service-plan") });
 check("service AVEVA dry-run writes Job artifact", avevaServiceRun.ok === true && jobStore.getJob(avevaServiceRun.jobId)?.artifacts.some((artifact) => artifact.name === "tag-list-template.csv"), JSON.stringify(jobStore.getJob(avevaServiceRun.jobId)));
 check("service AVEVA dry-run writes skipped approval gate", jobStore.getJob(avevaServiceRun.jobId)?.gateResults.some((gate) => gate.metadata?.adapterId === "aveva" && gate.status === "skipped"));
+
+let industrialAuthorizationRequests = 0;
+const deniedIndustrialService = createIndustrialToolService({
+  registry: fakeCompilerRegistry,
+  getCwd: () => workspace,
+  jobStore,
+  domainPackManager,
+  authorize: async () => { industrialAuthorizationRequests += 1; return "deny"; },
+});
+const deniedIndustrialRun = await deniedIndustrialService.runAdapterTask({
+  adapterId: "openplc",
+  task: "Attempt approved compile",
+  mode: "execute",
+  userApproved: true,
+  plcRequest: validPlcRequest(".hicode/artifacts/plc/denied-service-run"),
+});
+check("industrial execute cannot forge Renderer approval", industrialAuthorizationRequests === 1 && deniedIndustrialRun.ok === false && /approval/i.test(deniedIndustrialRun.error || deniedIndustrialRun.result?.error || ""));
 
 console.log("\n[industrial-tools] IPC");
 const ipc = fakeIpcMain();

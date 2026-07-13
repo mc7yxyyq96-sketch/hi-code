@@ -158,6 +158,7 @@ Electron keeps its existing `output` and `tool-event` IPC channels while changin
 - Mutating tools and external adapters require explicit permission unless the user selected a documented higher-trust mode.
 - Child processes receive minimal allowlisted environments; tokens, secrets, passwords, keys, and unknown sensitive variables are excluded by default.
 - Integrated terminal startup is one explicit permission decision for an interactive shell session. The shell starts in the active workspace and closes on owner/workspace/app lifecycle changes, but retains the desktop user's OS permissions and does not claim filesystem sandboxing.
+- Managed child execution uses one versioned policy kernel. macOS and Linux isolation backends are probed and reported as partial, Windows remains weak without a reviewed restricted token, and every non-interactive runner records timeout/output/process-tree evidence without arguments or environment values.
 - Store and Domain Pack remote installs require HTTPS, safe destinations, and manifest validation. Remote manifests cannot inject local source paths or automatic scripts.
 - Commercial adapters never bypass licensing, VPN, identity, or enterprise authorization. Plaintext credentials are not persisted.
 - Logs and evidence redact secret-like data before persistence.

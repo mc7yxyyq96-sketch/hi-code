@@ -14,6 +14,8 @@ Sprint 6F adds the SolidWorks bridge foundation for Hi Code. SolidWorks is comme
 
 Real COM/API execution, automatic part creation, assembly generation, drawing export, STEP export, and BOM export are not performed by Hi Code in Sprint 6F.
 
+The current bridge creates no external process. Any future executable bridge must enter through the shared execution-policy runner, require fresh main-process approval, use a minimized environment, and preserve `external_required` until independently verified output evidence exists.
+
 ## Windows / COM / API Notes
 
 SolidWorks automation normally happens through a Windows COM session owned by the licensed desktop user. Hi Code must not bypass licensing or start hidden commercial software sessions. A future production bridge should run as a user-installed local bridge with:

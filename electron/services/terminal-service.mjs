@@ -5,6 +5,11 @@ import crypto from "node:crypto";
 import { spawnSync } from "node:child_process";
 
 import { buildSafeChildEnv } from "../../dist/process-env.js";
+import {
+  detectExecutionCapabilities,
+  evaluateExecutionPolicy,
+  projectExecutionCapabilities,
+} from "../../dist/execution-policy.js";
 import { ipcBoundedNumber, ipcObject, ipcString, redactString } from "../ipc/ipc-utils.mjs";
 
 export const TERMINAL_EVENT_CHANNEL = "terminal:event";
@@ -38,11 +43,13 @@ export function createTerminalService({
   idFactory = () => `terminal-${crypto.randomUUID()}`,
   terminateProcessTree = defaultTerminateProcessTree,
   transcriptLimit = MAX_TERMINAL_TRANSCRIPT_BYTES,
+  executionPolicy = null,
 } = {}) {
   if (typeof getCwd !== "function") throw new Error("terminal-service requires getCwd");
   if (typeof authorize !== "function") throw new Error("terminal-service requires authorize");
   if (typeof loadPty !== "function") throw new Error("terminal-service requires loadPty");
   if (typeof terminateProcessTree !== "function") throw new Error("terminal-service requires terminateProcessTree");
+  const policy = normalizeExecutionPolicy(executionPolicy, { platform });
 
   const sessions = new Map();
   const ownerSessions = new Map();
@@ -76,6 +83,7 @@ export function createTerminalService({
         supportsResize: true,
         profileLoading: false,
         maxSessionsPerWindow: 1,
+        executionPolicy: policy.capabilities().capabilities,
       };
     } catch (error) {
       return terminalUnavailable(platform, `PTY component failed to load: ${redactString(error?.message || String(error))}`, shell);
@@ -120,7 +128,31 @@ export function createTerminalService({
         log("terminal:start-cancelled", { ownerId: owner.id, workspace, reason: "workspace_changed" });
         return { ok: false, code: "terminal_workspace_changed", error: "工作区已切换，请在新工作区重新启动终端" };
       }
-      const env = terminalEnvironment({ platform, envSource, cwd: workspace });
+      const policyDecision = policy.evaluate({
+        id: "integrated-terminal",
+        surface: "integrated-terminal",
+        executable: shell.executable,
+        args: shell.args,
+        cwd: workspace,
+        allowedRoots: [workspace],
+        filesystem: "unrestricted",
+        network: "allow",
+        environment: terminalEnvironmentOptions({ platform, envSource, cwd: workspace }),
+        limits: { timeoutMs: 0, outputBytes: boundedTranscriptLimit(transcriptLimit) },
+        approval: { required: true, granted: decision !== "deny" },
+        processTree: { required: true },
+        interactive: true,
+        enforcementMode: "strict",
+      });
+      if (!policyDecision.ok || !policyDecision.launch) {
+        log("terminal:policy-denied", { ownerId: owner.id, workspace, code: policyDecision.code, error: policyDecision.error });
+        return {
+          ok: false,
+          code: policyDecision.code || "terminal_policy_denied",
+          error: `终端执行策略拒绝启动：${policyDecision.error || "安全边界不可用"}`,
+        };
+      }
+      const env = policyDecision.launch.env;
       const ptyProcess = pty.spawn(shell.executable, shell.args, {
         name: "xterm-256color",
         cols,
@@ -150,6 +182,7 @@ export function createTerminalService({
         transcriptLimit: boundedTranscriptLimit(transcriptLimit),
         closing: false,
         finalized: false,
+        executionPolicy: policyDecision.audit,
         disposables: [],
         ownerDestroyedHandler: null,
       };
@@ -173,6 +206,8 @@ export function createTerminalService({
         shell: shell.label,
         permission: decision,
         envKeys: Object.keys(env).sort(),
+        executionPolicy: policyDecision.audit,
+        isolationWarnings: policyDecision.warnings,
       });
       return { ok: true, reused: false, session: publicSession(session), snapshot: session.transcript };
     } catch (error) {
@@ -409,8 +444,8 @@ function resolveWindowsShell(env, fsImpl) {
   return { ...selected, profileLoading: false };
 }
 
-function terminalEnvironment({ platform, envSource, cwd }) {
-  return buildSafeChildEnv({
+function terminalEnvironmentOptions({ platform, envSource, cwd }) {
+  return {
     source: envSource,
     extraEnv: {
       TERM: "xterm-256color",
@@ -420,7 +455,7 @@ function terminalEnvironment({ platform, envSource, cwd }) {
       PWD: cwd,
       ...(platform === "win32" ? {} : { HISTFILE: os.devNull }),
     },
-  });
+  };
 }
 
 function publicShell(shell) {
@@ -440,6 +475,8 @@ function publicSession(session) {
     rows: session.rows,
     startedAt: session.startedAt,
     state: session.closing ? "closing" : "running",
+    isolationStrength: session.executionPolicy?.strength || "weak",
+    executionBackend: session.executionPolicy?.backend || "none",
   });
 }
 
@@ -454,7 +491,17 @@ function terminalUnavailable(platform, reason, shell = null) {
     maxSessionsPerWindow: 1,
     reason: redactString(reason),
     setupHint: "重新安装 Hi Code 的完整桌面包；浏览器预览模式不提供原生终端。",
+    executionPolicy: null,
   };
+}
+
+function normalizeExecutionPolicy(candidate, { platform }) {
+  if (candidate && typeof candidate.capabilities === "function" && typeof candidate.evaluate === "function") return candidate;
+  const detected = detectExecutionCapabilities({ platform });
+  return Object.freeze({
+    capabilities: () => ({ ok: true, capabilities: projectExecutionCapabilities(detected) }),
+    evaluate: (request) => evaluateExecutionPolicy(request, detected),
+  });
 }
 
 function resolveWorkspace(value, fsImpl) {
@@ -543,10 +590,36 @@ function sanitizeTerminalLog(value) {
   for (const [key, item] of Object.entries(ipcObject(value))) {
     if (/input|output|transcript|env$/i.test(key)) continue;
     if (key === "envKeys") out.envKeys = Array.isArray(item) ? item.filter((entry) => typeof entry === "string").slice(0, 32) : [];
+    else if (key === "isolationWarnings") out.isolationWarnings = Array.isArray(item) ? item.filter((entry) => typeof entry === "string").slice(0, 8).map((entry) => redactString(entry).slice(0, 600)) : [];
+    else if (key === "executionPolicy" && item && typeof item === "object" && !Array.isArray(item)) {
+      out.executionPolicy = sanitizeExecutionPolicyAudit(item);
+    }
     else if (typeof item === "string") out[key] = redactString(item).slice(0, 4096);
     else if (typeof item === "number" || typeof item === "boolean" || item === null) out[key] = item;
   }
   return out;
+}
+
+function sanitizeExecutionPolicyAudit(value) {
+  const input = ipcObject(value);
+  return {
+    schemaVersion: Number(input.schemaVersion) || 1,
+    requestId: redactString(input.requestId || "").slice(0, 160),
+    surface: redactString(input.surface || "").slice(0, 160),
+    platform: redactString(input.platform || "").slice(0, 32),
+    backend: redactString(input.backend || "none").slice(0, 80),
+    strength: ["strong", "partial", "weak", "unavailable"].includes(input.strength) ? input.strength : "unavailable",
+    executable: path.basename(redactString(input.executable || "")).slice(0, 160),
+    argCount: Number.isInteger(input.argCount) ? input.argCount : 0,
+    rootCount: Number.isInteger(input.rootCount) ? input.rootCount : 0,
+    filesystem: redactString(input.filesystem || "").slice(0, 40),
+    network: redactString(input.network || "").slice(0, 40),
+    timeoutMs: Number(input.timeoutMs) || 0,
+    outputBytes: Number(input.outputBytes) || 0,
+    approvalRequired: input.approvalRequired === true,
+    processTreeRequired: input.processTreeRequired === true,
+    interactive: input.interactive === true,
+  };
 }
 
 function splitUtf8(value, maxBytes) {

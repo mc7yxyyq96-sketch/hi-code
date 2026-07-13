@@ -26,6 +26,7 @@ Every generated PLC output carries these assumptions:
 - Emergency stop and safety interlocks must be reviewed by qualified personnel.
 - Dry-run compile gates are recorded as `not_run`/skipped, not passed.
 - No network or device access is allowed by this adapter.
+- Local compiler probes and approved syntax checks run through the shared execution-policy runner with a minimal environment, bounded output/timeout, managed process-tree cleanup, and truthful isolation metadata.
 
 ## Input Schema
 

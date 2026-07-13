@@ -76,7 +76,7 @@
 ### 🛡 安全边界
 - **权限系统**：`default`（改动前确认）· `acceptEdits` · `yolo`（全自动）
 - **工作区路径限制**：文件读写不越界到项目之外
-- **Bash 沙箱（macOS）**：用 `sandbox-exec` 把 shell 写操作限制在工作区内
+- **跨平台执行策略**：macOS `sandbox-exec`、Linux bubblewrap（可用时）与 Windows 进程树能力均先检测再报告；缺少 OS 隔离时明确显示弱隔离，不冒充容器
 - **密钥脱敏**：工具输出里的 Bearer token、API Key 等会被自动打码
 
 ### 💾 其它

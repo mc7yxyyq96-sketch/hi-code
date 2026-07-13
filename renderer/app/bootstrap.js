@@ -649,6 +649,18 @@ if (!window.hicode) {
       : [{ role: "user", text: "hello" }, { role: "assistant", text: "你好，有什么可以帮你？" }]),
     deleteSession: async () => true,
     getConfig: async () => JSON.stringify(demoConfig, null, 2),
+	getExecutionPolicyCapabilities: async () => ({
+      ok: true,
+      capabilities: {
+        schemaVersion: 1,
+        platform: "browser",
+        backend: { id: "none", available: false, reason: "浏览器演示模式不执行本机命令。" },
+        strength: "unavailable",
+        controls: {},
+        warnings: ["浏览器演示模式没有本机执行能力。"],
+        setupHint: "请使用 Hi Code 桌面应用查看真实平台能力。",
+      },
+    }),
 	    saveConfig: async (text) => {
       try {
         demoConfig = JSON.parse(text);
@@ -1365,6 +1377,8 @@ const settingsSections = {
 const usagePanelRoot = $("usagePanelRoot");
 const reasoningOptions = $("reasoningOptions"), compactThresholdSelect = $("compactThresholdSelect");
 const sandboxToggle = $("sandboxToggle"), sandboxHint = $("sandboxHint");
+const executionPolicyStatus = $("executionPolicyStatus"), executionPolicyBackend = $("executionPolicyBackend");
+const executionPolicyControlRows = $("executionPolicyControlRows"), executionPolicyWarnings = $("executionPolicyWarnings");
 const mcpCfg = $("mcpCfg"), mcpSave = $("mcp-save");
 const dataDirPath = $("dataDirPath"), configFilePath = $("configFilePath");
 const openDataDirBtn = $("openDataDirBtn"), revealConfigBtn = $("revealConfigBtn");
@@ -4436,15 +4450,67 @@ compactThresholdSelect.onchange = async () => {
 };
 
 async function renderSafetySettings() {
-  const config = await currentConfigObject();
+  const [config, policyResponse] = await Promise.all([currentConfigObject(), api.getExecutionPolicyCapabilities()]);
   sandboxToggle.checked = config.sandbox === true;
-  const info = await getAppInfoCached();
-  if (info && info.platform !== "darwin") {
+  const capabilities = policyResponse?.ok ? policyResponse.capabilities : null;
+  renderExecutionPolicyCapabilities(capabilities, policyResponse?.error || "");
+  const filesystemAvailable = capabilities?.controls?.filesystem?.available === true;
+  if (!filesystemAvailable) {
     sandboxToggle.disabled = true;
-    sandboxHint.textContent = "当前平台不是 macOS，sandbox-exec 不可用；写入仍受工作区路径校验和逐项确认保护。";
+    sandboxHint.textContent = config.sandbox === true
+      ? "配置要求写入隔离，但当前平台后端不可用；bash 会按严格策略拒绝执行，不会无保护运行。"
+      : "当前平台没有可用的 OS 写入隔离后端。命令仍经过确认、最小环境和进程树管理，但边界属于弱隔离。";
   } else {
     sandboxToggle.disabled = false;
+    const backend = capabilities.backend?.id === "linux-bubblewrap" ? "bubblewrap" : capabilities.backend?.id === "macos-sandbox-exec" ? "sandbox-exec" : capabilities.backend?.id || "当前后端";
+    sandboxHint.textContent = `${backend} 可把命令写入限制在当前工作区；宿主读取能力仍会单独提示，因此不会标为完整容器隔离。`;
   }
+}
+
+function renderExecutionPolicyCapabilities(capabilities, error = "") {
+  executionPolicyControlRows.replaceChildren();
+  if (!capabilities) {
+    executionPolicyStatus.textContent = "执行策略状态不可用";
+    executionPolicyBackend.textContent = error || "无法读取主进程执行能力，请重启桌面应用。";
+    executionPolicyWarnings.textContent = "未知边界不会被当作安全沙箱。";
+    return;
+  }
+  const strengthLabels = { strong: "强隔离", partial: "部分隔离", weak: "弱隔离", unavailable: "不可用" };
+  const backendLabels = {
+    "macos-sandbox-exec": "macOS sandbox-exec",
+    "linux-bubblewrap": "Linux bubblewrap",
+    "windows-restricted-token": "Windows restricted token",
+    none: "无 OS 隔离后端",
+  };
+  executionPolicyStatus.textContent = `${strengthLabels[capabilities.strength] || "未知"} · ${capabilities.platform || "unknown"}`;
+  executionPolicyBackend.textContent = `${backendLabels[capabilities.backend?.id] || capabilities.backend?.id || "unknown"}：${capabilities.backend?.reason || "未提供检测原因"}`;
+  const labels = {
+    filesystem: "文件系统",
+    environment: "环境变量",
+    network: "网络",
+    processTree: "进程树",
+    timeout: "超时",
+    output: "输出边界",
+    approval: "人工确认",
+    audit: "审计",
+  };
+  for (const [key, label] of Object.entries(labels)) {
+    const control = capabilities.controls?.[key];
+    if (!control) continue;
+    const row = document.createElement("div");
+    row.className = "settings-row";
+    const body = document.createElement("div");
+    body.className = "settings-row-label";
+    const title = document.createElement("b");
+    title.textContent = `${label} · ${control.available ? "可执行" : "未执行"}`;
+    const detail = document.createElement("p");
+    detail.textContent = `${control.enforcement || "none"} · ${control.detail || "无说明"}`;
+    body.append(title, detail);
+    row.appendChild(body);
+    executionPolicyControlRows.appendChild(row);
+  }
+  const warnings = Array.isArray(capabilities.warnings) ? capabilities.warnings.filter(Boolean) : [];
+  executionPolicyWarnings.textContent = [warnings.join(" "), capabilities.setupHint || ""].filter(Boolean).join(" ");
 }
 
 sandboxToggle.onchange = async () => {

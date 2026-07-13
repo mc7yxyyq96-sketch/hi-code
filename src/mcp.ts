@@ -1,9 +1,16 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import type { McpServerConfig } from "./config.js";
 import type { ToolSchema } from "./llm.js";
-import { buildSafeChildEnv } from "./process-env.js";
+import {
+  createExecutionLaunchPlan,
+  detectExecutionCapabilities,
+  evaluateExecutionPolicy,
+  terminateExecutionProcessTree,
+  type ExecutionPolicyAudit,
+} from "./execution-policy.js";
 
 const PROTOCOL_VERSION = "2024-11-05";
+const MAX_MCP_STREAM_BYTES = 1024 * 1024;
 
 interface McpTool {
   name: string; // namespaced: mcp__<server>__<tool>
@@ -20,6 +27,9 @@ class McpClient {
   private nextId = 1;
   private pending = new Map<number, { resolve: (v: any) => void; reject: (e: Error) => void }>();
   private buf = "";
+  private stderrBuf = "";
+  private policyAudit?: ExecutionPolicyAudit;
+  private policyWarnings: string[] = [];
   tools: McpTool[] = [];
 
   constructor(name: string, private cfg: McpServerConfig) {
@@ -27,12 +37,39 @@ class McpClient {
   }
 
   async connect(timeoutMs = 15000): Promise<void> {
-    this.proc = spawn(this.cfg.command, this.cfg.args ?? [], {
-      env: buildSafeChildEnv({ extraEnv: this.cfg.env, allowSensitiveExtraEnv: true }),
+    const cwd = process.cwd();
+    const capabilities = detectExecutionCapabilities();
+    const decision = evaluateExecutionPolicy({
+      id: `mcp:${safeId(this.name)}`,
+      surface: "mcp-server",
+      executable: this.cfg.command,
+      args: this.cfg.args ?? [],
+      cwd,
+      allowedRoots: [cwd],
+      filesystem: "unrestricted",
+      network: "allow",
+      environment: { extraEnv: this.cfg.env, allowSensitiveExtraEnv: true },
+      limits: { timeoutMs: 0, outputBytes: MAX_MCP_STREAM_BYTES },
+      approval: { required: false, granted: true },
+      processTree: { required: true },
+      interactive: true,
+      enforcementMode: "report-only",
+    }, capabilities);
+    if (!decision.ok) throw new Error(`MCP execution policy denied startup: ${decision.error || decision.code}`);
+    const plan = createExecutionLaunchPlan(decision, capabilities);
+    this.policyAudit = decision.audit;
+    this.policyWarnings = [...decision.warnings];
+    this.proc = spawn(plan.command, plan.args, {
+      cwd: plan.cwd,
+      env: plan.env,
+      detached: plan.detached,
       stdio: ["pipe", "pipe", "pipe"],
     }) as ChildProcessWithoutNullStreams;
 
     this.proc.stdout.on("data", (d: Buffer) => this.onData(d));
+    this.proc.stderr.on("data", (d: Buffer) => {
+      this.stderrBuf = boundedTail(this.stderrBuf + d.toString(), MAX_MCP_STREAM_BYTES);
+    });
     this.proc.on("error", (e) => this.failAll(e));
     this.proc.on("exit", () => this.failAll(new Error(`mcp server '${this.name}' exited`)));
 
@@ -73,7 +110,16 @@ class McpClient {
   }
 
   close(): void {
-    this.proc?.kill();
+    const pid = this.proc?.pid;
+    if (pid) terminateExecutionProcessTree({ pid });
+    this.proc = undefined;
+  }
+
+  executionBoundary(): { audit?: ExecutionPolicyAudit; warnings: string[] } {
+    return {
+      ...(this.policyAudit ? { audit: { ...this.policyAudit, envKeys: [...this.policyAudit.envKeys] } } : {}),
+      warnings: [...this.policyWarnings],
+    };
   }
 
   private request(method: string, params: unknown): Promise<unknown> {
@@ -91,6 +137,11 @@ class McpClient {
 
   private onData(d: Buffer): void {
     this.buf += d.toString();
+    if (Buffer.byteLength(this.buf) > MAX_MCP_STREAM_BYTES) {
+      this.failAll(new Error("MCP server output exceeded the bounded protocol buffer"));
+      this.close();
+      return;
+    }
     let nl: number;
     while ((nl = this.buf.indexOf("\n")) !== -1) {
       const line = this.buf.slice(0, nl).trim();
@@ -126,6 +177,7 @@ export interface McpConnectResult {
   ok: boolean;
   toolCount: number;
   error?: string;
+  executionPolicy?: { audit?: ExecutionPolicyAudit; warnings: string[] };
 }
 
 /** Connect to all configured MCP servers; returns a per-server status report. */
@@ -137,7 +189,7 @@ export async function initMcp(servers: Record<string, McpServerConfig>): Promise
       await client.connect();
       clients.push(client);
       for (const t of client.tools) toolIndex.set(t.name, t);
-      results.push({ server: name, ok: true, toolCount: client.tools.length });
+      results.push({ server: name, ok: true, toolCount: client.tools.length, executionPolicy: client.executionBoundary() });
     } catch (e) {
       client.close();
       results.push({ server: name, ok: false, toolCount: 0, error: (e as Error).message });
@@ -174,6 +226,15 @@ export async function callMcpTool(name: string, args: Record<string, unknown>): 
 
 export function mcpStatus(): { server: string; tools: string[] }[] {
   return clients.map((c) => ({ server: c.name, tools: c.tools.map((t) => t.rawName) }));
+}
+
+function safeId(value: string): string {
+  return String(value || "server").replace(/[^A-Za-z0-9._:-]+/g, "-").slice(0, 120) || "server";
+}
+
+function boundedTail(value: string, limit: number): string {
+  const buffer = Buffer.from(value);
+  return (buffer.length <= limit ? buffer : buffer.subarray(buffer.length - limit)).toString("utf8");
 }
 
 export function shutdownMcp(): void {

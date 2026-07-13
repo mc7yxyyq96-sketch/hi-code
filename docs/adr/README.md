@@ -43,3 +43,4 @@ The file name is `ADR-NNNN-short-title.md`. Numbers are never reused. An accepte
 | [ADR-0014](ADR-0014-isolated-loopback-app-preview.md) | Accepted | Open local applications in owner-scoped sandboxed child windows and persist truthful verification evidence |
 | [ADR-0015](ADR-0015-authoritative-coding-and-git-delivery-loop.md) | Accepted | Keep Plan, queued prompts, Steer, and protected Git delivery behind main-process authorities and truthful state |
 | [ADR-0016](ADR-0016-keychain-backed-secret-references.md) | Accepted | Persist scoped references while Electron safeStorage encrypts desktop credentials with atomic reversible migration |
+| [ADR-0017](ADR-0017-cross-platform-execution-policy.md) | Accepted | Evaluate every managed child against truthful platform capabilities, bounded execution, and metadata-only audit |

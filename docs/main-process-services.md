@@ -80,6 +80,9 @@ Sprint 1A splits Electron main-process IPC registration into service modules wit
 - `electron/services/security-service.mjs`
   - Auth IPC registration
   - Path guard and sensitive log redaction utilities
+- `electron/services/execution-policy-service.mjs`
+  - Owns the cached platform capability probe and policy evaluation used by desktop process launchers
+  - Exposes only `execution-policy:capabilities`; the Renderer cannot submit executables, roots, environment values, or policy overrides
 - `electron/services/secret-store-service.mjs`
   - Electron `safeStorage` vault for model, MCP, and Agent Provider credentials
   - Atomic sanitized-config persistence, startup migration, encrypted recovery
@@ -123,6 +126,8 @@ The normalized error path redacts API keys, bearer tokens, password-like fields,
 - Workspace file reads use the existing workspace path confinement.
 - Integrated editor open/save uses the same workspace path authority. It rejects symlink escapes, binary or invalid UTF-8 content, oversized files, and stale normal saves. A force save is available only through an explicit typed request after visible user confirmation.
 - Integrated terminal creation uses the same Runtime permission state and a main-process-owned PTY. The renderer cannot select an executable, cwd, arguments, or environment. The terminal starts in the active workspace and is closed before workspace changes; this workspace binding is not an OS filesystem sandbox.
+- Worktree commands, custom command gates, and real industrial adapter execution require a fresh main-process permission decision. Renderer payload flags express intent only and cannot authorize a process.
+- Runtime Bash, terminal, Quality Gate, Worktree, Patch Arena, MCP, and supported industrial adapters consume the shared execution policy. Strict requests fail closed; compatible report-only launches preserve a `weak` warning and policy audit instead of claiming isolation.
 - Terminal children receive a minimal safe environment and never inherit API keys, tokens, passwords, unknown variables, or `SSH_AUTH_SOCK`. Raw input, output, and transcripts are not persisted in logs.
 - App Preview accepts only `http:` loopback targets. Every page runs in a unique non-persistent sandboxed session with no preload or Node access. The trusted renderer never navigates to preview content, and failed verification checks remain failed.
 - Plan mode remains read-only at the tool boundary even in higher-trust permission modes. Steer is persisted as cancel-and-follow-up; an interrupted queue item cannot later become successful.
@@ -137,9 +142,10 @@ The normalized error path redacts API keys, bearer tokens, password-like fields,
 - Release Builder confines release outputs to `releases/<version>/` inside the workspace. Failed gates and `requires_approval` gates block release. Simulated, not-run, skipped, and warning gates are preserved as release risks and must appear in release notes instead of being promoted to passed.
 - Bash tool environment allowlisting remains in `src/tools/bash.ts`.
 - MCP server processes and industrial tool execution paths must use
-  `src/process-env.ts` (`buildSafeChildEnv`, `redactEnvForLogs`) instead of
-  inheriting the full parent `process.env`. Server-specific MCP credentials are
-  only passed from the explicit MCP server `env` config block.
+  `src/execution-policy.ts`, `src/execution-runner.ts`, and `src/process-env.ts`
+  instead of inheriting the full parent `process.env` or relying on direct-child
+  timeout behavior. Server-specific MCP credentials are only passed from the
+  explicit MCP server `env` config block; policy audit contains key names only.
 
 ## Compatibility Boundary
 

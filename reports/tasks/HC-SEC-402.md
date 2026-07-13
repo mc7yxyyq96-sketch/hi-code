@@ -70,6 +70,27 @@ Create one versioned execution-policy contract that evaluates command, working d
 - `node node_modules/npm/bin/npm-cli.js run verify`: passed before task files or production implementation were changed.
 - Existing tests truthfully confirm macOS-only Bash write confinement and cross-platform terminal process-tree cleanup; they do not constitute HC-SEC-402 acceptance.
 
+## Implemented
+
+- Added a typed, versioned policy kernel with deterministic macOS, Linux, and Windows capability reporting.
+- Added async and synchronous managed runners with minimal child environments, output limits, timeouts, and descendant termination.
+- Integrated Runtime Bash, desktop terminal, Worktree Runner, Patch Arena gates, Quality Gate command execution, MCP stdio servers, and real industrial adapter processes.
+- Added fresh main-process authorization for Renderer-initiated Worktree, Quality Gate, and industrial-tool execution; Renderer `userApproved` fields are intent only.
+- Added a read-only preload/IPC capability projection and Settings diagnostics for all eight policy controls.
+- Kept SolidWorks and AVEVA bridge-only with no external process or false real-execution claim.
+- Fixed Electron-hosted synchronous supervision by using Node mode only for the internal supervisor, preventing two IfcOpenShell probes from blocking the desktop for ten seconds.
+
+## Focused Verification
+
+- `test/execution-policy-tests.mjs`: 26 passed.
+- `test/terminal-service-tests.mjs`: 12 passed.
+- `test/worktree-runner-tests.mjs`: 21 passed.
+- `test/patch-arena-tests.mjs`: 20 passed.
+- `test/industrial-tool-tests.mjs`: 98 passed.
+- `test/quality-gate-tests.mjs`: 19 passed.
+- `test/security-baseline.mjs`: 216 passed.
+- Real Electron E2E: passed, including capability diagnostics and responsive Industrial Project navigation.
+
 ## Rollback
 
 The policy kernel and platform backends will be introduced behind existing Runtime and service interfaces. Rollback removes their calls and the read-only diagnostic API while preserving the previous permission, safe-environment, workspace, and process-cleanup behavior. No user data migration is planned.

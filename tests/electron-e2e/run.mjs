@@ -246,7 +246,34 @@ async function setContentSize(width, height) {
 
 async function waitVisible(page, selector, timeout = 8_000) {
   const locator = page.locator(selector);
-  await locator.waitFor({ state: "visible", timeout });
+  try {
+    await locator.waitFor({ state: "visible", timeout });
+  } catch (error) {
+    const state = await page.evaluate((targetSelector) => {
+      const target = document.querySelector(targetSelector);
+      const main = document.querySelector("#main");
+      const shellMount = document.querySelector("#appShellMount");
+      const targetRect = target?.getBoundingClientRect();
+      const targetStyle = target ? getComputedStyle(target) : null;
+      const parentRect = target?.parentElement?.getBoundingClientRect();
+      return {
+        targetClass: target?.className || "<missing>",
+        targetRectCount: target?.getClientRects().length || 0,
+        targetRect: targetRect ? { x: targetRect.x, y: targetRect.y, width: targetRect.width, height: targetRect.height } : null,
+        targetDisplay: targetStyle?.display || "<missing>",
+        targetVisibility: targetStyle?.visibility || "<missing>",
+        targetOpacity: targetStyle?.opacity || "<missing>",
+        targetContentVisibility: targetStyle?.contentVisibility || "<missing>",
+        targetHidden: target instanceof HTMLElement ? target.hidden : null,
+        targetCheckVisibility: typeof target?.checkVisibility === "function" ? target.checkVisibility() : null,
+        targetOffsetParent: target instanceof HTMLElement ? target.offsetParent?.id || target.offsetParent?.tagName || null : null,
+        parentRect: parentRect ? { x: parentRect.x, y: parentRect.y, width: parentRect.width, height: parentRect.height } : null,
+        mainClass: main?.className || "<missing>",
+        shellRoute: shellMount?.dataset.activeRoute || "<unset>",
+      };
+    }, selector);
+    throw new Error(`${error instanceof Error ? error.message : String(error)} | route state: ${JSON.stringify(state)} | page errors: ${JSON.stringify(pageErrors.slice(-3))}`);
+  }
   return locator;
 }
 
@@ -262,8 +289,12 @@ async function verifyNavigation(page, width) {
     const button = page.locator(item.button);
     await button.scrollIntoViewIfNeeded();
     assert.equal(await button.isVisible(), true, `${item.name} has no visible navigation entry at ${width}px`);
+    const startedAt = Date.now();
     await button.click();
     await waitVisible(page, item.view);
+    if (item.button === "#industrialBtn") {
+      assert.ok(Date.now() - startedAt < 3_000, `Industrial Project blocked navigation for ${Date.now() - startedAt}ms at ${width}px`);
+    }
     await returnHome(page);
   }
 
@@ -273,6 +304,35 @@ async function verifyNavigation(page, width) {
   await waitVisible(page, "#settings");
   await page.locator("#cfg-cancel").click();
   assert.equal(await page.locator("#settings").isHidden(), true, `Settings did not close at ${width}px`);
+}
+
+async function verifyExecutionPolicyDiagnostics(page) {
+  await page.locator("#settingsBtn").click();
+  await waitVisible(page, "#settings");
+  await page.locator('[data-settings-tab="safety"]').click();
+  await waitVisible(page, "#settingsSafetySection");
+  await page.waitForFunction(() => document.querySelector("#executionPolicyStatus")?.textContent !== "正在检测…");
+  const diagnostics = await page.evaluate(() => {
+    const section = document.querySelector("#settingsSafetySection");
+    const sectionRect = section?.getBoundingClientRect();
+    const controls = [...document.querySelectorAll("#executionPolicyControlRows .settings-row")];
+    return {
+      status: document.querySelector("#executionPolicyStatus")?.textContent || "",
+      backend: document.querySelector("#executionPolicyBackend")?.textContent || "",
+      warnings: document.querySelector("#executionPolicyWarnings")?.textContent || "",
+      controlCount: controls.length,
+      overflow: controls.some((row) => {
+        const rect = row.getBoundingClientRect();
+        return !!sectionRect && (rect.left < sectionRect.left - 1 || rect.right > sectionRect.right + 1);
+      }),
+    };
+  });
+  assert.match(diagnostics.status, /部分隔离|弱隔离|强隔离|不可用/);
+  assert.ok(diagnostics.backend.length > 8, "execution backend reason is missing");
+  assert.ok(diagnostics.warnings.length > 8, "execution setup hint is missing");
+  assert.equal(diagnostics.controlCount, 8, "execution diagnostics do not list every policy control");
+  assert.equal(diagnostics.overflow, false, "execution diagnostics overflow the settings panel");
+  await page.locator("#cfg-cancel").click();
 }
 
 async function captureHome(page, width) {
@@ -957,6 +1017,11 @@ async function main() {
       observed[width] = await captureHome(page, width);
     });
   }
+
+  await check("Settings reports the real cross-platform execution boundary", async () => {
+    await setContentSize(Math.max(960, baseline.widths[0]), baseline.height);
+    await verifyExecutionPolicyDiagnostics(page);
+  });
 
   for (const width of baseline.widths) {
     await check(`${width}px core navigation and settings remain reachable`, async () => {
