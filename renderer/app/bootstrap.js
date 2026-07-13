@@ -682,6 +682,10 @@ if (!window.hicode) {
     revealConfigFile: async () => ({ ok: false, error: "浏览器演示模式无法定位本地文件。" }),
     openAppPage: async () => ({ ok: false, error: "浏览器演示模式无法打开外部链接。" }),
     checkUpdates: async () => ({ ok: false, error: "浏览器演示模式无法检查更新。" }),
+    getUpdateStatus: async () => ({ ok: true, capability: { available: false, reason: "browser_demo", message: "浏览器演示模式不安装更新。" }, state: { status: "disabled", channel: "stable" } }),
+    setUpdateChannel: async () => ({ ok: false, error: "浏览器演示模式无法设置更新通道。" }),
+    downloadUpdate: async () => ({ ok: false, error: "浏览器演示模式无法下载更新。" }),
+    installUpdate: async () => ({ ok: false, error: "浏览器演示模式无法安装更新。" }),
     getUsageStats: async () => buildDemoUsageStats(),
     authStatus: async () => ({ user: demoUser }),
     register: async ({ email, name }) => {
@@ -1384,6 +1388,7 @@ const dataDirPath = $("dataDirPath"), configFilePath = $("configFilePath");
 const openDataDirBtn = $("openDataDirBtn"), revealConfigBtn = $("revealConfigBtn");
 const aboutVersion = $("aboutVersion"), aboutRuntime = $("aboutRuntime"), aboutPlatform = $("aboutPlatform");
 const updateStatus = $("updateStatus"), checkUpdatesBtn = $("checkUpdatesBtn");
+const updateChannelSelect = $("updateChannelSelect"), downloadUpdateBtn = $("downloadUpdateBtn"), installUpdateBtn = $("installUpdateBtn");
 const aboutRepoBtn = $("aboutRepoBtn"), aboutReleasesBtn = $("aboutReleasesBtn"), aboutIssuesBtn = $("aboutIssuesBtn");
 const providerHint = $("providerHint");
 const quickBaseURL = $("quickBaseURL"), quickApiKey = $("quickApiKey"), quickModel = $("quickModel"), quickContext = $("quickContext");
@@ -4543,6 +4548,39 @@ async function renderAppInfoSettings() {
   aboutVersion.title = info.version ? `当前版本 v${info.version}` : "当前版本";
   aboutRuntime.textContent = `Electron ${info.electron || "?"} · Chromium ${info.chrome || "?"} · Node ${info.node || "?"}`;
   aboutPlatform.textContent = `${info.platform || "?"} · ${info.arch || "?"}`;
+  await renderUpdateStatus();
+}
+
+async function renderUpdateStatus() {
+  const result = await api.getUpdateStatus();
+  if (!result?.ok) {
+    updateStatus.textContent = result?.error || "无法读取更新状态。";
+    checkUpdatesBtn.disabled = true;
+    return;
+  }
+  const capability = result.capability || {};
+  const state = result.state || {};
+  updateChannelSelect.value = state.channel || "stable";
+  checkUpdatesBtn.disabled = !capability.available || state.status === "checking" || state.status === "downloading" || state.status === "installing";
+  downloadUpdateBtn.classList.toggle("hidden", state.status !== "available" && state.status !== "downloading");
+  downloadUpdateBtn.disabled = state.status !== "available";
+  installUpdateBtn.classList.toggle("hidden", state.status !== "downloaded");
+  installUpdateBtn.disabled = state.status !== "downloaded";
+  if (!capability.available) {
+    updateStatus.textContent = capability.message || "当前安装包未启用应用内更新。";
+  } else if (state.status === "available") {
+    updateStatus.textContent = `发现新版本 v${state.availableVersion}，可由 Hi Code 下载并在确认后安装。`;
+  } else if (state.status === "downloading") {
+    updateStatus.textContent = `正在下载 v${state.availableVersion}… ${Math.round(state.progress?.percent || 0)}%`;
+  } else if (state.status === "downloaded") {
+    updateStatus.textContent = `v${state.availableVersion} 已下载并验证，等待确认安装。`;
+  } else if (state.status === "up_to_date") {
+    updateStatus.textContent = `当前通道已是最新版本（v${state.currentVersion}）。`;
+  } else if (state.status === "error") {
+    updateStatus.textContent = state.error || "更新失败。";
+  } else {
+    updateStatus.textContent = `更新通道：${state.channel === "stable" ? "稳定版" : state.channel === "beta" ? "测试版" : "每夜版"}。仅签名发布包启用应用内更新。`;
+  }
 }
 
 openDataDirBtn.onclick = async () => {
@@ -4564,11 +4602,34 @@ checkUpdatesBtn.onclick = async () => {
   checkUpdatesBtn.disabled = false;
   if (!r.ok) {
     updateStatus.textContent = r.error || "检查更新失败。";
+    await renderUpdateStatus();
     return;
   }
   updateStatus.textContent = r.hasUpdate
-    ? `发现新版本 v${r.latest}（当前 v${r.current}），请到下载页获取。`
+    ? `发现新版本 v${r.latest}（当前 v${r.current}）。`
     : `已是最新版本（v${r.current}）。`;
+  await renderUpdateStatus();
+};
+
+updateChannelSelect.onchange = async () => {
+  const result = await api.setUpdateChannel(updateChannelSelect.value);
+  if (!result?.ok) updateStatus.textContent = result?.error || "更新通道设置失败。";
+  await renderUpdateStatus();
+};
+
+downloadUpdateBtn.onclick = async () => {
+  downloadUpdateBtn.disabled = true;
+  updateStatus.textContent = "正在下载并验证更新包…";
+  const result = await api.downloadUpdate();
+  if (!result?.ok) updateStatus.textContent = result?.error || "更新下载失败。";
+  await renderUpdateStatus();
+};
+
+installUpdateBtn.onclick = async () => {
+  installUpdateBtn.disabled = true;
+  const result = await api.installUpdate();
+  if (!result?.ok && !result?.cancelled) updateStatus.textContent = result?.error || "更新安装失败。";
+  await renderUpdateStatus();
 };
 
 $("cfg-cancel").onclick = () => settings.classList.add("hidden");

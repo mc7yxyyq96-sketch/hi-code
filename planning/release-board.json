@@ -136,6 +136,12 @@
       "branch": "codex/runtime-engine/hc-git-320",
       "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-hc-git-320",
       "mode": "completed-worktree"
+    },
+    {
+      "taskId": "HC-REL-420",
+      "branch": "codex/security-release/hc-rel-420",
+      "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-hc-rel-420",
+      "mode": "active-worktree"
     }
   ],
   "tasks": [
@@ -364,6 +370,16 @@
       "taskManifest": "reports/tasks/HC-SEC-402.md",
       "evidence": "reports/evidence/HC-SEC-402/manifest.json",
       "ciEvidence": "reports/evidence/HC-SEC-402/ci-matrix.json"
+    },
+    {
+      "id": "HC-REL-420",
+      "owner": "security-release",
+      "priority": "P0",
+      "status": "in_progress",
+      "dependencies": ["HC-PLAT-110", "HC-SEC-401"],
+      "branch": "codex/security-release/hc-rel-420",
+      "startedAt": "2026-07-13T04:48:41Z",
+      "taskManifest": "reports/tasks/HC-REL-420.md"
     }
   ],
   "gates": [

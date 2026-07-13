@@ -364,7 +364,10 @@
       "dependencies": ["HC-PLAT-110", "HC-SEC-401"],
       "deliverables": ["macOS/Windows/Linux artifacts", "update channels", "SBOM", "checksums", "install smoke"],
       "acceptance": ["signed artifacts where credentials exist", "unsigned dev path is clearly marked", "upgrade/rollback smoke passes"],
-      "status": "planned"
+      "status": "in_progress",
+      "startedAt": "2026-07-13T04:48:41Z",
+      "branch": "codex/security-release/hc-rel-420",
+      "taskManifest": "reports/tasks/HC-REL-420.md"
     },
     {
       "id": "HC-IND-501",

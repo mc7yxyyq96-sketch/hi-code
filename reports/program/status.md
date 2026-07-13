@@ -45,6 +45,7 @@ The final machine-captured evidence is written by `npm run program:baseline` to 
 | 17 | HC-GIT-320 | Completed | Runtime Engine | HC-RUN-203, HC-UI-310 |
 | 18 | HC-SEC-401 | Completed | Security And Release | HC-PLAT-110 |
 | 19 | HC-SEC-402 | Completed | Security And Release | HC-PLAT-110 |
+| 20 | HC-REL-420 | In progress | Security And Release | HC-PLAT-110, HC-SEC-401 |
 
 HC-QA-101 established a real Electron responsive baseline. HC-RUN-201 introduces protocol-native assistant output and concurrency isolation. No new industrial domain module is authorized before HC-RUN-201 completes.
 
@@ -89,6 +90,8 @@ HC-GIT-320 completed in the isolated `codex/runtime-engine/hc-git-320` worktree 
 HC-SEC-401 completed in the isolated `codex/security-release/hc-sec-401` worktree from HC-GIT-320 completion commit `6059a6d`. Model, sensitive MCP, and Agent Provider credentials now persist as validated references; Electron `safeStorage` encrypts values and rejects unavailable or Linux `basic_text` storage. Startup migration is atomic and exactly reversible through an encrypted snapshot, CLI fallback is environment-only, and Renderer/preload receive status rather than values. Sixteen local evidence commands passed from clean source commit `c107121`, including a zero-finding DoD scan and real Electron E2E. GitHub Actions run `29196545587` passed general tests and real Electron smoke on Ubuntu, macOS, and Windows for Draft PR #18.
 
 HC-SEC-402 completed in the isolated `codex/security-release/hc-sec-402` worktree from HC-SEC-401 completion commit `3a2328c`. A versioned policy kernel now governs command, filesystem, environment, network, limit, approval, audit, and process-tree semantics for Runtime Bash, terminal, Worktree, Patch Arena, Quality Gate, MCP, and real industrial adapter launches. Unsupported strict controls fail closed and weak/report-only isolation remains explicit. Nineteen local evidence commands passed from clean source commit `f45415f`, including 100/100 industrial tool checks and real Electron navigation at compact widths. GitHub Actions run `29221844706` passed general tests and real Electron smoke on Ubuntu, macOS, and Windows for Draft PR #19.
+
+HC-REL-420 started in the isolated `codex/security-release/hc-rel-420` worktree from HC-SEC-402 completion commit `14c5380`. The current packaging audit found macOS DMG and Windows NSIS/ZIP only, a hard-disabled macOS signing identity, no Linux target, no managed updater lifecycle, and no release SBOM/provenance or upgrade/rollback smoke. The task will add a fail-closed release policy, three-platform package contracts, explicit unsigned development artifacts, update channels, CycloneDX SBOM, checksums, provenance, and package lifecycle tests. Formal publication, notarization, and credential-backed signing remain approval-gated.
 
 ## Current Product Truth
 

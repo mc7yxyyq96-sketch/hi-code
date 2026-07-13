@@ -1,0 +1,98 @@
+name: Release Packaging
+
+on:
+  workflow_dispatch: {}
+  pull_request:
+    paths:
+      - package.json
+      - package-lock.json
+      - electron/**
+      - renderer/**
+      - scripts/**
+      - test/release-pipeline-tests.mjs
+      - .github/workflows/release-packaging.yml
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    name: Package smoke (${{ matrix.label }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: Linux x64
+            os: ubuntu-latest
+            target: linux
+            platform: linux
+          - label: macOS
+            os: macos-latest
+            target: mac
+            platform: darwin
+          - label: Windows x64
+            os: windows-latest
+            target: win
+            platform: win32
+    env:
+      HICODE_RELEASE_MODE: ci
+      HICODE_RELEASE_CHANNEL: nightly
+      HICODE_RELEASE_APPROVED: "0"
+      HICODE_RELEASE_PUBLISH: "0"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Set reproducible source timestamp
+        shell: bash
+        run: echo "SOURCE_DATE_EPOCH=$(git show -s --format=%ct HEAD)" >> "$GITHUB_ENV"
+
+      - name: Release policy preflight
+        run: node scripts/release-preflight.mjs --platform=${{ matrix.platform }} --mode=ci --channel=nightly
+
+      - name: Release contract tests
+        run: npm run test:release-pipeline
+
+      - name: Build native packages
+        run: npm run dist:${{ matrix.target }}
+
+      - name: Package install/extract smoke
+        run: node scripts/package-smoke.mjs --platform=${{ matrix.platform }}
+
+      - name: Generate CycloneDX SBOM
+        run: npm run release:sbom
+
+      - name: Generate provenance statement
+        run: npm run release:provenance
+
+      - name: Generate and verify SHA-256 manifest
+        run: npm run release:checksums && npm run release:verify-checksums
+
+      - name: Upload package evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hicode-${{ matrix.target }}-${{ runner.arch }}
+          path: |
+            release/*.dmg
+            release/*.exe
+            release/*.zip
+            release/*.AppImage
+            release/*.deb
+            release/*.blockmap
+            release/*.yml
+            release/sbom-*.json
+            release/provenance-*.json
+            release/SHA256SUMS-*.txt
+            build/generated/release-channel.json
+          if-no-files-found: error
+          retention-days: 14

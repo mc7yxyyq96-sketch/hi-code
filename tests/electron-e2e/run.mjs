@@ -335,6 +335,27 @@ async function verifyExecutionPolicyDiagnostics(page) {
   await page.locator("#cfg-cancel").click();
 }
 
+async function verifyUpdateTrustBoundary(page) {
+  await page.locator("#settingsBtn").click();
+  await waitVisible(page, "#settings");
+  await page.locator('[data-settings-tab="about"]').click();
+  await waitVisible(page, "#settingsAboutSection");
+  await page.waitForFunction(() => /开发模式|unsigned|更新通道/.test(document.querySelector("#updateStatus")?.textContent || ""));
+  const state = await page.evaluate(() => ({
+    status: document.querySelector("#updateStatus")?.textContent || "",
+    checkDisabled: document.querySelector("#checkUpdatesBtn")?.disabled,
+    channelVisible: Boolean(document.querySelector("#updateChannelSelect")?.getClientRects().length),
+    downloadHidden: document.querySelector("#downloadUpdateBtn")?.classList.contains("hidden"),
+    installHidden: document.querySelector("#installUpdateBtn")?.classList.contains("hidden"),
+  }));
+  assert.match(state.status, /开发模式|unsigned/);
+  assert.equal(state.checkDisabled, true, "unpackaged app must not contact the update provider");
+  assert.equal(state.channelVisible, true, "predefined update channel selector is not visible");
+  assert.equal(state.downloadHidden, true, "download action must stay hidden without a trusted update");
+  assert.equal(state.installHidden, true, "install action must stay hidden without a verified download");
+  await page.locator("#cfg-cancel").click();
+}
+
 async function captureHome(page, width) {
   await setContentSize(width, baseline.height);
   await page.waitForTimeout(220);
@@ -1021,6 +1042,10 @@ async function main() {
   await check("Settings reports the real cross-platform execution boundary", async () => {
     await setContentSize(Math.max(960, baseline.widths[0]), baseline.height);
     await verifyExecutionPolicyDiagnostics(page);
+  });
+
+  await check("Settings keeps unpackaged and unsigned updates fail-closed", async () => {
+    await verifyUpdateTrustBoundary(page);
   });
 
   for (const width of baseline.widths) {

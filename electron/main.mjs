@@ -3,6 +3,7 @@
 process.env.FORCE_COLOR = "1"; // make chalk emit ANSI even without a TTY
 
 import { app, BrowserWindow, ipcMain, dialog, shell, safeStorage } from "electron";
+import electronUpdater from "electron-updater";
 import path from "node:path";
 import os from "node:os";
 import fs from "node:fs";
@@ -56,6 +57,7 @@ import { createPreviewService } from "./services/preview-service.mjs";
 import { createSecurityService, redactSensitive } from "./services/security-service.mjs";
 import { createExecutionPolicyService } from "./services/execution-policy-service.mjs";
 import { createAppInfoService } from "./services/app-info-service.mjs";
+import { createUpdateService } from "./services/update-service.mjs";
 import { createUsageService } from "./services/usage-service.mjs";
 import { createElectronSecretStore } from "./services/secret-store-service.mjs";
 import { recordUsage } from "../dist/usage-store.js";
@@ -85,6 +87,7 @@ const DOMAIN_PACK_DIR = path.join(HICODE_DIR, "domain-packs");
 const AGENT_TEAM_DIR = path.join(HICODE_DIR, "agent-team");
 const ATTACHMENT_STORE_DIR = path.join(HICODE_DIR, "attachments-v2");
 const PREVIEW_EVIDENCE_DIR = path.join(HICODE_DIR, "preview-evidence");
+const UPDATE_SETTINGS_PATH = path.join(HICODE_DIR, "updates", "settings.json");
 const CODEX_DIR = path.join(os.homedir(), ".codex");
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -2704,8 +2707,31 @@ function createMainServices() {
       createdAt: Date.now(),
     }),
   });
+  const updateService = createUpdateService({
+    updater: electronUpdater.autoUpdater,
+    getVersion: () => app.getVersion(),
+    isPackaged: () => app.isPackaged,
+    resourcesPath: process.resourcesPath,
+    settingsPath: UPDATE_SETTINGS_PATH,
+    dialog,
+    beforeInstall: async () => {
+      nativeCleanupQuitInProgress = true;
+      await Promise.all([
+        Promise.resolve(mainServices?.terminal?.closeAll?.("app_update")),
+        Promise.resolve(mainServices?.preview?.closeAll?.("app_update")),
+      ]);
+    },
+    logger: (event, payload) => appendRuntimeLog({
+      id: `update-${Date.now()}-${crypto.randomUUID()}`,
+      type: event,
+      title: event,
+      payload,
+      createdAt: Date.now(),
+    }),
+  });
   const services = {
     executionPolicy,
+    update: updateService,
     runtime: createRuntimeService({
       getRuntime: () => runtime,
       inputQueue,
@@ -2849,6 +2875,7 @@ function createMainServices() {
       shell,
       dataDir: HICODE_DIR,
       configPath: CONFIG_PATH,
+      updateService,
     }),
     usage: createUsageService({ logDir: LOG_DIR }),
   };
