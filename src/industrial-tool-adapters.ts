@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
-import { spawnSync } from "node:child_process";
+
+import { runIndustrialCommand } from "./industrial-execution.js";
 
 import {
   INDUSTRIAL_ARTIFACT_TYPES,
@@ -35,6 +36,7 @@ export interface ToolVersionInfo {
   version?: string;
   command?: string;
   output?: string;
+  executionPolicy?: import("./execution-runner.js").ManagedExecutionPolicyResult;
 }
 
 export interface ToolDiagnostic {
@@ -103,6 +105,7 @@ export interface ToolRunResult {
   artifacts: ToolArtifact[];
   diagnostics: ToolDiagnostic[];
   detection: ToolDetectionResult;
+  executionPolicy?: import("./execution-runner.js").ManagedExecutionPolicyResult;
   error?: string;
 }
 
@@ -501,16 +504,21 @@ function detectVersion(adapter: IndustrialToolAdapter, executablePath: string | 
     : findCommand(versionCommand.command, pathEnv);
   if (!command) return undefined;
   try {
-    const result = spawnSync(command, validateArgs(versionCommand.args || []), {
-      encoding: "utf8",
-      timeout: 5000,
-      shell: false,
-      windowsHide: true,
-      env: { PATH: pathEnv },
+    const result = runIndustrialCommand({
+      id: `${adapter.id}.version`,
+      executable: command,
+      args: validateArgs(versionCommand.args || []),
+      cwd: process.cwd(),
+      workspaceRoot: process.cwd(),
+      timeoutMs: 5000,
+      outputBytes: 2000,
+      environment: { PATH: pathEnv },
+      mutating: false,
+      network: "deny",
     });
     const output = redactText([result.stdout, result.stderr].filter(Boolean).join("\n").trim()).slice(0, 2000);
     const version = versionCommand.pattern ? new RegExp(versionCommand.pattern).exec(output)?.[1] : undefined;
-    return { command: redactPath(command), output, version };
+    return { command: redactPath(command), output, version, executionPolicy: result.executionPolicy };
   } catch {
     return { command: redactPath(command), output: "version command failed" };
   }

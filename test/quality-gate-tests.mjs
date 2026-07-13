@@ -55,7 +55,7 @@ fs.writeFileSync(artifactFile, "ok\n");
 fs.writeFileSync(schemaFile, JSON.stringify({ schemaVersion: 1, name: "Gate Schema" }));
 const realArtifactFile = fs.realpathSync.native(artifactFile);
 
-const runner = new QualityGateRunner({ cwd: workspace, timeoutMs: 5_000 });
+const runner = new QualityGateRunner({ cwd: workspace, timeoutMs: 5_000, approvalGranted: true });
 const builtIns = builtInQualityGates();
 check("built-in gates include required gate types", ["command_gate", "file_exists_gate", "schema_gate", "artifact_integrity_gate", "security_gate", "human_approval_gate", "adapter_gate", "documentation_gate"].every((type) => builtIns.some((gate) => gate.type === type)), builtIns.map((gate) => gate.type).join(", "));
 
@@ -142,7 +142,7 @@ console.log("\n[quality-gates] service, persistence, project");
 const projectStore = new IndustrialProjectStore({ workspacePath: workspace });
 projectStore.createProject({ name: "Quality Gate Project", type: "software_release", domains: ["software", "qa"], actor: "tester" });
 const jobStore = new JobStore({ storePath: path.join(tmp, "jobs.json"), allowedArtifactRoots: [workspace], idPrefix: "quality-job" });
-const service = createQualityGateService({ getCwd: () => workspace, jobStore });
+const service = createQualityGateService({ getCwd: () => workspace, jobStore, authorize: async () => "allow" });
 const serviceRun = await service.runGate({
   gate: {
     id: "test.service.file",
@@ -164,6 +164,22 @@ check("gate result writes to Industrial Project", projectAfterGate.qualityGates.
 
 const approvalServiceRun = await service.approveGate({ gateId: "bim.code_check_manual_approval", approved: false, actor: "tester", reason: "not reviewed" });
 check("service approval reject writes failed result", approvalServiceRun.ok === true && approvalServiceRun.run.status === "failed", JSON.stringify(approvalServiceRun));
+
+const deniedService = createQualityGateService({ getCwd: () => workspace, jobStore, authorize: async () => "deny" });
+const deniedCommand = await deniedService.runGate({
+  gate: {
+    id: "test.command.denied",
+    name: "denied command",
+    type: "command_gate",
+    category: "software",
+    severity: "high",
+    description: "must require main-process approval",
+    command: process.execPath,
+    args: ["-e", "require('node:fs').writeFileSync('should-not-run.txt','bad')"],
+    remediation: { summary: "approve explicitly", steps: ["review command"] },
+  },
+});
+check("command gate cannot bypass main-process approval", deniedCommand.denied === true && !fs.existsSync(path.join(workspace, "should-not-run.txt")));
 
 console.log("\n[quality-gates] IPC");
 const ipc = fakeIpcMain();

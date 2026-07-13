@@ -4,7 +4,9 @@ import crypto from "node:crypto";
 import { spawnSync } from "node:child_process";
 
 import { runDefinitionOfDone } from "../../dist/definition-of-done.js";
+import { runManagedExecutionSync } from "../../dist/execution-runner.js";
 import { PatchArenaStore } from "../../dist/patch-arena.js";
+import { buildSafeChildEnv } from "../../dist/process-env.js";
 import { validatePatchPaths } from "../../dist/worktree-runner.js";
 import { ipcBoundedNumber, ipcObject, ipcString, ipcStringArray } from "../ipc/ipc-utils.mjs";
 
@@ -300,7 +302,7 @@ function executeCandidate({
       data: { runId: run.id, candidateId: candidate.id, workspace: publicWorkspace(workspace) },
     });
 
-    const commandResult = worktreeRunner.runInIsolatedWorkspace({ workspace, command, timeoutMs });
+    const commandResult = worktreeRunner.runInIsolatedWorkspace({ workspace, command, timeoutMs, userApproved: true });
     logs.push(commandResult.output || `command exited with ${commandResult.exitCode}`);
     appendEvent(jobStore, run.jobId, {
       type: "arena.candidate.command",
@@ -453,7 +455,7 @@ function runQualityGates({ workspacePath, changedFiles, patch }) {
     const started = Date.now();
     let failed = null;
     for (const file of jsFiles) {
-      const result = spawnSync(process.execPath, ["--check", file], { cwd: workspacePath, encoding: "utf8", maxBuffer: 3 * 1024 * 1024 });
+      const result = runArenaCommand({ id: "syntax-check", executable: process.execPath, args: ["--check", file], cwd: workspacePath, timeoutMs: 30_000, outputBytes: 3 * 1024 * 1024, mutating: false });
       if (result.status !== 0) {
         failed = { file, result };
         break;
@@ -468,7 +470,7 @@ function runQualityGates({ workspacePath, changedFiles, patch }) {
       exitCode: failed ? failed.result.status ?? 1 : 0,
       durationMs: Date.now() - started,
       createdAt: now,
-      metadata: { files: jsFiles },
+      metadata: { files: jsFiles, executionPolicy: failed?.result?.executionPolicy },
     });
   } else {
     gates.push({ id: newId("gate"), gate: "syntax check", status: "skipped", message: "no changed JavaScript files", createdAt: now });
@@ -515,7 +517,7 @@ function runNpmGate({ workspacePath, script, gate }) {
   if (!pkg?.scripts?.[script]) return { id: newId("gate"), gate, status: "skipped", message: `${script} script not found`, createdAt: now };
   if (!commandExists("npm", workspacePath)) return { id: newId("gate"), gate, status: "warning", message: "npm is not available in PATH", createdAt: now };
   const started = Date.now();
-  const result = spawnSync("npm", ["run", script], { cwd: workspacePath, encoding: "utf8", timeout: 180000, maxBuffer: 8 * 1024 * 1024 });
+  const result = runArenaCommand({ id: `npm-${script}`, executable: "npm", args: ["run", script], cwd: workspacePath, timeoutMs: 180_000, outputBytes: 8 * 1024 * 1024, mutating: true });
   return {
     id: newId("gate"),
     gate,
@@ -525,6 +527,7 @@ function runNpmGate({ workspacePath, script, gate }) {
     exitCode: result.status ?? 1,
     durationMs: Date.now() - started,
     createdAt: now,
+    metadata: { executionPolicy: result.executionPolicy },
   };
 }
 
@@ -532,12 +535,7 @@ function runTestGate(workspacePath) {
   const now = Date.now();
   if (fs.existsSync(path.join(workspacePath, "test", "feature-tests.mjs"))) {
     const started = Date.now();
-    const result = spawnSync(process.execPath, ["test/feature-tests.mjs"], {
-      cwd: workspacePath,
-      encoding: "utf8",
-      timeout: 180000,
-      maxBuffer: 8 * 1024 * 1024,
-    });
+    const result = runArenaCommand({ id: "feature-tests", executable: process.execPath, args: ["test/feature-tests.mjs"], cwd: workspacePath, timeoutMs: 180_000, outputBytes: 8 * 1024 * 1024, mutating: true });
     return {
       id: newId("gate"),
       gate: "feature tests",
@@ -547,6 +545,7 @@ function runTestGate(workspacePath) {
       exitCode: result.status ?? 1,
       durationMs: Date.now() - started,
       createdAt: now,
+      metadata: { executionPolicy: result.executionPolicy },
     };
   }
   return runNpmGate({ workspacePath, script: "test", gate: "npm run test" });
@@ -695,8 +694,38 @@ function readPackageJson(file) {
 }
 
 function commandExists(command, cwd) {
-  const result = spawnSync("bash", ["-lc", `command -v ${shellQuote(command)}`], { cwd, encoding: "utf8" });
+  const result = runArenaCommand({ id: "command-exists", executable: "bash", args: ["-lc", `command -v ${shellQuote(command)}`], cwd, timeoutMs: 5_000, outputBytes: 64 * 1024, mutating: false });
   return result.status === 0;
+}
+
+function runArenaCommand({ id, executable, args, cwd, timeoutMs, outputBytes, mutating }) {
+  const electronNodeMode = executable === process.execPath && Boolean(process.versions.electron);
+  const result = runManagedExecutionSync({
+    id: `patch-arena:${id}`,
+    surface: "patch-arena-gate",
+    executable,
+    args,
+    cwd,
+    allowedRoots: [cwd],
+    filesystem: mutating ? "workspace-write" : "read-only",
+    network: "allow",
+    environment: {
+      source: process.env,
+      ...(electronNodeMode ? { extraEnv: { ELECTRON_RUN_AS_NODE: "1" } } : {}),
+    },
+    limits: { timeoutMs, outputBytes },
+    approval: { required: false, granted: true },
+    processTree: { required: true },
+    enforcementMode: "report-only",
+  });
+  return {
+    status: result.exitCode,
+    signal: result.signal,
+    stdout: result.stdout,
+    stderr: result.stderr,
+    error: result.error ? new Error(result.error) : undefined,
+    executionPolicy: result.policy,
+  };
 }
 
 function gitDirty(cwd) {
@@ -708,7 +737,7 @@ function gitDirty(cwd) {
 }
 
 function git(cwd, args) {
-  const result = spawnSync("git", args, { cwd, encoding: "utf8", maxBuffer: 12 * 1024 * 1024 });
+  const result = spawnSync("git", args, { cwd, encoding: "utf8", maxBuffer: 12 * 1024 * 1024, env: buildSafeChildEnv() });
   return {
     ok: result.status === 0,
     out: (result.stdout || "").trimEnd(),
@@ -718,7 +747,7 @@ function git(cwd, args) {
 }
 
 function gitWithInput(cwd, args, input) {
-  const result = spawnSync("git", args, { cwd, input, encoding: "utf8", maxBuffer: 12 * 1024 * 1024 });
+  const result = spawnSync("git", args, { cwd, input, encoding: "utf8", maxBuffer: 12 * 1024 * 1024, env: buildSafeChildEnv() });
   return {
     ok: result.status === 0,
     out: (result.stdout || "").trimEnd(),

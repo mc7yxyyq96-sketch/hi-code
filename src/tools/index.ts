@@ -362,7 +362,12 @@ async function executeToolInner(
       );
       out.toolResult(res.output, { dim: true });
       const tag = res.exitCode === 0 ? "ok" : `exit ${res.exitCode}`;
-      return { content: `exit code ${res.exitCode}\n${res.output}`, summary: tag, exitCode: res.exitCode };
+      return {
+        content: `exit code ${res.exitCode}\n${res.output}`,
+        summary: tag,
+        exitCode: res.exitCode,
+        metadata: res.executionPolicy ? { executionPolicy: res.executionPolicy.audit, isolationStrength: res.executionPolicy.strength } : undefined,
+      };
     }
     case "spawn_agent": {
       // Dynamic import breaks the tools ↔ agents module cycle.

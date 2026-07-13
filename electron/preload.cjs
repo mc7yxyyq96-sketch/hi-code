@@ -363,6 +363,7 @@ contextBridge.exposeInMainWorld("hicode", {
   deleteSession: (id) => checkedInvoke("delete-session", id, "sessionId"),
   getConfig: () => safeInvoke("get-config"),
   getCredentialStatus: () => safeInvoke("config:credential-status"),
+  getExecutionPolicyCapabilities: () => safeInvoke("execution-policy:capabilities"),
   saveConfig: (text) => checkedInvoke("save-config", text, "configText"),
   testModel: (profile) => safeInvoke("test-model", optionalObject(profile)),
   getAppInfo: () => safeInvoke("app:info"),

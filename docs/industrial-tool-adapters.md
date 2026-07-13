@@ -118,6 +118,9 @@ Details are in `docs/adapters/aveva.md`.
 Adapter execution follows these boundaries:
 
 - External tool execution requires explicit user approval.
+- Renderer `userApproved` input cannot grant that approval. The main process obtains the permission decision and only then marks the internal adapter request approved.
+- Tool detection and real execution use the shared managed execution runner. Detection is read-only; real generation/compile/inspection is workspace-write, network-deny, bounded, and process-tree-managed.
+- A platform without an OS filesystem/network backend may preserve an explicitly approved compatible run only as `weak` report-only evidence. It is never labeled strong or fully sandboxed.
 - Real execution is blocked for adapters other than FreeCAD, KiCad, OpenPLC/IEC, and IfcOpenShell/IFC in Sprint 6F, even if approval is supplied.
 - PLC/OpenPLC artifacts always require human safety approval before compile, simulation, FAT/SAT, commissioning, or device download.
 - BIM/IFC inspection never concludes local building-code compliance; qualified human review remains required.

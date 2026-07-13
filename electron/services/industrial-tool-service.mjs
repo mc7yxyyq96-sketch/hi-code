@@ -4,10 +4,11 @@ import { IndustrialToolAdapterRegistry } from "../../dist/industrial-tool-adapte
 import { IndustrialProjectStore } from "../../dist/industrial-project.js";
 import { ipcObject, ipcString } from "../ipc/ipc-utils.mjs";
 
-export function createIndustrialToolService({ registry, getCwd, jobStore, domainPackManager }) {
+export function createIndustrialToolService({ registry, getCwd, jobStore, domainPackManager, authorize }) {
   if (!registry) throw new Error("industrial-tool-service requires registry");
   if (typeof getCwd !== "function") throw new Error("industrial-tool-service requires getCwd");
   if (!jobStore) throw new Error("industrial-tool-service requires jobStore");
+  if (typeof authorize !== "function") throw new Error("industrial-tool-service requires authorize");
 
   return {
     listAdapters() {
@@ -62,7 +63,7 @@ export function createIndustrialToolService({ registry, getCwd, jobStore, domain
       return { ok: result.ok, errors: result.errors, adapter: result.adapter || null };
     },
 
-    runAdapterTask(payload = {}) {
+    async runAdapterTask(payload = {}) {
       const input = ipcObject(payload);
       try {
         const cwd = path.resolve(getCwd());
@@ -81,10 +82,17 @@ export function createIndustrialToolService({ registry, getCwd, jobStore, domain
           bimRequest: ipcObject(input.bimRequest || input.ifcRequest),
           solidworksRequest: ipcObject(input.solidworksRequest || input.solidWorksRequest),
           avevaRequest: ipcObject(input.avevaRequest || input.avevaBridgeRequest),
-          userApproved: input.userApproved === true,
+          userApproved: false,
           allowNetwork: input.allowNetwork === true,
           actor: ipcString(input.actor, "user"),
         };
+        if (request.mode === "execute" && input.userApproved === true) {
+          request.userApproved = normalizeDecision(await authorize({
+            tool: `industrial_tool:${request.adapterId}`,
+            label: `运行工业工具 ${request.adapterId}`,
+            mutating: true,
+          })) === "allow";
+        }
         const job = createToolJob({ jobStore, cwd, title: `Run ${request.adapterId}`, trigger: "toolchain:run", actor: request.actor });
         jobStore.updateJob(job.id, { status: "running" });
         jobStore.appendJobEvent(job.id, {
@@ -101,7 +109,7 @@ export function createIndustrialToolService({ registry, getCwd, jobStore, domain
             path: artifact.path,
             name: artifact.name,
             producedBy: { executor: `industrial-tool:${request.adapterId}` },
-            metadata: { ...artifact.metadata, simulated: artifact.simulated },
+            metadata: { ...artifact.metadata, simulated: artifact.simulated, executionPolicy: result.executionPolicy },
           });
         }
         for (const diagnostic of result.diagnostics || []) {
@@ -110,7 +118,7 @@ export function createIndustrialToolService({ registry, getCwd, jobStore, domain
             gate: String(diagnostic.gate || diagnostic.code || "industrial-tool-diagnostic"),
             status: gateStatus,
             message: diagnostic.message,
-            metadata: { adapterId: request.adapterId, diagnostic },
+            metadata: { adapterId: request.adapterId, diagnostic, executionPolicy: result.executionPolicy },
           });
         }
         jobStore.appendJobEvent(job.id, {
@@ -118,7 +126,13 @@ export function createIndustrialToolService({ registry, getCwd, jobStore, domain
           message: result.summary,
           actor: request.actor,
           status: result.ok ? "succeeded" : "failed",
-          data: { adapterId: request.adapterId, mode: result.mode, simulated: result.simulated, commandPreview: result.commandPreview },
+          data: {
+            adapterId: request.adapterId,
+            mode: result.mode,
+            simulated: result.simulated,
+            commandCount: result.commandPreview?.length || 0,
+            executionPolicy: result.executionPolicy,
+          },
         });
         jobStore.updateJob(job.id, { status: result.ok ? "succeeded" : "failed", error: result.error });
         return { ok: result.ok, result, jobId: job.id, error: result.error };
@@ -218,4 +232,8 @@ function collectToolRequirements({ cwd, domainPackManager }) {
 
 function errorMessage(error) {
   return error?.message ? String(error.message) : String(error || "industrial tool operation failed");
+}
+
+function normalizeDecision(value) {
+  return value === "allow" || value === "always" || value === "y" || value === "a" ? "allow" : "deny";
 }

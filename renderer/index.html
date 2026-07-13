@@ -706,15 +706,22 @@
             </section>
 
             <section id="settingsSafetySection" class="settings-section hidden">
-              <div class="settings-group-title">命令执行沙箱</div>
+              <div class="settings-group-title">当前平台执行边界</div>
               <div class="settings-row">
-                <div class="settings-row-label"><b>bash 写入沙箱</b><p id="sandboxHint">macOS 上通过 sandbox-exec 把 bash 的写入限制在当前工作区内，读取不受限。</p></div>
+                <div class="settings-row-label"><b id="executionPolicyStatus">正在检测…</b><p id="executionPolicyBackend">读取操作系统隔离后端与进程控制能力。</p></div>
+              </div>
+              <div id="executionPolicyControlRows"></div>
+              <div class="settings-hint" id="executionPolicyWarnings"></div>
+              <div class="settings-group-title">命令执行隔离</div>
+              <div class="settings-row">
+                <div class="settings-row-label"><b>工作区写入隔离</b><p id="sandboxHint">启用后只在当前平台后端能够执行写入隔离时运行；后端缺失会拒绝命令，不会静默降级。</p></div>
                 <input type="checkbox" id="sandboxToggle" class="settings-toggle" />
               </div>
               <div class="settings-group-title">始终生效的保护</div>
               <div class="settings-hint">
                 以下安全边界不可关闭：写文件 / 改文件 / 执行命令前逐项询问；文件访问限制在工作区内（符号链接逃逸会被拦截）；
                 子进程环境变量默认剥离 API Key 等敏感项；日志与错误信息自动脱敏。
+                “弱隔离”表示仍使用当前用户的操作系统权限，不能等同于容器或虚拟机。
               </div>
             </section>
 

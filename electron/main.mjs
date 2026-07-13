@@ -54,6 +54,7 @@ import { createEditorService } from "./services/editor-service.mjs";
 import { createTerminalService } from "./services/terminal-service.mjs";
 import { createPreviewService } from "./services/preview-service.mjs";
 import { createSecurityService, redactSensitive } from "./services/security-service.mjs";
+import { createExecutionPolicyService } from "./services/execution-policy-service.mjs";
 import { createAppInfoService } from "./services/app-info-service.mjs";
 import { createUsageService } from "./services/usage-service.mjs";
 import { createElectronSecretStore } from "./services/secret-store-service.mjs";
@@ -62,6 +63,7 @@ import { RuntimeEventBus } from "../dist/runtime-event-sink.js";
 import { connectAssistantTextOutput } from "../dist/runtime-client-adapters.js";
 import { FileAttachmentStore } from "../dist/attachment-store.js";
 import { createDefaultCommandRegistry } from "../dist/command-registry.js";
+import { buildSafeChildEnv } from "../dist/process-env.js";
 import { openMacApp, parseOpenAppRequest } from "./services/native-open-service.mjs";
 import { BUILTIN_STORE_CATALOG } from "./store-catalog.mjs";
 
@@ -1460,7 +1462,14 @@ function extractDownloadedArchive(file, extractDir) {
   ];
   const errors = [];
   for (const attempt of attempts) {
-    const run = spawnSync(attempt.command, attempt.args, { encoding: "utf8", timeout: 30000, maxBuffer: 1024 * 1024 });
+    const run = spawnSync(attempt.command, attempt.args, {
+      encoding: "utf8",
+      timeout: 30000,
+      maxBuffer: 1024 * 1024,
+      env: buildSafeChildEnv(),
+      shell: false,
+      windowsHide: true,
+    });
     if (run.status === 0) {
       const escaped = walkStoreFiles(absExtractDir, (candidate) => !resolvedPathInside(absExtractDir, candidate), 5000);
       if (escaped.length) {
@@ -2533,6 +2542,30 @@ async function authorizeTerminal(request) {
   });
 }
 
+async function authorizeManagedExecution({ tool, label, mutating = true }) {
+  const currentRuntime = runtime;
+  if (!currentRuntime?.execEnv?.perms) return "deny";
+  const safeLabel = String(label || "执行本机命令").replace(/[\r\n\0]/g, " ").slice(0, 240);
+  return requestPermission(currentRuntime.execEnv.perms, {
+    tool: String(tool || "managed_execution").slice(0, 80),
+    action: safeLabel,
+    mutating: mutating === true,
+  }, async (question) => {
+    if (!win || win.isDestroyed()) return "n";
+    const result = await dialog.showMessageBox(win, {
+      type: "warning",
+      title: "允许受控本机执行",
+      message: `允许 Hi Code ${safeLabel}吗？`,
+      detail: `执行将使用最小环境变量、工作区边界、输出上限、超时和进程树清理。当前平台不能实施的操作系统级隔离会在执行证据中明确标记。\n\n${stripAnsi(question).replace(/\[[yan]\][^›]*›/i, "").trim()}`,
+      buttons: ["允许一次", "本次运行始终允许", "拒绝"],
+      defaultId: 2,
+      cancelId: 2,
+      noLink: true,
+    });
+    return result.response === 0 ? "y" : result.response === 1 ? "a" : "n";
+  });
+}
+
 async function authorizePullRequest({ title, base, draft }) {
   if (!win || win.isDestroyed()) return "deny";
   const result = await dialog.showMessageBox(win, {
@@ -2662,7 +2695,17 @@ app.on("before-quit", (event) => {
 });
 
 function createMainServices() {
+  const executionPolicy = createExecutionPolicyService({
+    logger: (event, payload) => appendRuntimeLog({
+      id: `execution-policy-${Date.now()}-${crypto.randomUUID()}`,
+      type: event,
+      title: event,
+      payload,
+      createdAt: Date.now(),
+    }),
+  });
   const services = {
+    executionPolicy,
     runtime: createRuntimeService({
       getRuntime: () => runtime,
       inputQueue,
@@ -2714,6 +2757,7 @@ function createMainServices() {
       runner: worktreeRunner,
       jobStore,
       getCwd: () => cwd,
+      authorize: authorizeManagedExecution,
     }),
     diff: createDiffIpcService({
       logDir: LOG_DIR,
@@ -2752,6 +2796,7 @@ function createMainServices() {
     terminal: createTerminalService({
       getCwd: () => cwd,
       authorize: authorizeTerminal,
+      executionPolicy,
       logger: (event, payload) => appendRuntimeLog({
         id: `terminal-${Date.now()}-${crypto.randomUUID()}`,
         type: event,
@@ -2836,10 +2881,12 @@ function createMainServices() {
     getCwd: () => cwd,
     jobStore,
     domainPackManager,
+    authorize: authorizeManagedExecution,
   });
   services.qualityGate = createQualityGateService({
     getCwd: () => cwd,
     jobStore,
+    authorize: authorizeManagedExecution,
   });
   services.release = createReleaseService({
     getCwd: () => cwd,

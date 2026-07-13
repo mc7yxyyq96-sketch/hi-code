@@ -1,0 +1,41 @@
+$ npm run test:arena
+
+> hi-code@0.6.0-alpha.8 test:arena
+> node test/patch-arena-tests.mjs
+
+
+[patch-arena] setup
+
+[patch-arena] create and collect candidate
+  ✓ creates arena run
+  ✓ creates internal provider candidate
+  ✓ collects patch artifact
+  ✓ writes gate results
+  ✓ writes skeleton detector gate
+  ✓ writes candidate artifacts
+  ✓ writes Job Center events
+  ✓ writes Job Center gate results
+
+[patch-arena] reject candidate
+  ✓ reject candidate records decision
+  ✓ reject candidate updates status
+
+[patch-arena] merge candidate
+  ✓ merge candidate succeeds on clean workspace
+  ✓ merge records decision
+  ✓ merge writes Job Center event
+
+[patch-arena] skeleton detector candidate risk
+  ✓ skeleton candidate is not marked ready
+  ✓ skeleton detector gate fails candidate
+  ✓ skeleton risk is visible in metadata and score
+
+[patch-arena] dirty merge protection
+  ✓ dirty workspace merge is rejected
+  ✓ failed merge preserves patch file
+  ✓ failed merge records decision
+
+[patch-arena] provider safety
+  ✓ not_configured provider cannot run
+
+=== 20 passed, 0 failed ===

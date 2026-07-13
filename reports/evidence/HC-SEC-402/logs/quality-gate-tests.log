@@ -1,0 +1,32 @@
+$ npm run test:quality-gates
+
+> hi-code@0.6.0-alpha.8 test:quality-gates
+> node test/quality-gate-tests.mjs
+
+
+[quality-gates] core runner
+  ✓ built-in gates include required gate types
+  ✓ command gate pass records evidence
+  ✓ command gate fail records stderr
+  ✓ file exists gate passes for workspace artifact
+  ✓ schema gate validates required fields
+  ✓ simulated adapter gate is not passed
+  ✓ human approval gate requires approval
+  ✓ invalid custom result cannot be used as gate
+  ✓ approved human gate passes
+
+[quality-gates] service, persistence, project
+  ✓ service run returns gate result
+  ✓ gate result writes to Job Center
+  ✓ gate result writes to Industrial Project
+  ✓ service approval reject writes failed result
+  ✓ command gate cannot bypass main-process approval
+
+[quality-gates] IPC
+  ✓ IPC exposes quality-gate:list
+  ✓ IPC exposes quality-gate:run
+  ✓ IPC exposes quality-gate:approve
+  ✓ IPC list returns built-in gates
+  ✓ IPC run calls real service path
+
+=== 19 passed, 0 failed ===

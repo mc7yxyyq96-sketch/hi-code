@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "program": "Hi Code Product-Grade Desktop and Industrial Workbench",
-  "updatedAt": "2026-07-12T14:37:48Z",
+  "updatedAt": "2026-07-12T15:15:48Z",
   "risks": [
     {
       "id": "RISK-RUN-001",
@@ -183,6 +183,27 @@
       "impact": "A local config disclosure, support bundle, backup, or accidental repository copy can expose reusable model or MCP credentials.",
       "mitigation": "HC-SEC-401 now persists validated references, encrypts desktop values through Electron safeStorage, rejects unavailable or Linux basic_text storage, keeps CLI fallback environment-only, migrates atomically with encrypted exact rollback, and exposes status rather than values. Sixteen local gates plus Linux, macOS, and Windows Electron CI passed.",
       "trigger": "Any successful config save or migration that leaves a plaintext model API key or sensitive MCP environment value blocks HC-SEC-401 and the rc.1 release line."
+    },
+    {
+      "id": "RISK-SEC-002",
+      "severity": "critical",
+      "status": "mitigated",
+      "owner": "security-release",
+      "title": "Execution isolation differs by platform and is not represented by one truthful policy contract",
+      "evidence": [
+        "reports/tasks/HC-SEC-402.md",
+        "reports/evidence/HC-SEC-402/manifest.json",
+        "reports/evidence/HC-SEC-402/ci-matrix.json",
+        "docs/execution-policy.md",
+        "src/execution-policy.ts",
+        "src/tools/bash.ts",
+        "electron/services/terminal-service.mjs",
+        "src/quality-gates.ts",
+        "src/worktree-runner.ts"
+      ],
+      "impact": "A user can interpret approval, workspace path validation, or process cleanup as an operating-system sandbox even when filesystem or network access remains available to the child process.",
+      "mitigation": "HC-SEC-402 centralizes command, path, environment, network, limit, approval, audit, and process-tree decisions in one versioned contract. Unsupported strict controls fail closed, report-only launches remain visibly weak, Renderer approval cannot be forged, child environments are minimized, and Linux/macOS/Windows capabilities are reported without inventing unavailable isolation. Nineteen local gates and GitHub Actions run 29221844706 passed, including real Electron smoke on all three platforms.",
+      "trigger": "Any execution path that reports sandboxed/strong while its requested filesystem, environment, network, limit, approval, audit, or process-tree control is not enforced blocks HC-SEC-402 and rc.1."
     },
     {
       "id": "RISK-PLAT-001",

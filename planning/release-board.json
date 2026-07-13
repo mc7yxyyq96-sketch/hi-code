@@ -351,6 +351,19 @@
       "taskManifest": "reports/tasks/HC-SEC-401.md",
       "evidence": "reports/evidence/HC-SEC-401/manifest.json",
       "ciEvidence": "reports/evidence/HC-SEC-401/ci-matrix.json"
+    },
+    {
+      "id": "HC-SEC-402",
+      "owner": "security-release",
+      "priority": "P0",
+      "status": "completed",
+      "dependencies": ["HC-PLAT-110"],
+      "branch": "codex/security-release/hc-sec-402",
+      "startedAt": "2026-07-12T15:15:48Z",
+      "completedAt": "2026-07-13T03:32:56Z",
+      "taskManifest": "reports/tasks/HC-SEC-402.md",
+      "evidence": "reports/evidence/HC-SEC-402/manifest.json",
+      "ciEvidence": "reports/evidence/HC-SEC-402/ci-matrix.json"
     }
   ],
   "gates": [
@@ -484,6 +497,14 @@
       "verifiedAt": "2026-07-12T14:37:48Z",
       "evidence": "reports/evidence/HC-SEC-401/manifest.json",
       "ciEvidence": "reports/evidence/HC-SEC-401/ci-matrix.json"
+    },
+    {
+      "id": "cross-platform-execution-policy",
+      "status": "passed",
+      "owner": "HC-SEC-402",
+      "verifiedAt": "2026-07-13T03:32:56Z",
+      "evidence": "reports/evidence/HC-SEC-402/manifest.json",
+      "ciEvidence": "reports/evidence/HC-SEC-402/ci-matrix.json"
     }
   ],
   "nextReleaseSlices": [

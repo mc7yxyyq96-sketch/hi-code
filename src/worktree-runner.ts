@@ -5,6 +5,9 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { createTwoFilesPatch } from "diff";
 
+import { runManagedExecutionSync, type ManagedExecutionPolicyResult } from "./execution-runner.js";
+import { buildSafeChildEnv } from "./process-env.js";
+
 export const WORKTREE_RUNNER_SCHEMA_VERSION = 1;
 export const WORKTREE_MANIFEST = ".hicode-worktree-runner.json";
 
@@ -55,6 +58,7 @@ export interface RunCommandRequest {
   command: string;
   timeoutMs?: number;
   env?: Record<string, string>;
+  userApproved?: boolean;
 }
 
 export interface RunCommandResult {
@@ -64,6 +68,7 @@ export interface RunCommandResult {
   exitCode: number;
   output: string;
   logs: string[];
+  executionPolicy?: ManagedExecutionPolicyResult;
 }
 
 export interface CollectedChanges {
@@ -182,22 +187,38 @@ export function runInIsolatedWorkspace(request: RunCommandRequest): RunCommandRe
   }
   if (!request.command || typeof request.command !== "string") throw new Error("command must be a non-empty string");
   assertManagedWorkspace(workspace);
-  const result = spawnSync("bash", ["-lc", request.command], {
+  const result = runManagedExecutionSync({
+    id: `worktree:${workspace.id}`,
+    surface: "worktree-runner",
+    executable: "bash",
+    args: ["-lc", request.command],
     cwd: workspace.workspacePath,
-    encoding: "utf8",
-    timeout: Math.min(Math.max(Number(request.timeoutMs || 120000), 1000), 600000),
-    env: sanitizeCommandEnv(request.env),
-    maxBuffer: 10 * 1024 * 1024,
+    allowedRoots: [workspace.workspacePath],
+    filesystem: "workspace-write",
+    network: "allow",
+    environment: { extraEnv: request.env },
+    limits: {
+      timeoutMs: Math.min(Math.max(Number(request.timeoutMs || 120000), 1000), 600000),
+      outputBytes: 10 * 1024 * 1024,
+    },
+    approval: { required: true, granted: request.userApproved === true },
+    processTree: { required: true },
+    enforcementMode: "report-only",
   });
   const output = `${result.stdout || ""}${result.stderr || ""}`.trim();
-  const exitCode = result.status ?? (result.error ? 127 : 0);
+  const exitCode = result.exitCode ?? 127;
   return {
-    ok: exitCode === 0,
+    ok: result.ok,
     command: request.command,
     cwd: workspace.workspacePath,
     exitCode,
     output,
-    logs: [`command exited with ${exitCode}`],
+    logs: [
+      `command exited with ${exitCode}`,
+      `execution isolation: ${result.policy.strength}`,
+      ...result.policy.warnings,
+    ],
+    executionPolicy: result.policy,
   };
 }
 
@@ -548,7 +569,7 @@ function detectGit(cwd: string): { root: string; head: string; dirty: boolean } 
 }
 
 function git(cwd: string, args: string[]): { ok: boolean; out: string; err: string; status: number | null } {
-  const result = spawnSync("git", args, { cwd, encoding: "utf8", maxBuffer: 20 * 1024 * 1024 });
+  const result = spawnSync("git", args, { cwd, encoding: "utf8", maxBuffer: 20 * 1024 * 1024, env: buildSafeChildEnv() });
   return {
     ok: result.status === 0,
     out: (result.stdout || "").trimEnd(),
@@ -567,16 +588,6 @@ function readTextFile(file: string): string | null {
   } catch {
     return null;
   }
-}
-
-function sanitizeCommandEnv(extra: Record<string, string> = {}): NodeJS.ProcessEnv {
-  const base = ["PATH", "HOME", "SHELL", "TMPDIR", "LANG", "LC_ALL"];
-  const env: NodeJS.ProcessEnv = {};
-  for (const key of base) if (process.env[key]) env[key] = process.env[key];
-  for (const [key, value] of Object.entries(extra || {})) {
-    if (/^[A-Z_][A-Z0-9_]*$/i.test(key) && typeof value === "string") env[key] = value;
-  }
-  return env;
 }
 
 function assertInside(root: string, target: string): void {

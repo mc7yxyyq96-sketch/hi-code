@@ -22,6 +22,7 @@ const testFiles = [
   ["test:git-collaboration", "test/git-collaboration-tests.mjs"],
   ["test:secrets", "test/secret-reference-tests.mjs"],
   ["test:secret-store", "test/secret-store-service-tests.mjs"],
+  ["test:execution-policy", "test/execution-policy-tests.mjs"],
   ["test:services", "test/main-process-services-tests.mjs"],
   ["test:jobs", "test/job-center-tests.mjs"],
   ["test:providers", "test/provider-tests.mjs"],

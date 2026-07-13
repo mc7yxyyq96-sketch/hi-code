@@ -9,6 +9,11 @@ import {
   createTerminalService,
   resolveTerminalShell,
 } from "../electron/services/terminal-service.mjs";
+import {
+  detectExecutionCapabilities,
+  evaluateExecutionPolicy,
+  projectExecutionCapabilities,
+} from "../dist/execution-policy.js";
 
 let passed = 0;
 let failed = 0;
@@ -120,6 +125,18 @@ function makeFixture({ decision = "allow", transcriptLimit = 64 * 1024, getCwd =
       return pty.process;
     },
   };
+  const executionCapabilities = detectExecutionCapabilities({
+    platform: "darwin",
+    backendAvailability: { sandboxExec: true },
+    processTreeSupport: true,
+  });
+  const executionPolicy = {
+    capabilities: () => ({
+      ok: true,
+      capabilities: projectExecutionCapabilities(executionCapabilities),
+    }),
+    evaluate: (request) => evaluateExecutionPolicy(request, executionCapabilities),
+  };
   const service = createTerminalService({
     getCwd: getCwd || (() => workspace),
     authorize: async () => decision,
@@ -131,6 +148,7 @@ function makeFixture({ decision = "allow", transcriptLimit = 64 * 1024, getCwd =
     logger: (event, payload) => logs.push({ event, payload }),
     loadPty: loadPty || (async () => ptyModule),
     terminateProcessTree: async (request) => { terminations.push(request); },
+    executionPolicy,
   });
   return { service, owner, pty, ptyModule, spawnCalls, logs, terminations, envSource, workspace };
 }
@@ -155,6 +173,8 @@ await check("authorized start uses the current real workspace and a trusted prof
   assert.equal(fixture.spawnCalls[0].options.cwd, fixture.workspace);
   assert.equal(fixture.spawnCalls[0].options.cols, 120);
   assert.equal(fixture.spawnCalls[0].options.rows, 32);
+  assert.equal(result.session.isolationStrength, "weak");
+  assert.equal(result.session.executionBackend, "macos-sandbox-exec");
 });
 
 await check("PTY environment is minimal and excludes parent secrets", async () => {
@@ -170,6 +190,10 @@ await check("PTY environment is minimal and excludes parent secrets", async () =
   assert.equal(env.ANTHROPIC_API_KEY, undefined);
   assert.equal(env.GITHUB_TOKEN, undefined);
   assert.ok(!JSON.stringify(fixture.logs).includes("openai-secret"));
+  const startLog = fixture.logs.find((entry) => entry.event === "terminal:started");
+  assert.equal(startLog.payload.executionPolicy.interactive, true);
+  assert.equal(startLog.payload.executionPolicy.timeoutMs, 0);
+  assert.ok(!JSON.stringify(startLog).includes("/Users/tester"));
 });
 
 await check("session operations are owner-scoped", async () => {

@@ -1,0 +1,36 @@
+$ npm run test:worktrees
+
+> hi-code@0.6.0-alpha.8 test:worktrees
+> node test/worktree-runner-tests.mjs
+
+
+[worktree-runner] git worktree mode
+  ✓ git repo creates worktree
+  ✓ worktree manifest exists
+  ✓ runInIsolatedWorkspace executes command
+  ✓ collectChanges reports changed file
+  ✓ collectChanges writes patch
+  ✓ cleanup removes managed workspace
+  ✓ dirty workspace is rejected by default
+
+[worktree-runner] copy sandbox fallback
+  ✓ non-git source falls back to copy sandbox
+  ✓ copy sandbox patch includes modified file
+  ✓ copy sandbox patch includes new file
+
+[worktree-runner] safety
+  ✓ cleanup refuses unmanaged path
+  ✓ patch path escape is rejected
+  ✓ copy sandbox cleanup removes only managed workspace
+
+[worktree-runner] service and Job Center
+  ✓ worktree service creates Job
+  ✓ worktree service writes create event
+  ✓ worktree service writes command event
+  ✓ worktree service writes patch event
+  ✓ worktree service writes cleanup event
+  ✓ worktree service records patch artifact
+  ✓ worktree service records metadata-only execution policy
+  ✓ worktree IPC cannot bypass main-process approval
+
+=== 21 passed, 0 failed ===

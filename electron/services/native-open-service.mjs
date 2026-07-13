@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { buildSafeChildEnv } from "../../dist/process-env.js";
 
 const OPEN_APP_ALIASES = Object.freeze({
   "apple music": "Music",
@@ -64,7 +65,11 @@ export function openMacApp(appName, candidates = [appName]) {
         resolve({ ok: false, error: errors.filter(Boolean).join("；") || `找不到应用 ${appName}` });
         return;
       }
-      const child = spawn("/usr/bin/open", ["-a", name], { stdio: ["ignore", "ignore", "pipe"] });
+      const child = spawn("/usr/bin/open", ["-a", name], {
+        env: buildSafeChildEnv(),
+        shell: false,
+        stdio: ["ignore", "ignore", "pipe"],
+      });
       let err = "";
       child.stderr.on("data", (chunk) => {
         err += chunk.toString();
