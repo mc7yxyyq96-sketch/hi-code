@@ -90,6 +90,40 @@ function runChecked(command, args, options = {}) {
   return result;
 }
 
+const sleepSignal = new Int32Array(new SharedArrayBuffer(4));
+
+function sleep(milliseconds) {
+  Atomics.wait(sleepSignal, 0, 0, milliseconds);
+}
+
+function waitForPathsMissing(paths, timeoutMs = 30_000) {
+  const deadline = Date.now() + timeoutMs;
+  let remaining = paths.filter((target) => fs.existsSync(target));
+  while (remaining.length && Date.now() < deadline) {
+    sleep(250);
+    remaining = remaining.filter((target) => fs.existsSync(target));
+  }
+  if (remaining.length) {
+    throw new Error(`NSIS uninstall left installed files behind: ${remaining.map((target) => path.basename(target)).join(", ")}`);
+  }
+}
+
+function removeTemporaryTree(root, timeoutMs = 30_000) {
+  const deadline = Date.now() + timeoutMs;
+  let lastError = null;
+  while (Date.now() < deadline) {
+    try {
+      fs.rmSync(root, { recursive: true, force: true });
+      return;
+    } catch (error) {
+      if (!["EBUSY", "EPERM", "ENOTEMPTY"].includes(error?.code)) throw error;
+      lastError = error;
+      sleep(250);
+    }
+  }
+  throw lastError || new Error(`Timed out cleaning temporary package tree: ${root}`);
+}
+
 function findNamed(root, name, { directory = false } = {}) {
   const queue = [root];
   let visited = 0;
@@ -181,9 +215,10 @@ function smokeWindows(installerPath, version) {
     const uninstaller = findNamed(installDir, "Uninstall Hi Code.exe");
     if (!uninstaller) throw new Error("NSIS smoke install did not create an uninstaller");
     runChecked(uninstaller, ["/S"]);
+    waitForPathsMissing([executable, inspected.asarPath, uninstaller]);
     return inspected;
   } finally {
-    fs.rmSync(temporary, { recursive: true, force: true });
+    removeTemporaryTree(temporary);
   }
 }
 
