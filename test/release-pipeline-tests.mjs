@@ -84,6 +84,7 @@ const dirtyReleasePolicy = createReleasePolicy({ version: "1.0.0", platform: "li
 check("release mode rejects a dirty source tree", !dirtyReleasePolicy.ok && dirtyReleasePolicy.errors.some((item) => item.includes("clean Git source tree")));
 const gitEnv = buildReleaseGitEnv({ PATH: "/usr/bin", HOME: "/tmp/home", GITHUB_TOKEN: "secret", OPENAI_API_KEY: "secret" });
 check("release source inspection excludes ambient secrets", gitEnv.PATH === "/usr/bin" && gitEnv.HOME === "/tmp/home" && !gitEnv.GITHUB_TOKEN && !gitEnv.OPENAI_API_KEY);
+check("release source inspection uses a portable isolated Git config", gitEnv.GIT_CONFIG_GLOBAL !== os.devNull && fs.statSync(gitEnv.GIT_CONFIG_GLOBAL).isFile());
 const sourceTmp = fs.mkdtempSync(path.join(os.tmpdir(), "hicode-release-source-"));
 for (const args of [["init"], ["config", "user.email", "release-test@example.com"], ["config", "user.name", "Release Test"]]) {
   const result = spawnSync("git", args, { cwd: sourceTmp, env: buildReleaseGitEnv(process.env), encoding: "utf8" });
@@ -148,6 +149,7 @@ const updateService = createUpdateService({
   isPackaged: () => true,
   settingsPath: path.join(updateTmp, "settings.json"),
   embeddedManifest: { schemaVersion: 1, version: "1.0.0", channel: "stable", artifactTrust: "signed", updateEnabled: true },
+  platform: "darwin",
   dialog: { showMessageBox: async () => ({ response: 0 }) },
   beforeInstall: async () => { beforeInstall += 1; },
 });
