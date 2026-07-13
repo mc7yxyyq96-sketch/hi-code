@@ -28,6 +28,8 @@ Detection checks:
 - common IfcOpenShell and IfcConvert CLI paths
 - Python version and module import probe
 
+Automatic detection probes one highest-priority Python interpreter: an explicit `IFCOPENSHELL_PYTHON` executable, then `python3`/`python` on `PATH`, then the first executable common-path candidate. The remaining candidates stay visible as detection evidence but are not launched serially. A user-configured executable path always overrides this bounded automatic probe and is checked directly.
+
 Manual configuration example:
 
 ```json

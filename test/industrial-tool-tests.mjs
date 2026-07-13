@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { createIpcRegistrar } from "../electron/ipc/ipc-utils.mjs";
 import { createIndustrialToolService, registerIndustrialToolIpc } from "../electron/services/industrial-tool-service.mjs";
+import { detectBimIfcAdapter } from "../dist/bim-ifc-adapter.js";
 import { DomainPackManager } from "../dist/domain-packs.js";
 import { IndustrialProjectStore } from "../dist/industrial-project.js";
 import { IndustrialToolAdapterRegistry, builtInIndustrialToolAdapters } from "../dist/industrial-tool-adapters.js";
@@ -38,6 +39,21 @@ function makeFakeExecutable(dir, name, output = "FakeCAD 1.2.3") {
 function makeFakeIfcPython(dir) {
   const file = path.join(dir, "python3");
   fs.writeFileSync(file, `#!/bin/sh\nif [ "$1" = "-c" ]; then\n  echo '{"ok": true, "version": "0.8.0-test"}'\n  exit 0\nfi\necho 'Python 3 test'\n`, { mode: 0o755 });
+  return file;
+}
+
+function makeSelectableIfcPython(dir, available) {
+  fs.mkdirSync(dir, { recursive: true });
+  const file = path.join(dir, "python3");
+  const payload = available
+    ? "{\"ok\": true, \"version\": \"0.9.0-priority-test\"}"
+    : "{\"ok\": false, \"error\": \"module unavailable\"}";
+  fs.writeFileSync(file, [
+    "#!/bin/sh",
+    `echo '${payload}'`,
+    available ? "exit 0" : "exit 3",
+    "",
+  ].join("\n"), { mode: 0o755 });
   return file;
 }
 
@@ -206,6 +222,32 @@ const manualPlcDetection = new IndustrialToolAdapterRegistry({ pathEnv: "", env:
 check("OpenPLC manual compiler path is detected", manualPlcDetection.installed === true && manualPlcDetection.version?.version === "1.4.0", JSON.stringify(manualPlcDetection));
 const manualIfcDetection = new IndustrialToolAdapterRegistry({ pathEnv: "", env: { PATH: "", HOME: os.homedir() } }).detectAdapter("ifcopenshell", { executablePath: fakeIfcPython });
 check("IfcOpenShell manual Python path is detected by module probe", manualIfcDetection.installed === true && manualIfcDetection.version?.version === "0.8.0-test", JSON.stringify(manualIfcDetection));
+const ifcProbeRoot = fs.mkdtempSync(path.join(os.tmpdir(), "hicode-ifc-probe-priority-"));
+const primaryPython = makeSelectableIfcPython(path.join(ifcProbeRoot, "primary"), false);
+const secondaryPython = makeSelectableIfcPython(path.join(ifcProbeRoot, "secondary"), true);
+const prioritizedIfcAdapter = {
+  ...bimBuiltin,
+  detection: {
+    ...bimBuiltin.detection,
+    commands: [],
+    executablePaths: [primaryPython, secondaryPython],
+    envVars: [],
+    configPaths: [],
+  },
+};
+const automaticIfcDetection = detectBimIfcAdapter({
+  adapter: prioritizedIfcAdapter,
+  env: { PATH: "", HOME: os.homedir() },
+  pathEnv: "",
+});
+check("IfcOpenShell automatic detection probes only the highest-priority Python", automaticIfcDetection.installed === false && automaticIfcDetection.evidence.executablePaths.filter((item) => item.found).length === 2, JSON.stringify(automaticIfcDetection));
+const explicitSecondaryIfcDetection = detectBimIfcAdapter({
+  adapter: prioritizedIfcAdapter,
+  options: { executablePath: secondaryPython },
+  env: { PATH: "", HOME: os.homedir() },
+  pathEnv: "",
+});
+check("IfcOpenShell manual path overrides the bounded automatic probe", explicitSecondaryIfcDetection.installed === true && explicitSecondaryIfcDetection.version?.version === "0.9.0-priority-test", JSON.stringify(explicitSecondaryIfcDetection));
 const unsupportedSolidWorksDetection = new IndustrialToolAdapterRegistry({ pathEnv: executableDir, env: { PATH: executableDir, HOME: os.homedir(), HICODE_HOST_PLATFORM: "darwin" } }).detectAdapter("solidworks");
 check("SolidWorks non-Windows platform is unsupported", unsupportedSolidWorksDetection.installed === false && /unsupported_platform/.test(unsupportedSolidWorksDetection.reason), JSON.stringify(unsupportedSolidWorksDetection));
 const windowsSolidWorksDetection = new IndustrialToolAdapterRegistry({ pathEnv: executableDir, env: { PATH: executableDir, HOME: os.homedir(), HICODE_HOST_PLATFORM: "win32" } }).detectAdapter("solidworks");

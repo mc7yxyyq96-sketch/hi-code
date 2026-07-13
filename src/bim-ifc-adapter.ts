@@ -587,14 +587,16 @@ function detectIfcOpenShellProbe({ manual, commands, executablePaths, environmen
   environment: Array<{ name: string; set: boolean; path?: string; exists?: boolean; executable?: boolean }>;
   pathEnv: string;
 }): IfcDetectionProbe {
-  const pythonCandidates = unique([
-    ...(manual && isPythonExecutable(manual) ? [manual] : []),
+  const automaticPythonCandidates = unique([
     ...environment.filter((item) => item.executable && item.name.includes("PYTHON") && item.path).map((item) => item.path as string),
-    ...executablePaths.filter((item) => item.found && isPythonExecutable(item.path)).map((item) => item.path),
     findCommand("python3", pathEnv),
     findCommand("python", pathEnv),
+    ...executablePaths.filter((item) => item.found && isPythonExecutable(item.path)).map((item) => item.path),
   ].filter(Boolean) as string[]);
-  for (const pythonPath of pythonCandidates) {
+  const pythonPath = manual && isPythonExecutable(manual)
+    ? manual
+    : automaticPythonCandidates[0];
+  if (pythonPath) {
     const probe = probePythonModule(pythonPath);
     if (probe.moduleAvailable) return probe;
   }
