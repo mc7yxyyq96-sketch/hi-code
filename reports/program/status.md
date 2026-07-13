@@ -96,6 +96,8 @@ HC-REL-420 completed in the isolated `codex/security-release/hc-rel-420` worktre
 
 HC-MCP-410 completed in the isolated `codex/runtime-engine/hc-mcp-410` worktree from accepted HC-REL-420 commit `630b19d`. The existing MCP manager now preserves managed stdio while adding HTTPS Streamable HTTP, protocol and capability negotiation, session recovery, reconnect, timeout, cancellation, streaming results, graceful shutdown, normalized errors, and bearer/OAuth expiry, discovery, PKCE, refresh, rotation, secret-reference, and redaction boundaries. Rotated OAuth credentials and matching expiry metadata persist through one secure config transaction. Desktop exposes validated lifecycle controls without credentials; CLI and TUI retain the compatibility API and await graceful shutdown. Real loopback JSON/SSE, service, security, Renderer, feature, Electron, and Program Control checks passed across all 14 captured evidence commands. Interactive OAuth browser/callback consent remains an explicit host responsibility and is not claimed as completed authorization.
 
+The `0.6.0` Stable Release Gate was executed in the isolated `codex/security-release/0.6.0-stable-gate` worktree from HC-MCP-410 commit `eaa9f27`. Ten engineering conditions pass: Runtime Protocol authority, turn replay/recovery, client isolation, three-platform Electron and package smoke, Code Studio, MCP, DoD, explicit zero open P0/P1 work, and truthful documentation. Promotion remains **blocked**, not failed: `RISK-REL-001` remains OPEN because Apple signing/notarization, Windows code-signing, and stable update-chain evidence are external prerequisites, and Program Control still records high open `RISK-PROV-001`. The package stays `0.6.0-alpha.8`; no Release, tag, signature claim, publication, updater enablement, or industrial task was created.
+
 ## Current Product Truth
 
 - Core Electron, CLI/TUI, runtime, tool, security, Job Center, Provider, Worktree, Arena, industrial, gate, sample, and release tests pass.
@@ -130,6 +132,7 @@ HC-MCP-410 completed in the isolated `codex/runtime-engine/hc-mcp-410` worktree 
 - Cross-platform execution policy evidence: `reports/tasks/HC-SEC-402.md`, `reports/evidence/HC-SEC-402/manifest.json`, `reports/evidence/HC-SEC-402/ci-matrix.json`
 - Controlled release pipeline evidence: `reports/tasks/HC-REL-420.md`, `reports/evidence/HC-REL-420/manifest.json`, `reports/evidence/HC-REL-420/ci-matrix.json`
 - MCP connection layer evidence: `reports/tasks/HC-MCP-410.md`, `reports/evidence/HC-MCP-410/manifest.json`
+- Stable release gate evidence: `reports/tasks/HC-REL-STABLE-GATE.md`, `reports/evidence/HC-REL-STABLE-GATE/manifest.json`, `reports/evidence/HC-REL-STABLE-GATE/gate-result.json`, `reports/releases/0.6.0-stable/gate-report.md`
 - Current risks: `reports/program/risks.json`
 - Historical final acceptance: `reports/final-acceptance-historical.md`
 - Historical audit policy: `reports/audit/README.md`

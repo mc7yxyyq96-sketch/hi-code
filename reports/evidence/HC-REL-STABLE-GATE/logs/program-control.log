@@ -1,0 +1,1288 @@
+$ npm run test:program
+
+> hi-code@0.6.0-alpha.8 test:program
+> node test/program-control-tests.mjs
+
+
+[program-control] required artifacts
+  ✓ docs/program/PROGRAM.md exists and is non-empty
+  ✓ docs/program/ARCHITECTURE.md exists and is non-empty
+  ✓ docs/adr/README.md exists and is non-empty
+  ✓ docs/adr/ADR-0001-program-control-and-evidence.md exists and is non-empty
+  ✓ docs/adr/ADR-0002-runtime-protocol-authority-migration.md exists and is non-empty
+  ✓ docs/adr/ADR-0003-typed-runtime-stores-and-idempotent-replay.md exists and is non-empty
+  ✓ docs/adr/ADR-0004-turn-state-and-conservative-recovery.md exists and is non-empty
+  ✓ docs/adr/ADR-0005-supported-electron-line.md exists and is non-empty
+  ✓ docs/adr/ADR-0006-model-provider-adapter-v2.md exists and is non-empty
+  ✓ docs/adr/ADR-0007-explicit-openai-responses-transport.md exists and is non-empty
+  ✓ docs/adr/ADR-0008-explicit-anthropic-ollama-transports.md exists and is non-empty
+  ✓ docs/adr/ADR-0009-durable-attachments-and-command-routing.md exists and is non-empty
+  ✓ docs/adr/ADR-0010-gradual-react-app-shell.md exists and is non-empty
+  ✓ docs/adr/ADR-0011-typed-session-workbench.md exists and is non-empty
+  ✓ docs/adr/ADR-0012-conflict-safe-integrated-editor.md exists and is non-empty
+  ✓ docs/adr/ADR-0013-policy-bound-integrated-terminal.md exists and is non-empty
+  ✓ docs/app-shell.md exists and is non-empty
+  ✓ docs/session-workbench.md exists and is non-empty
+  ✓ docs/code-editor.md exists and is non-empty
+  ✓ docs/integrated-terminal.md exists and is non-empty
+  ✓ docs/secure-app-preview.md exists and is non-empty
+  ✓ docs/adr/ADR-0014-isolated-loopback-app-preview.md exists and is non-empty
+  ✓ docs/git-delivery-loop.md exists and is non-empty
+  ✓ docs/adr/ADR-0015-authoritative-coding-and-git-delivery-loop.md exists and is non-empty
+  ✓ docs/adr/ADR-0016-keychain-backed-secret-references.md exists and is non-empty
+  ✓ docs/adr/ADR-0017-cross-platform-execution-policy.md exists and is non-empty
+  ✓ docs/adr/ADR-0018-controlled-desktop-release-pipeline.md exists and is non-empty
+  ✓ docs/adr/ADR-0019-mcp-streamable-http-oauth.md exists and is non-empty
+  ✓ docs/credential-storage.md exists and is non-empty
+  ✓ docs/execution-policy.md exists and is non-empty
+  ✓ docs/release-pipeline.md exists and is non-empty
+  ✓ docs/mcp-connection-layer.md exists and is non-empty
+  ✓ docs/attachments-and-command-registry.md exists and is non-empty
+  ✓ docs/anthropic-ollama-adapters.md exists and is non-empty
+  ✓ docs/model-provider-adapters.md exists and is non-empty
+  ✓ docs/openai-responses-adapter.md exists and is non-empty
+  ✓ docs/electron-compatibility.md exists and is non-empty
+  ✓ docs/runtime-stores.md exists and is non-empty
+  ✓ planning/backlog.json exists and is non-empty
+  ✓ planning/release-board.json exists and is non-empty
+  ✓ reports/program/status.md exists and is non-empty
+  ✓ reports/program/risks.json exists and is non-empty
+  ✓ reports/tasks/HC-PROG-100.md exists and is non-empty
+  ✓ reports/tasks/HC-QA-101.md exists and is non-empty
+  ✓ reports/tasks/HC-RUN-201.md exists and is non-empty
+  ✓ reports/tasks/HC-RUN-202.md exists and is non-empty
+  ✓ reports/tasks/HC-RUN-203.md exists and is non-empty
+  ✓ reports/tasks/HC-PLAT-110.md exists and is non-empty
+  ✓ reports/tasks/HC-REL-ALPHA-8.md exists and is non-empty
+  ✓ reports/tasks/HC-PROV-210.md exists and is non-empty
+  ✓ reports/tasks/HC-PROV-211.md exists and is non-empty
+  ✓ reports/tasks/HC-PROV-212.md exists and is non-empty
+  ✓ reports/tasks/HC-RUN-220.md exists and is non-empty
+  ✓ reports/tasks/HC-UI-301.md exists and is non-empty
+  ✓ reports/tasks/HC-UI-302.md exists and is non-empty
+  ✓ reports/tasks/HC-UI-310.md exists and is non-empty
+  ✓ reports/tasks/HC-UI-311.md exists and is non-empty
+  ✓ reports/tasks/HC-UI-312.md exists and is non-empty
+  ✓ reports/tasks/HC-GIT-320.md exists and is non-empty
+  ✓ reports/tasks/HC-SEC-401.md exists and is non-empty
+  ✓ reports/tasks/HC-SEC-402.md exists and is non-empty
+  ✓ reports/tasks/HC-REL-420.md exists and is non-empty
+  ✓ reports/tasks/HC-MCP-410.md exists and is non-empty
+  ✓ reports/tasks/HC-REL-STABLE-GATE.md exists and is non-empty
+  ✓ reports/tasks/HC-REL-ALPHA-7.md exists and is non-empty
+  ✓ reports/evidence/baseline/manifest.json exists and is non-empty
+  ✓ reports/evidence/HC-QA-101/manifest.json exists and is non-empty
+  ✓ reports/evidence/HC-RUN-201/manifest.json exists and is non-empty
+  ✓ reports/evidence/HC-RUN-202/manifest.json exists and is non-empty
+  ✓ reports/evidence/HC-RUN-203/manifest.json exists and is non-empty
+  ✓ reports/evidence/HC-REL-ALPHA-7/manifest.json exists and is non-empty
+  ✓ reports/evidence/HC-PLAT-110/ci-matrix.json exists and is non-empty
+  ✓ reports/evidence/HC-PLAT-110/manifest.json exists and is non-empty
+  ✓ reports/evidence/HC-REL-ALPHA-8/manifest.json exists and is non-empty
+  ✓ reports/evidence/HC-PROV-210/manifest.json exists and is non-empty
+  ✓ reports/evidence/HC-PROV-211/manifest.json exists and is non-empty
+  ✓ reports/evidence/HC-PROV-212/manifest.json exists and is non-empty
+  ✓ reports/evidence/HC-RUN-220/manifest.json exists and is non-empty
+  ✓ reports/evidence/HC-UI-301/manifest.json exists and is non-empty
+  ✓ reports/evidence/HC-UI-302/manifest.json exists and is non-empty
+  ✓ reports/evidence/HC-UI-310/manifest.json exists and is non-empty
+  ✓ reports/evidence/HC-UI-311/manifest.json exists and is non-empty
+  ✓ reports/evidence/HC-UI-311/ci-matrix.json exists and is non-empty
+  ✓ reports/evidence/HC-UI-312/manifest.json exists and is non-empty
+  ✓ reports/evidence/HC-UI-312/ci-matrix.json exists and is non-empty
+  ✓ reports/evidence/HC-GIT-320/manifest.json exists and is non-empty
+  ✓ reports/evidence/HC-GIT-320/ci-matrix.json exists and is non-empty
+  ✓ reports/evidence/HC-SEC-401/manifest.json exists and is non-empty
+  ✓ reports/evidence/HC-SEC-401/ci-matrix.json exists and is non-empty
+  ✓ reports/evidence/HC-SEC-402/manifest.json exists and is non-empty
+  ✓ reports/evidence/HC-SEC-402/ci-matrix.json exists and is non-empty
+  ✓ reports/evidence/HC-REL-420/manifest.json exists and is non-empty
+  ✓ reports/evidence/HC-REL-420/ci-matrix.json exists and is non-empty
+  ✓ reports/evidence/HC-MCP-410/manifest.json exists and is non-empty
+  ✓ reports/evidence/HC-REL-STABLE-GATE/gate-result.json exists and is non-empty
+  ✓ reports/releases/0.6.0-stable/gate-report.md exists and is non-empty
+  ✓ scripts/stable-release-gate.mjs exists and is non-empty
+  ✓ test/stable-release-gate-tests.mjs exists and is non-empty
+  ✓ scripts/electron-compatibility.mjs exists and is non-empty
+  ✓ scripts/run-electron-builder.mjs exists and is non-empty
+  ✓ test/electron-compatibility-tests.mjs exists and is non-empty
+  ✓ reports/releases/0.6.0-alpha.7/capability-matrix.md exists and is non-empty
+  ✓ reports/releases/0.6.0-alpha.7/migration-report.md exists and is non-empty
+  ✓ reports/releases/0.6.0-alpha.7/security-report.md exists and is non-empty
+  ✓ reports/releases/0.6.0-alpha.7/e2e-report.md exists and is non-empty
+  ✓ reports/releases/0.6.0-alpha.7/known-limitations.md exists and is non-empty
+  ✓ reports/releases/0.6.0-alpha.7/release-evidence.md exists and is non-empty
+  ✓ reports/releases/0.6.0-alpha.8/capability-matrix.md exists and is non-empty
+  ✓ reports/releases/0.6.0-alpha.8/migration-report.md exists and is non-empty
+  ✓ reports/releases/0.6.0-alpha.8/security-report.md exists and is non-empty
+  ✓ reports/releases/0.6.0-alpha.8/e2e-report.md exists and is non-empty
+  ✓ reports/releases/0.6.0-alpha.8/known-limitations.md exists and is non-empty
+  ✓ reports/releases/0.6.0-alpha.8/release-evidence.md exists and is non-empty
+
+[program-control] board and evidence contract
+  ✓ backlog records immutable source commit
+  ✓ HC-PROG-100 is completed
+  ✓ release board keeps QA dependency
+  ✓ HC-QA-101 is completed with evidence
+  ✓ Electron responsive gate passed
+  ✓ release board keeps runtime dependency
+  ✓ HC-RUN-201 is completed with evidence
+  ✓ runtime event sink gate passed
+  ✓ HC-RUN-201 completion is reflected in backlog
+  ✓ HC-RUN-202 completed only after its dependency and evidence
+  ✓ release board records HC-RUN-202 completion
+  ✓ runtime store replay gate passed
+  ✓ HC-RUN-203 completed only after typed replay acceptance
+  ✓ release board records HC-RUN-203 completion
+  ✓ turn recovery gate passed
+  ✓ turn recovery test is part of the global verification matrix
+  ✓ HC-PLAT-110 completed only after its dependency
+  ✓ HC-PLAT-110 pins the supported Electron toolchain
+  ✓ Electron compatibility contract is part of global verification
+  ✓ Electron supported-line gate passed
+  ✓ HC-PLAT-110 evidence records every command passing
+  ✓ HC-PLAT-110 evidence is captured from its task branch
+  ✓ HC-PLAT-110 captured build
+  ✓ HC-PLAT-110 captured verify
+  ✓ HC-PLAT-110 captured release-check
+  ✓ HC-PLAT-110 captured feature-tests
+  ✓ HC-PLAT-110 captured electron-compatibility
+  ✓ HC-PLAT-110 captured security-tests
+  ✓ HC-PLAT-110 captured dod-tests
+  ✓ HC-PLAT-110 captured dod-scan
+  ✓ HC-PLAT-110 captured production-audit
+  ✓ HC-PLAT-110 captured electron-e2e
+  ✓ HC-PLAT-110 captured mac-package
+  ✓ HC-PLAT-110 captured program-control
+  ✓ HC-PLAT-110 captured git-diff-check
+  ✓ HC-PLAT-110 build log exists
+  ✓ HC-PLAT-110 build log hash matches
+  ✓ HC-PLAT-110 verify log exists
+  ✓ HC-PLAT-110 verify log hash matches
+  ✓ HC-PLAT-110 release-check log exists
+  ✓ HC-PLAT-110 release-check log hash matches
+  ✓ HC-PLAT-110 feature-tests log exists
+  ✓ HC-PLAT-110 feature-tests log hash matches
+  ✓ HC-PLAT-110 electron-compatibility log exists
+  ✓ HC-PLAT-110 electron-compatibility log hash matches
+  ✓ HC-PLAT-110 security-tests log exists
+  ✓ HC-PLAT-110 security-tests log hash matches
+  ✓ HC-PLAT-110 dod-tests log exists
+  ✓ HC-PLAT-110 dod-tests log hash matches
+  ✓ HC-PLAT-110 dod-scan log exists
+  ✓ HC-PLAT-110 dod-scan log hash matches
+  ✓ HC-PLAT-110 production-audit log exists
+  ✓ HC-PLAT-110 production-audit log hash matches
+  ✓ HC-PLAT-110 electron-e2e log exists
+  ✓ HC-PLAT-110 electron-e2e log hash matches
+  ✓ HC-PLAT-110 mac-package log exists
+  ✓ HC-PLAT-110 mac-package log hash matches
+  ✓ HC-PLAT-110 program-control log exists
+  ✓ HC-PLAT-110 program-control log hash matches
+  ✓ HC-PLAT-110 git-diff-check log exists
+  ✓ HC-PLAT-110 git-diff-check log hash matches
+  ✓ HC-PLAT-110 ubuntu-latest Electron smoke passed
+  ✓ HC-PLAT-110 macos-latest Electron smoke passed
+  ✓ HC-PLAT-110 windows-latest Electron smoke passed
+  ✓ HC-REL-ALPHA-8 completed only after all candidate dependencies
+  ✓ HC-UI-301 completed only after its dependencies and evidence
+  ✓ React App Shell gate passed with committed evidence
+  ✓ HC-UI-301 compatibility risk is evidence-backed and mitigated
+  ✓ HC-UI-301 evidence records every command passing
+  ✓ HC-UI-301 evidence is captured from its isolated branch
+  ✓ HC-UI-301 captured build
+  ✓ HC-UI-301 captured verify
+  ✓ HC-UI-301 captured release-check
+  ✓ HC-UI-301 captured feature-tests
+  ✓ HC-UI-301 captured app-shell-tests
+  ✓ HC-UI-301 captured renderer-tests
+  ✓ HC-UI-301 captured security-tests
+  ✓ HC-UI-301 captured dod-tests
+  ✓ HC-UI-301 captured dod-scan
+  ✓ HC-UI-301 captured production-audit
+  ✓ HC-UI-301 captured electron-e2e
+  ✓ HC-UI-301 captured program-control
+  ✓ HC-UI-301 captured git-diff-check
+  ✓ HC-UI-301 build log exists
+  ✓ HC-UI-301 build log hash matches
+  ✓ HC-UI-301 verify log exists
+  ✓ HC-UI-301 verify log hash matches
+  ✓ HC-UI-301 release-check log exists
+  ✓ HC-UI-301 release-check log hash matches
+  ✓ HC-UI-301 feature-tests log exists
+  ✓ HC-UI-301 feature-tests log hash matches
+  ✓ HC-UI-301 app-shell-tests log exists
+  ✓ HC-UI-301 app-shell-tests log hash matches
+  ✓ HC-UI-301 renderer-tests log exists
+  ✓ HC-UI-301 renderer-tests log hash matches
+  ✓ HC-UI-301 security-tests log exists
+  ✓ HC-UI-301 security-tests log hash matches
+  ✓ HC-UI-301 dod-tests log exists
+  ✓ HC-UI-301 dod-tests log hash matches
+  ✓ HC-UI-301 dod-scan log exists
+  ✓ HC-UI-301 dod-scan log hash matches
+  ✓ HC-UI-301 production-audit log exists
+  ✓ HC-UI-301 production-audit log hash matches
+  ✓ HC-UI-301 electron-e2e log exists
+  ✓ HC-UI-301 electron-e2e log hash matches
+  ✓ HC-UI-301 program-control log exists
+  ✓ HC-UI-301 program-control log hash matches
+  ✓ HC-UI-301 git-diff-check log exists
+  ✓ HC-UI-301 git-diff-check log hash matches
+  ✓ HC-UI-302 completed only after its dependencies and evidence
+  ✓ React Session Workbench gate passed with committed evidence
+  ✓ HC-UI-302 migration risk is evidence-backed and mitigated
+  ✓ HC-UI-302 evidence records every command passing from a clean tree
+  ✓ HC-UI-302 evidence is captured from its isolated branch
+  ✓ HC-UI-302 captured build
+  ✓ HC-UI-302 captured verify
+  ✓ HC-UI-302 captured release-check
+  ✓ HC-UI-302 captured feature-tests
+  ✓ HC-UI-302 captured app-shell-tests
+  ✓ HC-UI-302 captured workspace-shell-tests
+  ✓ HC-UI-302 captured renderer-tests
+  ✓ HC-UI-302 captured security-tests
+  ✓ HC-UI-302 captured dod-tests
+  ✓ HC-UI-302 captured dod-scan
+  ✓ HC-UI-302 captured production-audit
+  ✓ HC-UI-302 captured electron-e2e
+  ✓ HC-UI-302 captured program-control
+  ✓ HC-UI-302 captured git-diff-check
+  ✓ HC-UI-302 build log exists
+  ✓ HC-UI-302 build log hash matches
+  ✓ HC-UI-302 verify log exists
+  ✓ HC-UI-302 verify log hash matches
+  ✓ HC-UI-302 release-check log exists
+  ✓ HC-UI-302 release-check log hash matches
+  ✓ HC-UI-302 feature-tests log exists
+  ✓ HC-UI-302 feature-tests log hash matches
+  ✓ HC-UI-302 app-shell-tests log exists
+  ✓ HC-UI-302 app-shell-tests log hash matches
+  ✓ HC-UI-302 workspace-shell-tests log exists
+  ✓ HC-UI-302 workspace-shell-tests log hash matches
+  ✓ HC-UI-302 renderer-tests log exists
+  ✓ HC-UI-302 renderer-tests log hash matches
+  ✓ HC-UI-302 security-tests log exists
+  ✓ HC-UI-302 security-tests log hash matches
+  ✓ HC-UI-302 dod-tests log exists
+  ✓ HC-UI-302 dod-tests log hash matches
+  ✓ HC-UI-302 dod-scan log exists
+  ✓ HC-UI-302 dod-scan log hash matches
+  ✓ HC-UI-302 production-audit log exists
+  ✓ HC-UI-302 production-audit log hash matches
+  ✓ HC-UI-302 electron-e2e log exists
+  ✓ HC-UI-302 electron-e2e log hash matches
+  ✓ HC-UI-302 program-control log exists
+  ✓ HC-UI-302 program-control log hash matches
+  ✓ HC-UI-302 git-diff-check log exists
+  ✓ HC-UI-302 git-diff-check log hash matches
+  ✓ HC-UI-310 completed only after its dependency and evidence
+  ✓ Integrated editor review gate passed with committed evidence
+  ✓ HC-UI-310 data-loss and fake-review risk is evidence-backed and mitigated
+  ✓ HC-UI-310 evidence records every command passing from a clean tree
+  ✓ HC-UI-310 evidence is captured from its isolated branch
+  ✓ HC-UI-310 captured build
+  ✓ HC-UI-310 captured verify
+  ✓ HC-UI-310 captured release-check
+  ✓ HC-UI-310 captured feature-tests
+  ✓ HC-UI-310 captured editor-workbench-tests
+  ✓ HC-UI-310 captured workspace-shell-tests
+  ✓ HC-UI-310 captured renderer-tests
+  ✓ HC-UI-310 captured service-tests
+  ✓ HC-UI-310 captured security-tests
+  ✓ HC-UI-310 captured dod-tests
+  ✓ HC-UI-310 captured dod-scan
+  ✓ HC-UI-310 captured production-audit
+  ✓ HC-UI-310 captured electron-e2e
+  ✓ HC-UI-310 captured program-control
+  ✓ HC-UI-310 captured git-diff-check
+  ✓ HC-UI-310 build log exists
+  ✓ HC-UI-310 build log hash matches
+  ✓ HC-UI-310 verify log exists
+  ✓ HC-UI-310 verify log hash matches
+  ✓ HC-UI-310 release-check log exists
+  ✓ HC-UI-310 release-check log hash matches
+  ✓ HC-UI-310 feature-tests log exists
+  ✓ HC-UI-310 feature-tests log hash matches
+  ✓ HC-UI-310 editor-workbench-tests log exists
+  ✓ HC-UI-310 editor-workbench-tests log hash matches
+  ✓ HC-UI-310 workspace-shell-tests log exists
+  ✓ HC-UI-310 workspace-shell-tests log hash matches
+  ✓ HC-UI-310 renderer-tests log exists
+  ✓ HC-UI-310 renderer-tests log hash matches
+  ✓ HC-UI-310 service-tests log exists
+  ✓ HC-UI-310 service-tests log hash matches
+  ✓ HC-UI-310 security-tests log exists
+  ✓ HC-UI-310 security-tests log hash matches
+  ✓ HC-UI-310 dod-tests log exists
+  ✓ HC-UI-310 dod-tests log hash matches
+  ✓ HC-UI-310 dod-scan log exists
+  ✓ HC-UI-310 dod-scan log hash matches
+  ✓ HC-UI-310 production-audit log exists
+  ✓ HC-UI-310 production-audit log hash matches
+  ✓ HC-UI-310 electron-e2e log exists
+  ✓ HC-UI-310 electron-e2e log hash matches
+  ✓ HC-UI-310 program-control log exists
+  ✓ HC-UI-310 program-control log hash matches
+  ✓ HC-UI-310 git-diff-check log exists
+  ✓ HC-UI-310 git-diff-check log hash matches
+  ✓ HC-UI-311 completed only after its dependencies and evidence
+  ✓ Integrated terminal policy gate passed with committed evidence
+  ✓ HC-UI-311 policy and lifecycle risk is evidence-backed and mitigated
+  ✓ HC-UI-311 evidence records every command passing from a clean tree
+  ✓ HC-UI-311 evidence is captured from its isolated branch
+  ✓ HC-UI-311 CI passed general tests and real Electron smoke on every target platform
+  ✓ HC-UI-311 captured build
+  ✓ HC-UI-311 captured terminal-tests
+  ✓ HC-UI-311 captured service-tests
+  ✓ HC-UI-311 captured app-shell-tests
+  ✓ HC-UI-311 captured renderer-tests
+  ✓ HC-UI-311 captured electron-compatibility
+  ✓ HC-UI-311 captured security-tests
+  ✓ HC-UI-311 captured verify
+  ✓ HC-UI-311 captured release-check
+  ✓ HC-UI-311 captured feature-tests
+  ✓ HC-UI-311 captured dod-tests
+  ✓ HC-UI-311 captured dod-scan
+  ✓ HC-UI-311 captured production-audit
+  ✓ HC-UI-311 captured electron-e2e
+  ✓ HC-UI-311 captured mac-package
+  ✓ HC-UI-311 captured terminal-package
+  ✓ HC-UI-311 captured program-control
+  ✓ HC-UI-311 captured git-diff-check
+  ✓ HC-UI-311 build log exists
+  ✓ HC-UI-311 build log hash matches
+  ✓ HC-UI-311 terminal-tests log exists
+  ✓ HC-UI-311 terminal-tests log hash matches
+  ✓ HC-UI-311 service-tests log exists
+  ✓ HC-UI-311 service-tests log hash matches
+  ✓ HC-UI-311 app-shell-tests log exists
+  ✓ HC-UI-311 app-shell-tests log hash matches
+  ✓ HC-UI-311 renderer-tests log exists
+  ✓ HC-UI-311 renderer-tests log hash matches
+  ✓ HC-UI-311 electron-compatibility log exists
+  ✓ HC-UI-311 electron-compatibility log hash matches
+  ✓ HC-UI-311 security-tests log exists
+  ✓ HC-UI-311 security-tests log hash matches
+  ✓ HC-UI-311 verify log exists
+  ✓ HC-UI-311 verify log hash matches
+  ✓ HC-UI-311 release-check log exists
+  ✓ HC-UI-311 release-check log hash matches
+  ✓ HC-UI-311 feature-tests log exists
+  ✓ HC-UI-311 feature-tests log hash matches
+  ✓ HC-UI-311 dod-tests log exists
+  ✓ HC-UI-311 dod-tests log hash matches
+  ✓ HC-UI-311 dod-scan log exists
+  ✓ HC-UI-311 dod-scan log hash matches
+  ✓ HC-UI-311 production-audit log exists
+  ✓ HC-UI-311 production-audit log hash matches
+  ✓ HC-UI-311 electron-e2e log exists
+  ✓ HC-UI-311 electron-e2e log hash matches
+  ✓ HC-UI-311 mac-package log exists
+  ✓ HC-UI-311 mac-package log hash matches
+  ✓ HC-UI-311 terminal-package log exists
+  ✓ HC-UI-311 terminal-package log hash matches
+  ✓ HC-UI-311 program-control log exists
+  ✓ HC-UI-311 program-control log hash matches
+  ✓ HC-UI-311 git-diff-check log exists
+  ✓ HC-UI-311 git-diff-check log hash matches
+  ✓ HC-UI-312 completed only after its dependencies and evidence
+  ✓ Secure App Preview gate passed with committed evidence
+  ✓ HC-UI-312 isolation and false-verification risk is evidence-backed and mitigated
+  ✓ HC-UI-312 evidence records every command passing from a clean tree
+  ✓ HC-UI-312 evidence is captured from its isolated branch
+  ✓ HC-UI-312 CI passed general tests and real Electron smoke on every target platform
+  ✓ HC-UI-312 captured build
+  ✓ HC-UI-312 captured preview-tests
+  ✓ HC-UI-312 captured service-tests
+  ✓ HC-UI-312 captured app-shell-tests
+  ✓ HC-UI-312 captured renderer-tests
+  ✓ HC-UI-312 captured security-tests
+  ✓ HC-UI-312 captured verify
+  ✓ HC-UI-312 captured release-check
+  ✓ HC-UI-312 captured feature-tests
+  ✓ HC-UI-312 captured dod-tests
+  ✓ HC-UI-312 captured dod-scan
+  ✓ HC-UI-312 captured production-audit
+  ✓ HC-UI-312 captured electron-e2e
+  ✓ HC-UI-312 captured program-control
+  ✓ HC-UI-312 captured git-diff-check
+  ✓ HC-UI-312 build log exists
+  ✓ HC-UI-312 build log hash matches
+  ✓ HC-UI-312 preview-tests log exists
+  ✓ HC-UI-312 preview-tests log hash matches
+  ✓ HC-UI-312 service-tests log exists
+  ✓ HC-UI-312 service-tests log hash matches
+  ✓ HC-UI-312 app-shell-tests log exists
+  ✓ HC-UI-312 app-shell-tests log hash matches
+  ✓ HC-UI-312 renderer-tests log exists
+  ✓ HC-UI-312 renderer-tests log hash matches
+  ✓ HC-UI-312 security-tests log exists
+  ✓ HC-UI-312 security-tests log hash matches
+  ✓ HC-UI-312 verify log exists
+  ✓ HC-UI-312 verify log hash matches
+  ✓ HC-UI-312 release-check log exists
+  ✓ HC-UI-312 release-check log hash matches
+  ✓ HC-UI-312 feature-tests log exists
+  ✓ HC-UI-312 feature-tests log hash matches
+  ✓ HC-UI-312 dod-tests log exists
+  ✓ HC-UI-312 dod-tests log hash matches
+  ✓ HC-UI-312 dod-scan log exists
+  ✓ HC-UI-312 dod-scan log hash matches
+  ✓ HC-UI-312 production-audit log exists
+  ✓ HC-UI-312 production-audit log hash matches
+  ✓ HC-UI-312 electron-e2e log exists
+  ✓ HC-UI-312 electron-e2e log hash matches
+  ✓ HC-UI-312 program-control log exists
+  ✓ HC-UI-312 program-control log hash matches
+  ✓ HC-UI-312 git-diff-check log exists
+  ✓ HC-UI-312 git-diff-check log hash matches
+  ✓ HC-GIT-320 completed only after its dependencies and evidence
+  ✓ Authoritative coding and Git delivery gate passed with committed evidence
+  ✓ HC-GIT-320 queue and collaboration risk is evidence-backed and mitigated
+  ✓ HC-GIT-320 evidence records every command passing from a clean tree
+  ✓ HC-GIT-320 evidence is captured from its isolated branch
+  ✓ HC-GIT-320 CI passed general tests and real Electron smoke on every target platform
+  ✓ HC-GIT-320 captured build
+  ✓ HC-GIT-320 captured runtime-control
+  ✓ HC-GIT-320 captured git-collaboration
+  ✓ HC-GIT-320 captured service-tests
+  ✓ HC-GIT-320 captured renderer-tests
+  ✓ HC-GIT-320 captured security-tests
+  ✓ HC-GIT-320 captured verify
+  ✓ HC-GIT-320 captured release-check
+  ✓ HC-GIT-320 captured feature-tests
+  ✓ HC-GIT-320 captured dod-tests
+  ✓ HC-GIT-320 captured dod-scan
+  ✓ HC-GIT-320 captured production-audit
+  ✓ HC-GIT-320 captured electron-e2e
+  ✓ HC-GIT-320 captured program-control
+  ✓ HC-GIT-320 captured git-diff-check
+  ✓ HC-GIT-320 build log exists
+  ✓ HC-GIT-320 build log hash matches
+  ✓ HC-GIT-320 runtime-control log exists
+  ✓ HC-GIT-320 runtime-control log hash matches
+  ✓ HC-GIT-320 git-collaboration log exists
+  ✓ HC-GIT-320 git-collaboration log hash matches
+  ✓ HC-GIT-320 service-tests log exists
+  ✓ HC-GIT-320 service-tests log hash matches
+  ✓ HC-GIT-320 renderer-tests log exists
+  ✓ HC-GIT-320 renderer-tests log hash matches
+  ✓ HC-GIT-320 security-tests log exists
+  ✓ HC-GIT-320 security-tests log hash matches
+  ✓ HC-GIT-320 verify log exists
+  ✓ HC-GIT-320 verify log hash matches
+  ✓ HC-GIT-320 release-check log exists
+  ✓ HC-GIT-320 release-check log hash matches
+  ✓ HC-GIT-320 feature-tests log exists
+  ✓ HC-GIT-320 feature-tests log hash matches
+  ✓ HC-GIT-320 dod-tests log exists
+  ✓ HC-GIT-320 dod-tests log hash matches
+  ✓ HC-GIT-320 dod-scan log exists
+  ✓ HC-GIT-320 dod-scan log hash matches
+  ✓ HC-GIT-320 production-audit log exists
+  ✓ HC-GIT-320 production-audit log hash matches
+  ✓ HC-GIT-320 electron-e2e log exists
+  ✓ HC-GIT-320 electron-e2e log hash matches
+  ✓ HC-GIT-320 program-control log exists
+  ✓ HC-GIT-320 program-control log hash matches
+  ✓ HC-GIT-320 git-diff-check log exists
+  ✓ HC-GIT-320 git-diff-check log hash matches
+  ✓ HC-SEC-401 completed only after its dependency and committed evidence
+  ✓ Keychain secret-reference gate passed with committed evidence
+  ✓ HC-SEC-401 plaintext credential risk is evidence-backed and mitigated
+  ✓ HC-SEC-401 evidence records every command passing from a clean tree
+  ✓ HC-SEC-401 evidence is captured from its isolated branch
+  ✓ HC-SEC-401 CI passed general tests and real Electron smoke on every target platform
+  ✓ HC-SEC-401 captured build
+  ✓ HC-SEC-401 captured secret-references
+  ✓ HC-SEC-401 captured secret-store
+  ✓ HC-SEC-401 captured provider-tests
+  ✓ HC-SEC-401 captured service-tests
+  ✓ HC-SEC-401 captured renderer-tests
+  ✓ HC-SEC-401 captured security-tests
+  ✓ HC-SEC-401 captured verify
+  ✓ HC-SEC-401 captured release-check
+  ✓ HC-SEC-401 captured feature-tests
+  ✓ HC-SEC-401 captured dod-tests
+  ✓ HC-SEC-401 captured dod-scan
+  ✓ HC-SEC-401 captured production-audit
+  ✓ HC-SEC-401 captured electron-e2e
+  ✓ HC-SEC-401 captured program-control
+  ✓ HC-SEC-401 captured git-diff-check
+  ✓ HC-SEC-401 build log exists
+  ✓ HC-SEC-401 build log hash matches
+  ✓ HC-SEC-401 secret-references log exists
+  ✓ HC-SEC-401 secret-references log hash matches
+  ✓ HC-SEC-401 secret-store log exists
+  ✓ HC-SEC-401 secret-store log hash matches
+  ✓ HC-SEC-401 provider-tests log exists
+  ✓ HC-SEC-401 provider-tests log hash matches
+  ✓ HC-SEC-401 service-tests log exists
+  ✓ HC-SEC-401 service-tests log hash matches
+  ✓ HC-SEC-401 renderer-tests log exists
+  ✓ HC-SEC-401 renderer-tests log hash matches
+  ✓ HC-SEC-401 security-tests log exists
+  ✓ HC-SEC-401 security-tests log hash matches
+  ✓ HC-SEC-401 verify log exists
+  ✓ HC-SEC-401 verify log hash matches
+  ✓ HC-SEC-401 release-check log exists
+  ✓ HC-SEC-401 release-check log hash matches
+  ✓ HC-SEC-401 feature-tests log exists
+  ✓ HC-SEC-401 feature-tests log hash matches
+  ✓ HC-SEC-401 dod-tests log exists
+  ✓ HC-SEC-401 dod-tests log hash matches
+  ✓ HC-SEC-401 dod-scan log exists
+  ✓ HC-SEC-401 dod-scan log hash matches
+  ✓ HC-SEC-401 production-audit log exists
+  ✓ HC-SEC-401 production-audit log hash matches
+  ✓ HC-SEC-401 electron-e2e log exists
+  ✓ HC-SEC-401 electron-e2e log hash matches
+  ✓ HC-SEC-401 program-control log exists
+  ✓ HC-SEC-401 program-control log hash matches
+  ✓ HC-SEC-401 git-diff-check log exists
+  ✓ HC-SEC-401 git-diff-check log hash matches
+  ✓ HC-SEC-402 completed only after its dependency and committed evidence
+  ✓ Cross-platform execution-policy gate passed with committed evidence
+  ✓ HC-SEC-402 platform-isolation risk is evidence-backed and mitigated
+  ✓ HC-SEC-402 evidence records every command passing from a clean tree
+  ✓ HC-SEC-402 evidence is captured from its isolated branch
+  ✓ HC-SEC-402 CI passed general tests and real Electron smoke on every target platform
+  ✓ HC-SEC-402 captured build
+  ✓ HC-SEC-402 captured execution-policy
+  ✓ HC-SEC-402 captured terminal-tests
+  ✓ HC-SEC-402 captured worktree-tests
+  ✓ HC-SEC-402 captured arena-tests
+  ✓ HC-SEC-402 captured industrial-tool-tests
+  ✓ HC-SEC-402 captured quality-gate-tests
+  ✓ HC-SEC-402 captured service-tests
+  ✓ HC-SEC-402 captured renderer-tests
+  ✓ HC-SEC-402 captured security-tests
+  ✓ HC-SEC-402 captured verify
+  ✓ HC-SEC-402 captured release-check
+  ✓ HC-SEC-402 captured feature-tests
+  ✓ HC-SEC-402 captured dod-tests
+  ✓ HC-SEC-402 captured dod-scan
+  ✓ HC-SEC-402 captured production-audit
+  ✓ HC-SEC-402 captured electron-e2e
+  ✓ HC-SEC-402 captured program-control
+  ✓ HC-SEC-402 captured git-diff-check
+  ✓ HC-SEC-402 build log exists
+  ✓ HC-SEC-402 build log hash matches
+  ✓ HC-SEC-402 execution-policy log exists
+  ✓ HC-SEC-402 execution-policy log hash matches
+  ✓ HC-SEC-402 terminal-tests log exists
+  ✓ HC-SEC-402 terminal-tests log hash matches
+  ✓ HC-SEC-402 worktree-tests log exists
+  ✓ HC-SEC-402 worktree-tests log hash matches
+  ✓ HC-SEC-402 arena-tests log exists
+  ✓ HC-SEC-402 arena-tests log hash matches
+  ✓ HC-SEC-402 industrial-tool-tests log exists
+  ✓ HC-SEC-402 industrial-tool-tests log hash matches
+  ✓ HC-SEC-402 quality-gate-tests log exists
+  ✓ HC-SEC-402 quality-gate-tests log hash matches
+  ✓ HC-SEC-402 service-tests log exists
+  ✓ HC-SEC-402 service-tests log hash matches
+  ✓ HC-SEC-402 renderer-tests log exists
+  ✓ HC-SEC-402 renderer-tests log hash matches
+  ✓ HC-SEC-402 security-tests log exists
+  ✓ HC-SEC-402 security-tests log hash matches
+  ✓ HC-SEC-402 verify log exists
+  ✓ HC-SEC-402 verify log hash matches
+  ✓ HC-SEC-402 release-check log exists
+  ✓ HC-SEC-402 release-check log hash matches
+  ✓ HC-SEC-402 feature-tests log exists
+  ✓ HC-SEC-402 feature-tests log hash matches
+  ✓ HC-SEC-402 dod-tests log exists
+  ✓ HC-SEC-402 dod-tests log hash matches
+  ✓ HC-SEC-402 dod-scan log exists
+  ✓ HC-SEC-402 dod-scan log hash matches
+  ✓ HC-SEC-402 production-audit log exists
+  ✓ HC-SEC-402 production-audit log hash matches
+  ✓ HC-SEC-402 electron-e2e log exists
+  ✓ HC-SEC-402 electron-e2e log hash matches
+  ✓ HC-SEC-402 program-control log exists
+  ✓ HC-SEC-402 program-control log hash matches
+  ✓ HC-SEC-402 git-diff-check log exists
+  ✓ HC-SEC-402 git-diff-check log hash matches
+  ✓ HC-REL-420 completed only after its dependencies and committed evidence
+  ✓ Controlled release-pipeline gate passed with committed evidence
+  ✓ HC-REL-420 keeps commercial signing risk open and evidence-backed
+  ✓ HC-REL-420 evidence records every command passing from a clean tree
+  ✓ HC-REL-420 evidence is captured from its isolated branch
+  ✓ HC-REL-420 CI evidence binds the verified PR head and successful workflows
+  ✓ HC-REL-420 native package smoke passed on all three target platforms
+  ✓ HC-REL-420 CI passed general tests and real Electron smoke on every target platform
+  ✓ HC-REL-420 CI artifacts remain truthfully unsigned
+  ✓ HC-REL-420 captured build
+  ✓ HC-REL-420 captured release-preflight
+  ✓ HC-REL-420 captured release-pipeline-tests
+  ✓ HC-REL-420 captured service-tests
+  ✓ HC-REL-420 captured security-tests
+  ✓ HC-REL-420 captured verify
+  ✓ HC-REL-420 captured release-check
+  ✓ HC-REL-420 captured feature-tests
+  ✓ HC-REL-420 captured dod-tests
+  ✓ HC-REL-420 captured dod-scan
+  ✓ HC-REL-420 captured production-audit
+  ✓ HC-REL-420 captured electron-e2e
+  ✓ HC-REL-420 captured mac-package
+  ✓ HC-REL-420 captured mac-package-smoke
+  ✓ HC-REL-420 captured sbom
+  ✓ HC-REL-420 captured provenance
+  ✓ HC-REL-420 captured checksums
+  ✓ HC-REL-420 captured checksum-verification
+  ✓ HC-REL-420 captured program-control
+  ✓ HC-REL-420 captured git-diff-check
+  ✓ HC-REL-420 build log exists
+  ✓ HC-REL-420 build log hash matches
+  ✓ HC-REL-420 release-preflight log exists
+  ✓ HC-REL-420 release-preflight log hash matches
+  ✓ HC-REL-420 release-pipeline-tests log exists
+  ✓ HC-REL-420 release-pipeline-tests log hash matches
+  ✓ HC-REL-420 service-tests log exists
+  ✓ HC-REL-420 service-tests log hash matches
+  ✓ HC-REL-420 security-tests log exists
+  ✓ HC-REL-420 security-tests log hash matches
+  ✓ HC-REL-420 verify log exists
+  ✓ HC-REL-420 verify log hash matches
+  ✓ HC-REL-420 release-check log exists
+  ✓ HC-REL-420 release-check log hash matches
+  ✓ HC-REL-420 feature-tests log exists
+  ✓ HC-REL-420 feature-tests log hash matches
+  ✓ HC-REL-420 dod-tests log exists
+  ✓ HC-REL-420 dod-tests log hash matches
+  ✓ HC-REL-420 dod-scan log exists
+  ✓ HC-REL-420 dod-scan log hash matches
+  ✓ HC-REL-420 production-audit log exists
+  ✓ HC-REL-420 production-audit log hash matches
+  ✓ HC-REL-420 electron-e2e log exists
+  ✓ HC-REL-420 electron-e2e log hash matches
+  ✓ HC-REL-420 mac-package log exists
+  ✓ HC-REL-420 mac-package log hash matches
+  ✓ HC-REL-420 mac-package-smoke log exists
+  ✓ HC-REL-420 mac-package-smoke log hash matches
+  ✓ HC-REL-420 sbom log exists
+  ✓ HC-REL-420 sbom log hash matches
+  ✓ HC-REL-420 provenance log exists
+  ✓ HC-REL-420 provenance log hash matches
+  ✓ HC-REL-420 checksums log exists
+  ✓ HC-REL-420 checksums log hash matches
+  ✓ HC-REL-420 checksum-verification log exists
+  ✓ HC-REL-420 checksum-verification log hash matches
+  ✓ HC-REL-420 program-control log exists
+  ✓ HC-REL-420 program-control log hash matches
+  ✓ HC-REL-420 git-diff-check log exists
+  ✓ HC-REL-420 git-diff-check log hash matches
+  ✓ Controlled release-pipeline evidence capture is reproducible
+  ✓ HC-MCP-410 completed only after its dependency and evidence
+  ✓ MCP Streamable HTTP and OAuth gate passed with evidence
+  ✓ HC-MCP-410 transport risk is evidence-backed and mitigated
+  ✓ HC-MCP-410 evidence records every command passing
+  ✓ HC-MCP-410 evidence is captured from its isolated branch and accepted release base
+  ✓ HC-MCP-410 captured build
+  ✓ HC-MCP-410 captured mcp-tests
+  ✓ HC-MCP-410 captured service-tests
+  ✓ HC-MCP-410 captured renderer-tests
+  ✓ HC-MCP-410 captured security-tests
+  ✓ HC-MCP-410 captured verify
+  ✓ HC-MCP-410 captured release-check
+  ✓ HC-MCP-410 captured feature-tests
+  ✓ HC-MCP-410 captured dod-tests
+  ✓ HC-MCP-410 captured dod-scan
+  ✓ HC-MCP-410 captured production-audit
+  ✓ HC-MCP-410 captured electron-e2e
+  ✓ HC-MCP-410 captured program-control
+  ✓ HC-MCP-410 captured git-diff-check
+  ✓ HC-MCP-410 build log exists
+  ✓ HC-MCP-410 build log hash matches
+  ✓ HC-MCP-410 mcp-tests log exists
+  ✓ HC-MCP-410 mcp-tests log hash matches
+  ✓ HC-MCP-410 service-tests log exists
+  ✓ HC-MCP-410 service-tests log hash matches
+  ✓ HC-MCP-410 renderer-tests log exists
+  ✓ HC-MCP-410 renderer-tests log hash matches
+  ✓ HC-MCP-410 security-tests log exists
+  ✓ HC-MCP-410 security-tests log hash matches
+  ✓ HC-MCP-410 verify log exists
+  ✓ HC-MCP-410 verify log hash matches
+  ✓ HC-MCP-410 release-check log exists
+  ✓ HC-MCP-410 release-check log hash matches
+  ✓ HC-MCP-410 feature-tests log exists
+  ✓ HC-MCP-410 feature-tests log hash matches
+  ✓ HC-MCP-410 dod-tests log exists
+  ✓ HC-MCP-410 dod-tests log hash matches
+  ✓ HC-MCP-410 dod-scan log exists
+  ✓ HC-MCP-410 dod-scan log hash matches
+  ✓ HC-MCP-410 production-audit log exists
+  ✓ HC-MCP-410 production-audit log hash matches
+  ✓ HC-MCP-410 electron-e2e log exists
+  ✓ HC-MCP-410 electron-e2e log hash matches
+  ✓ HC-MCP-410 program-control log exists
+  ✓ HC-MCP-410 program-control log hash matches
+  ✓ HC-MCP-410 git-diff-check log exists
+  ✓ HC-MCP-410 git-diff-check log hash matches
+  ✓ HC-MCP-410 evidence capture is reproducible
+  ✓ Stable Gate assessment task is completed without claiming promotion
+  ✓ Stable promotion gate is separately and truthfully blocked
+  ✓ Stable Gate result preserves passing engineering and blocked promotion
+  ✓ Stable Gate blocks unsigned release infrastructure and open Provider risk
+  ✓ Stable Gate scripts expose assessment and strict fail-closed modes
+  ✓ Evidence capture permits non-zero success only for the strict blocked Stable Gate assertion
+  ✓ Stable Gate keeps the alpha candidate and creates no release reference
+  ✓ alpha.8 version is synchronized
+  ✓ alpha.8 release candidate gate passed
+  ✓ historical alpha.7 release candidate gate remains passed
+  ✓ HC-PROV-210 completed only after typed runtime store completion and evidence
+  ✓ Model Provider focused tests are part of global verification
+  ✓ OpenAI Responses focused tests are part of global verification
+  ✓ Anthropic and Ollama focused tests are part of global verification
+  ✓ Attachment and command routing tests are part of global verification
+  ✓ OpenAI Responses evidence capture is reproducible
+  ✓ Anthropic and Ollama evidence capture is reproducible
+  ✓ Attachment and command evidence capture is reproducible
+  ✓ Typed App Shell tests are part of global verification
+  ✓ Typed App Shell evidence capture is reproducible
+  ✓ Typed Session Workbench evidence capture is reproducible
+  ✓ Integrated editor tests are part of global verification
+  ✓ Integrated editor evidence capture is reproducible
+  ✓ Integrated terminal tests are part of global verification
+  ✓ Integrated terminal evidence capture is reproducible
+  ✓ Secure App Preview tests are part of global verification
+  ✓ Secure App Preview evidence capture is reproducible
+  ✓ Coding and Git delivery evidence capture is reproducible
+  ✓ Credential storage evidence capture is reproducible
+  ✓ Execution policy evidence capture is reproducible
+  ✓ Task evidence commands cannot be shadowed by a project-local npm binary
+  ✓ Task evidence executes the locked npm CLI with the current Node runtime
+  ✓ HC-PROV-211 completed only after Model Provider v2 completion and evidence
+  ✓ HC-PROV-211 evidence records every command passing
+  ✓ HC-PROV-211 evidence is captured from its isolated branch
+  ✓ HC-PROV-211 captured build
+  ✓ HC-PROV-211 captured verify
+  ✓ HC-PROV-211 captured release-check
+  ✓ HC-PROV-211 captured feature-tests
+  ✓ HC-PROV-211 captured openai-responses-tests
+  ✓ HC-PROV-211 captured model-provider-tests
+  ✓ HC-PROV-211 captured service-tests
+  ✓ HC-PROV-211 captured runtime-protocol
+  ✓ HC-PROV-211 captured runtime-events
+  ✓ HC-PROV-211 captured runtime-concurrency
+  ✓ HC-PROV-211 captured runtime-clients
+  ✓ HC-PROV-211 captured renderer-tests
+  ✓ HC-PROV-211 captured security-tests
+  ✓ HC-PROV-211 captured dod-tests
+  ✓ HC-PROV-211 captured dod-scan
+  ✓ HC-PROV-211 captured production-audit
+  ✓ HC-PROV-211 captured electron-e2e
+  ✓ HC-PROV-211 captured program-control
+  ✓ HC-PROV-211 captured git-diff-check
+  ✓ HC-PROV-211 build log exists
+  ✓ HC-PROV-211 build log hash matches
+  ✓ HC-PROV-211 verify log exists
+  ✓ HC-PROV-211 verify log hash matches
+  ✓ HC-PROV-211 release-check log exists
+  ✓ HC-PROV-211 release-check log hash matches
+  ✓ HC-PROV-211 feature-tests log exists
+  ✓ HC-PROV-211 feature-tests log hash matches
+  ✓ HC-PROV-211 openai-responses-tests log exists
+  ✓ HC-PROV-211 openai-responses-tests log hash matches
+  ✓ HC-PROV-211 model-provider-tests log exists
+  ✓ HC-PROV-211 model-provider-tests log hash matches
+  ✓ HC-PROV-211 service-tests log exists
+  ✓ HC-PROV-211 service-tests log hash matches
+  ✓ HC-PROV-211 runtime-protocol log exists
+  ✓ HC-PROV-211 runtime-protocol log hash matches
+  ✓ HC-PROV-211 runtime-events log exists
+  ✓ HC-PROV-211 runtime-events log hash matches
+  ✓ HC-PROV-211 runtime-concurrency log exists
+  ✓ HC-PROV-211 runtime-concurrency log hash matches
+  ✓ HC-PROV-211 runtime-clients log exists
+  ✓ HC-PROV-211 runtime-clients log hash matches
+  ✓ HC-PROV-211 renderer-tests log exists
+  ✓ HC-PROV-211 renderer-tests log hash matches
+  ✓ HC-PROV-211 security-tests log exists
+  ✓ HC-PROV-211 security-tests log hash matches
+  ✓ HC-PROV-211 dod-tests log exists
+  ✓ HC-PROV-211 dod-tests log hash matches
+  ✓ HC-PROV-211 dod-scan log exists
+  ✓ HC-PROV-211 dod-scan log hash matches
+  ✓ HC-PROV-211 production-audit log exists
+  ✓ HC-PROV-211 production-audit log hash matches
+  ✓ HC-PROV-211 electron-e2e log exists
+  ✓ HC-PROV-211 electron-e2e log hash matches
+  ✓ HC-PROV-211 program-control log exists
+  ✓ HC-PROV-211 program-control log hash matches
+  ✓ HC-PROV-211 git-diff-check log exists
+  ✓ HC-PROV-211 git-diff-check log hash matches
+  ✓ HC-PROV-212 completed only after both provider transport dependencies and evidence
+  ✓ HC-PROV-212 evidence records every command passing
+  ✓ HC-PROV-212 evidence is captured from its isolated branch
+  ✓ HC-PROV-212 captured build
+  ✓ HC-PROV-212 captured verify
+  ✓ HC-PROV-212 captured release-check
+  ✓ HC-PROV-212 captured feature-tests
+  ✓ HC-PROV-212 captured anthropic-ollama-tests
+  ✓ HC-PROV-212 captured model-provider-tests
+  ✓ HC-PROV-212 captured openai-responses-tests
+  ✓ HC-PROV-212 captured service-tests
+  ✓ HC-PROV-212 captured runtime-protocol
+  ✓ HC-PROV-212 captured runtime-events
+  ✓ HC-PROV-212 captured runtime-concurrency
+  ✓ HC-PROV-212 captured runtime-clients
+  ✓ HC-PROV-212 captured renderer-tests
+  ✓ HC-PROV-212 captured security-tests
+  ✓ HC-PROV-212 captured dod-tests
+  ✓ HC-PROV-212 captured dod-scan
+  ✓ HC-PROV-212 captured production-audit
+  ✓ HC-PROV-212 captured electron-e2e
+  ✓ HC-PROV-212 captured program-control
+  ✓ HC-PROV-212 captured git-diff-check
+  ✓ HC-PROV-212 build log exists
+  ✓ HC-PROV-212 build log hash matches
+  ✓ HC-PROV-212 verify log exists
+  ✓ HC-PROV-212 verify log hash matches
+  ✓ HC-PROV-212 release-check log exists
+  ✓ HC-PROV-212 release-check log hash matches
+  ✓ HC-PROV-212 feature-tests log exists
+  ✓ HC-PROV-212 feature-tests log hash matches
+  ✓ HC-PROV-212 anthropic-ollama-tests log exists
+  ✓ HC-PROV-212 anthropic-ollama-tests log hash matches
+  ✓ HC-PROV-212 model-provider-tests log exists
+  ✓ HC-PROV-212 model-provider-tests log hash matches
+  ✓ HC-PROV-212 openai-responses-tests log exists
+  ✓ HC-PROV-212 openai-responses-tests log hash matches
+  ✓ HC-PROV-212 service-tests log exists
+  ✓ HC-PROV-212 service-tests log hash matches
+  ✓ HC-PROV-212 runtime-protocol log exists
+  ✓ HC-PROV-212 runtime-protocol log hash matches
+  ✓ HC-PROV-212 runtime-events log exists
+  ✓ HC-PROV-212 runtime-events log hash matches
+  ✓ HC-PROV-212 runtime-concurrency log exists
+  ✓ HC-PROV-212 runtime-concurrency log hash matches
+  ✓ HC-PROV-212 runtime-clients log exists
+  ✓ HC-PROV-212 runtime-clients log hash matches
+  ✓ HC-PROV-212 renderer-tests log exists
+  ✓ HC-PROV-212 renderer-tests log hash matches
+  ✓ HC-PROV-212 security-tests log exists
+  ✓ HC-PROV-212 security-tests log hash matches
+  ✓ HC-PROV-212 dod-tests log exists
+  ✓ HC-PROV-212 dod-tests log hash matches
+  ✓ HC-PROV-212 dod-scan log exists
+  ✓ HC-PROV-212 dod-scan log hash matches
+  ✓ HC-PROV-212 production-audit log exists
+  ✓ HC-PROV-212 production-audit log hash matches
+  ✓ HC-PROV-212 electron-e2e log exists
+  ✓ HC-PROV-212 electron-e2e log hash matches
+  ✓ HC-PROV-212 program-control log exists
+  ✓ HC-PROV-212 program-control log hash matches
+  ✓ HC-PROV-212 git-diff-check log exists
+  ✓ HC-PROV-212 git-diff-check log hash matches
+  ✓ HC-RUN-220 completed only after its runtime dependency and evidence
+  ✓ HC-RUN-220 risk is evidence-backed and mitigated
+  ✓ HC-RUN-220 evidence records every command passing
+  ✓ HC-RUN-220 evidence is captured from its isolated branch
+  ✓ HC-RUN-220 captured build
+  ✓ HC-RUN-220 captured verify
+  ✓ HC-RUN-220 captured release-check
+  ✓ HC-RUN-220 captured feature-tests
+  ✓ HC-RUN-220 captured attachment-command-tests
+  ✓ HC-RUN-220 captured model-provider-tests
+  ✓ HC-RUN-220 captured openai-responses-tests
+  ✓ HC-RUN-220 captured anthropic-ollama-tests
+  ✓ HC-RUN-220 captured service-tests
+  ✓ HC-RUN-220 captured runtime-protocol
+  ✓ HC-RUN-220 captured runtime-stores
+  ✓ HC-RUN-220 captured runtime-store-integration
+  ✓ HC-RUN-220 captured turn-recovery
+  ✓ HC-RUN-220 captured runtime-events
+  ✓ HC-RUN-220 captured runtime-concurrency
+  ✓ HC-RUN-220 captured runtime-clients
+  ✓ HC-RUN-220 captured renderer-tests
+  ✓ HC-RUN-220 captured security-tests
+  ✓ HC-RUN-220 captured dod-tests
+  ✓ HC-RUN-220 captured dod-scan
+  ✓ HC-RUN-220 captured production-audit
+  ✓ HC-RUN-220 captured electron-e2e
+  ✓ HC-RUN-220 captured program-control
+  ✓ HC-RUN-220 captured git-diff-check
+  ✓ HC-RUN-220 build log exists
+  ✓ HC-RUN-220 build log hash matches
+  ✓ HC-RUN-220 verify log exists
+  ✓ HC-RUN-220 verify log hash matches
+  ✓ HC-RUN-220 release-check log exists
+  ✓ HC-RUN-220 release-check log hash matches
+  ✓ HC-RUN-220 feature-tests log exists
+  ✓ HC-RUN-220 feature-tests log hash matches
+  ✓ HC-RUN-220 attachment-command-tests log exists
+  ✓ HC-RUN-220 attachment-command-tests log hash matches
+  ✓ HC-RUN-220 model-provider-tests log exists
+  ✓ HC-RUN-220 model-provider-tests log hash matches
+  ✓ HC-RUN-220 openai-responses-tests log exists
+  ✓ HC-RUN-220 openai-responses-tests log hash matches
+  ✓ HC-RUN-220 anthropic-ollama-tests log exists
+  ✓ HC-RUN-220 anthropic-ollama-tests log hash matches
+  ✓ HC-RUN-220 service-tests log exists
+  ✓ HC-RUN-220 service-tests log hash matches
+  ✓ HC-RUN-220 runtime-protocol log exists
+  ✓ HC-RUN-220 runtime-protocol log hash matches
+  ✓ HC-RUN-220 runtime-stores log exists
+  ✓ HC-RUN-220 runtime-stores log hash matches
+  ✓ HC-RUN-220 runtime-store-integration log exists
+  ✓ HC-RUN-220 runtime-store-integration log hash matches
+  ✓ HC-RUN-220 turn-recovery log exists
+  ✓ HC-RUN-220 turn-recovery log hash matches
+  ✓ HC-RUN-220 runtime-events log exists
+  ✓ HC-RUN-220 runtime-events log hash matches
+  ✓ HC-RUN-220 runtime-concurrency log exists
+  ✓ HC-RUN-220 runtime-concurrency log hash matches
+  ✓ HC-RUN-220 runtime-clients log exists
+  ✓ HC-RUN-220 runtime-clients log hash matches
+  ✓ HC-RUN-220 renderer-tests log exists
+  ✓ HC-RUN-220 renderer-tests log hash matches
+  ✓ HC-RUN-220 security-tests log exists
+  ✓ HC-RUN-220 security-tests log hash matches
+  ✓ HC-RUN-220 dod-tests log exists
+  ✓ HC-RUN-220 dod-tests log hash matches
+  ✓ HC-RUN-220 dod-scan log exists
+  ✓ HC-RUN-220 dod-scan log hash matches
+  ✓ HC-RUN-220 production-audit log exists
+  ✓ HC-RUN-220 production-audit log hash matches
+  ✓ HC-RUN-220 electron-e2e log exists
+  ✓ HC-RUN-220 electron-e2e log hash matches
+  ✓ HC-RUN-220 program-control log exists
+  ✓ HC-RUN-220 program-control log hash matches
+  ✓ HC-RUN-220 git-diff-check log exists
+  ✓ HC-RUN-220 git-diff-check log hash matches
+  ✓ HC-PROV-210 evidence records every command passing
+  ✓ HC-PROV-210 evidence is captured from its task branch
+  ✓ HC-PROV-210 captured build
+  ✓ HC-PROV-210 captured verify
+  ✓ HC-PROV-210 captured release-check
+  ✓ HC-PROV-210 captured feature-tests
+  ✓ HC-PROV-210 captured model-provider-tests
+  ✓ HC-PROV-210 captured runtime-protocol
+  ✓ HC-PROV-210 captured runtime-events
+  ✓ HC-PROV-210 captured runtime-concurrency
+  ✓ HC-PROV-210 captured runtime-clients
+  ✓ HC-PROV-210 captured security-tests
+  ✓ HC-PROV-210 captured dod-tests
+  ✓ HC-PROV-210 captured dod-scan
+  ✓ HC-PROV-210 captured production-audit
+  ✓ HC-PROV-210 captured electron-e2e
+  ✓ HC-PROV-210 captured program-control
+  ✓ HC-PROV-210 captured git-diff-check
+  ✓ HC-PROV-210 build log exists
+  ✓ HC-PROV-210 build log hash matches
+  ✓ HC-PROV-210 verify log exists
+  ✓ HC-PROV-210 verify log hash matches
+  ✓ HC-PROV-210 release-check log exists
+  ✓ HC-PROV-210 release-check log hash matches
+  ✓ HC-PROV-210 feature-tests log exists
+  ✓ HC-PROV-210 feature-tests log hash matches
+  ✓ HC-PROV-210 model-provider-tests log exists
+  ✓ HC-PROV-210 model-provider-tests log hash matches
+  ✓ HC-PROV-210 runtime-protocol log exists
+  ✓ HC-PROV-210 runtime-protocol log hash matches
+  ✓ HC-PROV-210 runtime-events log exists
+  ✓ HC-PROV-210 runtime-events log hash matches
+  ✓ HC-PROV-210 runtime-concurrency log exists
+  ✓ HC-PROV-210 runtime-concurrency log hash matches
+  ✓ HC-PROV-210 runtime-clients log exists
+  ✓ HC-PROV-210 runtime-clients log hash matches
+  ✓ HC-PROV-210 security-tests log exists
+  ✓ HC-PROV-210 security-tests log hash matches
+  ✓ HC-PROV-210 dod-tests log exists
+  ✓ HC-PROV-210 dod-tests log hash matches
+  ✓ HC-PROV-210 dod-scan log exists
+  ✓ HC-PROV-210 dod-scan log hash matches
+  ✓ HC-PROV-210 production-audit log exists
+  ✓ HC-PROV-210 production-audit log hash matches
+  ✓ HC-PROV-210 electron-e2e log exists
+  ✓ HC-PROV-210 electron-e2e log hash matches
+  ✓ HC-PROV-210 program-control log exists
+  ✓ HC-PROV-210 program-control log hash matches
+  ✓ HC-PROV-210 git-diff-check log exists
+  ✓ HC-PROV-210 git-diff-check log hash matches
+  ✓ risk register has active risks
+  ✓ baseline records source commit
+  ✓ baseline records every gate passing
+  ✓ baseline records no runtime product dirt
+  ✓ build log exists
+  ✓ build log hash matches
+  ✓ verify log exists
+  ✓ verify log hash matches
+  ✓ release-check log exists
+  ✓ release-check log hash matches
+  ✓ feature-tests log exists
+  ✓ feature-tests log hash matches
+  ✓ security-tests log exists
+  ✓ security-tests log hash matches
+  ✓ dod-tests log exists
+  ✓ dod-tests log hash matches
+  ✓ dod-scan log exists
+  ✓ dod-scan log hash matches
+  ✓ production-audit log exists
+  ✓ production-audit log hash matches
+  ✓ git-diff-check log exists
+  ✓ git-diff-check log hash matches
+  ✓ HC-QA-101 evidence records every command passing
+  ✓ HC-QA-101 build log exists
+  ✓ HC-QA-101 build log hash matches
+  ✓ HC-QA-101 verify log exists
+  ✓ HC-QA-101 verify log hash matches
+  ✓ HC-QA-101 release-check log exists
+  ✓ HC-QA-101 release-check log hash matches
+  ✓ HC-QA-101 feature-tests log exists
+  ✓ HC-QA-101 feature-tests log hash matches
+  ✓ HC-QA-101 security-tests log exists
+  ✓ HC-QA-101 security-tests log hash matches
+  ✓ HC-QA-101 dod-tests log exists
+  ✓ HC-QA-101 dod-tests log hash matches
+  ✓ HC-QA-101 dod-scan log exists
+  ✓ HC-QA-101 dod-scan log hash matches
+  ✓ HC-QA-101 production-audit log exists
+  ✓ HC-QA-101 production-audit log hash matches
+  ✓ HC-QA-101 electron-e2e log exists
+  ✓ HC-QA-101 electron-e2e log hash matches
+  ✓ HC-QA-101 git-diff-check log exists
+  ✓ HC-QA-101 git-diff-check log hash matches
+  ✓ HC-RUN-201 evidence records every command passing
+  ✓ HC-RUN-201 evidence is captured from its task branch
+  ✓ HC-RUN-201 captured build
+  ✓ HC-RUN-201 captured verify
+  ✓ HC-RUN-201 captured release-check
+  ✓ HC-RUN-201 captured feature-tests
+  ✓ HC-RUN-201 captured runtime-events
+  ✓ HC-RUN-201 captured runtime-concurrency
+  ✓ HC-RUN-201 captured runtime-clients
+  ✓ HC-RUN-201 captured security-tests
+  ✓ HC-RUN-201 captured dod-tests
+  ✓ HC-RUN-201 captured dod-scan
+  ✓ HC-RUN-201 captured production-audit
+  ✓ HC-RUN-201 captured electron-e2e
+  ✓ HC-RUN-201 captured git-diff-check
+  ✓ HC-RUN-201 build log exists
+  ✓ HC-RUN-201 build log hash matches
+  ✓ HC-RUN-201 verify log exists
+  ✓ HC-RUN-201 verify log hash matches
+  ✓ HC-RUN-201 release-check log exists
+  ✓ HC-RUN-201 release-check log hash matches
+  ✓ HC-RUN-201 feature-tests log exists
+  ✓ HC-RUN-201 feature-tests log hash matches
+  ✓ HC-RUN-201 runtime-events log exists
+  ✓ HC-RUN-201 runtime-events log hash matches
+  ✓ HC-RUN-201 runtime-concurrency log exists
+  ✓ HC-RUN-201 runtime-concurrency log hash matches
+  ✓ HC-RUN-201 runtime-clients log exists
+  ✓ HC-RUN-201 runtime-clients log hash matches
+  ✓ HC-RUN-201 security-tests log exists
+  ✓ HC-RUN-201 security-tests log hash matches
+  ✓ HC-RUN-201 dod-tests log exists
+  ✓ HC-RUN-201 dod-tests log hash matches
+  ✓ HC-RUN-201 dod-scan log exists
+  ✓ HC-RUN-201 dod-scan log hash matches
+  ✓ HC-RUN-201 production-audit log exists
+  ✓ HC-RUN-201 production-audit log hash matches
+  ✓ HC-RUN-201 electron-e2e log exists
+  ✓ HC-RUN-201 electron-e2e log hash matches
+  ✓ HC-RUN-201 git-diff-check log exists
+  ✓ HC-RUN-201 git-diff-check log hash matches
+  ✓ HC-RUN-202 evidence records every command passing
+  ✓ HC-RUN-202 evidence is captured from its task branch
+  ✓ HC-RUN-202 captured build
+  ✓ HC-RUN-202 captured verify
+  ✓ HC-RUN-202 captured release-check
+  ✓ HC-RUN-202 captured feature-tests
+  ✓ HC-RUN-202 captured runtime-protocol
+  ✓ HC-RUN-202 captured runtime-stores
+  ✓ HC-RUN-202 captured runtime-store-integration
+  ✓ HC-RUN-202 captured runtime-events
+  ✓ HC-RUN-202 captured runtime-concurrency
+  ✓ HC-RUN-202 captured runtime-clients
+  ✓ HC-RUN-202 captured security-tests
+  ✓ HC-RUN-202 captured dod-tests
+  ✓ HC-RUN-202 captured dod-scan
+  ✓ HC-RUN-202 captured production-audit
+  ✓ HC-RUN-202 captured electron-e2e
+  ✓ HC-RUN-202 captured git-diff-check
+  ✓ HC-RUN-202 build log exists
+  ✓ HC-RUN-202 build log hash matches
+  ✓ HC-RUN-202 verify log exists
+  ✓ HC-RUN-202 verify log hash matches
+  ✓ HC-RUN-202 release-check log exists
+  ✓ HC-RUN-202 release-check log hash matches
+  ✓ HC-RUN-202 feature-tests log exists
+  ✓ HC-RUN-202 feature-tests log hash matches
+  ✓ HC-RUN-202 runtime-protocol log exists
+  ✓ HC-RUN-202 runtime-protocol log hash matches
+  ✓ HC-RUN-202 runtime-stores log exists
+  ✓ HC-RUN-202 runtime-stores log hash matches
+  ✓ HC-RUN-202 runtime-store-integration log exists
+  ✓ HC-RUN-202 runtime-store-integration log hash matches
+  ✓ HC-RUN-202 runtime-events log exists
+  ✓ HC-RUN-202 runtime-events log hash matches
+  ✓ HC-RUN-202 runtime-concurrency log exists
+  ✓ HC-RUN-202 runtime-concurrency log hash matches
+  ✓ HC-RUN-202 runtime-clients log exists
+  ✓ HC-RUN-202 runtime-clients log hash matches
+  ✓ HC-RUN-202 security-tests log exists
+  ✓ HC-RUN-202 security-tests log hash matches
+  ✓ HC-RUN-202 dod-tests log exists
+  ✓ HC-RUN-202 dod-tests log hash matches
+  ✓ HC-RUN-202 dod-scan log exists
+  ✓ HC-RUN-202 dod-scan log hash matches
+  ✓ HC-RUN-202 production-audit log exists
+  ✓ HC-RUN-202 production-audit log hash matches
+  ✓ HC-RUN-202 electron-e2e log exists
+  ✓ HC-RUN-202 electron-e2e log hash matches
+  ✓ HC-RUN-202 git-diff-check log exists
+  ✓ HC-RUN-202 git-diff-check log hash matches
+  ✓ HC-RUN-203 evidence records every command passing
+  ✓ HC-RUN-203 evidence is captured from its task branch
+  ✓ HC-RUN-203 captured build
+  ✓ HC-RUN-203 captured verify
+  ✓ HC-RUN-203 captured release-check
+  ✓ HC-RUN-203 captured feature-tests
+  ✓ HC-RUN-203 captured runtime-protocol
+  ✓ HC-RUN-203 captured runtime-stores
+  ✓ HC-RUN-203 captured runtime-store-integration
+  ✓ HC-RUN-203 captured turn-recovery
+  ✓ HC-RUN-203 captured runtime-events
+  ✓ HC-RUN-203 captured runtime-concurrency
+  ✓ HC-RUN-203 captured runtime-clients
+  ✓ HC-RUN-203 captured renderer-tests
+  ✓ HC-RUN-203 captured security-tests
+  ✓ HC-RUN-203 captured dod-tests
+  ✓ HC-RUN-203 captured dod-scan
+  ✓ HC-RUN-203 captured production-audit
+  ✓ HC-RUN-203 captured electron-e2e
+  ✓ HC-RUN-203 captured git-diff-check
+  ✓ HC-RUN-203 build log exists
+  ✓ HC-RUN-203 build log hash matches
+  ✓ HC-RUN-203 verify log exists
+  ✓ HC-RUN-203 verify log hash matches
+  ✓ HC-RUN-203 release-check log exists
+  ✓ HC-RUN-203 release-check log hash matches
+  ✓ HC-RUN-203 feature-tests log exists
+  ✓ HC-RUN-203 feature-tests log hash matches
+  ✓ HC-RUN-203 runtime-protocol log exists
+  ✓ HC-RUN-203 runtime-protocol log hash matches
+  ✓ HC-RUN-203 runtime-stores log exists
+  ✓ HC-RUN-203 runtime-stores log hash matches
+  ✓ HC-RUN-203 runtime-store-integration log exists
+  ✓ HC-RUN-203 runtime-store-integration log hash matches
+  ✓ HC-RUN-203 turn-recovery log exists
+  ✓ HC-RUN-203 turn-recovery log hash matches
+  ✓ HC-RUN-203 runtime-events log exists
+  ✓ HC-RUN-203 runtime-events log hash matches
+  ✓ HC-RUN-203 runtime-concurrency log exists
+  ✓ HC-RUN-203 runtime-concurrency log hash matches
+  ✓ HC-RUN-203 runtime-clients log exists
+  ✓ HC-RUN-203 runtime-clients log hash matches
+  ✓ HC-RUN-203 renderer-tests log exists
+  ✓ HC-RUN-203 renderer-tests log hash matches
+  ✓ HC-RUN-203 security-tests log exists
+  ✓ HC-RUN-203 security-tests log hash matches
+  ✓ HC-RUN-203 dod-tests log exists
+  ✓ HC-RUN-203 dod-tests log hash matches
+  ✓ HC-RUN-203 dod-scan log exists
+  ✓ HC-RUN-203 dod-scan log hash matches
+  ✓ HC-RUN-203 production-audit log exists
+  ✓ HC-RUN-203 production-audit log hash matches
+  ✓ HC-RUN-203 electron-e2e log exists
+  ✓ HC-RUN-203 electron-e2e log hash matches
+  ✓ HC-RUN-203 git-diff-check log exists
+  ✓ HC-RUN-203 git-diff-check log hash matches
+  ✓ alpha.7 evidence records every command passing
+  ✓ alpha.7 evidence is captured from its release branch
+  ✓ alpha.7 captured build
+  ✓ alpha.7 captured verify
+  ✓ alpha.7 captured release-check
+  ✓ alpha.7 captured feature-tests
+  ✓ alpha.7 captured security-tests
+  ✓ alpha.7 captured dod-tests
+  ✓ alpha.7 captured dod-scan
+  ✓ alpha.7 captured production-audit
+  ✓ alpha.7 captured electron-e2e
+  ✓ alpha.7 captured program-control
+  ✓ alpha.7 captured git-diff-check
+  ✓ alpha.7 build log exists
+  ✓ alpha.7 build log hash matches
+  ✓ alpha.7 verify log exists
+  ✓ alpha.7 verify log hash matches
+  ✓ alpha.7 release-check log exists
+  ✓ alpha.7 release-check log hash matches
+  ✓ alpha.7 feature-tests log exists
+  ✓ alpha.7 feature-tests log hash matches
+  ✓ alpha.7 security-tests log exists
+  ✓ alpha.7 security-tests log hash matches
+  ✓ alpha.7 dod-tests log exists
+  ✓ alpha.7 dod-tests log hash matches
+  ✓ alpha.7 dod-scan log exists
+  ✓ alpha.7 dod-scan log hash matches
+  ✓ alpha.7 production-audit log exists
+  ✓ alpha.7 production-audit log hash matches
+  ✓ alpha.7 electron-e2e log exists
+  ✓ alpha.7 electron-e2e log hash matches
+  ✓ alpha.7 program-control log exists
+  ✓ alpha.7 program-control log hash matches
+  ✓ alpha.7 git-diff-check log exists
+  ✓ alpha.7 git-diff-check log hash matches
+  ✓ alpha.7 capability report does not claim event-only resume
+  ✓ alpha.8 capability report claims only evidence-backed event reconstruction
+  ✓ alpha.8 limitations keep signing outside the candidate
+  ✓ alpha.8 evidence records every command passing
+  ✓ alpha.8 evidence is captured from its release branch
+  ✓ alpha.8 captured build
+  ✓ alpha.8 captured verify
+  ✓ alpha.8 captured release-check
+  ✓ alpha.8 captured feature-tests
+  ✓ alpha.8 captured electron-compatibility
+  ✓ alpha.8 captured security-tests
+  ✓ alpha.8 captured dod-tests
+  ✓ alpha.8 captured dod-scan
+  ✓ alpha.8 captured production-audit
+  ✓ alpha.8 captured electron-e2e
+  ✓ alpha.8 captured mac-package
+  ✓ alpha.8 captured program-control
+  ✓ alpha.8 captured git-diff-check
+  ✓ alpha.8 build log exists
+  ✓ alpha.8 build log hash matches
+  ✓ alpha.8 verify log exists
+  ✓ alpha.8 verify log hash matches
+  ✓ alpha.8 release-check log exists
+  ✓ alpha.8 release-check log hash matches
+  ✓ alpha.8 feature-tests log exists
+  ✓ alpha.8 feature-tests log hash matches
+  ✓ alpha.8 electron-compatibility log exists
+  ✓ alpha.8 electron-compatibility log hash matches
+  ✓ alpha.8 security-tests log exists
+  ✓ alpha.8 security-tests log hash matches
+  ✓ alpha.8 dod-tests log exists
+  ✓ alpha.8 dod-tests log hash matches
+  ✓ alpha.8 dod-scan log exists
+  ✓ alpha.8 dod-scan log hash matches
+  ✓ alpha.8 production-audit log exists
+  ✓ alpha.8 production-audit log hash matches
+  ✓ alpha.8 electron-e2e log exists
+  ✓ alpha.8 electron-e2e log hash matches
+  ✓ alpha.8 mac-package log exists
+  ✓ alpha.8 mac-package log hash matches
+  ✓ alpha.8 program-control log exists
+  ✓ alpha.8 program-control log hash matches
+  ✓ alpha.8 git-diff-check log exists
+  ✓ alpha.8 git-diff-check log hash matches
+  ✓ historical final acceptance is explicitly named
+  ✓ unmarked final acceptance path is absent
+  ✓ audit archive policy is present
+  ✓ production audit is package-manager independent
+
+[program-control] production audit helpers
+  ✓ production audit includes production packages
+  ✓ production audit excludes development packages
+  ✓ production audit preserves scoped transitive packages
+  ✓ high audit threshold blocks high advisories
+  ✓ production audit rejects insecure registry
+
+=== 1275 passed, 0 failed ===

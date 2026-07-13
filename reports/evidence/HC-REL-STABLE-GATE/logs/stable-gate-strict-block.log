@@ -1,0 +1,8 @@
+$ npm run release:stable-gate
+
+> hi-code@0.6.0-alpha.8 release:stable-gate
+> node scripts/stable-release-gate.mjs --require-ready
+
+[stable-release-gate] engineering=passed decision=blocked passed=10 blocked=2 failed=0
+[stable-release-gate] blocker RISK-REL-001: Apple signing/notarization and Windows code-signing evidence are not available for stable promotion.
+[stable-release-gate] blocker RISK-PROV-001: Model transport lacks an explicit capability contract

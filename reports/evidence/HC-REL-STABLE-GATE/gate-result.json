@@ -1,0 +1,168 @@
+{
+  "schemaVersion": 1,
+  "gateId": "HC-REL-STABLE-GATE",
+  "targetVersion": "0.6.0",
+  "evaluatedVersion": "0.6.0-alpha.8",
+  "evaluatedAt": "2026-07-13T18:32:29.101Z",
+  "source": {
+    "commit": "eaa9f27f312a90c76548c7ad3f04ad1bef65d6ea",
+    "branch": "codex/security-release/0.6.0-stable-gate"
+  },
+  "engineeringStatus": "passed",
+  "decision": "blocked",
+  "formalReleaseCreated": false,
+  "tagCreated": false,
+  "conditions": [
+    {
+      "id": "runtime-protocol-authority",
+      "title": "Runtime Protocol v2 is the durable source of truth",
+      "category": "engineering",
+      "status": "passed",
+      "evidence": [
+        "reports/evidence/HC-RUN-201/manifest.json",
+        "reports/evidence/HC-RUN-202/manifest.json"
+      ]
+    },
+    {
+      "id": "complete-turn-replay",
+      "title": "Complete turns replay and interrupted turns recover conservatively",
+      "category": "engineering",
+      "status": "passed",
+      "evidence": [
+        "reports/evidence/HC-RUN-202/manifest.json",
+        "reports/evidence/HC-RUN-203/manifest.json"
+      ]
+    },
+    {
+      "id": "runtime-client-isolation",
+      "title": "Desktop, CLI, and TUI do not depend on a global stdout bridge",
+      "category": "engineering",
+      "status": "passed",
+      "evidence": [
+        "reports/evidence/HC-RUN-201/manifest.json"
+      ]
+    },
+    {
+      "id": "three-platform-electron-smoke",
+      "title": "Core Electron startup passes on Linux, macOS, and Windows",
+      "category": "engineering",
+      "status": "passed",
+      "evidence": [
+        "reports/evidence/HC-REL-420/ci-matrix.json"
+      ]
+    },
+    {
+      "id": "three-platform-package-smoke",
+      "title": "Native package lifecycle smoke passes on Linux, macOS, and Windows",
+      "category": "engineering",
+      "status": "passed",
+      "evidence": [
+        "reports/evidence/HC-REL-420/manifest.json",
+        "reports/evidence/HC-REL-420/ci-matrix.json"
+      ]
+    },
+    {
+      "id": "code-studio-core-flow",
+      "title": "Code Studio editor, terminal, preview, and Git delivery flow is evidenced",
+      "category": "engineering",
+      "status": "passed",
+      "evidence": [
+        "reports/evidence/HC-UI-310/manifest.json",
+        "reports/evidence/HC-UI-311/manifest.json",
+        "reports/evidence/HC-UI-312/manifest.json",
+        "reports/evidence/HC-GIT-320/manifest.json"
+      ]
+    },
+    {
+      "id": "mcp-connection-layer",
+      "title": "MCP stdio and Streamable HTTP lifecycle is compatible and secured",
+      "category": "engineering",
+      "status": "passed",
+      "evidence": [
+        "reports/evidence/HC-MCP-410/manifest.json"
+      ]
+    },
+    {
+      "id": "full-tree-dod",
+      "title": "Latest full-tree DoD and Skeleton scan has no blocking findings",
+      "category": "engineering",
+      "status": "passed",
+      "evidence": [
+        "reports/evidence/HC-MCP-410/manifest.json"
+      ]
+    },
+    {
+      "id": "p0-p1-release-work",
+      "title": "No open P0 or P1 release work remains",
+      "category": "engineering",
+      "status": "passed",
+      "evidence": [
+        "planning/release-board.json",
+        "reports/audit/README.md"
+      ]
+    },
+    {
+      "id": "truthful-documentation",
+      "title": "Documentation states the current unsigned and update-disabled boundary",
+      "category": "engineering",
+      "status": "passed",
+      "evidence": [
+        "docs/program/EXECUTION_PLAN.md",
+        "docs/release-pipeline.md",
+        "reports/tasks/HC-REL-420.md"
+      ]
+    },
+    {
+      "id": "signed-release-chain",
+      "title": "macOS and Windows signing, Apple notarization, and stable update chain are verified",
+      "category": "promotion",
+      "status": "blocked",
+      "evidence": [
+        "reports/evidence/HC-REL-420/ci-matrix.json",
+        "reports/program/risks.json",
+        "docs/release-pipeline.md"
+      ],
+      "reason": "RISK-REL-001 remains open and current CI artifacts are explicitly unsigned and update-disabled."
+    },
+    {
+      "id": "release-risk-disposition",
+      "title": "No open critical or high non-industrial release risk remains",
+      "category": "promotion",
+      "status": "blocked",
+      "evidence": [
+        "reports/program/risks.json"
+      ],
+      "reason": "Open release risks require disposition: RISK-PROV-001."
+    }
+  ],
+  "blockers": [
+    {
+      "id": "RISK-REL-001",
+      "type": "external-release-infrastructure",
+      "severity": "medium",
+      "reason": "Apple signing/notarization and Windows code-signing evidence are not available for stable promotion.",
+      "evidence": [
+        "reports/program/risks.json",
+        "reports/evidence/HC-REL-420/ci-matrix.json"
+      ]
+    },
+    {
+      "id": "RISK-PROV-001",
+      "type": "open-program-risk",
+      "severity": "high",
+      "reason": "Model transport lacks an explicit capability contract",
+      "evidence": [
+        "src/model-provider.ts",
+        "src/agent.ts",
+        "test/model-provider-tests.mjs",
+        "reports/evidence/HC-PROV-210/manifest.json"
+      ]
+    }
+  ],
+  "summary": {
+    "total": 12,
+    "passed": 10,
+    "blocked": 2,
+    "failed": 0
+  }
+}

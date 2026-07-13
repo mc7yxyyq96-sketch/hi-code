@@ -1,0 +1,44 @@
+$ npm run test:git-collaboration
+
+> hi-code@0.6.0-alpha.8 test:git-collaboration
+> npm run build && node test/git-collaboration-tests.mjs
+
+
+> hi-code@0.6.0-alpha.8 build
+> tsc -p renderer/tsconfig.json --noEmit && vite build --config vite.renderer.config.ts && tsc -p tsconfig.json && chmod +x dist/index.js
+
+vite v6.2.6 building for production...
+transforming...
+✓ 71 modules transformed.
+rendering chunks...
+computing gzip size...
+renderer/generated/hi-code.css                         5.24 kB │ gzip:   1.92 kB
+renderer/generated/app-shell.js                      288.98 kB │ gzip:  72.70 kB
+renderer/generated/chunks/xterm-runtime-DOnvTC-9.js  414.54 kB │ gzip:  92.86 kB
+renderer/generated/chunks/code-editor-oiW-xu-R.js    772.97 kB │ gzip: 232.99 kB
+✓ built in 700ms
+
+[git-collaboration] dirty worktree protection
+  ✓ branch switch refuses a dirty worktree
+
+[git-collaboration] branch workflow
+  ✓ branch creation switches to a validated branch
+  ✓ branch list marks the current branch
+  ✓ branch names cannot become command arguments
+
+[git-collaboration] pull request and child environment
+  ✓ pull request creation uses explicit bounded arguments
+  ✓ GitHub CLI does not inherit model or GitHub tokens
+  ✓ GitHub CLI keeps only required home and path environment
+
+[git-collaboration] CI truth
+  ✓ failed CI remains failed
+  ✓ pending CI remains visible beside failure
+  ✓ PR metadata remains visible
+
+[git-collaboration] actionable status errors
+  ✓ GitHub authentication failures become actionable Chinese guidance
+  ✓ GitHub authentication guidance does not echo secret environment names
+  ✓ Pull Request failures use the same redacted authentication guidance
+
+=== 13 passed, 0 failed ===

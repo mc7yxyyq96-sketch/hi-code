@@ -1,0 +1,18 @@
+$ npm run test:stable-gate
+
+> hi-code@0.6.0-alpha.8 test:stable-gate
+> node test/stable-release-gate-tests.mjs
+
+✓ ready requires signed package and update-chain evidence
+✓ missing platform update-chain evidence blocks stable promotion
+✓ unsigned artifacts block promotion without failing engineering
+✓ an open high program risk blocks stable promotion
+✓ missing replay evidence rejects the engineering gate
+✓ failed platform smoke cannot be hidden by successful package jobs
+✓ open P0 or P1 board work rejects the engineering gate
+✓ open P0 or P1 audit issues reject the engineering gate
+✓ deferred P0 or P1 audit issues still reject stable engineering
+✓ gate output records decision without creating a release or tag
+✓ repository evidence produces a fail-closed stable assessment
+
+Stable release gate tests: 11/11 passed

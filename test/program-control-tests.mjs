@@ -94,6 +94,7 @@ const requiredFiles = [
   "reports/tasks/HC-SEC-402.md",
   "reports/tasks/HC-REL-420.md",
   "reports/tasks/HC-MCP-410.md",
+  "reports/tasks/HC-REL-STABLE-GATE.md",
   "reports/tasks/HC-REL-ALPHA-7.md",
   "reports/evidence/baseline/manifest.json",
   "reports/evidence/HC-QA-101/manifest.json",
@@ -124,6 +125,10 @@ const requiredFiles = [
   "reports/evidence/HC-REL-420/manifest.json",
   "reports/evidence/HC-REL-420/ci-matrix.json",
   "reports/evidence/HC-MCP-410/manifest.json",
+  "reports/evidence/HC-REL-STABLE-GATE/gate-result.json",
+  "reports/releases/0.6.0-stable/gate-report.md",
+  "scripts/stable-release-gate.mjs",
+  "test/stable-release-gate-tests.mjs",
   "scripts/electron-compatibility.mjs",
   "scripts/run-electron-builder.mjs",
   "test/electron-compatibility-tests.mjs",
@@ -178,6 +183,7 @@ const executionPolicyCiEvidence = readJson(root, "reports/evidence/HC-SEC-402/ci
 const releasePipelineManifest = readJson(root, "reports/evidence/HC-REL-420/manifest.json");
 const releasePipelineCiEvidence = readJson(root, "reports/evidence/HC-REL-420/ci-matrix.json");
 const mcpConnectionManifest = readJson(root, "reports/evidence/HC-MCP-410/manifest.json");
+const stableGateResult = readJson(root, "reports/evidence/HC-REL-STABLE-GATE/gate-result.json");
 const packageJson = readJson(root, "package.json");
 const packageLock = readJson(root, "package-lock.json");
 const programTask = backlog.tasks.find((task) => task.id === "HC-PROG-100");
@@ -220,6 +226,7 @@ const secretStorageBoardTask = board.tasks.find((task) => task.id === "HC-SEC-40
 const executionPolicyBoardTask = board.tasks.find((task) => task.id === "HC-SEC-402");
 const releasePipelineBoardTask = board.tasks.find((task) => task.id === "HC-REL-420");
 const mcpConnectionBoardTask = board.tasks.find((task) => task.id === "HC-MCP-410");
+const stableGateBoardTask = board.tasks.find((task) => task.id === "HC-REL-STABLE-GATE");
 
 console.log("\n[program-control] board and evidence contract");
 check("backlog records immutable source commit", /^[0-9a-f]{40}$/.test(backlog.sourceCommit || ""));
@@ -721,6 +728,73 @@ check(
   "HC-MCP-410 evidence capture is reproducible",
   packageJson.scripts["program:evidence:mcp"] === "node scripts/capture-task-evidence.mjs --task=HC-MCP-410" &&
     fs.readFileSync(path.join(root, "scripts/capture-task-evidence.mjs"), "utf8").includes('"HC-MCP-410"'),
+);
+check(
+  "Stable Gate assessment task is completed without claiming promotion",
+  stableGateBoardTask?.status === "completed" &&
+    stableGateBoardTask?.branch === "codex/security-release/0.6.0-stable-gate" &&
+    stableGateBoardTask?.dependencies?.includes("HC-REL-420") &&
+    stableGateBoardTask?.dependencies?.includes("HC-MCP-410") &&
+    stableGateBoardTask?.promotionDecision === "blocked" &&
+    stableGateBoardTask?.gateResult === "reports/evidence/HC-REL-STABLE-GATE/gate-result.json",
+  JSON.stringify(stableGateBoardTask),
+);
+check(
+  "Stable promotion gate is separately and truthfully blocked",
+  board.stableGate?.status === "blocked" &&
+    board.stableGate?.engineeringStatus === "passed" &&
+    board.stableGate?.evidence === "reports/evidence/HC-REL-STABLE-GATE/gate-result.json" &&
+    board.stableGate?.blockers?.includes("RISK-REL-001") &&
+    board.stableGate?.blockers?.includes("RISK-PROV-001") &&
+    board.stableGate?.formalReleaseCreated === false &&
+    board.stableGate?.tagCreated === false &&
+    board.gates?.find((gate) => gate.id === "stable-release-promotion")?.status === "blocked",
+  JSON.stringify(board.stableGate),
+);
+check(
+  "Stable Gate result preserves passing engineering and blocked promotion",
+  stableGateResult.gateId === "HC-REL-STABLE-GATE" &&
+    stableGateResult.engineeringStatus === "passed" &&
+    stableGateResult.decision === "blocked" &&
+    stableGateResult.formalReleaseCreated === false &&
+    stableGateResult.tagCreated === false &&
+    stableGateResult.summary?.passed === 10 &&
+    stableGateResult.summary?.blocked === 2 &&
+    stableGateResult.summary?.failed === 0,
+  JSON.stringify(stableGateResult.summary),
+);
+check(
+  "Stable Gate blocks unsigned release infrastructure and open Provider risk",
+  stableGateResult.conditions?.find((item) => item.id === "signed-release-chain")?.status === "blocked" &&
+    stableGateResult.conditions?.find((item) => item.id === "release-risk-disposition")?.status === "blocked" &&
+    stableGateResult.blockers?.some((item) => item.id === "RISK-REL-001") &&
+    stableGateResult.blockers?.some((item) => item.id === "RISK-PROV-001") &&
+    risks.risks?.find((risk) => risk.id === "RISK-REL-001")?.status === "open" &&
+    risks.risks?.find((risk) => risk.id === "RISK-PROV-001")?.status === "open",
+);
+check(
+  "Stable Gate scripts expose assessment and strict fail-closed modes",
+  packageJson.scripts["test:stable-gate"] === "node test/stable-release-gate-tests.mjs" &&
+    packageJson.scripts["release:stable-gate:assess"] === "node scripts/stable-release-gate.mjs" &&
+    packageJson.scripts["release:stable-gate"] === "node scripts/stable-release-gate.mjs --require-ready" &&
+    packageJson.scripts["program:evidence:stable-gate"] === "node scripts/capture-task-evidence.mjs --task=HC-REL-STABLE-GATE",
+);
+check(
+  "Evidence capture permits non-zero success only for the strict blocked Stable Gate assertion",
+  fs.readFileSync(path.join(root, "scripts/capture-task-evidence.mjs"), "utf8")
+    .includes('taskId === "HC-REL-STABLE-GATE"') &&
+    fs.readFileSync(path.join(root, "scripts/capture-task-evidence.mjs"), "utf8")
+      .includes('spec.id === "stable-gate-strict-block"') &&
+    fs.readFileSync(path.join(root, "scripts/capture-task-evidence.mjs"), "utf8")
+      .includes("cannot treat a non-zero exit as passing"),
+);
+check(
+  "Stable Gate keeps the alpha candidate and creates no release reference",
+  board.currentRelease === "0.6.0-alpha.8" &&
+    packageJson.version === "0.6.0-alpha.8" &&
+    stableGateResult.evaluatedVersion === "0.6.0-alpha.8" &&
+    !fs.readFileSync(path.join(root, "reports/releases/0.6.0-stable/gate-report.md"), "utf8").includes("Formal Release created: **Yes**") &&
+    !fs.readFileSync(path.join(root, "reports/releases/0.6.0-stable/gate-report.md"), "utf8").includes("Tag created: **Yes**"),
 );
 check("alpha.8 version is synchronized", packageJson.version === "0.6.0-alpha.8" && packageLock.version === packageJson.version && packageLock.packages?.[""]?.version === packageJson.version && fs.readFileSync(path.join(root, "VERSION"), "utf8").trim() === packageJson.version);
 check("alpha.8 release candidate gate passed", board.currentRelease === packageJson.version && board.candidate?.version === packageJson.version && board.candidate?.branch === "codex/release/0.6.0-alpha.8" && board.candidate?.status === "passed" && board.candidate?.evidence === "reports/evidence/HC-REL-ALPHA-8/manifest.json" && board.gates?.find((gate) => gate.id === "alpha-8-release-candidate")?.status === "passed");

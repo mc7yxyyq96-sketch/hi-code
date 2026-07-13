@@ -1,0 +1,433 @@
+{
+  "schemaVersion": 1,
+  "evidenceType": "stable-release-gate-assessment",
+  "taskId": "HC-REL-STABLE-GATE",
+  "source": {
+    "version": "0.6.0-alpha.8",
+    "parentCommit": "eaa9f27f312a90c76548c7ad3f04ad1bef65d6ea",
+    "branch": "codex/security-release/0.6.0-stable-gate"
+  },
+  "capture": {
+    "startedAt": "2026-07-13T18:30:28.079Z",
+    "completedAt": "2026-07-13T18:32:29.131Z",
+    "workingTreeClean": false,
+    "dirtyPaths": [
+      "package.json",
+      "planning/release-board.json",
+      "reports/program/status.md",
+      "scripts/capture-task-evidence.mjs",
+      "test/program-control-tests.mjs",
+      "reports/evidence/HC-REL-STABLE-GATE/",
+      "reports/releases/0.6.0-stable/",
+      "reports/tasks/HC-REL-STABLE-GATE.md",
+      "scripts/stable-release-gate.mjs",
+      "test/stable-release-gate-tests.mjs"
+    ],
+    "note": "Task evidence is captured before the task commit; artifact hashes bind the tested implementation and reviewed screenshots."
+  },
+  "environment": {
+    "platform": "darwin",
+    "architecture": "arm64",
+    "osRelease": "25.5.0",
+    "node": "v22.22.3"
+  },
+  "artifacts": [
+    {
+      "path": "docs/program/EXECUTION_PLAN.md",
+      "bytes": 33566,
+      "sha256": "ab61116e0940e7963a7753f17c78260f37b38fbe67666612ad8f4d07b637fe72"
+    },
+    {
+      "path": "docs/release-pipeline.md",
+      "bytes": 6035,
+      "sha256": "a31a7fdb83b7097138e6ccffd2d0e096b51fd28cbacc19c073634ed5bba93360"
+    },
+    {
+      "path": "package.json",
+      "bytes": 11323,
+      "sha256": "fb34e4a678ddfaaaca8d71c03a748a18c594b42290ea7b68e6814023312a5091"
+    },
+    {
+      "path": "planning/release-board.json",
+      "bytes": 21407,
+      "sha256": "4832a855e9830dfce59bd7146e0e80201d2930ab10808abd6da2795c1b008535"
+    },
+    {
+      "path": "reports/evidence/HC-MCP-410/manifest.json",
+      "bytes": 13889,
+      "sha256": "f17e95bfc915bbc7e7a510aa3ab444b45f83c948f08722bf2d0fc5af4d9e705e"
+    },
+    {
+      "path": "reports/evidence/HC-REL-420/ci-matrix.json",
+      "bytes": 4157,
+      "sha256": "9bd500f69921e2eeea17888eeac47767cdeac1b077557729bded7e90b24547e7"
+    },
+    {
+      "path": "reports/evidence/HC-REL-420/manifest.json",
+      "bytes": 14936,
+      "sha256": "a4ee614f79cb2c744d22a5425c942307629df3901e96ebaaf5fc9d7f60f32d3a"
+    },
+    {
+      "path": "reports/evidence/HC-REL-STABLE-GATE/gate-result.json",
+      "bytes": 5171,
+      "sha256": "f86f2d87f2ad207facd264f4271dff7e99813d1de4c0bdc8a185a99d5b0817ba"
+    },
+    {
+      "path": "reports/program/risks.json",
+      "bytes": 23808,
+      "sha256": "295bbf05829b951be1fe0479d05461c166a7412a8fe738d4eb688cf13025c53c"
+    },
+    {
+      "path": "reports/program/status.md",
+      "bytes": 21718,
+      "sha256": "0d1f7e24ca45b0083f95ee51cd8f0d24dd6ce31a438518ec3ff265fb985ed184"
+    },
+    {
+      "path": "reports/releases/0.6.0-stable/gate-report.md",
+      "bytes": 2551,
+      "sha256": "1823aa2a34ce417e0f35c85cddb7f2f86ca4e2a668f8680155e59fd3f94f18e9"
+    },
+    {
+      "path": "reports/tasks/HC-REL-STABLE-GATE.md",
+      "bytes": 4385,
+      "sha256": "353c0851aab3fa7205a181e8a68df6b1d5a0dc5b082aec1299132ebf69ca34b7"
+    },
+    {
+      "path": "scripts/capture-task-evidence.mjs",
+      "bytes": 63179,
+      "sha256": "2c886e35fafe8414415e8b72b5eae7502ff5d9e4cb95fb8e2220b1d9d20b55cf"
+    },
+    {
+      "path": "scripts/stable-release-gate.mjs",
+      "bytes": 17453,
+      "sha256": "888baa6a57628c27f1c233600a3dc2f29e20476ef6b7b1b6134413a36fdc28dc"
+    },
+    {
+      "path": "test/program-control-tests.mjs",
+      "bytes": 84759,
+      "sha256": "9e8a04011614a61cfa81b8380bd63baac4b5212559d0ebfb20a105f8ba2c32b3"
+    },
+    {
+      "path": "test/stable-release-gate-tests.mjs",
+      "bytes": 8851,
+      "sha256": "bc552c8edf7e5846d49f7b2f4338ca4d857ae9ead564ad865edca23fff106dad"
+    }
+  ],
+  "commands": [
+    {
+      "id": "stable-gate-assessment",
+      "command": "npm run release:stable-gate:assess",
+      "startedAt": "2026-07-13T18:30:28.089Z",
+      "endedAt": "2026-07-13T18:30:28.198Z",
+      "durationMs": 109,
+      "exitCode": 0,
+      "expectedExitCodes": [
+        0
+      ],
+      "status": "passed",
+      "logPath": "reports/evidence/HC-REL-STABLE-GATE/logs/stable-gate-assessment.log",
+      "logSha256": "ed2d66e1120849b6eedce3031c591ddcad08e4784f1b7e0e26965a2ff54e255b"
+    },
+    {
+      "id": "build",
+      "command": "npm run build",
+      "startedAt": "2026-07-13T18:30:28.199Z",
+      "endedAt": "2026-07-13T18:30:30.748Z",
+      "durationMs": 2549,
+      "exitCode": 0,
+      "expectedExitCodes": [
+        0
+      ],
+      "status": "passed",
+      "logPath": "reports/evidence/HC-REL-STABLE-GATE/logs/build.log",
+      "logSha256": "9b8354afffdc31fa7b27bd4f8b50952b29e98d170fd49e31d938c3899d9d6ffa"
+    },
+    {
+      "id": "stable-gate-tests",
+      "command": "npm run test:stable-gate",
+      "startedAt": "2026-07-13T18:30:30.748Z",
+      "endedAt": "2026-07-13T18:30:30.857Z",
+      "durationMs": 109,
+      "exitCode": 0,
+      "expectedExitCodes": [
+        0
+      ],
+      "status": "passed",
+      "logPath": "reports/evidence/HC-REL-STABLE-GATE/logs/stable-gate-tests.log",
+      "logSha256": "3378dd0b253cd7a5d06f86bf71d853e027dd67999999cd11bb83f91c4cb16c7a"
+    },
+    {
+      "id": "runtime-protocol",
+      "command": "npm run test:runtime-protocol",
+      "startedAt": "2026-07-13T18:30:30.857Z",
+      "endedAt": "2026-07-13T18:30:41.895Z",
+      "durationMs": 11038,
+      "exitCode": 0,
+      "expectedExitCodes": [
+        0
+      ],
+      "status": "passed",
+      "logPath": "reports/evidence/HC-REL-STABLE-GATE/logs/runtime-protocol.log",
+      "logSha256": "ed3b9d6031319572b9c45cbf73ec482629c67faca691427bf0f712ee54d94031"
+    },
+    {
+      "id": "runtime-stores",
+      "command": "npm run test:runtime-stores",
+      "startedAt": "2026-07-13T18:30:41.896Z",
+      "endedAt": "2026-07-13T18:30:42.047Z",
+      "durationMs": 151,
+      "exitCode": 0,
+      "expectedExitCodes": [
+        0
+      ],
+      "status": "passed",
+      "logPath": "reports/evidence/HC-REL-STABLE-GATE/logs/runtime-stores.log",
+      "logSha256": "942783dcf365220774802ac1cc801a1b842388b9bb4e8e1c0589bdd749d2ef9f"
+    },
+    {
+      "id": "runtime-store-integration",
+      "command": "npm run test:runtime-store-integration",
+      "startedAt": "2026-07-13T18:30:42.047Z",
+      "endedAt": "2026-07-13T18:30:43.179Z",
+      "durationMs": 1131,
+      "exitCode": 0,
+      "expectedExitCodes": [
+        0
+      ],
+      "status": "passed",
+      "logPath": "reports/evidence/HC-REL-STABLE-GATE/logs/runtime-store-integration.log",
+      "logSha256": "c56398a99024638eb7a19dc96139c9f01b894271ac550e11a8d5026ee8324830"
+    },
+    {
+      "id": "turn-recovery",
+      "command": "npm run test:turn-recovery",
+      "startedAt": "2026-07-13T18:30:43.179Z",
+      "endedAt": "2026-07-13T18:30:43.272Z",
+      "durationMs": 93,
+      "exitCode": 0,
+      "expectedExitCodes": [
+        0
+      ],
+      "status": "passed",
+      "logPath": "reports/evidence/HC-REL-STABLE-GATE/logs/turn-recovery.log",
+      "logSha256": "6b6138f437b338d9328260f82a38e62fa2b52d171ca20141142cdfc3be67c569"
+    },
+    {
+      "id": "runtime-clients",
+      "command": "npm run test:runtime-clients",
+      "startedAt": "2026-07-13T18:30:43.272Z",
+      "endedAt": "2026-07-13T18:30:43.363Z",
+      "durationMs": 91,
+      "exitCode": 0,
+      "expectedExitCodes": [
+        0
+      ],
+      "status": "passed",
+      "logPath": "reports/evidence/HC-REL-STABLE-GATE/logs/runtime-clients.log",
+      "logSha256": "7253161dcbcf4c43c6ea9372c20c8c45c77129953d2f9585ae49629a6cd7e7d4"
+    },
+    {
+      "id": "git-collaboration",
+      "command": "npm run test:git-collaboration",
+      "startedAt": "2026-07-13T18:30:43.363Z",
+      "endedAt": "2026-07-13T18:30:46.293Z",
+      "durationMs": 2930,
+      "exitCode": 0,
+      "expectedExitCodes": [
+        0
+      ],
+      "status": "passed",
+      "logPath": "reports/evidence/HC-REL-STABLE-GATE/logs/git-collaboration.log",
+      "logSha256": "5d12b892795f9b3cdc7e8d0af2d55259fda23b01a93d2eda690cd7faca286f7d"
+    },
+    {
+      "id": "mcp-tests",
+      "command": "npm run test:mcp",
+      "startedAt": "2026-07-13T18:30:46.294Z",
+      "endedAt": "2026-07-13T18:30:53.402Z",
+      "durationMs": 7108,
+      "exitCode": 0,
+      "expectedExitCodes": [
+        0
+      ],
+      "status": "passed",
+      "logPath": "reports/evidence/HC-REL-STABLE-GATE/logs/mcp-tests.log",
+      "logSha256": "4545befd52e94d6075eea11f1f3e16109e515bb09732592052d24e7c7b6ed4a5"
+    },
+    {
+      "id": "release-pipeline-tests",
+      "command": "npm run test:release-pipeline",
+      "startedAt": "2026-07-13T18:30:53.403Z",
+      "endedAt": "2026-07-13T18:30:53.584Z",
+      "durationMs": 181,
+      "exitCode": 0,
+      "expectedExitCodes": [
+        0
+      ],
+      "status": "passed",
+      "logPath": "reports/evidence/HC-REL-STABLE-GATE/logs/release-pipeline-tests.log",
+      "logSha256": "a71d58f0af16aebafab336010bcd6041d089b0c963f298b8f063a03d27cf8d9b"
+    },
+    {
+      "id": "security-tests",
+      "command": "npm run test:security",
+      "startedAt": "2026-07-13T18:30:53.584Z",
+      "endedAt": "2026-07-13T18:30:53.674Z",
+      "durationMs": 90,
+      "exitCode": 0,
+      "expectedExitCodes": [
+        0
+      ],
+      "status": "passed",
+      "logPath": "reports/evidence/HC-REL-STABLE-GATE/logs/security-tests.log",
+      "logSha256": "bfa5bbfcbf27b54e36ea2ca114e706154a33ec7fca0d7e3c6fd01ed480833542"
+    },
+    {
+      "id": "verify",
+      "command": "npm run verify",
+      "startedAt": "2026-07-13T18:30:53.675Z",
+      "endedAt": "2026-07-13T18:31:29.190Z",
+      "durationMs": 35515,
+      "exitCode": 0,
+      "expectedExitCodes": [
+        0
+      ],
+      "status": "passed",
+      "logPath": "reports/evidence/HC-REL-STABLE-GATE/logs/verify.log",
+      "logSha256": "08a950affcbb5076c6e55aa05b3683d76543f0454dedfc0d73f5d4377e229e3d"
+    },
+    {
+      "id": "release-check",
+      "command": "npm run release:check",
+      "startedAt": "2026-07-13T18:31:29.192Z",
+      "endedAt": "2026-07-13T18:32:00.070Z",
+      "durationMs": 30878,
+      "exitCode": 0,
+      "expectedExitCodes": [
+        0
+      ],
+      "status": "passed",
+      "logPath": "reports/evidence/HC-REL-STABLE-GATE/logs/release-check.log",
+      "logSha256": "8ea7b465cd2c94eee5b49ad88f656f49a91a05448666af4c896d0e008165b846"
+    },
+    {
+      "id": "feature-tests",
+      "command": "/Applications/QClaw.app/Contents/Resources/node/node test/feature-tests.mjs",
+      "startedAt": "2026-07-13T18:32:00.071Z",
+      "endedAt": "2026-07-13T18:32:02.396Z",
+      "durationMs": 2325,
+      "exitCode": 0,
+      "expectedExitCodes": [
+        0
+      ],
+      "status": "passed",
+      "logPath": "reports/evidence/HC-REL-STABLE-GATE/logs/feature-tests.log",
+      "logSha256": "534392df37db2b86175f799134782b59da7e9cc1cb02dd93a54b660ee384f930"
+    },
+    {
+      "id": "dod-tests",
+      "command": "npm run test:dod",
+      "startedAt": "2026-07-13T18:32:02.396Z",
+      "endedAt": "2026-07-13T18:32:02.687Z",
+      "durationMs": 291,
+      "exitCode": 0,
+      "expectedExitCodes": [
+        0
+      ],
+      "status": "passed",
+      "logPath": "reports/evidence/HC-REL-STABLE-GATE/logs/dod-tests.log",
+      "logSha256": "f8b3096032e626f999dd376ae91b433d713bc544686c172eeb7bcc40c2e3154e"
+    },
+    {
+      "id": "dod-scan",
+      "command": "npm run scan:dod",
+      "startedAt": "2026-07-13T18:32:02.688Z",
+      "endedAt": "2026-07-13T18:32:02.975Z",
+      "durationMs": 287,
+      "exitCode": 0,
+      "expectedExitCodes": [
+        0
+      ],
+      "status": "passed",
+      "logPath": "reports/evidence/HC-REL-STABLE-GATE/logs/dod-scan.log",
+      "logSha256": "ab6ca47e1dd37d2cfbbccb4c50df9ea6f0b776223472f25d5b88d64be90db276"
+    },
+    {
+      "id": "production-audit",
+      "command": "npm run audit:prod",
+      "startedAt": "2026-07-13T18:32:02.975Z",
+      "endedAt": "2026-07-13T18:32:04.198Z",
+      "durationMs": 1224,
+      "exitCode": 0,
+      "expectedExitCodes": [
+        0
+      ],
+      "status": "passed",
+      "logPath": "reports/evidence/HC-REL-STABLE-GATE/logs/production-audit.log",
+      "logSha256": "9f7c507d9af3253a1010988af30c28077e02547298ce7818fd3b1d736442f8b2"
+    },
+    {
+      "id": "electron-e2e",
+      "command": "npm run test:electron-e2e",
+      "startedAt": "2026-07-13T18:32:04.199Z",
+      "endedAt": "2026-07-13T18:32:28.889Z",
+      "durationMs": 24690,
+      "exitCode": 0,
+      "expectedExitCodes": [
+        0
+      ],
+      "status": "passed",
+      "logPath": "reports/evidence/HC-REL-STABLE-GATE/logs/electron-e2e.log",
+      "logSha256": "df2a5b46a79d543c5bff318030dc790bd55fd26e14433e998a27c671cc72aa8c"
+    },
+    {
+      "id": "program-control",
+      "command": "npm run test:program",
+      "startedAt": "2026-07-13T18:32:28.889Z",
+      "endedAt": "2026-07-13T18:32:29.002Z",
+      "durationMs": 113,
+      "exitCode": 0,
+      "expectedExitCodes": [
+        0
+      ],
+      "status": "passed",
+      "logPath": "reports/evidence/HC-REL-STABLE-GATE/logs/program-control.log",
+      "logSha256": "7fc1841ef29d9894b5119a17df339c3a25e19cf6befa9cce053abc7fad7e6d66"
+    },
+    {
+      "id": "stable-gate-strict-block",
+      "command": "npm run release:stable-gate",
+      "startedAt": "2026-07-13T18:32:29.002Z",
+      "endedAt": "2026-07-13T18:32:29.106Z",
+      "durationMs": 104,
+      "exitCode": 2,
+      "expectedExitCodes": [
+        2
+      ],
+      "expectedOutcome": "blocked",
+      "status": "passed",
+      "logPath": "reports/evidence/HC-REL-STABLE-GATE/logs/stable-gate-strict-block.log",
+      "logSha256": "3bdcb323db4bae35ac8932e1dd67e752bdd365366fe955c061f4dbd255874ef5"
+    },
+    {
+      "id": "git-diff-check",
+      "command": "git diff --check",
+      "startedAt": "2026-07-13T18:32:29.107Z",
+      "endedAt": "2026-07-13T18:32:29.117Z",
+      "durationMs": 10,
+      "exitCode": 0,
+      "expectedExitCodes": [
+        0
+      ],
+      "status": "passed",
+      "logPath": "reports/evidence/HC-REL-STABLE-GATE/logs/git-diff-check.log",
+      "logSha256": "3d4d50cd32af92c6d4df37c1df74a96622fca8cfb5643a155c91f034a42f2068"
+    }
+  ],
+  "summary": {
+    "total": 22,
+    "passed": 22,
+    "failed": 0,
+    "allPassed": true
+  }
+}

@@ -1064,6 +1064,57 @@ const profiles = {
       "tests/electron-e2e/run.mjs"
     ],
   },
+  "HC-REL-STABLE-GATE": {
+    evidenceType: "stable-release-gate-assessment",
+    commands: [
+      { id: "stable-gate-assessment", command: npm, args: ["run", "release:stable-gate:assess"] },
+      { id: "build", command: npm, args: ["run", "build"] },
+      { id: "stable-gate-tests", command: npm, args: ["run", "test:stable-gate"] },
+      { id: "runtime-protocol", command: npm, args: ["run", "test:runtime-protocol"] },
+      { id: "runtime-stores", command: npm, args: ["run", "test:runtime-stores"] },
+      { id: "runtime-store-integration", command: npm, args: ["run", "test:runtime-store-integration"] },
+      { id: "turn-recovery", command: npm, args: ["run", "test:turn-recovery"] },
+      { id: "runtime-clients", command: npm, args: ["run", "test:runtime-clients"] },
+      { id: "git-collaboration", command: npm, args: ["run", "test:git-collaboration"] },
+      { id: "mcp-tests", command: npm, args: ["run", "test:mcp"] },
+      { id: "release-pipeline-tests", command: npm, args: ["run", "test:release-pipeline"] },
+      { id: "security-tests", command: npm, args: ["run", "test:security"] },
+      { id: "verify", command: npm, args: ["run", "verify"] },
+      { id: "release-check", command: npm, args: ["run", "release:check"] },
+      { id: "feature-tests", command: node, args: ["test/feature-tests.mjs"] },
+      { id: "dod-tests", command: npm, args: ["run", "test:dod"] },
+      { id: "dod-scan", command: npm, args: ["run", "scan:dod"] },
+      { id: "production-audit", command: npm, args: ["run", "audit:prod"] },
+      { id: "electron-e2e", command: npm, args: ["run", "test:electron-e2e"] },
+      { id: "program-control", command: npm, args: ["run", "test:program"] },
+      {
+        id: "stable-gate-strict-block",
+        command: npm,
+        args: ["run", "release:stable-gate"],
+        expectedExitCodes: [2],
+        expectedOutcome: "blocked",
+      },
+      { id: "git-diff-check", command: "git", args: ["diff", "--check"] },
+    ],
+    keyArtifacts: [
+      "docs/program/EXECUTION_PLAN.md",
+      "docs/release-pipeline.md",
+      "package.json",
+      "planning/release-board.json",
+      "reports/evidence/HC-MCP-410/manifest.json",
+      "reports/evidence/HC-REL-420/ci-matrix.json",
+      "reports/evidence/HC-REL-420/manifest.json",
+      "reports/evidence/HC-REL-STABLE-GATE/gate-result.json",
+      "reports/program/risks.json",
+      "reports/program/status.md",
+      "reports/releases/0.6.0-stable/gate-report.md",
+      "reports/tasks/HC-REL-STABLE-GATE.md",
+      "scripts/capture-task-evidence.mjs",
+      "scripts/stable-release-gate.mjs",
+      "test/program-control-tests.mjs",
+      "test/stable-release-gate-tests.mjs"
+    ],
+  },
   "HC-REL-ALPHA-7": {
     evidenceType: "release-candidate-acceptance",
     commands: [
@@ -1199,6 +1250,24 @@ function parseTaskId() {
   return raw;
 }
 
+function expectedExitCodesFor(spec, taskId) {
+  const expectedExitCodes = Array.isArray(spec.expectedExitCodes) && spec.expectedExitCodes.length
+    ? spec.expectedExitCodes
+    : [0];
+  if (!expectedExitCodes.every(Number.isInteger)) {
+    throw new Error(`Evidence command '${spec.id}' has an invalid expected exit code`);
+  }
+  const allowsStableGateBlock = taskId === "HC-REL-STABLE-GATE"
+    && spec.id === "stable-gate-strict-block"
+    && spec.expectedOutcome === "blocked"
+    && expectedExitCodes.length === 1
+    && expectedExitCodes[0] === 2;
+  if (expectedExitCodes.some((exitCode) => exitCode !== 0) && !allowsStableGateBlock) {
+    throw new Error(`Evidence command '${spec.id}' cannot treat a non-zero exit as passing`);
+  }
+  return expectedExitCodes;
+}
+
 function runCommand(spec, taskId, stagingLogDir) {
   const startedAt = new Date();
   const started = process.hrtime.bigint();
@@ -1214,6 +1283,8 @@ function runCommand(spec, taskId, stagingLogDir) {
   const endedAt = new Date();
   const durationMs = Number(process.hrtime.bigint() - started) / 1_000_000;
   const exitCode = result.error ? 1 : (result.status ?? 1);
+  const expectedExitCodes = expectedExitCodesFor(spec, taskId);
+  const matchesExpectation = expectedExitCodes.includes(exitCode);
   const display = [spec.command, ...spec.args].join(" ");
   const output = `${redact([
     `$ ${display}`,
@@ -1223,7 +1294,7 @@ function runCommand(spec, taskId, stagingLogDir) {
   ].filter(Boolean).join("\n")).trimEnd()}\n`;
   const logName = `${spec.id}.log`;
   fs.writeFileSync(path.join(stagingLogDir, logName), output, { mode: 0o644 });
-  console.log(`[task:evidence] ${spec.id}: ${exitCode === 0 ? "pass" : "fail"} (${durationMs.toFixed(0)} ms)`);
+  console.log(`[task:evidence] ${spec.id}: ${matchesExpectation ? "pass" : "fail"} (${durationMs.toFixed(0)} ms, exit ${exitCode}, expected ${expectedExitCodes.join("|")})`);
   return {
     id: spec.id,
     command: display,
@@ -1231,7 +1302,9 @@ function runCommand(spec, taskId, stagingLogDir) {
     endedAt: endedAt.toISOString(),
     durationMs: Math.round(durationMs),
     exitCode,
-    status: exitCode === 0 ? "passed" : "failed",
+    expectedExitCodes,
+    ...(spec.expectedOutcome ? { expectedOutcome: spec.expectedOutcome } : {}),
+    status: matchesExpectation ? "passed" : "failed",
     logPath: path.posix.join("reports", "evidence", taskId, "logs", logName),
     logSha256: digest(output),
   };
