@@ -79,14 +79,24 @@ function minimalSmokeEnv() {
 }
 
 function runChecked(command, args, options = {}) {
+  const {
+    label = command,
+    timeout = 180_000,
+    ...spawnOptions
+  } = options;
   const result = spawnSync(command, args, {
     encoding: "utf8",
-    timeout: 180_000,
+    timeout,
     env: minimalSmokeEnv(),
-    ...options,
+    ...spawnOptions,
   });
-  if (result.error) throw result.error;
-  if (result.status !== 0) throw new Error(`${command} failed (${result.status}): ${(result.stderr || result.stdout || "").slice(-1200)}`);
+  if (result.error) {
+    const detail = result.error.code === "ETIMEDOUT"
+      ? `timed out after ${timeout}ms`
+      : result.error.message;
+    throw new Error(`${label} failed: ${detail}`, { cause: result.error });
+  }
+  if (result.status !== 0) throw new Error(`${label} failed (${result.status}): ${(result.stderr || result.stdout || "").slice(-1200)}`);
   return result;
 }
 
@@ -205,21 +215,37 @@ function smokeMac(dmgPath, version) {
 function smokeWindows(installerPath, version) {
   const temporary = fs.mkdtempSync(path.join(os.tmpdir(), "hicode-nsis-smoke-"));
   const installDir = path.join(temporary, "installed");
+  let inspected = null;
+  let primaryError = null;
   try {
-    runChecked(installerPath, ["/S", `/D=${installDir}`]);
+    console.log("[package-smoke] Windows NSIS silent install");
+    runChecked(installerPath, ["/S", `/D=${installDir}`], { label: "NSIS silent install" });
     const executable = findNamed(installDir, "Hi Code.exe");
     if (!executable) throw new Error("NSIS smoke install did not create Hi Code.exe");
-    const inspected = inspectResources(path.join(path.dirname(executable), "resources"), version);
+    console.log("[package-smoke] Windows installed artifact inspection");
+    inspected = inspectResources(path.join(path.dirname(executable), "resources"), version);
     verifyWindowsTrust(installerPath, inspected.manifest);
     verifyWindowsTrust(executable, inspected.manifest);
     const uninstaller = findNamed(installDir, "Uninstall Hi Code.exe");
     if (!uninstaller) throw new Error("NSIS smoke install did not create an uninstaller");
-    runChecked(uninstaller, ["/S"]);
+    console.log("[package-smoke] Windows NSIS silent uninstall");
+    runChecked(uninstaller, ["/S"], { label: "NSIS silent uninstall" });
     waitForPathsMissing([executable, inspected.asarPath, uninstaller]);
-    return inspected;
-  } finally {
-    removeTemporaryTree(temporary);
+    console.log("[package-smoke] Windows NSIS lifecycle complete");
+  } catch (error) {
+    primaryError = error;
   }
+
+  try {
+    removeTemporaryTree(temporary);
+  } catch (cleanupError) {
+    if (!primaryError) throw cleanupError;
+    throw new Error(`${primaryError.message}; cleanup also failed: ${cleanupError.message}`, {
+      cause: primaryError,
+    });
+  }
+  if (primaryError) throw primaryError;
+  return inspected;
 }
 
 function smokeLinux(appImagePath, debPath, version) {

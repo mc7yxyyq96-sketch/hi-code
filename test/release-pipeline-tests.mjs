@@ -264,6 +264,7 @@ const rendererSource = fs.readFileSync("renderer/app/bootstrap.js", "utf8");
 const packagingWorkflow = fs.readFileSync(".github/workflows/release-packaging.yml", "utf8");
 const packageSmokeSource = fs.readFileSync("scripts/package-smoke.mjs", "utf8");
 check("package config has all native platform targets", packageSource.includes('"dist:mac"') && packageSource.includes('"dist:win"') && packageSource.includes('"dist:linux"') && packageSource.includes('"AppImage"') && packageSource.includes('"deb"'));
+check("NSIS lifecycle never auto-launches the installed app", pkg.build?.nsis?.runAfterFinish === false);
 check("preload exposes bounded update lifecycle", preloadSource.includes('safeInvoke("app:update-status")') && preloadSource.includes('checkedInvoke("app:update-channel", channel, "channel")') && preloadSource.includes('safeInvoke("app:update-download")') && preloadSource.includes('safeInvoke("app:update-install")'));
 check("renderer has real update actions", rendererSource.includes("downloadUpdateBtn.onclick") && rendererSource.includes("installUpdateBtn.onclick") && rendererSource.includes("updateChannelSelect.onchange"));
 check("CI packages and smokes all three native platforms", ["ubuntu-latest", "macos-latest", "windows-latest"].every((value) => packagingWorkflow.includes(value))

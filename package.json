@@ -204,6 +204,7 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
+      "runAfterFinish": false,
       "artifactName": "Hi-Code-Setup-${version}-win-${arch}.${ext}"
     },
     "linux": {
