@@ -187,18 +187,22 @@
     {
       "id": "RISK-SEC-002",
       "severity": "critical",
-      "status": "open",
+      "status": "mitigated",
       "owner": "security-release",
       "title": "Execution isolation differs by platform and is not represented by one truthful policy contract",
       "evidence": [
         "reports/tasks/HC-SEC-402.md",
+        "reports/evidence/HC-SEC-402/manifest.json",
+        "reports/evidence/HC-SEC-402/ci-matrix.json",
+        "docs/execution-policy.md",
+        "src/execution-policy.ts",
         "src/tools/bash.ts",
         "electron/services/terminal-service.mjs",
         "src/quality-gates.ts",
         "src/worktree-runner.ts"
       ],
       "impact": "A user can interpret approval, workspace path validation, or process cleanup as an operating-system sandbox even when filesystem or network access remains available to the child process.",
-      "mitigation": "HC-SEC-402 will centralize policy evaluation, detect platform backends, fail closed where a requested boundary cannot be enforced, expose weak isolation explicitly, and verify full process-tree termination without claiming unavailable controls.",
+      "mitigation": "HC-SEC-402 centralizes command, path, environment, network, limit, approval, audit, and process-tree decisions in one versioned contract. Unsupported strict controls fail closed, report-only launches remain visibly weak, Renderer approval cannot be forged, child environments are minimized, and Linux/macOS/Windows capabilities are reported without inventing unavailable isolation. Nineteen local gates and GitHub Actions run 29221844706 passed, including real Electron smoke on all three platforms.",
       "trigger": "Any execution path that reports sandboxed/strong while its requested filesystem, environment, network, limit, approval, audit, or process-tree control is not enforced blocks HC-SEC-402 and rc.1."
     },
     {

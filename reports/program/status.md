@@ -44,7 +44,7 @@ The final machine-captured evidence is written by `npm run program:baseline` to 
 | 16 | HC-UI-312 | Completed | Desktop UX | HC-UI-301, HC-PLAT-110 |
 | 17 | HC-GIT-320 | Completed | Runtime Engine | HC-RUN-203, HC-UI-310 |
 | 18 | HC-SEC-401 | Completed | Security And Release | HC-PLAT-110 |
-| 19 | HC-SEC-402 | In Progress | Security And Release | HC-PLAT-110 |
+| 19 | HC-SEC-402 | Completed | Security And Release | HC-PLAT-110 |
 
 HC-QA-101 established a real Electron responsive baseline. HC-RUN-201 introduces protocol-native assistant output and concurrency isolation. No new industrial domain module is authorized before HC-RUN-201 completes.
 
@@ -88,7 +88,7 @@ HC-GIT-320 completed in the isolated `codex/runtime-engine/hc-git-320` worktree 
 
 HC-SEC-401 completed in the isolated `codex/security-release/hc-sec-401` worktree from HC-GIT-320 completion commit `6059a6d`. Model, sensitive MCP, and Agent Provider credentials now persist as validated references; Electron `safeStorage` encrypts values and rejects unavailable or Linux `basic_text` storage. Startup migration is atomic and exactly reversible through an encrypted snapshot, CLI fallback is environment-only, and Renderer/preload receive status rather than values. Sixteen local evidence commands passed from clean source commit `c107121`, including a zero-finding DoD scan and real Electron E2E. GitHub Actions run `29196545587` passed general tests and real Electron smoke on Ubuntu, macOS, and Windows for Draft PR #18.
 
-HC-SEC-402 started in the isolated `codex/security-release/hc-sec-402` worktree from HC-SEC-401 completion commit `3a2328c`. The clean baseline verify passed. The task will make one policy kernel authoritative for command, filesystem, environment, network, limit, approval, audit, and process-tree semantics; every platform must report its actual enforcement strength and may not label approval-only or path-only protection as an operating-system sandbox.
+HC-SEC-402 completed in the isolated `codex/security-release/hc-sec-402` worktree from HC-SEC-401 completion commit `3a2328c`. A versioned policy kernel now governs command, filesystem, environment, network, limit, approval, audit, and process-tree semantics for Runtime Bash, terminal, Worktree, Patch Arena, Quality Gate, MCP, and real industrial adapter launches. Unsupported strict controls fail closed and weak/report-only isolation remains explicit. Nineteen local evidence commands passed from clean source commit `f45415f`, including 100/100 industrial tool checks and real Electron navigation at compact widths. GitHub Actions run `29221844706` passed general tests and real Electron smoke on Ubuntu, macOS, and Windows for Draft PR #19.
 
 ## Current Product Truth
 
@@ -120,6 +120,7 @@ HC-SEC-402 started in the isolated `codex/security-release/hc-sec-402` worktree 
 - Secure App Preview evidence: `reports/tasks/HC-UI-312.md`, `reports/evidence/HC-UI-312/manifest.json`, `reports/evidence/HC-UI-312/ci-matrix.json`
 - Coding and Git delivery evidence: `reports/tasks/HC-GIT-320.md`, `reports/evidence/HC-GIT-320/manifest.json`, `reports/evidence/HC-GIT-320/ci-matrix.json`
 - Credential storage evidence: `reports/tasks/HC-SEC-401.md`, `reports/evidence/HC-SEC-401/manifest.json`, `reports/evidence/HC-SEC-401/ci-matrix.json`
+- Cross-platform execution policy evidence: `reports/tasks/HC-SEC-402.md`, `reports/evidence/HC-SEC-402/manifest.json`, `reports/evidence/HC-SEC-402/ci-matrix.json`
 - Current risks: `reports/program/risks.json`
 - Historical final acceptance: `reports/final-acceptance-historical.md`
 - Historical audit policy: `reports/audit/README.md`

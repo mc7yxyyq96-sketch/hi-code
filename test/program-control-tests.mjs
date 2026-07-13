@@ -56,7 +56,9 @@ const requiredFiles = [
   "docs/git-delivery-loop.md",
   "docs/adr/ADR-0015-authoritative-coding-and-git-delivery-loop.md",
   "docs/adr/ADR-0016-keychain-backed-secret-references.md",
+  "docs/adr/ADR-0017-cross-platform-execution-policy.md",
   "docs/credential-storage.md",
+  "docs/execution-policy.md",
   "docs/attachments-and-command-registry.md",
   "docs/anthropic-ollama-adapters.md",
   "docs/model-provider-adapters.md",
@@ -85,6 +87,7 @@ const requiredFiles = [
   "reports/tasks/HC-UI-312.md",
   "reports/tasks/HC-GIT-320.md",
   "reports/tasks/HC-SEC-401.md",
+  "reports/tasks/HC-SEC-402.md",
   "reports/tasks/HC-REL-ALPHA-7.md",
   "reports/evidence/baseline/manifest.json",
   "reports/evidence/HC-QA-101/manifest.json",
@@ -110,6 +113,8 @@ const requiredFiles = [
   "reports/evidence/HC-GIT-320/ci-matrix.json",
   "reports/evidence/HC-SEC-401/manifest.json",
   "reports/evidence/HC-SEC-401/ci-matrix.json",
+  "reports/evidence/HC-SEC-402/manifest.json",
+  "reports/evidence/HC-SEC-402/ci-matrix.json",
   "scripts/electron-compatibility.mjs",
   "scripts/run-electron-builder.mjs",
   "test/electron-compatibility-tests.mjs",
@@ -159,6 +164,8 @@ const gitDeliveryManifest = readJson(root, "reports/evidence/HC-GIT-320/manifest
 const gitDeliveryCiEvidence = readJson(root, "reports/evidence/HC-GIT-320/ci-matrix.json");
 const secretStorageManifest = readJson(root, "reports/evidence/HC-SEC-401/manifest.json");
 const secretStorageCiEvidence = readJson(root, "reports/evidence/HC-SEC-401/ci-matrix.json");
+const executionPolicyManifest = readJson(root, "reports/evidence/HC-SEC-402/manifest.json");
+const executionPolicyCiEvidence = readJson(root, "reports/evidence/HC-SEC-402/ci-matrix.json");
 const packageJson = readJson(root, "package.json");
 const packageLock = readJson(root, "package-lock.json");
 const programTask = backlog.tasks.find((task) => task.id === "HC-PROG-100");
@@ -178,6 +185,7 @@ const terminalTask = backlog.tasks.find((task) => task.id === "HC-UI-311");
 const previewTask = backlog.tasks.find((task) => task.id === "HC-UI-312");
 const gitDeliveryTask = backlog.tasks.find((task) => task.id === "HC-GIT-320");
 const secretStorageTask = backlog.tasks.find((task) => task.id === "HC-SEC-401");
+const executionPolicyTask = backlog.tasks.find((task) => task.id === "HC-SEC-402");
 const qaTask = board.tasks.find((task) => task.id === "HC-QA-101");
 const runtimeTask = board.tasks.find((task) => task.id === "HC-RUN-201");
 const runtimeStoreTask = board.tasks.find((task) => task.id === "HC-RUN-202");
@@ -195,6 +203,7 @@ const terminalBoardTask = board.tasks.find((task) => task.id === "HC-UI-311");
 const previewBoardTask = board.tasks.find((task) => task.id === "HC-UI-312");
 const gitDeliveryBoardTask = board.tasks.find((task) => task.id === "HC-GIT-320");
 const secretStorageBoardTask = board.tasks.find((task) => task.id === "HC-SEC-401");
+const executionPolicyBoardTask = board.tasks.find((task) => task.id === "HC-SEC-402");
 
 console.log("\n[program-control] board and evidence contract");
 check("backlog records immutable source commit", /^[0-9a-f]{40}$/.test(backlog.sourceCommit || ""));
@@ -507,6 +516,44 @@ for (const command of secretStorageManifest.commands || []) {
   const absolute = path.join(root, command.logPath || "");
   check(`HC-SEC-401 ${command.id} log exists`, Boolean(command.logPath) && fs.existsSync(absolute));
   if (fs.existsSync(absolute)) check(`HC-SEC-401 ${command.id} log hash matches`, digest(absolute) === command.logSha256);
+}
+check(
+  "HC-SEC-402 completed only after its dependency and committed evidence",
+  executionPolicyTask?.status === "completed" &&
+    executionPolicyTask?.branch === "codex/security-release/hc-sec-402" &&
+    Boolean(executionPolicyTask?.startedAt) &&
+    Boolean(executionPolicyTask?.completedAt) &&
+    executionPolicyTask?.taskManifest === "reports/tasks/HC-SEC-402.md" &&
+    executionPolicyTask?.evidenceManifest === "reports/evidence/HC-SEC-402/manifest.json" &&
+    executionPolicyTask?.ciEvidence === "reports/evidence/HC-SEC-402/ci-matrix.json" &&
+    executionPolicyTask?.dependencies?.every((id) => backlog.tasks.find((task) => task.id === id)?.status === "completed") &&
+    executionPolicyBoardTask?.status === "completed" &&
+    executionPolicyBoardTask?.evidence === "reports/evidence/HC-SEC-402/manifest.json" &&
+    executionPolicyBoardTask?.ciEvidence === "reports/evidence/HC-SEC-402/ci-matrix.json",
+  JSON.stringify(executionPolicyTask),
+);
+check("Cross-platform execution-policy gate passed with committed evidence", board.gates?.find((gate) => gate.id === "cross-platform-execution-policy")?.status === "passed" && board.gates?.find((gate) => gate.id === "cross-platform-execution-policy")?.evidence === "reports/evidence/HC-SEC-402/manifest.json" && board.gates?.find((gate) => gate.id === "cross-platform-execution-policy")?.ciEvidence === "reports/evidence/HC-SEC-402/ci-matrix.json");
+check("HC-SEC-402 platform-isolation risk is evidence-backed and mitigated", risks.risks?.some((risk) => risk.id === "RISK-SEC-002" && risk.status === "mitigated" && risk.evidence?.includes("reports/evidence/HC-SEC-402/manifest.json") && risk.evidence?.includes("reports/evidence/HC-SEC-402/ci-matrix.json")));
+check("HC-SEC-402 evidence records every command passing from a clean tree", executionPolicyManifest.summary?.allPassed === true && executionPolicyManifest.summary?.total === 19 && executionPolicyManifest.capture?.workingTreeClean === true, JSON.stringify(executionPolicyManifest.summary));
+check("HC-SEC-402 evidence is captured from its isolated branch", executionPolicyManifest.source?.branch === "codex/security-release/hc-sec-402" && executionPolicyManifest.source?.parentCommit === "f45415f9a6eda59f1533da1e2a8a275f265abe90");
+check(
+  "HC-SEC-402 CI passed general tests and real Electron smoke on every target platform",
+  executionPolicyCiEvidence.event === "pull_request" &&
+    executionPolicyCiEvidence.pullRequest === 19 &&
+    executionPolicyCiEvidence.status === "completed" &&
+    executionPolicyCiEvidence.conclusion === "success" &&
+    executionPolicyCiEvidence.headSha === "9199c28841de3b48b53eba3a2142d374c1322b10" &&
+    ["ubuntu-latest", "macos-latest", "windows-latest"].every((platform) => executionPolicyCiEvidence.jobs?.some((job) => job.platform === platform && job.name === `Electron smoke (${platform})` && job.conclusion === "success" && job.electronSmoke === "success" && job.artifactUpload === "success")) &&
+    executionPolicyCiEvidence.jobs?.some((job) => job.name === "test" && job.conclusion === "success" && job.testSuites === "success" && job.dodScan === "success"),
+  JSON.stringify(executionPolicyCiEvidence),
+);
+for (const requiredCommand of ["build", "execution-policy", "terminal-tests", "worktree-tests", "arena-tests", "industrial-tool-tests", "quality-gate-tests", "service-tests", "renderer-tests", "security-tests", "verify", "release-check", "feature-tests", "dod-tests", "dod-scan", "production-audit", "electron-e2e", "program-control", "git-diff-check"]) {
+  check(`HC-SEC-402 captured ${requiredCommand}`, executionPolicyManifest.commands?.some((command) => command.id === requiredCommand && command.status === "passed"));
+}
+for (const command of executionPolicyManifest.commands || []) {
+  const absolute = path.join(root, command.logPath || "");
+  check(`HC-SEC-402 ${command.id} log exists`, Boolean(command.logPath) && fs.existsSync(absolute));
+  if (fs.existsSync(absolute)) check(`HC-SEC-402 ${command.id} log hash matches`, digest(absolute) === command.logSha256);
 }
 check("alpha.8 version is synchronized", packageJson.version === "0.6.0-alpha.8" && packageLock.version === packageJson.version && packageLock.packages?.[""]?.version === packageJson.version && fs.readFileSync(path.join(root, "VERSION"), "utf8").trim() === packageJson.version);
 check("alpha.8 release candidate gate passed", board.currentRelease === packageJson.version && board.candidate?.version === packageJson.version && board.candidate?.branch === "codex/release/0.6.0-alpha.8" && board.candidate?.status === "passed" && board.candidate?.evidence === "reports/evidence/HC-REL-ALPHA-8/manifest.json" && board.gates?.find((gate) => gate.id === "alpha-8-release-candidate")?.status === "passed");

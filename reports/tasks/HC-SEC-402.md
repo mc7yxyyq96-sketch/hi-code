@@ -1,12 +1,14 @@
 # HC-SEC-402 Cross-Platform Execution Policy And Capability Reporting
 
-Status: In Progress
+Status: Completed
 
 Branch: `codex/security-release/hc-sec-402`
 
 Parent commit: `3a2328cde78f55eeaf18f823f52d23643be93b6b`
 
 Started: `2026-07-12T15:15:48Z`
+
+Completed: `2026-07-13T03:32:56Z`
 
 ## Problem
 
@@ -79,6 +81,7 @@ Create one versioned execution-policy contract that evaluates command, working d
 - Added a read-only preload/IPC capability projection and Settings diagnostics for all eight policy controls.
 - Kept SolidWorks and AVEVA bridge-only with no external process or false real-execution claim.
 - Fixed Electron-hosted synchronous supervision by using Node mode only for the internal supervisor, preventing two IfcOpenShell probes from blocking the desktop for ten seconds.
+- Bounded automatic IfcOpenShell detection to one highest-priority Python interpreter while retaining all candidates as evidence and preserving explicit manual-path probing.
 
 ## Focused Verification
 
@@ -86,10 +89,20 @@ Create one versioned execution-policy contract that evaluates command, working d
 - `test/terminal-service-tests.mjs`: 12 passed.
 - `test/worktree-runner-tests.mjs`: 21 passed.
 - `test/patch-arena-tests.mjs`: 20 passed.
-- `test/industrial-tool-tests.mjs`: 98 passed.
+- `test/industrial-tool-tests.mjs`: 100 passed.
 - `test/quality-gate-tests.mjs`: 19 passed.
 - `test/security-baseline.mjs`: 216 passed.
 - Real Electron E2E: passed, including capability diagnostics and responsive Industrial Project navigation.
+
+## Evidence
+
+- Local acceptance: `reports/evidence/HC-SEC-402/manifest.json`
+- Source commit bound by local evidence: `f45415f9a6eda59f1533da1e2a8a275f265abe90`
+- Result: 19 passed, 0 failed, captured from a clean worktree.
+- Cross-platform CI: `reports/evidence/HC-SEC-402/ci-matrix.json`
+- GitHub Actions run: `29221844706`
+- PR: `#19`
+- General tests and real Electron smoke passed on Ubuntu, macOS, and Windows.
 
 ## Rollback
 
