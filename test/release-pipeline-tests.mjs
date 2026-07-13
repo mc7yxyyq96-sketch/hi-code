@@ -272,5 +272,8 @@ check("CI packages and smokes all three native platforms", ["ubuntu-latest", "ma
 check("signed package smoke verifies platform signatures", packageSmokeSource.includes('runChecked("codesign"')
   && packageSmokeSource.includes('runChecked("xcrun", ["stapler", "validate"')
   && packageSmokeSource.includes("Get-AuthenticodeSignature"));
+check("Windows package smoke waits for the complete NSIS process tree", packageSmokeSource.includes("Start-Process")
+  && packageSmokeSource.includes("-PassThru -Wait")
+  && packageSmokeSource.includes("HICODE_NSIS_ARGUMENTS"));
 
 console.log(`\n=== ${passed} passed, 0 failed ===`);

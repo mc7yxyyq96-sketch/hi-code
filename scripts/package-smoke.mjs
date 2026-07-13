@@ -100,6 +100,31 @@ function runChecked(command, args, options = {}) {
   return result;
 }
 
+function runWindowsProcessTree(command, args, label) {
+  const env = {
+    ...minimalSmokeEnv(),
+    HICODE_NSIS_TARGET: command,
+    HICODE_NSIS_ARGUMENTS: JSON.stringify(args),
+  };
+  const script = [
+    "$arguments = @(ConvertFrom-Json -InputObject $env:HICODE_NSIS_ARGUMENTS);",
+    "$process = Start-Process -FilePath $env:HICODE_NSIS_TARGET -ArgumentList $arguments -PassThru -Wait;",
+    "if ($null -eq $process.ExitCode) { exit 1 };",
+    "exit $process.ExitCode",
+  ].join(" ");
+  return runChecked("powershell.exe", [
+    "-NoLogo",
+    "-NoProfile",
+    "-NonInteractive",
+    "-Command",
+    script,
+  ], {
+    env,
+    label,
+    timeout: 300_000,
+  });
+}
+
 const sleepSignal = new Int32Array(new SharedArrayBuffer(4));
 
 function sleep(milliseconds) {
@@ -219,7 +244,7 @@ function smokeWindows(installerPath, version) {
   let primaryError = null;
   try {
     console.log("[package-smoke] Windows NSIS silent install");
-    runChecked(installerPath, ["/S", `/D=${installDir}`], { label: "NSIS silent install" });
+    runWindowsProcessTree(installerPath, ["/S", `/D=${installDir}`], "NSIS silent install process tree");
     const executable = findNamed(installDir, "Hi Code.exe");
     if (!executable) throw new Error("NSIS smoke install did not create Hi Code.exe");
     console.log("[package-smoke] Windows installed artifact inspection");
@@ -229,7 +254,7 @@ function smokeWindows(installerPath, version) {
     const uninstaller = findNamed(installDir, "Uninstall Hi Code.exe");
     if (!uninstaller) throw new Error("NSIS smoke install did not create an uninstaller");
     console.log("[package-smoke] Windows NSIS silent uninstall");
-    runChecked(uninstaller, ["/S"], { label: "NSIS silent uninstall" });
+    runWindowsProcessTree(uninstaller, ["/S"], "NSIS silent uninstall process tree");
     waitForPathsMissing([executable, inspected.asarPath, uninstaller]);
     console.log("[package-smoke] Windows NSIS lifecycle complete");
   } catch (error) {
