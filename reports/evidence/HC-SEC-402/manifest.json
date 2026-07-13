@@ -4,12 +4,12 @@
   "taskId": "HC-SEC-402",
   "source": {
     "version": "0.6.0-alpha.8",
-    "parentCommit": "c0023583398df3e165337d119a907aa08d514317",
+    "parentCommit": "f45415f9a6eda59f1533da1e2a8a275f265abe90",
     "branch": "codex/security-release/hc-sec-402"
   },
   "capture": {
-    "startedAt": "2026-07-13T02:28:11.500Z",
-    "completedAt": "2026-07-13T02:29:57.318Z",
+    "startedAt": "2026-07-13T03:22:46.807Z",
+    "completedAt": "2026-07-13T03:24:32.048Z",
     "workingTreeClean": true,
     "dirtyPaths": [],
     "note": "Task evidence is captured before the task commit; artifact hashes bind the tested implementation and reviewed screenshots."
@@ -35,6 +35,11 @@
       "path": "docs/adr/README.md",
       "bytes": 4081,
       "sha256": "d782bff382499ca7160e814e8e82279c5a8b52cf6e08d1fcc531ee0d24090713"
+    },
+    {
+      "path": "docs/adapters/bim-ifc.md",
+      "bytes": 5328,
+      "sha256": "0195d04f5f53d3a7e56992ab4e4eafb0c98ba8f477ba17060b27941f051bd83b"
     },
     {
       "path": "docs/execution-policy.md",
@@ -133,13 +138,18 @@
     },
     {
       "path": "scripts/capture-task-evidence.mjs",
-      "bytes": 53769,
-      "sha256": "bd4e929de8cebe0030755863243f9d2181a0eaff13c3a4fe442526ec4e50360f"
+      "bytes": 53835,
+      "sha256": "230fffa14906e9f73ff74173cd1d2f982e0573c0db050b25dedc3de82ba62c4a"
     },
     {
       "path": "scripts/verify.mjs",
       "bytes": 4411,
       "sha256": "1d58e289ad92e4cf05ee28c37c7dd8ee404379085f2914aa80fa44bb518dd957"
+    },
+    {
+      "path": "src/bim-ifc-adapter.ts",
+      "bytes": 37064,
+      "sha256": "bbd7ceb5d59f22e325ee87424adefefe03050254919c90f5b94eaeda38273cbb"
     },
     {
       "path": "src/execution-policy.ts",
@@ -188,8 +198,8 @@
     },
     {
       "path": "test/industrial-tool-tests.mjs",
-      "bytes": 53512,
-      "sha256": "af080f825427cf15b11f142db17512070146aea5d6e62c81f9dfb27c9466509b"
+      "bytes": 55365,
+      "sha256": "1a5f7101663be54252775fa75f560d2d38ad15f0e48e14a42ea5c2335413595c"
     },
     {
       "path": "test/main-process-services-tests.mjs",
@@ -231,31 +241,31 @@
     {
       "id": "build",
       "command": "npm run build",
-      "startedAt": "2026-07-13T02:28:11.511Z",
-      "endedAt": "2026-07-13T02:28:14.161Z",
-      "durationMs": 2650,
+      "startedAt": "2026-07-13T03:22:46.818Z",
+      "endedAt": "2026-07-13T03:22:49.395Z",
+      "durationMs": 2578,
       "exitCode": 0,
       "status": "passed",
       "logPath": "reports/evidence/HC-SEC-402/logs/build.log",
-      "logSha256": "97a3d1d4eefe4800700a4e784a6355fb118f3cdfc8ee5ebe5300f5b6d69db071"
+      "logSha256": "cec78f1f76d3162b3ab88cfbf95a5f077a7b5a63d7fc12facc78fa3dce3bd5b7"
     },
     {
       "id": "execution-policy",
       "command": "npm run test:execution-policy",
-      "startedAt": "2026-07-13T02:28:14.163Z",
-      "endedAt": "2026-07-13T02:28:17.474Z",
-      "durationMs": 3312,
+      "startedAt": "2026-07-13T03:22:49.397Z",
+      "endedAt": "2026-07-13T03:22:52.633Z",
+      "durationMs": 3237,
       "exitCode": 0,
       "status": "passed",
       "logPath": "reports/evidence/HC-SEC-402/logs/execution-policy.log",
-      "logSha256": "bc212c2c50583447d396c01de84baf08633ecdbdfc170a7da2d2f42238566d60"
+      "logSha256": "c0e21f0d23a66800c1a3547498cb26ae2f336bd68ca5d67391bf08d330092377"
     },
     {
       "id": "terminal-tests",
       "command": "npm run test:terminal",
-      "startedAt": "2026-07-13T02:28:17.475Z",
-      "endedAt": "2026-07-13T02:28:18.598Z",
-      "durationMs": 1123,
+      "startedAt": "2026-07-13T03:22:52.634Z",
+      "endedAt": "2026-07-13T03:22:53.138Z",
+      "durationMs": 504,
       "exitCode": 0,
       "status": "passed",
       "logPath": "reports/evidence/HC-SEC-402/logs/terminal-tests.log",
@@ -264,9 +274,9 @@
     {
       "id": "worktree-tests",
       "command": "npm run test:worktrees",
-      "startedAt": "2026-07-13T02:28:18.598Z",
-      "endedAt": "2026-07-13T02:28:18.950Z",
-      "durationMs": 352,
+      "startedAt": "2026-07-13T03:22:53.138Z",
+      "endedAt": "2026-07-13T03:22:53.488Z",
+      "durationMs": 350,
       "exitCode": 0,
       "status": "passed",
       "logPath": "reports/evidence/HC-SEC-402/logs/worktree-tests.log",
@@ -275,9 +285,9 @@
     {
       "id": "arena-tests",
       "command": "npm run test:arena",
-      "startedAt": "2026-07-13T02:28:18.950Z",
-      "endedAt": "2026-07-13T02:28:19.630Z",
-      "durationMs": 680,
+      "startedAt": "2026-07-13T03:22:53.489Z",
+      "endedAt": "2026-07-13T03:22:54.170Z",
+      "durationMs": 682,
       "exitCode": 0,
       "status": "passed",
       "logPath": "reports/evidence/HC-SEC-402/logs/arena-tests.log",
@@ -286,20 +296,20 @@
     {
       "id": "industrial-tool-tests",
       "command": "npm run test:industrial-tools",
-      "startedAt": "2026-07-13T02:28:19.631Z",
-      "endedAt": "2026-07-13T02:28:23.641Z",
-      "durationMs": 4011,
+      "startedAt": "2026-07-13T03:22:54.170Z",
+      "endedAt": "2026-07-13T03:22:58.555Z",
+      "durationMs": 4385,
       "exitCode": 0,
       "status": "passed",
       "logPath": "reports/evidence/HC-SEC-402/logs/industrial-tool-tests.log",
-      "logSha256": "21f141184a04399893c398b97839ecade2a984ed938fb97b91004abc39ce7ea7"
+      "logSha256": "40a9a4b3ab8aa9979c70327f804566fc54d7cedb606750c9ffb54c7605b74ed1"
     },
     {
       "id": "quality-gate-tests",
       "command": "npm run test:quality-gates",
-      "startedAt": "2026-07-13T02:28:23.641Z",
-      "endedAt": "2026-07-13T02:28:23.800Z",
-      "durationMs": 158,
+      "startedAt": "2026-07-13T03:22:58.555Z",
+      "endedAt": "2026-07-13T03:22:58.721Z",
+      "durationMs": 166,
       "exitCode": 0,
       "status": "passed",
       "logPath": "reports/evidence/HC-SEC-402/logs/quality-gate-tests.log",
@@ -308,9 +318,9 @@
     {
       "id": "service-tests",
       "command": "npm run test:services",
-      "startedAt": "2026-07-13T02:28:23.800Z",
-      "endedAt": "2026-07-13T02:28:27.236Z",
-      "durationMs": 3436,
+      "startedAt": "2026-07-13T03:22:58.721Z",
+      "endedAt": "2026-07-13T03:23:02.726Z",
+      "durationMs": 4005,
       "exitCode": 0,
       "status": "passed",
       "logPath": "reports/evidence/HC-SEC-402/logs/service-tests.log",
@@ -319,9 +329,9 @@
     {
       "id": "renderer-tests",
       "command": "npm run test:renderer",
-      "startedAt": "2026-07-13T02:28:27.238Z",
-      "endedAt": "2026-07-13T02:28:27.382Z",
-      "durationMs": 144,
+      "startedAt": "2026-07-13T03:23:02.727Z",
+      "endedAt": "2026-07-13T03:23:02.867Z",
+      "durationMs": 140,
       "exitCode": 0,
       "status": "passed",
       "logPath": "reports/evidence/HC-SEC-402/logs/renderer-tests.log",
@@ -330,9 +340,9 @@
     {
       "id": "security-tests",
       "command": "npm run test:security",
-      "startedAt": "2026-07-13T02:28:27.382Z",
-      "endedAt": "2026-07-13T02:28:27.475Z",
-      "durationMs": 93,
+      "startedAt": "2026-07-13T03:23:02.868Z",
+      "endedAt": "2026-07-13T03:23:02.959Z",
+      "durationMs": 91,
       "exitCode": 0,
       "status": "passed",
       "logPath": "reports/evidence/HC-SEC-402/logs/security-tests.log",
@@ -341,31 +351,31 @@
     {
       "id": "verify",
       "command": "npm run verify",
-      "startedAt": "2026-07-13T02:28:27.476Z",
-      "endedAt": "2026-07-13T02:28:55.265Z",
-      "durationMs": 27789,
+      "startedAt": "2026-07-13T03:23:02.959Z",
+      "endedAt": "2026-07-13T03:23:32.532Z",
+      "durationMs": 29573,
       "exitCode": 0,
       "status": "passed",
       "logPath": "reports/evidence/HC-SEC-402/logs/verify.log",
-      "logSha256": "e052b57602b29a0894f90717403850ef040561641d1665b6bf03762c3d14acbe"
+      "logSha256": "1d654f58432c8c1fcc2a12cbc19522ca71166510268a68d100e24c1092e9d38a"
     },
     {
       "id": "release-check",
       "command": "npm run release:check",
-      "startedAt": "2026-07-13T02:28:55.266Z",
-      "endedAt": "2026-07-13T02:29:22.383Z",
-      "durationMs": 27117,
+      "startedAt": "2026-07-13T03:23:32.533Z",
+      "endedAt": "2026-07-13T03:24:01.310Z",
+      "durationMs": 28778,
       "exitCode": 0,
       "status": "passed",
       "logPath": "reports/evidence/HC-SEC-402/logs/release-check.log",
-      "logSha256": "259136b112299ce7c0fc24ef22febc1976fe458c8e890fd47fc605d13222ec89"
+      "logSha256": "6a1dc360a8f8658d5f86bcc92aeeb29dedd79e16cedb81f49420aafe5bd4f61d"
     },
     {
       "id": "feature-tests",
       "command": "/Applications/QClaw.app/Contents/Resources/node/node test/feature-tests.mjs",
-      "startedAt": "2026-07-13T02:29:22.384Z",
-      "endedAt": "2026-07-13T02:29:24.732Z",
-      "durationMs": 2348,
+      "startedAt": "2026-07-13T03:24:01.312Z",
+      "endedAt": "2026-07-13T03:24:03.657Z",
+      "durationMs": 2345,
       "exitCode": 0,
       "status": "passed",
       "logPath": "reports/evidence/HC-SEC-402/logs/feature-tests.log",
@@ -374,9 +384,9 @@
     {
       "id": "dod-tests",
       "command": "npm run test:dod",
-      "startedAt": "2026-07-13T02:29:24.732Z",
-      "endedAt": "2026-07-13T02:29:25.037Z",
-      "durationMs": 305,
+      "startedAt": "2026-07-13T03:24:03.657Z",
+      "endedAt": "2026-07-13T03:24:03.957Z",
+      "durationMs": 300,
       "exitCode": 0,
       "status": "passed",
       "logPath": "reports/evidence/HC-SEC-402/logs/dod-tests.log",
@@ -385,20 +395,20 @@
     {
       "id": "dod-scan",
       "command": "npm run scan:dod",
-      "startedAt": "2026-07-13T02:29:25.037Z",
-      "endedAt": "2026-07-13T02:29:25.314Z",
-      "durationMs": 277,
+      "startedAt": "2026-07-13T03:24:03.957Z",
+      "endedAt": "2026-07-13T03:24:04.240Z",
+      "durationMs": 283,
       "exitCode": 0,
       "status": "passed",
       "logPath": "reports/evidence/HC-SEC-402/logs/dod-scan.log",
-      "logSha256": "0fbdf233982c97f8c92483672e845853ebd7ad134f5ed5b3c17971e6fbbb90f3"
+      "logSha256": "f0859896831994c82454b84fbf5ea00a17d016e9f787c00cd04f5714b58bfd2e"
     },
     {
       "id": "production-audit",
       "command": "npm run audit:prod",
-      "startedAt": "2026-07-13T02:29:25.314Z",
-      "endedAt": "2026-07-13T02:29:32.204Z",
-      "durationMs": 6890,
+      "startedAt": "2026-07-13T03:24:04.240Z",
+      "endedAt": "2026-07-13T03:24:06.366Z",
+      "durationMs": 2126,
       "exitCode": 0,
       "status": "passed",
       "logPath": "reports/evidence/HC-SEC-402/logs/production-audit.log",
@@ -407,9 +417,9 @@
     {
       "id": "electron-e2e",
       "command": "npm run test:electron-e2e",
-      "startedAt": "2026-07-13T02:29:32.205Z",
-      "endedAt": "2026-07-13T02:29:57.132Z",
-      "durationMs": 24930,
+      "startedAt": "2026-07-13T03:24:06.367Z",
+      "endedAt": "2026-07-13T03:24:31.903Z",
+      "durationMs": 25536,
       "exitCode": 0,
       "status": "passed",
       "logPath": "reports/evidence/HC-SEC-402/logs/electron-e2e.log",
@@ -418,9 +428,9 @@
     {
       "id": "program-control",
       "command": "npm run test:program",
-      "startedAt": "2026-07-13T02:29:57.133Z",
-      "endedAt": "2026-07-13T02:29:57.289Z",
-      "durationMs": 156,
+      "startedAt": "2026-07-13T03:24:31.904Z",
+      "endedAt": "2026-07-13T03:24:32.022Z",
+      "durationMs": 118,
       "exitCode": 0,
       "status": "passed",
       "logPath": "reports/evidence/HC-SEC-402/logs/program-control.log",
@@ -429,8 +439,8 @@
     {
       "id": "git-diff-check",
       "command": "git diff --check",
-      "startedAt": "2026-07-13T02:29:57.289Z",
-      "endedAt": "2026-07-13T02:29:57.299Z",
+      "startedAt": "2026-07-13T03:24:32.022Z",
+      "endedAt": "2026-07-13T03:24:32.032Z",
       "durationMs": 10,
       "exitCode": 0,
       "status": "passed",

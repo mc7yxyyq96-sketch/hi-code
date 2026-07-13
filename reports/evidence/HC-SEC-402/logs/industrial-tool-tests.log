@@ -20,6 +20,8 @@ $ npm run test:industrial-tools
   ✓ KiCad manual executable path is detected
   ✓ OpenPLC manual compiler path is detected
   ✓ IfcOpenShell manual Python path is detected by module probe
+  ✓ IfcOpenShell automatic detection probes only the highest-priority Python
+  ✓ IfcOpenShell manual path overrides the bounded automatic probe
   ✓ SolidWorks non-Windows platform is unsupported
   ✓ SolidWorks Windows detection can find local executable evidence
   ✓ AVEVA profile evidence is detected without claiming live connection
@@ -116,4 +118,4 @@ $ npm run test:industrial-tools
   ✓ IPC SolidWorks run calls real service path
   ✓ IPC AVEVA run calls real service path
 
-=== 98 passed, 0 failed ===
+=== 100 passed, 0 failed ===
