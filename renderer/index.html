@@ -765,7 +765,16 @@
               <div class="settings-row"><div class="settings-row-label"><b>开源许可</b><p>MIT License</p></div></div>
               <div class="settings-row">
                 <div class="settings-row-label"><b>版本更新</b><p id="updateStatus">从 GitHub Releases 获取最新版本信息。</p></div>
-                <button id="checkUpdatesBtn" class="ghost">检查更新</button>
+                <div class="update-controls">
+                  <select id="updateChannelSelect" class="settings-select" aria-label="更新通道">
+                    <option value="stable">稳定版</option>
+                    <option value="beta">测试版</option>
+                    <option value="nightly">每夜版</option>
+                  </select>
+                  <button id="checkUpdatesBtn" class="ghost">检查更新</button>
+                  <button id="downloadUpdateBtn" class="ghost hidden">下载</button>
+                  <button id="installUpdateBtn" class="primary hidden">安装并重启</button>
+                </div>
               </div>
               <div class="settings-actions about-actions">
                 <button id="aboutRepoBtn" class="ghost">GitHub 仓库</button>

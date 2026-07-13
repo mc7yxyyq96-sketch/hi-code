@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "program": "Hi Code Product-Grade Desktop and Industrial Workbench",
-  "updatedAt": "2026-07-12T15:15:48Z",
+  "updatedAt": "2026-07-13T09:49:20Z",
   "risks": [
     {
       "id": "RISK-RUN-001",
@@ -219,12 +219,12 @@
     {
       "id": "RISK-REL-001",
       "severity": "medium",
-      "status": "mitigated",
+      "status": "open",
       "owner": "security-release",
       "title": "Desktop installers are not commercially signed",
-      "evidence": ["package.json", "reports/releases/0.6.0-alpha.8/known-limitations.md", "reports/evidence/HC-REL-ALPHA-8/manifest.json"],
+      "evidence": ["package.json", "docs/release-pipeline.md", "reports/tasks/HC-REL-420.md", "reports/releases/0.6.0-alpha.8/known-limitations.md", "reports/evidence/HC-REL-ALPHA-8/manifest.json", "reports/evidence/HC-REL-420/manifest.json", "reports/evidence/HC-REL-420/ci-matrix.json"],
       "impact": "macOS Gatekeeper or Windows SmartScreen can warn users and weaken installation trust.",
-      "mitigation": "Keep artifacts prerelease-only, publish checksums, and require signing identities before stable promotion.",
+      "mitigation": "HC-REL-420 now fails closed for approved release mode without a clean source tree and platform credentials, rejects builder trust overrides, keeps CI/development artifacts explicitly unsigned and update-disabled, and verifies native package signatures, SBOM, provenance, updater metadata, and checksums. Commercial certificates and target reputation remain external prerequisites for stable promotion.",
       "trigger": "Stable release or automatic update enablement requires valid signing and platform smoke evidence."
     },
     {

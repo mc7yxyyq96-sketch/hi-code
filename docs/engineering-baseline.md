@@ -68,6 +68,20 @@ npm run test:feature
 
 The current script also runs entrypoint/security tests and production dependency audit.
 
+Desktop package validation is separate from the source release gate:
+
+```bash
+npm run release:preflight -- --platform=darwin
+npm run dist:mac
+npm run release:package-smoke -- --platform=darwin
+npm run release:sbom
+npm run release:provenance
+npm run release:checksums
+npm run release:verify-checksums
+```
+
+Use `dist:win`/`--platform=win32` on Windows and `dist:linux`/`--platform=linux` on Linux. CI and development packages must stay visibly unsigned and update-disabled. Formal signing, notarization, and publication require explicit approval and credentials; a missing credential is a release blocker, not a reason to weaken the preflight.
+
 ## Security Boundaries
 
 - Renderer must not receive Node.js primitives or raw `ipcRenderer`.
@@ -95,6 +109,8 @@ The current script also runs entrypoint/security tests and production dependency
 - Input classification must use the shared Command Registry. Unknown slash commands and ambiguous native matchers fail closed; ordinary coding requests must remain on the agent route.
 - Bash, MCP servers, and industrial adapters must not inherit the whole host environment. Bash uses the allowlist in `src/tools/bash.ts`; MCP/tool adapters use `src/process-env.ts` and only receive explicitly configured extra env.
 - Managed child processes must pass `src/execution-policy.ts`. Platform capability is probed rather than inferred: macOS `sandbox-exec` and Linux bubblewrap are partial isolation, while Windows remains weak until a reviewed restricted-token backend exists. Unsupported requested controls fail closed in strict mode or remain explicitly weak in report-only evidence.
+- Electron-builder runs through `scripts/run-electron-builder.mjs` with a release-specific environment allowlist. Model keys, cloud credentials, arbitrary tokens, package credentials, and unknown variables are not inherited. Signing and publication variables are admitted only in explicitly approved release mode, and logs expose key presence rather than values.
+- Application updates are disabled for unpackaged, invalid-manifest, unsigned, and unapproved builds. The updater does not auto-download or silently install; main-process confirmation and a verified downloaded package are mandatory. Automatic rollback is forbidden.
 - Non-interactive command runners use `src/execution-runner.ts` for timeout, bounded output, metadata-only audit, and descendant cleanup. A Renderer-supplied approval boolean is never sufficient for worktree, command-gate, or real industrial execution.
 - Git and GitHub CLI children use the same minimal environment and argument-array rule. Ambient tokens, model keys, package credentials, cloud secrets, and `SSH_AUTH_SOCK` must not be inherited; GitHub login remains in the external `gh` credential store.
 - Plan mode cannot execute mutating tools. Prompt order lives only in the main-process Runtime queue, and Steer must remain an explicit cancelled turn followed by a new queued instruction.

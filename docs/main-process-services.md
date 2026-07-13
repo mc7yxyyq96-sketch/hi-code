@@ -56,6 +56,12 @@ Sprint 1A splits Electron main-process IPC registration into service modules wit
 - `electron/services/release-service.mjs`
   - Release readiness, release package build, and open release folder channels
   - Uses `src/release-builder.ts`, reads `.hicode/project.json` plus Job Center gate results, writes `releases/<version>/*`, records release build Job events/gates, and stores `release-manifest.json` as a `release_package` Job artifact
+- `electron/services/release-policy.mjs`
+  - Defines release modes, stable/beta/nightly channel mapping, semantic version ordering, signing/notarization preflight, rollback policy, and the packaging child environment allowlist
+  - CI/development packages remain explicitly unsigned and update-disabled; release mode fails closed when approval or required platform signing evidence is missing
+- `electron/services/update-service.mjs`
+  - Owns packaged-app update capability, predefined channel persistence, manual check/download, and native-confirmed installation through `electron-updater`
+  - Never auto-downloads, installs on quit, accepts a Renderer feed URL, or permits automatic downgrade
 - `electron/services/git-service.mjs`
   - Git status, diff, stage, unstage, commit message, commit, local branch, Pull Request, and CI-status channels
   - Refuses dirty branch/PR mutations and requires a fresh native confirmation before PR creation
@@ -140,6 +146,8 @@ The normalized error path redacts API keys, bearer tokens, password-like fields,
 - Industrial Tool Adapter artifacts are confined to the current workspace, external tool execution requires explicit user approval, and Sprint 6G only permits the FreeCAD, KiCad, OpenPLC/IEC, and IfcOpenShell/IFC adapters to run real local tooling. PLC/OpenPLC execution is limited to local syntax-check style commands and never performs device download. IfcOpenShell/IFC execution is limited to local IFC inspection evidence and never declares building-code compliance. SolidWorks bridge generation never launches commercial software and marks native CAD outputs as external-required. AVEVA bridge generation never connects to enterprise systems and rejects plaintext credentials.
 - Quality Gate Runner command gates run without shell interpolation and with an allowlisted environment. Gate evidence must distinguish `simulated`, `not_run`, and `requires_approval` from `passed`.
 - Release Builder confines release outputs to `releases/<version>/` inside the workspace. Failed gates and `requires_approval` gates block release. Simulated, not-run, skipped, and warning gates are preserved as release risks and must appear in release notes instead of being promoted to passed.
+- Desktop packaging children receive a release-tool allowlist rather than the complete parent environment. CI/development artifacts embed `unsigned` and `updateEnabled: false`. macOS/Windows application updates require an approved signed package; approved Linux releases remain explicitly `integrity_verified` through HTTPS updater metadata rather than claiming platform signing.
+- Update installation is packaged-only and main-process controlled. The Renderer can select only `stable`, `beta`, or `nightly`; it cannot set a feed URL or authorization header. Download and install are separate actions, and installation requires a native confirmation after verified download.
 - Bash tool environment allowlisting remains in `src/tools/bash.ts`.
 - MCP server processes and industrial tool execution paths must use
   `src/execution-policy.ts`, `src/execution-runner.ts`, and `src/process-env.ts`
@@ -165,6 +173,7 @@ Public renderer and preload channels include:
 - `toolchain:list`, `toolchain:detect`, `toolchain:capabilities`, `toolchain:validate-adapter`, `toolchain:run`
 - `quality-gate:list`, `quality-gate:run`, `quality-gate:approve`
 - `release:readiness`, `release:build`, `release:open`
+- `app:update-status`, `app:update-channel`, `app:check-updates`, `app:update-download`, `app:update-install`
 - `tool-events:list`, `recoverable-tasks:list`
 - `diffs:list`, `diffs:accept`, `diffs:reject`, `diffs:accept-all`, `diffs:reject-all`, `diffs:clear-archived`
 - `git:status`, `git:diff`, `git:stage`, `git:unstage`, `git:commit-message`, `git:commit`, `git:branches`, `git:branch:create`, `git:branch:switch`, `git:collaboration`, `git:pr:create`
@@ -194,6 +203,7 @@ node test/main-process-services-tests.mjs
 npm run test:editor-workbench
 npm run test:terminal
 npm run test:preview
+npm run test:release-pipeline
 npm run test:runtime-control
 npm run test:git-collaboration
 node test/patch-arena-tests.mjs
@@ -205,4 +215,5 @@ node test/release-builder-tests.mjs
 node --check electron/main.mjs
 node --check electron/preload.cjs
 npm run test:electron-e2e
+npm run release:package-smoke -- --platform=darwin
 ```

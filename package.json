@@ -72,6 +72,7 @@
     "test:electron-e2e": "node tests/electron-e2e/run.mjs",
     "test:electron-e2e:update": "node tests/electron-e2e/run.mjs --update-fixtures",
     "test:electron-compatibility": "node test/electron-compatibility-tests.mjs",
+    "test:release-pipeline": "node test/release-pipeline-tests.mjs",
     "sync:version": "node scripts/sync-version.mjs",
     "scan:dod": "node scripts/scan-dod.mjs",
     "program:baseline": "node scripts/capture-program-baseline.mjs",
@@ -92,6 +93,7 @@
     "program:evidence:git-loop": "node scripts/capture-task-evidence.mjs --task=HC-GIT-320",
     "program:evidence:secrets": "node scripts/capture-task-evidence.mjs --task=HC-SEC-401",
     "program:evidence:execution-policy": "node scripts/capture-task-evidence.mjs --task=HC-SEC-402",
+    "program:evidence:release-pipeline": "node scripts/capture-task-evidence.mjs --task=HC-REL-420",
     "program:evidence:alpha7": "node scripts/capture-task-evidence.mjs --task=HC-REL-ALPHA-7",
     "program:evidence:alpha8": "node scripts/capture-task-evidence.mjs --task=HC-REL-ALPHA-8",
     "store:export": "node scripts/export-store-catalog.mjs",
@@ -101,11 +103,17 @@
     "audit:prod": "node scripts/audit-production.mjs --audit-level=high",
     "audit:high": "npm audit --audit-level=high",
     "release:check": "node scripts/verify.mjs --release",
+    "release:preflight": "node scripts/release-preflight.mjs",
+    "release:sbom": "node scripts/generate-sbom.mjs",
+    "release:provenance": "node scripts/generate-provenance.mjs",
     "release:checksums": "node scripts/checksum-release.mjs",
+    "release:verify-checksums": "node scripts/checksum-release.mjs --verify",
+    "release:package-smoke": "node scripts/package-smoke.mjs",
     "app": "npm run build && electron .",
-    "dist:mac": "npm run build && node scripts/run-electron-builder.mjs --mac dmg",
-    "dist:win": "npm run build && node scripts/run-electron-builder.mjs --win --x64",
-    "dist:all": "npm run build && node scripts/run-electron-builder.mjs --mac dmg --win --x64"
+    "dist:mac": "npm run build && node scripts/run-electron-builder.mjs --mac dmg zip",
+    "dist:win": "npm run build && node scripts/run-electron-builder.mjs --win nsis zip --x64",
+    "dist:linux": "npm run build && node scripts/run-electron-builder.mjs --linux AppImage deb --x64",
+    "dist:all": "npm run build && node scripts/run-electron-builder.mjs --mac dmg zip && node scripts/run-electron-builder.mjs --win nsis zip --x64 && node scripts/run-electron-builder.mjs --linux AppImage deb --x64"
   },
   "dependencies": {
     "@codemirror/commands": "^6.10.4",
@@ -121,6 +129,7 @@
     "@xterm/xterm": "^6.0.0",
     "chalk": "^5.3.0",
     "diff": "^5.2.0",
+    "electron-updater": "6.8.9",
     "ink": "^5.0.1",
     "ink-spinner": "^5.0.0",
     "node-pty": "1.2.0-beta.12",
@@ -146,6 +155,22 @@
     "asarUnpack": [
       "node_modules/node-pty/**/*"
     ],
+    "extraResources": [
+      {
+        "from": "build/generated/release-channel.json",
+        "to": "release-channel.json"
+      }
+    ],
+    "generateUpdatesFilesForAllChannels": true,
+    "electronUpdaterCompatibility": ">=2.16",
+    "publish": {
+      "provider": "github",
+      "owner": "mc7yxyyq96-sketch",
+      "repo": "hi-code",
+      "protocol": "https",
+      "releaseType": "draft",
+      "channel": "latest"
+    },
     "files": [
       "dist/**/*",
       "electron/**/*",
@@ -157,10 +182,13 @@
       "buildResources": "build"
     },
     "mac": {
-      "target": "dmg",
+      "target": [
+        "dmg",
+        "zip"
+      ],
       "category": "public.app-category.developer-tools",
       "icon": "build/icon.icns",
-      "identity": null
+      "artifactName": "Hi-Code-${version}-mac-${arch}.${ext}"
     },
     "dmg": {
       "title": "Hi Code"
@@ -170,12 +198,25 @@
         "nsis",
         "zip"
       ],
-      "icon": "build/icon.png"
+      "icon": "build/icon.png",
+      "artifactName": "Hi-Code-${version}-win-${arch}.${ext}"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "artifactName": "${productName}-Setup-${version}-win-${arch}.${ext}"
+      "runAfterFinish": false,
+      "artifactName": "Hi-Code-Setup-${version}-win-${arch}.${ext}"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Development",
+      "synopsis": "Local-first AI engineering workbench",
+      "description": "Hi Code is a local-first desktop coding and industrial engineering agent.",
+      "maintainer": "Hi Code contributors",
+      "artifactName": "Hi-Code-${version}-linux-${arch}.${ext}"
     }
   },
   "engines": {

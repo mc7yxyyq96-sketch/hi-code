@@ -1,0 +1,6 @@
+$ npm run release:provenance
+
+> hi-code@0.6.0-alpha.8 release:provenance
+> node scripts/generate-provenance.mjs
+
+[provenance] wrote release/provenance-v0.6.0-alpha.8.json (6 subjects, unattested=true)

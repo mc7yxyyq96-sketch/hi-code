@@ -1,0 +1,130 @@
+{
+  "schemaVersion": 1,
+  "event": "pull_request",
+  "pullRequest": 20,
+  "branch": "codex/security-release/hc-rel-420",
+  "headSha": "6e42ce3e30028ba9a6e8aee920865a68704b7571",
+  "status": "completed",
+  "conclusion": "success",
+  "runs": [
+    {
+      "workflow": "Release Packaging",
+      "runId": 29239107911,
+      "status": "completed",
+      "conclusion": "success",
+      "createdAt": "2026-07-13T09:26:27Z",
+      "updatedAt": "2026-07-13T09:33:17Z",
+      "url": "https://github.com/mc7yxyyq96-sketch/hi-code/actions/runs/29239107911"
+    },
+    {
+      "workflow": "CI",
+      "runId": 29239108094,
+      "status": "completed",
+      "conclusion": "success",
+      "createdAt": "2026-07-13T09:26:27Z",
+      "updatedAt": "2026-07-13T09:28:31Z",
+      "url": "https://github.com/mc7yxyyq96-sketch/hi-code/actions/runs/29239108094"
+    }
+  ],
+  "jobs": [
+    {
+      "workflow": "Release Packaging",
+      "name": "Package smoke (Windows x64)",
+      "platform": "windows-latest",
+      "status": "completed",
+      "conclusion": "success",
+      "jobId": 86780623274,
+      "url": "https://github.com/mc7yxyyq96-sketch/hi-code/actions/runs/29239107911/job/86780623274",
+      "build": "success",
+      "packageSmoke": "success",
+      "sbom": "success",
+      "provenance": "success",
+      "checksums": "success",
+      "artifactUpload": "success"
+    },
+    {
+      "workflow": "Release Packaging",
+      "name": "Package smoke (Linux x64)",
+      "platform": "ubuntu-latest",
+      "status": "completed",
+      "conclusion": "success",
+      "jobId": 86780623283,
+      "url": "https://github.com/mc7yxyyq96-sketch/hi-code/actions/runs/29239107911/job/86780623283",
+      "build": "success",
+      "packageSmoke": "success",
+      "sbom": "success",
+      "provenance": "success",
+      "checksums": "success",
+      "artifactUpload": "success"
+    },
+    {
+      "workflow": "Release Packaging",
+      "name": "Package smoke (macOS)",
+      "platform": "macos-latest",
+      "status": "completed",
+      "conclusion": "success",
+      "jobId": 86780623314,
+      "url": "https://github.com/mc7yxyyq96-sketch/hi-code/actions/runs/29239107911/job/86780623314",
+      "build": "success",
+      "packageSmoke": "success",
+      "sbom": "success",
+      "provenance": "success",
+      "checksums": "success",
+      "artifactUpload": "success"
+    },
+    {
+      "workflow": "CI",
+      "name": "test",
+      "platform": "ubuntu-latest",
+      "status": "completed",
+      "conclusion": "success",
+      "jobId": 86780624170,
+      "url": "https://github.com/mc7yxyyq96-sketch/hi-code/actions/runs/29239108094/job/86780624170",
+      "build": "success",
+      "testSuites": "success",
+      "dodScan": "success"
+    },
+    {
+      "workflow": "CI",
+      "name": "Electron smoke (macos-latest)",
+      "platform": "macos-latest",
+      "status": "completed",
+      "conclusion": "success",
+      "jobId": 86780624151,
+      "url": "https://github.com/mc7yxyyq96-sketch/hi-code/actions/runs/29239108094/job/86780624151",
+      "build": "success",
+      "electronSmoke": "success",
+      "artifactUpload": "success"
+    },
+    {
+      "workflow": "CI",
+      "name": "Electron smoke (ubuntu-latest)",
+      "platform": "ubuntu-latest",
+      "status": "completed",
+      "conclusion": "success",
+      "jobId": 86780624184,
+      "url": "https://github.com/mc7yxyyq96-sketch/hi-code/actions/runs/29239108094/job/86780624184",
+      "build": "success",
+      "electronSmoke": "success",
+      "artifactUpload": "success"
+    },
+    {
+      "workflow": "CI",
+      "name": "Electron smoke (windows-latest)",
+      "platform": "windows-latest",
+      "status": "completed",
+      "conclusion": "success",
+      "jobId": 86780624216,
+      "url": "https://github.com/mc7yxyyq96-sketch/hi-code/actions/runs/29239108094/job/86780624216",
+      "build": "success",
+      "electronSmoke": "success",
+      "artifactUpload": "success"
+    }
+  ],
+  "annotations": [
+    {
+      "severity": "warning",
+      "message": "Packages are CI/development artifacts and remain unsigned and update-disabled; commercial signing credentials were not present."
+    }
+  ]
+}

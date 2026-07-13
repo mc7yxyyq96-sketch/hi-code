@@ -1,43 +1,56 @@
 #!/usr/bin/env node
-import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import process from "node:process";
 import { fileURLToPath } from "node:url";
+import { listReleaseArtifacts, sha256File } from "./release-artifacts.mjs";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const releaseDir = path.join(root, "release");
-const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
-const version = String(pkg.version || "").trim();
+const scriptPath = fileURLToPath(import.meta.url);
+const root = path.resolve(path.dirname(scriptPath), "..");
 
-if (!version) {
-  console.error("[checksums] package.json version is required");
-  process.exit(1);
+export function writeChecksums({ releaseDir, version }) {
+  const artifacts = listReleaseArtifacts(releaseDir, version);
+  if (!artifacts.length) throw new Error(`no release artifacts found for version ${version}`);
+  const lines = artifacts.map((name) => `${sha256File(path.join(releaseDir, name))}  ${name}`);
+  const outputPath = path.join(releaseDir, `SHA256SUMS-v${version}.txt`);
+  fs.writeFileSync(outputPath, `${lines.join("\n")}\n`, { mode: 0o644 });
+  return { outputPath, lines, artifacts };
 }
 
-if (!fs.existsSync(releaseDir)) {
-  console.error("[checksums] release directory does not exist. Build packages first.");
-  process.exit(1);
+export function verifyChecksums({ releaseDir, version }) {
+  const checksumPath = path.join(releaseDir, `SHA256SUMS-v${version}.txt`);
+  if (!fs.existsSync(checksumPath)) throw new Error(`checksum manifest is missing: ${path.basename(checksumPath)}`);
+  const entries = fs.readFileSync(checksumPath, "utf8").trim().split(/\r?\n/).filter(Boolean).map((line) => {
+    const match = line.match(/^([0-9a-f]{64})  ([^/\\]+)$/i);
+    if (!match) throw new Error(`invalid checksum line: ${line}`);
+    return { digest: match[1].toLowerCase(), name: match[2] };
+  });
+  const expected = listReleaseArtifacts(releaseDir, version);
+  const manifestNames = entries.map((entry) => entry.name).sort((a, b) => a.localeCompare(b));
+  if (JSON.stringify(manifestNames) !== JSON.stringify(expected)) {
+    throw new Error("checksum manifest does not cover the current release artifact set");
+  }
+  for (const entry of entries) {
+    const actual = sha256File(path.join(releaseDir, entry.name));
+    if (actual !== entry.digest) throw new Error(`checksum mismatch: ${entry.name}`);
+  }
+  return { checksumPath, entries };
 }
 
-const allowedExtensions = new Set([".dmg", ".exe", ".zip"]);
-const artifacts = fs.readdirSync(releaseDir)
-  .filter((name) => name.includes(version))
-  .filter((name) => allowedExtensions.has(path.extname(name).toLowerCase()))
-  .sort((a, b) => a.localeCompare(b));
-
-if (!artifacts.length) {
-  console.error(`[checksums] no release artifacts found for version ${version}`);
-  process.exit(1);
+if (process.argv[1] && path.resolve(process.argv[1]) === scriptPath) {
+  const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
+  const releaseDir = path.join(root, "release");
+  try {
+    if (process.argv.includes("--verify")) {
+      const verified = verifyChecksums({ releaseDir, version: pkg.version });
+      console.log(`[checksums] verified ${verified.entries.length} artifacts from ${path.relative(root, verified.checksumPath)}`);
+    } else {
+      const written = writeChecksums({ releaseDir, version: pkg.version });
+      console.log(`[checksums] wrote ${path.relative(root, written.outputPath)}`);
+      for (const line of written.lines) console.log(line);
+    }
+  } catch (error) {
+    console.error(`[checksums] ${error.message}`);
+    process.exitCode = 1;
+  }
 }
-
-const lines = artifacts.map((name) => {
-  const absolutePath = path.join(releaseDir, name);
-  const digest = crypto.createHash("sha256").update(fs.readFileSync(absolutePath)).digest("hex");
-  return `${digest}  release/${name}`;
-});
-
-const outputPath = path.join(releaseDir, `SHA256SUMS-v${version}.txt`);
-fs.writeFileSync(outputPath, `${lines.join("\n")}\n`, { mode: 0o644 });
-
-console.log(`[checksums] wrote release/SHA256SUMS-v${version}.txt`);
-for (const line of lines) console.log(line);

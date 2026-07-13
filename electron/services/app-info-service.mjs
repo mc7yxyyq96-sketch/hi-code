@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { compareReleaseVersions } from "./release-policy.mjs";
 
 // About/settings support: app metadata, data-dir access, fixed project pages,
 // and a GitHub release update check. Pages are a fixed whitelist so the
@@ -14,18 +15,20 @@ const LATEST_RELEASE_API = "https://api.github.com/repos/mc7yxyyq96-sketch/hi-co
 
 /** Compare dotted versions ("0.5.1" vs "0.5.0"); returns -1 / 0 / 1. */
 export function compareVersions(a, b) {
-  const pa = String(a || "").replace(/^v/i, "").split(".").map((n) => parseInt(n, 10) || 0);
-  const pb = String(b || "").replace(/^v/i, "").split(".").map((n) => parseInt(n, 10) || 0);
-  const len = Math.max(pa.length, pb.length);
-  for (let i = 0; i < len; i++) {
-    const da = pa[i] || 0;
-    const db = pb[i] || 0;
-    if (da !== db) return da < db ? -1 : 1;
+  try {
+    const normalize = (value) => {
+      const plain = String(value || "").replace(/^v/i, "");
+      if (/^\d+$/.test(plain)) return `${plain}.0.0`;
+      if (/^\d+\.\d+$/.test(plain)) return `${plain}.0`;
+      return plain;
+    };
+    return compareReleaseVersions(normalize(a), normalize(b));
+  } catch {
+    return String(a || "").localeCompare(String(b || ""));
   }
-  return 0;
 }
 
-export function createAppInfoService({ getVersion, shell, dataDir, configPath, fetchImpl = fetch, platform = process.platform, arch = process.arch, versions = process.versions }) {
+export function createAppInfoService({ getVersion, shell, dataDir, configPath, fetchImpl = fetch, platform = process.platform, arch = process.arch, versions = process.versions, updateService = null }) {
   if (typeof getVersion !== "function") throw new Error("createAppInfoService requires getVersion");
   if (!dataDir) throw new Error("createAppInfoService requires dataDir");
 
@@ -43,6 +46,7 @@ export function createAppInfoService({ getVersion, shell, dataDir, configPath, f
         configPath: configPath || "",
         repoUrl: REPO_URL,
         license: "MIT",
+        update: updateService?.getStatus?.() || null,
       };
     },
 
@@ -76,6 +80,7 @@ export function createAppInfoService({ getVersion, shell, dataDir, configPath, f
     },
 
     async checkUpdates() {
+      if (updateService) return updateService.checkUpdates();
       const current = getVersion();
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 10000);
@@ -114,6 +119,25 @@ export function createAppInfoService({ getVersion, shell, dataDir, configPath, f
         clearTimeout(timer);
       }
     },
+
+    getUpdateStatus() {
+      return updateService ? updateService.getStatus() : { ok: true, capability: { available: false, reason: "legacy_update_check" }, state: null };
+    },
+
+    setUpdateChannel(channel) {
+      if (!updateService) return { ok: false, error: "当前版本不支持更新通道设置。" };
+      return updateService.setChannel(channel);
+    },
+
+    downloadUpdate() {
+      if (!updateService) return { ok: false, error: "当前版本不支持应用内下载更新。" };
+      return updateService.downloadUpdate();
+    },
+
+    installUpdate() {
+      if (!updateService) return { ok: false, error: "当前版本不支持应用内安装更新。" };
+      return updateService.installUpdate();
+    },
   };
 }
 
@@ -126,4 +150,8 @@ export function registerAppInfoIpc({ register, appInfo }) {
   register.handle("app:reveal-config", () => appInfo.revealConfig());
   register.handle("app:open-page", (_event, target) => appInfo.openPage(target));
   register.handle("app:check-updates", () => appInfo.checkUpdates());
+  register.handle("app:update-status", () => appInfo.getUpdateStatus());
+  register.handle("app:update-channel", (_event, channel) => appInfo.setUpdateChannel(channel));
+  register.handle("app:update-download", () => appInfo.downloadUpdate());
+  register.handle("app:update-install", () => appInfo.installUpdate());
 }
