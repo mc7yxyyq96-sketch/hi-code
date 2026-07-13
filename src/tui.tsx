@@ -79,6 +79,7 @@ function App({ opts, bridge, onExit }: AppProps) {
 
   const runtimeRef = useRef<Runtime | null>(null);
   const assistantDisconnectRef = useRef<(() => void) | null>(null);
+  const quittingRef = useRef(false);
   const askResolveRef = useRef<((s: string) => void) | null>(null);
   const lineBuf = useRef("");
   const completer = useRef<Completer>(makeCompleter(opts.cwd));
@@ -117,10 +118,12 @@ function App({ opts, bridge, onExit }: AppProps) {
   }
   const rt = runtimeRef.current;
 
-  const quit = () => {
+  const quit = async () => {
+    if (quittingRef.current) return;
+    quittingRef.current = true;
     assistantDisconnectRef.current?.();
     assistantDisconnectRef.current = null;
-    rt.shutdown();
+    await rt.shutdown();
     onExit();
     exit();
     process.exit(0);
@@ -130,7 +133,7 @@ function App({ opts, bridge, onExit }: AppProps) {
   useInput((input, key) => {
     if (key.ctrl && input === "c") {
       if (rt.abort()) feed(chalk.yellow("\n  ⏹ interrupting…\n"));
-      else quit();
+      else void quit();
     }
   });
 

@@ -58,9 +58,11 @@ const requiredFiles = [
   "docs/adr/ADR-0016-keychain-backed-secret-references.md",
   "docs/adr/ADR-0017-cross-platform-execution-policy.md",
   "docs/adr/ADR-0018-controlled-desktop-release-pipeline.md",
+  "docs/adr/ADR-0019-mcp-streamable-http-oauth.md",
   "docs/credential-storage.md",
   "docs/execution-policy.md",
   "docs/release-pipeline.md",
+  "docs/mcp-connection-layer.md",
   "docs/attachments-and-command-registry.md",
   "docs/anthropic-ollama-adapters.md",
   "docs/model-provider-adapters.md",
@@ -91,6 +93,7 @@ const requiredFiles = [
   "reports/tasks/HC-SEC-401.md",
   "reports/tasks/HC-SEC-402.md",
   "reports/tasks/HC-REL-420.md",
+  "reports/tasks/HC-MCP-410.md",
   "reports/tasks/HC-REL-ALPHA-7.md",
   "reports/evidence/baseline/manifest.json",
   "reports/evidence/HC-QA-101/manifest.json",
@@ -120,6 +123,7 @@ const requiredFiles = [
   "reports/evidence/HC-SEC-402/ci-matrix.json",
   "reports/evidence/HC-REL-420/manifest.json",
   "reports/evidence/HC-REL-420/ci-matrix.json",
+  "reports/evidence/HC-MCP-410/manifest.json",
   "scripts/electron-compatibility.mjs",
   "scripts/run-electron-builder.mjs",
   "test/electron-compatibility-tests.mjs",
@@ -173,6 +177,7 @@ const executionPolicyManifest = readJson(root, "reports/evidence/HC-SEC-402/mani
 const executionPolicyCiEvidence = readJson(root, "reports/evidence/HC-SEC-402/ci-matrix.json");
 const releasePipelineManifest = readJson(root, "reports/evidence/HC-REL-420/manifest.json");
 const releasePipelineCiEvidence = readJson(root, "reports/evidence/HC-REL-420/ci-matrix.json");
+const mcpConnectionManifest = readJson(root, "reports/evidence/HC-MCP-410/manifest.json");
 const packageJson = readJson(root, "package.json");
 const packageLock = readJson(root, "package-lock.json");
 const programTask = backlog.tasks.find((task) => task.id === "HC-PROG-100");
@@ -194,6 +199,7 @@ const gitDeliveryTask = backlog.tasks.find((task) => task.id === "HC-GIT-320");
 const secretStorageTask = backlog.tasks.find((task) => task.id === "HC-SEC-401");
 const executionPolicyTask = backlog.tasks.find((task) => task.id === "HC-SEC-402");
 const releasePipelineTask = backlog.tasks.find((task) => task.id === "HC-REL-420");
+const mcpConnectionTask = backlog.tasks.find((task) => task.id === "HC-MCP-410");
 const qaTask = board.tasks.find((task) => task.id === "HC-QA-101");
 const runtimeTask = board.tasks.find((task) => task.id === "HC-RUN-201");
 const runtimeStoreTask = board.tasks.find((task) => task.id === "HC-RUN-202");
@@ -213,6 +219,7 @@ const gitDeliveryBoardTask = board.tasks.find((task) => task.id === "HC-GIT-320"
 const secretStorageBoardTask = board.tasks.find((task) => task.id === "HC-SEC-401");
 const executionPolicyBoardTask = board.tasks.find((task) => task.id === "HC-SEC-402");
 const releasePipelineBoardTask = board.tasks.find((task) => task.id === "HC-REL-420");
+const mcpConnectionBoardTask = board.tasks.find((task) => task.id === "HC-MCP-410");
 
 console.log("\n[program-control] board and evidence contract");
 check("backlog records immutable source commit", /^[0-9a-f]{40}$/.test(backlog.sourceCommit || ""));
@@ -663,6 +670,57 @@ check(
   "Controlled release-pipeline evidence capture is reproducible",
   packageJson.scripts["program:evidence:release-pipeline"] === "node scripts/capture-task-evidence.mjs --task=HC-REL-420" &&
     fs.readFileSync(path.join(root, "scripts/capture-task-evidence.mjs"), "utf8").includes('"HC-REL-420"'),
+);
+check(
+  "HC-MCP-410 completed only after its dependency and evidence",
+  mcpConnectionTask?.status === "completed" &&
+    mcpConnectionTask?.branch === "codex/runtime-engine/hc-mcp-410" &&
+    Boolean(mcpConnectionTask?.startedAt) &&
+    Boolean(mcpConnectionTask?.completedAt) &&
+    mcpConnectionTask?.taskManifest === "reports/tasks/HC-MCP-410.md" &&
+    mcpConnectionTask?.evidenceManifest === "reports/evidence/HC-MCP-410/manifest.json" &&
+    mcpConnectionTask?.dependencies?.every((id) => backlog.tasks.find((task) => task.id === id)?.status === "completed") &&
+    mcpConnectionBoardTask?.status === "completed" &&
+    mcpConnectionBoardTask?.evidence === "reports/evidence/HC-MCP-410/manifest.json",
+  JSON.stringify(mcpConnectionTask),
+);
+check(
+  "MCP Streamable HTTP and OAuth gate passed with evidence",
+  board.gates?.find((gate) => gate.id === "mcp-streamable-http-oauth")?.status === "passed" &&
+    board.gates?.find((gate) => gate.id === "mcp-streamable-http-oauth")?.owner === "HC-MCP-410" &&
+    board.gates?.find((gate) => gate.id === "mcp-streamable-http-oauth")?.evidence === "reports/evidence/HC-MCP-410/manifest.json",
+);
+check(
+  "HC-MCP-410 transport risk is evidence-backed and mitigated",
+  risks.risks?.some((risk) =>
+    risk.id === "RISK-MCP-001" &&
+    risk.status === "mitigated" &&
+    risk.evidence?.includes("reports/evidence/HC-MCP-410/manifest.json")),
+);
+check(
+  "HC-MCP-410 evidence records every command passing",
+  mcpConnectionManifest.summary?.allPassed === true &&
+    mcpConnectionManifest.summary?.total === 14 &&
+    mcpConnectionManifest.summary?.failed === 0,
+  JSON.stringify(mcpConnectionManifest.summary),
+);
+check(
+  "HC-MCP-410 evidence is captured from its isolated branch and accepted release base",
+  mcpConnectionManifest.source?.branch === "codex/runtime-engine/hc-mcp-410" &&
+    mcpConnectionManifest.source?.parentCommit === "630b19d7d1d326cef6cb01341c4b2bc36a43ab59",
+);
+for (const requiredCommand of ["build", "mcp-tests", "service-tests", "renderer-tests", "security-tests", "verify", "release-check", "feature-tests", "dod-tests", "dod-scan", "production-audit", "electron-e2e", "program-control", "git-diff-check"]) {
+  check(`HC-MCP-410 captured ${requiredCommand}`, mcpConnectionManifest.commands?.some((command) => command.id === requiredCommand && command.status === "passed"));
+}
+for (const command of mcpConnectionManifest.commands || []) {
+  const absolute = path.join(root, command.logPath || "");
+  check(`HC-MCP-410 ${command.id} log exists`, Boolean(command.logPath) && fs.existsSync(absolute));
+  if (fs.existsSync(absolute)) check(`HC-MCP-410 ${command.id} log hash matches`, digest(absolute) === command.logSha256);
+}
+check(
+  "HC-MCP-410 evidence capture is reproducible",
+  packageJson.scripts["program:evidence:mcp"] === "node scripts/capture-task-evidence.mjs --task=HC-MCP-410" &&
+    fs.readFileSync(path.join(root, "scripts/capture-task-evidence.mjs"), "utf8").includes('"HC-MCP-410"'),
 );
 check("alpha.8 version is synchronized", packageJson.version === "0.6.0-alpha.8" && packageLock.version === packageJson.version && packageLock.packages?.[""]?.version === packageJson.version && fs.readFileSync(path.join(root, "VERSION"), "utf8").trim() === packageJson.version);
 check("alpha.8 release candidate gate passed", board.currentRelease === packageJson.version && board.candidate?.version === packageJson.version && board.candidate?.branch === "codex/release/0.6.0-alpha.8" && board.candidate?.status === "passed" && board.candidate?.evidence === "reports/evidence/HC-REL-ALPHA-8/manifest.json" && board.gates?.find((gate) => gate.id === "alpha-8-release-candidate")?.status === "passed");

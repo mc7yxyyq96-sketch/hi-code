@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "program": "Hi Code Product-Grade Desktop and Industrial Workbench",
-  "updatedAt": "2026-07-13T09:49:20Z",
+  "updatedAt": "2026-07-13T15:27:17Z",
   "risks": [
     {
       "id": "RISK-RUN-001",
@@ -226,6 +226,17 @@
       "impact": "macOS Gatekeeper or Windows SmartScreen can warn users and weaken installation trust.",
       "mitigation": "HC-REL-420 now fails closed for approved release mode without a clean source tree and platform credentials, rejects builder trust overrides, keeps CI/development artifacts explicitly unsigned and update-disabled, and verifies native package signatures, SBOM, provenance, updater metadata, and checksums. Commercial certificates and target reputation remain external prerequisites for stable promotion.",
       "trigger": "Stable release or automatic update enablement requires valid signing and platform smoke evidence."
+    },
+    {
+      "id": "RISK-MCP-001",
+      "severity": "high",
+      "status": "mitigated",
+      "owner": "runtime-engine",
+      "title": "Remote MCP sessions and credentials lacked a transport-neutral lifecycle",
+      "evidence": ["src/mcp.ts", "src/mcp-transport.ts", "src/mcp-auth.ts", "src/mcp-protocol.ts", "test/mcp-connection-tests.mjs", "reports/evidence/HC-MCP-410/manifest.json"],
+      "impact": "Adding remote MCP without bounded sessions, cancellation, OAuth expiry, secret references, and redaction could leak credentials or leave Desktop, CLI, and TUI with divergent tool behavior.",
+      "mitigation": "HC-MCP-410 preserves managed stdio and adds HTTPS Streamable HTTP, negotiated protocol/session state, reconnect, timeout, cancellation, graceful shutdown, OAuth discovery/PKCE/refresh/rotation, atomic credential-and-expiry persistence, secret references, bounded parsing, and sensitive audit redaction behind the existing manager API.",
+      "trigger": "Any plaintext remote token, insecure non-loopback endpoint, unbounded response, false connected state, or stdio compatibility regression reopens this risk."
     },
     {
       "id": "RISK-PROV-001",

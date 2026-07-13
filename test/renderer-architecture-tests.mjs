@@ -99,6 +99,9 @@ check("recovery actions restore the source session before retry", bootstrap.incl
 check("unsafe recovery states never run automatically", bootstrap.includes('action === "retry_turn" || action === "retry_with_approval"') && bootstrap.includes("task.canRetry === true") && bootstrap.includes("该会话目前只能回放") && bootstrap.includes("请先检查未完成输出和工具副作用"));
 check("recovery UI distinguishes retry approval review and inspection", timelineView.includes('retry_with_approval: "重新确认"') && timelineView.includes('review_output: "查看输出"') && timelineView.includes('inspect_tool: "检查状态"') && timelineView.includes("保留 ${task.partialAssistantText.length} 字输出"));
 check("MCP settings validates mcpServers JSON", bootstrap.includes("function validateMcpServersConfig") && bootstrap.includes("MCP JSON 格式错误") && bootstrap.includes("mcpServers 必须是 JSON 对象"));
+check("MCP settings documents stdio and Streamable HTTP security", html.includes("本地 stdio") && html.includes("Streamable HTTP") && html.includes("远程连接必须使用 HTTPS") && html.includes("系统安全存储"));
+check("MCP lifecycle UI exposes real reload connect reconnect disconnect and cancel actions", html.includes('id="mcp-reload"') && html.includes('id="mcpLifecycleList"') && bootstrap.includes("function renderMcpLifecycle") && bootstrap.includes("api.reloadMcpServers()") && bootstrap.includes("api.connectMcpServer(server.server)") && bootstrap.includes("api.reconnectMcpServer(server.server)") && bootstrap.includes("api.disconnectMcpServer(server.server)") && bootstrap.includes("api.cancelMcpRequest({ server: server.server"));
+check("MCP lifecycle UI surfaces negotiated protocol tools auth and normalized errors", bootstrap.includes("server.protocolVersion") && bootstrap.includes("server.tools.length") && bootstrap.includes("server.auth?.type") && bootstrap.includes("server.lastError?.message") && css.includes(".mcp-lifecycle-row") && css.includes(".mcp-lifecycle-error"));
 check("command sidebar opens visible command center", html.includes('section id="commandView"') && bootstrap.includes('route: "commandView"') && bootstrap.includes('"cmdBtn").onclick = showCommandCenter'));
 check("command center exposes real actions", bootstrap.includes("function executeCommand") && bootstrap.includes('if (name === "/mcp") return showCapabilities("mcp")') && bootstrap.includes('if (name === "/diff") return showGit()'));
 check("Agent sidebar opens installed agent capability list", html.includes('id="agentsBtn"') && bootstrap.includes('$("agentsBtn").onclick = () => showCapabilities("agents")') && bootstrap.includes('activeNav: CAPABILITY_META[kind]?.nav'));
@@ -172,6 +175,12 @@ const api = createHiCodeApi({
   attachImage: async () => ({ ok: true, id: "att-00000000-0000-4000-8000-000000000002", kind: "image" }),
   removeAttachment: async () => ({ ok: true }),
   newSession: async () => ({ ok: true, sessionId: "session-new" }),
+  listMcpLifecycle: async () => ({ ok: true, servers: [{ server: "remote", state: "ready", protocolVersion: "2025-11-25", tools: ["echo"], auth: { type: "oauth", state: "ready" } }] }),
+  reloadMcpServers: async () => ({ ok: true, results: [{ server: "remote", ok: true }], servers: [] }),
+  connectMcpServer: async (server) => ({ ok: true, server }),
+  reconnectMcpServer: async (server) => ({ ok: true, server, reconnected: true }),
+  disconnectMcpServer: async (server) => ({ ok: true, server, disconnected: true }),
+  cancelMcpRequest: async (payload) => ({ ok: true, server: payload.server, callId: payload.callId, cancelled: 1 }),
   gitBranches: async () => ({ ok: true, current: "main", branches: [{ name: "main", current: true }] }),
   gitCreateBranch: async (payload) => ({ ok: true, branch: payload.name }),
   gitSwitchBranch: async (payload) => ({ ok: true, branch: payload.name }),
@@ -241,6 +250,10 @@ check("api wrapper returns standardized missing-method error", missing?.ok === f
 check("api wrapper exposes durable file attachment bridge", (await api.attachFile({})).id === "att-00000000-0000-4000-8000-000000000001");
 check("api wrapper preserves legacy image attachment bridge", (await api.attachImage({})).id === "att-00000000-0000-4000-8000-000000000002");
 check("api wrapper exposes new session bridge", (await api.newSession()).sessionId === "session-new");
+check("MCP lifecycle API is callable", (await api.listMcpLifecycle()).servers[0].protocolVersion === "2025-11-25");
+check("MCP reload API is callable", (await api.reloadMcpServers()).results[0].ok === true);
+check("MCP connect reconnect disconnect APIs are callable", (await api.connectMcpServer("remote")).server === "remote" && (await api.reconnectMcpServer("remote")).reconnected === true && (await api.disconnectMcpServer("remote")).disconnected === true);
+check("MCP cancel API preserves correlation id", (await api.cancelMcpRequest({ server: "remote", callId: "call-1" })).callId === "call-1");
 check("Git branch API is callable", (await api.gitBranches()).current === "main" && (await api.gitCreateBranch({ name: "feature/ui" })).branch === "feature/ui");
 check("Git Pull Request API preserves draft confirmation intent", (await api.gitCreatePullRequest({ title: "Delivery", base: "main", body: "", draft: true })).draft === true);
 const missingIndustrialApi = createHiCodeApi({}, { onError: (message) => errors.push(message) });

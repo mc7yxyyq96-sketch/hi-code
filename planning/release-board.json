@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "program": "Hi Code Product-Grade Desktop and Industrial Workbench",
-  "updatedAt": "2026-07-13T09:49:20Z",
+  "updatedAt": "2026-07-13T15:27:17Z",
   "status": "active",
   "source": {
     "version": "0.6.0-alpha.6",
@@ -141,6 +141,12 @@
       "taskId": "HC-REL-420",
       "branch": "codex/security-release/hc-rel-420",
       "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-hc-rel-420",
+      "mode": "completed-worktree"
+    },
+    {
+      "taskId": "HC-MCP-410",
+      "branch": "codex/runtime-engine/hc-mcp-410",
+      "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-hc-mcp-410",
       "mode": "completed-worktree"
     }
   ],
@@ -383,6 +389,18 @@
       "completedAt": "2026-07-13T09:49:20Z",
       "evidence": "reports/evidence/HC-REL-420/manifest.json",
       "ciEvidence": "reports/evidence/HC-REL-420/ci-matrix.json"
+    },
+    {
+      "id": "HC-MCP-410",
+      "owner": "runtime-engine",
+      "priority": "P1",
+      "status": "completed",
+      "dependencies": ["HC-SEC-401"],
+      "branch": "codex/runtime-engine/hc-mcp-410",
+      "startedAt": "2026-07-13T11:39:31Z",
+      "completedAt": "2026-07-13T16:58:48Z",
+      "taskManifest": "reports/tasks/HC-MCP-410.md",
+      "evidence": "reports/evidence/HC-MCP-410/manifest.json"
     }
   ],
   "gates": [
@@ -532,6 +550,13 @@
       "verifiedAt": "2026-07-13T09:49:20Z",
       "evidence": "reports/evidence/HC-REL-420/manifest.json",
       "ciEvidence": "reports/evidence/HC-REL-420/ci-matrix.json"
+    },
+    {
+      "id": "mcp-streamable-http-oauth",
+      "status": "passed",
+      "owner": "HC-MCP-410",
+      "verifiedAt": "2026-07-13T16:58:48Z",
+      "evidence": "reports/evidence/HC-MCP-410/manifest.json"
     }
   ],
   "nextReleaseSlices": [

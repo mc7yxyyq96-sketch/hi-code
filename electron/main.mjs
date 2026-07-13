@@ -15,7 +15,15 @@ import { loadConfig, defaultProfile, HICODE_DIR } from "../dist/config.js";
 import { createRuntime, buildSystemPrompt } from "../dist/runtime.js";
 import { requestPermission } from "../dist/permissions.js";
 import { setSpinnerEnabled } from "../dist/ui.js";
-import { initMcp } from "../dist/mcp.js";
+import {
+  initMcp,
+  mcpLifecycleStatus,
+  connectMcpServer,
+  reconnectMcpServer,
+  disconnectMcpServer,
+  cancelMcpRequest,
+  shutdownMcp,
+} from "../dist/mcp.js";
 import { listSessions, deleteSession, loadSession, replaySessionMessages } from "../dist/session-store.js";
 import { DiffService } from "../dist/diff-service.js";
 import { readRecoverableTasks, readRecoverableTasksFromLogs } from "../dist/recovery.js";
@@ -2211,9 +2219,12 @@ function listConfiguredMcpServers() {
   const cfg = loadDesktopConfig();
   const servers = Object.entries(cfg.mcpServers || {}).map(([name, server]) => ({
     name,
-    command: server.command,
-    args: Array.isArray(server.args) ? server.args : [],
-    envCount: server.env ? Object.keys(server.env).length : 0,
+    transport: server.transport === "streamable-http" ? "streamable-http" : "stdio",
+    command: server.transport === "streamable-http" ? "" : server.command,
+    url: server.transport === "streamable-http" ? server.url : "",
+    args: server.transport === "streamable-http" ? [] : Array.isArray(server.args) ? server.args : [],
+    envCount: server.transport === "streamable-http" ? 0 : server.env ? Object.keys(server.env).length : 0,
+    authType: server.transport === "streamable-http" ? server.auth?.type || "none" : "none",
     status: "configured",
   }));
   for (const entry of storeCapabilityEntries("mcp")) {
@@ -2367,12 +2378,13 @@ async function runRuntimeInputInIsolatedCwd(text, executionCwd, executionMode = 
     eventSink: runtimeEventBus,
     legacyAssistantOutput: false,
     allowProcessExit: false,
+    ownsMcpLifecycle: false,
   });
   send("output", `\n[isolated] ${executionCwd}\n`);
   try {
     await isolatedRuntime.handleInput(text, { executionMode });
   } finally {
-    isolatedRuntime.shutdown();
+    await isolatedRuntime.shutdown();
   }
 }
 
@@ -2503,6 +2515,7 @@ function buildRuntime() {
     attachmentStore,
     commandRegistry: desktopCommandRegistry,
     commandSurface: "desktop",
+    ownsMcpLifecycle: false,
   });
   send("ready", {
     model: p.model,
@@ -2681,19 +2694,23 @@ app.whenReady().then(() => {
 });
 
 app.on("window-all-closed", () => {
-  if (runtime) runtime.shutdown();
+  if (runtime) void runtime.shutdown();
   if (process.platform !== "darwin") app.quit();
 });
 
 app.on("before-quit", (event) => {
   const terminal = mainServices?.terminal;
   const preview = mainServices?.preview;
-  if (nativeCleanupQuitInProgress || (!terminal?.activeCount?.() && !preview?.activeCount?.())) return;
+  if (nativeCleanupQuitInProgress) return;
+  const hasNativeResources = Boolean(terminal?.activeCount?.() || preview?.activeCount?.());
+  const hasMcpResources = mcpLifecycleStatus().some((server) => !["disconnected", "failed"].includes(server.state));
+  if (!hasNativeResources && !hasMcpResources) return;
   event.preventDefault();
   nativeCleanupQuitInProgress = true;
   Promise.all([
     Promise.resolve(terminal?.closeAll?.("app_quit")),
     Promise.resolve(preview?.closeAll?.("app_quit")),
+    shutdownMcp(),
   ]).finally(() => app.quit());
 });
 
@@ -2750,11 +2767,18 @@ function createMainServices() {
     }),
     mcp: createMcpService({
       initMcp,
+      mcpLifecycleStatus,
+      connectMcpServer,
+      reconnectMcpServer,
+      disconnectMcpServer,
+      cancelMcpRequest,
       loadConfig: loadDesktopConfig,
       listLocalPlugins,
       listLocalSkills,
       listConfiguredMcpServers,
       listLocalAgents,
+      secretStore: desktopSecretStore,
+      logger: (event, payload) => appendRuntimeLog({ id: `mcp-${Date.now()}-${crypto.randomUUID()}`, type: event, title: event, payload, createdAt: Date.now() }),
     }),
     store: createStoreService({
       listStoreCatalog,

@@ -97,6 +97,8 @@ export interface RuntimeOpts {
   attachmentStore?: AttachmentReader;
   commandRegistry?: CommandRegistry;
   commandSurface?: CommandSurface;
+  /** CLI/TUI own the process-wide MCP manager; embedded runtimes leave it to their host. */
+  ownsMcpLifecycle?: boolean;
 }
 
 export interface RuntimeInputOptions {
@@ -128,7 +130,7 @@ export interface Runtime {
   isBusy: () => boolean;
   /** Apply a new model config without discarding the active conversation. */
   updateConfig: (cfg: VibeConfig, systemPrompt: string) => void;
-  shutdown: () => void;
+  shutdown: () => Promise<void>;
   /** Start a fresh empty conversation without reusing the previous session id. */
   startNewSession: () => { sessionId: string };
   /** Load a saved session into the runtime (no output) and return its messages for display. */
@@ -565,7 +567,7 @@ export function createRuntime(opts: RuntimeOpts): Runtime {
       cmdEnv.cfg = cfg;
       cmdEnv.systemPrompt = nextSystemPrompt;
     },
-    shutdown: shutdownMcp,
+    shutdown: opts.ownsMcpLifecycle === false ? async () => {} : shutdownMcp,
     startNewSession: () => {
       const fresh = newSession(cmdEnv.systemPrompt);
       session.messages = fresh.messages;

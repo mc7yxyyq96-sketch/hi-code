@@ -20,8 +20,9 @@ Sprint 1A splits Electron main-process IPC registration into service modules wit
   - Runtime queue clear/snapshot behavior and persisted queue projection
   - This is not a DAG or Job Center implementation
 - `electron/services/mcp-service.mjs`
-  - Configured MCP server initialization
-  - Existing capability listing
+  - Configured MCP stdio and Streamable HTTP initialization
+  - Capability listing plus lifecycle/reload/connect/reconnect/disconnect/cancel channels
+  - OAuth token rotation and expiry metadata through one desktop secret-store configuration transaction, with recursively redacted lifecycle audit events
 - `electron/services/store-service.mjs`
   - Existing Store / Plugin / Skill / MCP install preview and install channels
 - `electron/services/job-service.mjs`
@@ -154,6 +155,9 @@ The normalized error path redacts API keys, bearer tokens, password-like fields,
   instead of inheriting the full parent `process.env` or relying on direct-child
   timeout behavior. Server-specific MCP credentials are only passed from the
   explicit MCP server `env` config block; policy audit contains key names only.
+- Remote MCP connections require HTTPS except for loopback development. Tokens
+  are resolved only in the main process, custom authorization/cookie headers are
+  rejected, and lifecycle audit data is recursively redacted before persistence.
 
 ## Compatibility Boundary
 
@@ -162,6 +166,7 @@ Public renderer and preload channels include:
 - `runtime:enqueue`, `runtime:steer`, `runtime-queue:clear`
 - `auth-status`, `register`, `login`, `logout`
 - `list-capabilities`
+- `mcp:lifecycle`, `mcp:reload`, `mcp:connect`, `mcp:reconnect`, `mcp:disconnect`, `mcp:cancel`
 - `list-store`, `set-store-source`, `preview-store-item`, `install-store-item`
 - `job:create`, `job:list`, `job:get`, `job:cancel`, `job:retry`, `job:pause`, `job:resume`, `job:events`, `job:artifacts`, `job:artifact:preview`, `job:artifact:open`
 - `provider:list`, `provider:get`, `provider:configure`, `provider:run`, `provider:cancel`
@@ -197,6 +202,7 @@ Required validation for this layer:
 
 ```bash
 npm run build
+npm run test:mcp
 npm run verify
 node test/feature-tests.mjs
 node test/main-process-services-tests.mjs

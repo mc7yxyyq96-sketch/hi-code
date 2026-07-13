@@ -195,6 +195,23 @@ function previewEvent(value) {
   return { type: data.type, preview };
 }
 
+function mcpServerName(value) {
+  const checked = requireString(value, "server");
+  if (!checked.ok || !/^[A-Za-z0-9._:-]{1,128}$/.test(checked.value)) {
+    return { ok: false, error: "MCP server name is invalid" };
+  }
+  return checked;
+}
+
+function mcpCancelRequest(value) {
+  const data = optionalObject(value);
+  const server = mcpServerName(data.server);
+  if (!server.ok) return server;
+  const callId = data.callId === undefined ? "" : String(data.callId);
+  if (callId && !/^[A-Za-z0-9._:-]{1,256}$/.test(callId)) return { ok: false, error: "MCP call id is invalid" };
+  return { ok: true, value: { server: server.value, ...(callId ? { callId } : {}) } };
+}
+
 function utf8Length(value) {
   return new TextEncoder().encode(String(value)).byteLength;
 }
@@ -245,6 +262,24 @@ contextBridge.exposeInMainWorld("hicode", {
   login: (payload) => safeInvoke("login", optionalObject(payload)),
   logout: () => safeInvoke("logout"),
   listCapabilities: () => safeInvoke("list-capabilities"),
+  listMcpLifecycle: () => safeInvoke("mcp:lifecycle"),
+  reloadMcpServers: () => safeInvoke("mcp:reload"),
+  connectMcpServer: (name) => {
+    const checked = mcpServerName(name);
+    return checked.ok ? safeInvoke("mcp:connect", checked.value) : Promise.resolve(checked);
+  },
+  reconnectMcpServer: (name) => {
+    const checked = mcpServerName(name);
+    return checked.ok ? safeInvoke("mcp:reconnect", checked.value) : Promise.resolve(checked);
+  },
+  disconnectMcpServer: (name) => {
+    const checked = mcpServerName(name);
+    return checked.ok ? safeInvoke("mcp:disconnect", checked.value) : Promise.resolve(checked);
+  },
+  cancelMcpRequest: (payload) => {
+    const checked = mcpCancelRequest(payload);
+    return checked.ok ? safeInvoke("mcp:cancel", checked.value) : Promise.resolve(checked);
+  },
   listStore: (options) => safeInvoke("list-store", optionalObject(options)),
   setStoreSource: (sourceId) => checkedInvoke("set-store-source", sourceId, "sourceId"),
   previewStoreItem: (itemId) => checkedInvoke("preview-store-item", itemId, "itemId"),

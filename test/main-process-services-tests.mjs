@@ -6,6 +6,7 @@ import { createIpcRegistrar } from "../electron/ipc/ipc-utils.mjs";
 import { registerIpcHandlers } from "../electron/ipc/register-ipc-handlers.mjs";
 import { createRuntimeService } from "../electron/services/runtime-service.mjs";
 import { createQueueService } from "../electron/services/queue-service.mjs";
+import { createMcpService, sanitizeMcpAuditPayload } from "../electron/services/mcp-service.mjs";
 import { createGitService } from "../electron/services/git-service.mjs";
 import { parseOpenAppRequest } from "../electron/services/native-open-service.mjs";
 import { createPathGuard, redactSensitive } from "../electron/services/security-service.mjs";
@@ -26,6 +27,15 @@ function check(name, cond, detail = "") {
   } else {
     console.log(`  ✗ ${name}  ${detail}`);
     fail++;
+  }
+}
+
+async function rejects(fn, pattern) {
+  try {
+    await fn();
+    return false;
+  } catch (error) {
+    return pattern.test(error?.message || String(error));
   }
 }
 
@@ -86,6 +96,72 @@ const queue = createQueueService({
   },
 });
 check("queue service clears runtime queue", queue.clearRuntimeQueue().count === 2 && cleared);
+
+const mcpServiceEvents = [];
+let persistedMcpConfig = null;
+const persistedMcpConfigFixture = {
+  mcpServers: {
+    remote: {
+      transport: "streamable-http",
+      url: "https://mcp.example.com",
+      auth: {
+        type: "oauth",
+        clientId: "hicode-desktop",
+        accessTokenRef: "hicode-secret:v1:mcp:cmVtb3Rl:YXV0aC1hY2Nlc3NUb2tlbg",
+        refreshTokenRef: "hicode-secret:v1:mcp:cmVtb3Rl:YXV0aC1yZWZyZXNoVG9rZW4",
+        expiresAt: "2026-01-01T00:00:00.000Z",
+      },
+    },
+  },
+};
+const mcpLifecycleFixture = [{ server: "remote", transport: "streamable-http", state: "ready", tools: ["echo"], activeCalls: [] }];
+const mcpService = createMcpService({
+  initMcp: async (_servers, options) => {
+    await options.persistOAuthUpdate("remote", {
+      accessToken: "rotated-secret",
+      refreshToken: "rotated-refresh-secret",
+      expiresAt: "2027-01-01T00:00:00.000Z",
+    });
+    return [{ server: "remote", ok: true }];
+  },
+  mcpLifecycleStatus: () => mcpLifecycleFixture,
+  connectMcpServer: async (server) => ({ server, ok: true }),
+  reconnectMcpServer: async (server) => ({ server, ok: true }),
+  disconnectMcpServer: async (server) => ({ server, ok: true }),
+  cancelMcpRequest: (server, callId) => ({ server, callId, ok: true, cancelled: 1 }),
+  loadConfig: () => ({ mcpServers: { remote: { transport: "streamable-http", url: "https://mcp.example.com" } } }),
+  listLocalPlugins: () => [],
+  listLocalSkills: () => [],
+  listConfiguredMcpServers: () => [{ name: "remote", transport: "streamable-http" }],
+  secretStore: {
+    persistSecretWrites: () => ({ commit() {} }),
+    readConfigForRenderer: () => JSON.stringify(persistedMcpConfigFixture),
+    persistConfig: (config) => {
+      persistedMcpConfig = structuredClone(config);
+      return { ok: true };
+    },
+  },
+  logger: (event, payload) => mcpServiceEvents.push({ event, payload }),
+});
+check("mcp service exposes lifecycle state", mcpService.listLifecycle().servers[0].state === "ready");
+check("mcp service rejects malformed server names", await rejects(() => mcpService.connect("../../outside"), /server name is invalid/));
+check("mcp service rejects malformed cancellation ids", await rejects(() => mcpService.cancel({ server: "remote", callId: "bad call id" }), /call id is invalid/));
+const mcpReload = await mcpService.reload();
+check("mcp service atomically persists OAuth token rotation and expiry metadata", mcpReload.ok === true
+  && persistedMcpConfig?.mcpServers?.remote?.auth?.accessToken === "rotated-secret"
+  && persistedMcpConfig?.mcpServers?.remote?.auth?.refreshToken === "rotated-refresh-secret"
+  && persistedMcpConfig?.mcpServers?.remote?.auth?.expiresAt === "2027-01-01T00:00:00.000Z");
+check("mcp lifecycle audit log excludes rotated token values", !JSON.stringify(mcpServiceEvents).includes("rotated-secret"), JSON.stringify(mcpServiceEvents));
+const sanitizedMcpAudit = sanitizeMcpAuditPayload({
+  authorization: "Bearer exposed-token",
+  message: "GITHUB_TOKEN=github_pat_exposed and client_secret=plain-secret",
+  nested: { accessToken: "oauth-access-token", visible: "ok" },
+});
+check("mcp lifecycle audit log redacts structured and inline secrets", JSON.stringify(sanitizedMcpAudit) === JSON.stringify({
+  authorization: "[REDACTED]",
+  message: "GITHUB_TOKEN=[REDACTED] and client_secret=[REDACTED]",
+  nested: { accessToken: "[REDACTED]", visible: "ok" },
+}), JSON.stringify(sanitizedMcpAudit));
 
 let gitCwd = "";
 let pullRequestDecision = "deny";
@@ -350,6 +426,9 @@ registerIpcHandlers({
   },
 });
 for (const channel of ["runtime:enqueue", "runtime:steer", "runtime-queue:clear", "auth-status", "execution-policy:capabilities", "list-store", "store:item", "store:enable", "store:disable", "store:uninstall", "job:create", "job:list", "job:get", "job:cancel", "job:retry", "job:pause", "job:resume", "job:events", "job:artifacts", "job:artifact:preview", "job:artifact:open", "provider:list", "provider:get", "provider:configure", "provider:run", "provider:cancel", "worktree:create", "worktree:run", "worktree:collectChanges", "worktree:cleanup", "arena:list", "arena:get", "arena:create", "arena:acceptCandidate", "arena:rejectCandidate", "arena:mergeCandidate", "arena:artifact:preview", "arena:artifact:open", "industrial-project:schema", "industrial-project:get", "industrial-project:validate", "industrial-project:save", "industrial-requirement:draft", "industrial-requirement:add", "industrial-requirement:criteria:update", "industrial-requirement:artifact-plan", "industrial-requirement:test-plan", "industrial-requirement:spec-package", "industrial-requirement:approve", "industrial-project:artifact:add", "industrial-project:traceability:add", "industrial-project:gate:add", "domain-pack:list", "domain-pack:get", "domain-pack:validate", "domain-pack:install", "domain-pack:update", "domain-pack:enable", "domain-pack:disable", "domain-pack:uninstall", "domain-pack:recommend", "agent-team:profiles", "agent-team:profile:get", "agent-team:plan:create", "agent-team:plan:list", "agent-team:plan:get", "agent-team:job:create", "toolchain:list", "toolchain:detect", "toolchain:capabilities", "toolchain:validate-adapter", "toolchain:run", "quality-gate:list", "quality-gate:run", "quality-gate:approve", "release:readiness", "release:build", "release:open", "sample:industrial-control-box:create", "diffs:list", "git:status", "git:branches", "git:branch:create", "git:branch:switch", "git:collaboration", "git:pr:create", "editor:file:open", "editor:file:save", "terminal:capabilities", "terminal:create", "terminal:status", "terminal:write", "terminal:resize", "terminal:close", "preview:capabilities", "preview:open", "preview:list", "preview:reopen", "preview:reload", "preview:verify", "preview:close", "preview:remove", "attach-file", "attach-image", "attachments:list", "attachment:remove", "read-file", "read-session", "new-session", "get-config", "config:credential-status", "app:info", "app:open-data-dir", "app:reveal-config", "app:open-page", "app:check-updates", "app:update-status", "app:update-channel", "app:update-download", "app:update-install", "usage:stats"]) {
+  check(`register-ipc-handlers exposes ${channel}`, ipc2.handles.has(channel));
+}
+for (const channel of ["mcp:lifecycle", "mcp:reload", "mcp:connect", "mcp:reconnect", "mcp:disconnect", "mcp:cancel"]) {
   check(`register-ipc-handlers exposes ${channel}`, ipc2.handles.has(channel));
 }
 for (const channel of ["input", "ask-response", "interrupt"]) {

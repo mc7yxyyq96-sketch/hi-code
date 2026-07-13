@@ -329,10 +329,19 @@ function listSecretReferences(config) {
   }
   if (config?.mcpServers && typeof config.mcpServers === "object" && !Array.isArray(config.mcpServers)) {
     for (const [serverName, server] of Object.entries(config.mcpServers)) {
-      if (!server || typeof server !== "object" || Array.isArray(server) || !server.env || typeof server.env !== "object" || Array.isArray(server.env)) continue;
-      for (const [envName, value] of Object.entries(server.env)) {
-        if (value && typeof value === "object" && !Array.isArray(value) && typeof value.secretRef === "string") {
-          references.push({ location: `mcpServers.${serverName}.env.${envName}`, secretRef: validateSecretRef(value.secretRef, "mcp"), scope: "mcp" });
+      if (!server || typeof server !== "object" || Array.isArray(server)) continue;
+      if (server.env && typeof server.env === "object" && !Array.isArray(server.env)) {
+        for (const [envName, value] of Object.entries(server.env)) {
+          if (value && typeof value === "object" && !Array.isArray(value) && typeof value.secretRef === "string") {
+            references.push({ location: `mcpServers.${serverName}.env.${envName}`, secretRef: validateSecretRef(value.secretRef, "mcp"), scope: "mcp" });
+          }
+        }
+      }
+      if (server.auth && typeof server.auth === "object" && !Array.isArray(server.auth)) {
+        for (const field of ["tokenRef", "accessTokenRef", "refreshTokenRef"]) {
+          if (typeof server.auth[field] === "string") {
+            references.push({ location: `mcpServers.${serverName}.auth.${field}`, secretRef: validateSecretRef(server.auth[field], "mcp"), scope: "mcp" });
+          }
         }
       }
     }

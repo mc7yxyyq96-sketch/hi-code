@@ -5,7 +5,7 @@
   "sourceCommit": "6ed9ed666bb817f8d1e863c76b0bf61b31c7b52d",
   "horizonDays": 90,
   "status": "active",
-  "updatedAt": "2026-07-13T09:49:20Z",
+  "updatedAt": "2026-07-13T15:27:17Z",
   "principles": [
     "Runtime Protocol is the single source of truth",
     "No big-bang rewrite",
@@ -352,7 +352,12 @@
       "dependencies": ["HC-SEC-401"],
       "deliverables": ["HTTP transport", "OAuth/token references", "server lifecycle UI"],
       "acceptance": ["stdio remains compatible", "remote auth is not plaintext", "reconnect/timeout/cancel tests pass"],
-      "status": "planned"
+      "status": "completed",
+      "startedAt": "2026-07-13T11:39:31Z",
+      "completedAt": "2026-07-13T16:58:48Z",
+      "branch": "codex/runtime-engine/hc-mcp-410",
+      "taskManifest": "reports/tasks/HC-MCP-410.md",
+      "evidenceManifest": "reports/evidence/HC-MCP-410/manifest.json"
     },
     {
       "id": "HC-REL-420",

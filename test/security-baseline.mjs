@@ -21,6 +21,10 @@ const preload = fs.readFileSync(path.join(root, "electron", "preload.cjs"), "utf
 const html = fs.readFileSync(path.join(root, "renderer", "index.html"), "utf8");
 const bash = fs.readFileSync(path.join(root, "src", "tools", "bash.ts"), "utf8");
 const mcp = fs.readFileSync(path.join(root, "src", "mcp.ts"), "utf8");
+const mcpTransport = fs.readFileSync(path.join(root, "src", "mcp-transport.ts"), "utf8");
+const mcpAuth = fs.readFileSync(path.join(root, "src", "mcp-auth.ts"), "utf8");
+const mcpProtocol = fs.readFileSync(path.join(root, "src", "mcp-protocol.ts"), "utf8");
+const mcpService = fs.readFileSync(path.join(root, "electron", "services", "mcp-service.mjs"), "utf8");
 const processEnvService = fs.readFileSync(path.join(root, "src", "process-env.ts"), "utf8");
 const executionRunner = fs.readFileSync(path.join(root, "src", "execution-runner.ts"), "utf8");
 const industrialExecution = fs.readFileSync(path.join(root, "src", "industrial-execution.ts"), "utf8");
@@ -54,6 +58,8 @@ const productionAuditScript = fs.readFileSync(path.join(root, "scripts", "audit-
 const syncVersionScript = fs.readFileSync(path.join(root, "scripts", "sync-version.mjs"), "utf8");
 const commands = fs.readFileSync(path.join(root, "src", "commands.ts"), "utf8");
 const runtime = fs.readFileSync(path.join(root, "src", "runtime.ts"), "utf8");
+const cliEntry = fs.readFileSync(path.join(root, "src", "index.ts"), "utf8");
+const tuiEntry = fs.readFileSync(path.join(root, "src", "tui.tsx"), "utf8");
 const runtimeProtocol = fs.readFileSync(path.join(root, "src", "runtime-protocol.ts"), "utf8");
 const runtimeEventStore = fs.readFileSync(path.join(root, "src", "runtime-event-store.ts"), "utf8");
 const turnStateMachine = fs.readFileSync(path.join(root, "src", "turn-state-machine.ts"), "utf8");
@@ -243,7 +249,17 @@ check("Pull Request creation requires a fresh main-process confirmation", gitSer
 check("Git delivery forbids force push and automatic merge", gitCollaboration.includes('"push", "--set-upstream", "origin", "HEAD"') && !/--force|\bmerge\b/.test(gitCollaboration));
 check("Git preload validates bounded branch and Pull Request payloads", preload.includes("function gitBranchRequest") && preload.includes("function gitPullRequest") && preload.includes('safeInvoke("git:pr:create", checked.value)'));
 check("failed and pending CI conclusions remain truthful", gitCollaboration.includes('return "failed"') && gitCollaboration.includes('return "pending"') && gitCollaboration.includes('counts.failed ? "failed" : counts.pending ? "pending"'));
-check("MCP server process uses managed execution policy", mcp.includes("evaluateExecutionPolicy") && mcp.includes("createExecutionLaunchPlan") && mcp.includes("terminateExecutionProcessTree") && !mcp.includes("...process.env"));
+check("MCP stdio process uses managed execution policy", mcpTransport.includes("evaluateExecutionPolicy") && mcpTransport.includes("createExecutionLaunchPlan") && mcpTransport.includes("terminateExecutionProcessTree") && !mcpTransport.includes("...process.env"));
+check("MCP HTTP transport requires HTTPS except loopback", mcpTransport.includes('url.protocol !== "https:"') && mcpTransport.includes('url.protocol === "http:" && loopback') && mcpTransport.includes("cannot contain credentials, query parameters, or fragments"));
+check("MCP HTTP transport rejects ambient authorization headers", mcpTransport.includes("authorization|cookie|proxy-authorization") && mcpTransport.includes("MCP_HEADER_INVALID"));
+check("MCP HTTP and OAuth readers enforce bounded streaming responses", mcpTransport.includes("await cancelReader(reader") && mcpTransport.includes("await cancelResponseBody(response)") && !mcpTransport.includes("await response.text()") && mcpAuth.includes("await reader.cancel") && !mcpAuth.includes("await response.text()"));
+check("MCP OAuth handles expiry refresh PKCE state issuer validation and resource binding", mcpAuth.includes("tokenExpired(") && mcpAuth.includes('grant_type: "refresh_token"') && mcpAuth.includes('code_challenge_method", "S256"') && mcpAuth.includes("MCP_OAUTH_STATE_MISMATCH") && mcpAuth.includes("MCP_OAUTH_ISSUER_MISMATCH") && mcpAuth.includes('url.searchParams.set("resource"'));
+check("MCP secrets use references and logs redact sensitive values", secretReferences.includes("mcpAuthSecretRef") && secretReferences.includes('[["accessToken", "accessTokenRef"], ["refreshToken", "refreshTokenRef"]]') && mcpProtocol.includes("redactMcpText") && mcpProtocol.includes("INLINE_SECRET") && mcpService.includes("sanitizeMcpAuditPayload"));
+check("MCP OAuth rotation persists credentials and expiry in one secure config transaction", mcp.includes("persistOAuthUpdate?:") && mcpService.includes("secretStore.readConfigForRenderer()") && mcpService.includes("secretStore.persistConfig(config)") && mcpService.includes("auth.expiresAt = update.expiresAt"));
+check("MCP lifecycle preload validates names and cancellation payloads", preload.includes("function mcpServerName") && preload.includes("function mcpCancelRequest") && preload.includes('safeInvoke("mcp:connect", checked.value)') && preload.includes('safeInvoke("mcp:cancel", checked.value)'));
+check("Electron gracefully closes MCP sessions before quit", main.includes("hasMcpResources") && main.includes("shutdownMcp()") && mcp.includes("export async function shutdownMcp"));
+check("CLI and TUI await graceful MCP shutdown", runtime.includes("shutdown: () => Promise<void>") && runtime.includes("ownsMcpLifecycle") && cliEntry.includes("await rt.shutdown()") && tuiEntry.includes("await rt.shutdown()"));
+check("Desktop owns shared MCP lifecycle outside embedded runtimes", (main.match(/ownsMcpLifecycle: false/g) || []).length >= 2 && main.includes("Promise.all([") && main.includes("shutdownMcp(),"));
 check("FreeCAD execution uses managed industrial policy", freeCadAdapter.includes("runIndustrialCommand") && industrialExecution.includes("runManagedExecutionSync") && !freeCadAdapter.includes("spawnSync("));
 check("Electron E2E isolates HOME and USERPROFILE", electronE2e.includes("safeElectronEnv(isolatedHome)") && electronE2e.includes("env.HOME = isolatedHome") && electronE2e.includes("env.USERPROFILE = isolatedHome") && !electronE2e.includes('"PATH", "HOME"'));
 check("Electron E2E rejects inherited secret variables", electronE2e.includes("sensitiveKeys") && electronE2e.includes("TOKEN|SECRET|PASSWORD|API_KEY|PRIVATE_KEY") && electronE2e.includes("assert.deepEqual(environment.sensitiveKeys, [])"));
@@ -348,6 +364,7 @@ check("verify script includes version sync", verifyScript.includes('"sync:versio
 check("verify script includes build", verifyScript.includes('run("build"'));
 check("verify script includes syntax check", verifyScript.includes("runSyntaxCheck()") && verifyScript.includes("electron/main.mjs"));
 check("verify script includes feature tests", verifyScript.includes('"test:feature"') && verifyScript.includes("test/feature-tests.mjs"));
+check("verify script includes MCP transport and OAuth tests", verifyScript.includes('"test:mcp"') && verifyScript.includes("test/mcp-connection-tests.mjs"));
 check("verify script includes runtime protocol tests", verifyScript.includes('"test:runtime-protocol"') && verifyScript.includes("test/runtime-protocol-tests.mjs"));
 check("verify script includes authoritative runtime control tests", verifyScript.includes('"test:runtime-control"') && verifyScript.includes("test/runtime-control-tests.mjs"));
 check("verify script includes protected Git collaboration tests", verifyScript.includes('"test:git-collaboration"') && verifyScript.includes("test/git-collaboration-tests.mjs"));

@@ -40,6 +40,7 @@ This extracted workspace was installed with a bundled Node/pnpm runtime. On a no
 ```bash
 npm run test
 npm run test:feature
+npm run test:mcp
 npm run test:entrypoints
 npm run test:security
 npm run test:app-shell
@@ -108,6 +109,10 @@ Use `dist:win`/`--platform=win32` on Windows and `dist:linux`/`--platform=linux`
 - Unsupported PDF or general-file transport must fail before provider network I/O and must not be reported as processed.
 - Input classification must use the shared Command Registry. Unknown slash commands and ambiguous native matchers fail closed; ordinary coding requests must remain on the agent route.
 - Bash, MCP servers, and industrial adapters must not inherit the whole host environment. Bash uses the allowlist in `src/tools/bash.ts`; MCP/tool adapters use `src/process-env.ts` and only receive explicitly configured extra env.
+- MCP stdio remains the compatibility default. Streamable HTTP endpoints require
+  HTTPS except loopback development, maintain bounded sessions/timeouts/cancel,
+  and keep bearer/OAuth values behind opaque secret references. See
+  `docs/mcp-connection-layer.md`.
 - Managed child processes must pass `src/execution-policy.ts`. Platform capability is probed rather than inferred: macOS `sandbox-exec` and Linux bubblewrap are partial isolation, while Windows remains weak until a reviewed restricted-token backend exists. Unsupported requested controls fail closed in strict mode or remain explicitly weak in report-only evidence.
 - Electron-builder runs through `scripts/run-electron-builder.mjs` with a release-specific environment allowlist. Model keys, cloud credentials, arbitrary tokens, package credentials, and unknown variables are not inherited. Signing and publication variables are admitted only in explicitly approved release mode, and logs expose key presence rather than values.
 - Application updates are disabled for unpackaged, invalid-manifest, unsigned, and unapproved builds. The updater does not auto-download or silently install; main-process confirmation and a verified downloaded package are mandatory. Automatic rollback is forbidden.

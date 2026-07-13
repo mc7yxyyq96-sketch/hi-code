@@ -46,6 +46,7 @@ The final machine-captured evidence is written by `npm run program:baseline` to 
 | 18 | HC-SEC-401 | Completed | Security And Release | HC-PLAT-110 |
 | 19 | HC-SEC-402 | Completed | Security And Release | HC-PLAT-110 |
 | 20 | HC-REL-420 | Completed | Security And Release | HC-PLAT-110, HC-SEC-401 |
+| 21 | HC-MCP-410 | Completed | Runtime Engine | HC-SEC-401 |
 
 HC-QA-101 established a real Electron responsive baseline. HC-RUN-201 introduces protocol-native assistant output and concurrency isolation. No new industrial domain module is authorized before HC-RUN-201 completes.
 
@@ -93,6 +94,8 @@ HC-SEC-402 completed in the isolated `codex/security-release/hc-sec-402` worktre
 
 HC-REL-420 completed in the isolated `codex/security-release/hc-rel-420` worktree from HC-SEC-402 completion commit `14c5380`. A fail-closed release policy now controls macOS DMG/ZIP, Windows NSIS/ZIP, and Linux AppImage/DEB packaging; update channels, user-confirmed packaged-app updates, CycloneDX SBOM, provenance, checksums, and native package lifecycle smoke are part of the same contract. Twenty local evidence commands passed from clean implementation commit `6e42ce3`. Draft PR #20 passed Release Packaging run `29239107911` and CI run `29239108094`, including native package smoke on all three target platforms and real Electron startup on Ubuntu, macOS, and Windows. These are unsigned, update-disabled CI/development artifacts: no formal release, tag, publication, notarization, or credential-backed signing was performed, and `RISK-REL-001` remains open.
 
+HC-MCP-410 completed in the isolated `codex/runtime-engine/hc-mcp-410` worktree from accepted HC-REL-420 commit `630b19d`. The existing MCP manager now preserves managed stdio while adding HTTPS Streamable HTTP, protocol and capability negotiation, session recovery, reconnect, timeout, cancellation, streaming results, graceful shutdown, normalized errors, and bearer/OAuth expiry, discovery, PKCE, refresh, rotation, secret-reference, and redaction boundaries. Rotated OAuth credentials and matching expiry metadata persist through one secure config transaction. Desktop exposes validated lifecycle controls without credentials; CLI and TUI retain the compatibility API and await graceful shutdown. Real loopback JSON/SSE, service, security, Renderer, feature, Electron, and Program Control checks passed across all 14 captured evidence commands. Interactive OAuth browser/callback consent remains an explicit host responsibility and is not claimed as completed authorization.
+
 ## Current Product Truth
 
 - Core Electron, CLI/TUI, runtime, tool, security, Job Center, Provider, Worktree, Arena, industrial, gate, sample, and release tests pass.
@@ -103,6 +106,7 @@ HC-REL-420 completed in the isolated `codex/security-release/hc-rel-420` worktre
 - Desktop config and Agent Provider state contain secret references rather than
   plaintext credentials; OS secure storage or explicit CLI environment fallback
   is required.
+- MCP supports managed stdio and HTTPS Streamable HTTP through one lifecycle. Remote bearer/OAuth values remain in the desktop secret store, refreshed credentials and expiry metadata commit atomically, and a generated OAuth authorization request is never presented as completed user consent.
 
 ## Evidence And Historical Material
 
@@ -125,6 +129,7 @@ HC-REL-420 completed in the isolated `codex/security-release/hc-rel-420` worktre
 - Credential storage evidence: `reports/tasks/HC-SEC-401.md`, `reports/evidence/HC-SEC-401/manifest.json`, `reports/evidence/HC-SEC-401/ci-matrix.json`
 - Cross-platform execution policy evidence: `reports/tasks/HC-SEC-402.md`, `reports/evidence/HC-SEC-402/manifest.json`, `reports/evidence/HC-SEC-402/ci-matrix.json`
 - Controlled release pipeline evidence: `reports/tasks/HC-REL-420.md`, `reports/evidence/HC-REL-420/manifest.json`, `reports/evidence/HC-REL-420/ci-matrix.json`
+- MCP connection layer evidence: `reports/tasks/HC-MCP-410.md`, `reports/evidence/HC-MCP-410/manifest.json`
 - Current risks: `reports/program/risks.json`
 - Historical final acceptance: `reports/final-acceptance-historical.md`
 - Historical audit policy: `reports/audit/README.md`

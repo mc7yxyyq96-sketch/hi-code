@@ -726,8 +726,14 @@
             </section>
 
             <section id="settingsMcpSection" class="settings-section hidden">
-              <div class="settings-group-title">MCP 服务器（stdio）</div>
-              <div class="settings-hint">编辑 <span class="mono">config.json</span> 里的 <span class="mono">mcpServers</span> 字段，保存后重连生效。也可以从商店一键安装。</div>
+              <div class="settings-group-title">MCP 连接</div>
+              <div class="settings-hint">支持本地 stdio 与远程 Streamable HTTP。远程连接必须使用 HTTPS；认证令牌会转存到系统安全存储，不保留在明文配置中。</div>
+              <div class="settings-actions mcp-toolbar">
+                <button id="mcp-reload" class="ghost">重载全部连接</button>
+              </div>
+              <div id="mcpLifecycleList" class="mcp-lifecycle-list" aria-live="polite"></div>
+              <div class="settings-group-title">连接配置</div>
+              <div class="settings-hint">编辑 <span class="mono">config.json</span> 里的 <span class="mono">mcpServers</span> 字段。保存后会校验配置并重载连接；商店安装的 stdio 服务仍保持兼容。</div>
               <div class="advanced-config">
                 <textarea id="mcpCfg" spellcheck="false"></textarea>
                 <div class="modal-foot">

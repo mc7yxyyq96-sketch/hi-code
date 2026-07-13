@@ -6,10 +6,12 @@ import {
   isCredentialPlaceholder,
   isSensitiveEnvName,
   isSecretReferenceRecord,
+  mcpAuthSecretRef,
   mcpSecretEnvName,
   profileApiKeyEnvName,
   validateSecretRef,
 } from "./secret-references.js";
+import type { McpAuthConfig, McpOAuthConfig } from "./mcp-auth.js";
 
 /** One model endpoint + its parameters. The unit the LLM client speaks. */
 export const MODEL_TRANSPORT_PROTOCOLS = ["chat_completions", "responses", "anthropic_messages", "ollama_chat"] as const;
@@ -46,15 +48,30 @@ export interface VibeConfig {
   reasoningLevel: "low" | "medium" | "high" | "ultra";
   /** Confine bash writes to the workspace via macOS sandbox-exec. */
   sandbox: boolean;
-  /** MCP servers to connect to at startup (stdio transport). */
+  /** MCP servers to connect to at startup. Existing entries default to stdio. */
   mcpServers: Record<string, McpServerConfig>;
 }
 
-export interface McpServerConfig {
+interface McpServerCommonConfig {
+  timeoutMs?: number;
+  reconnect?: { maxAttempts?: number; baseDelayMs?: number };
+}
+
+export interface McpStdioServerConfig extends McpServerCommonConfig {
+  transport?: "stdio";
   command: string;
   args?: string[];
   env?: Record<string, string>;
 }
+
+export interface McpHttpServerConfig extends McpServerCommonConfig {
+  transport: "streamable-http";
+  url: string;
+  headers?: Record<string, string>;
+  auth?: McpAuthConfig;
+}
+
+export type McpServerConfig = McpStdioServerConfig | McpHttpServerConfig;
 
 export interface LoadConfigOptions {
   configPath?: string;
@@ -266,9 +283,27 @@ function normalizeMcpServers(value: unknown, env: NodeJS.ProcessEnv, options: Lo
   for (const [serverName, raw] of Object.entries(value as Record<string, unknown>)) {
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) continue;
     const persisted = raw as Record<string, unknown>;
+    const transport = persisted.transport === "streamable-http" ? "streamable-http" : "stdio";
+    const common = normalizeMcpCommonConfig(persisted);
+    if (transport === "streamable-http") {
+      if (typeof persisted.url !== "string") continue;
+      const url = normalizeMcpHttpUrl(persisted.url);
+      const headers = normalizeMcpHeaders(persisted.headers);
+      const auth = normalizeMcpAuth(serverName, persisted.auth, env, options);
+      servers[serverName] = {
+        transport,
+        url,
+        ...common,
+        ...(headers ? { headers } : {}),
+        ...(auth ? { auth } : {}),
+      };
+      continue;
+    }
     if (typeof persisted.command !== "string" || !persisted.command.trim()) continue;
-    const server: McpServerConfig = {
+    const server: McpStdioServerConfig = {
+      transport: "stdio",
       command: persisted.command,
+      ...common,
       ...(Array.isArray(persisted.args) ? { args: persisted.args.filter((arg): arg is string => typeof arg === "string") } : {}),
     };
     if (persisted.env && typeof persisted.env === "object" && !Array.isArray(persisted.env)) {
@@ -291,6 +326,100 @@ function normalizeMcpServers(value: unknown, env: NodeJS.ProcessEnv, options: Lo
     servers[serverName] = server;
   }
   return servers;
+}
+
+function normalizeMcpCommonConfig(persisted: Record<string, unknown>): Pick<McpServerCommonConfig, "timeoutMs" | "reconnect"> {
+  const timeout = Number(persisted.timeoutMs);
+  const reconnect = persisted.reconnect && typeof persisted.reconnect === "object" && !Array.isArray(persisted.reconnect)
+    ? persisted.reconnect as Record<string, unknown>
+    : undefined;
+  const maxAttempts = Number(reconnect?.maxAttempts);
+  const baseDelayMs = Number(reconnect?.baseDelayMs);
+  return {
+    ...(Number.isFinite(timeout) ? { timeoutMs: Math.max(100, Math.min(10 * 60 * 1000, timeout)) } : {}),
+    ...(reconnect ? { reconnect: {
+      ...(Number.isFinite(maxAttempts) ? { maxAttempts: Math.max(0, Math.min(10, Math.floor(maxAttempts))) } : {}),
+      ...(Number.isFinite(baseDelayMs) ? { baseDelayMs: Math.max(50, Math.min(5000, Math.floor(baseDelayMs))) } : {}),
+    } } : {}),
+  };
+}
+
+function normalizeMcpHeaders(value: unknown): Record<string, string> | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const headers: Record<string, string> = {};
+  for (const [key, raw] of Object.entries(value as Record<string, unknown>)) {
+    if (!/^[A-Za-z][A-Za-z0-9-]{0,63}$/.test(key) || /authorization|cookie|proxy-authorization/i.test(key)) {
+      throw new Error(`MCP header ${key} is not allowed`);
+    }
+    if (typeof raw !== "string" || raw.length > 8192 || /[\0\r\n]/.test(raw)) throw new Error(`MCP header ${key} is invalid`);
+    headers[key] = raw;
+  }
+  return Object.keys(headers).length ? headers : undefined;
+}
+
+function normalizeMcpAuth(serverName: string, value: unknown, env: NodeJS.ProcessEnv, options: LoadConfigOptions): McpAuthConfig | undefined {
+  if (value === undefined) return undefined;
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error(`MCP server ${serverName}.auth must be an object`);
+  const raw = value as Record<string, unknown>;
+  if (raw.type === "none") return { type: "none" };
+  if (raw.type === "bearer") {
+    const tokenRef = raw.tokenRef === undefined ? undefined : validateSecretRef(raw.tokenRef, "mcp");
+    const token = resolveMcpAuthCredential(serverName, "token", raw.token, tokenRef, env, options);
+    return { type: "bearer", ...(token ? { token } : {}), ...(tokenRef ? { tokenRef } : {}) };
+  }
+  if (raw.type !== "oauth") throw new Error(`MCP server ${serverName}.auth.type is invalid`);
+  if (typeof raw.clientId !== "string" || !raw.clientId.trim() || raw.clientId.length > 512) throw new Error(`MCP server ${serverName}.auth.clientId is invalid`);
+  const accessTokenRef = raw.accessTokenRef === undefined ? undefined : validateSecretRef(raw.accessTokenRef, "mcp");
+  const refreshTokenRef = raw.refreshTokenRef === undefined ? undefined : validateSecretRef(raw.refreshTokenRef, "mcp");
+  const accessToken = resolveMcpAuthCredential(serverName, "accessToken", raw.accessToken, accessTokenRef, env, options);
+  const refreshToken = resolveMcpAuthCredential(serverName, "refreshToken", raw.refreshToken, refreshTokenRef, env, options);
+  const oauth: McpOAuthConfig = {
+    type: "oauth",
+    clientId: raw.clientId,
+    ...(Array.isArray(raw.scopes) ? { scopes: raw.scopes.filter((scope): scope is string => typeof scope === "string") } : {}),
+    ...copyMcpAuthUrlFields(raw),
+    ...(accessToken ? { accessToken } : {}),
+    ...(accessTokenRef ? { accessTokenRef } : {}),
+    ...(refreshToken ? { refreshToken } : {}),
+    ...(refreshTokenRef ? { refreshTokenRef } : {}),
+    ...(typeof raw.expiresAt === "string" ? { expiresAt: raw.expiresAt } : {}),
+  };
+  return oauth;
+}
+
+function resolveMcpAuthCredential(
+  serverName: string,
+  field: "token" | "accessToken" | "refreshToken",
+  legacyValue: unknown,
+  secretRef: string | undefined,
+  env: NodeJS.ProcessEnv,
+  options: LoadConfigOptions,
+): string | undefined {
+  if (secretRef) {
+    const resolved = resolveReferencedSecret(secretRef, `mcpServers.${serverName}.auth.${field}Ref`, options)
+      || env[mcpSecretEnvName(serverName, `AUTH_${field}`)];
+    if (resolved) return resolved;
+  }
+  if (options.allowLegacyPlaintext !== false && typeof legacyValue === "string" && !isCredentialPlaceholder(legacyValue)) return legacyValue;
+  return undefined;
+}
+
+function copyMcpAuthUrlFields(raw: Record<string, unknown>): Partial<McpOAuthConfig> {
+  const output: Partial<McpOAuthConfig> = {};
+  for (const key of ["resourceMetadataUrl", "authorizationServer", "authorizationEndpoint", "tokenEndpoint"] as const) {
+    if (typeof raw[key] === "string" && raw[key]) output[key] = normalizeMcpHttpUrl(raw[key], { allowQuery: true });
+  }
+  return output;
+}
+
+function normalizeMcpHttpUrl(value: string, { allowQuery = false }: { allowQuery?: boolean } = {}): string {
+  const url = new URL(value);
+  const loopback = ["127.0.0.1", "localhost", "::1", "[::1]"].includes(url.hostname);
+  if (url.protocol !== "https:" && !(url.protocol === "http:" && loopback)) throw new Error("remote MCP URLs must use HTTPS");
+  if (url.username || url.password || url.hash || (!allowQuery && url.search)) {
+    throw new Error(`MCP URLs cannot contain credentials, fragments${allowQuery ? "" : ", or query parameters"}`);
+  }
+  return url.toString();
 }
 
 function resolveReferencedSecret(secretRef: string, location: string, options: LoadConfigOptions): string | undefined {

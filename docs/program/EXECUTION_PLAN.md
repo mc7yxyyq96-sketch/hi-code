@@ -12,7 +12,7 @@
 
 ### 1.1 当前真实成熟度
 
-Hi Code 不是空壳。当前已经具备可工作的 Electron/CLI/TUI 入口、LLM runtime、文件和 Bash 工具、MCP stdio、权限、diff、Git、Job Center、worktree、Patch Arena、工业项目、Domain Pack、工业适配器、Quality Gate、Release Builder、Industrial Control Box 样板和较广的自动化测试。
+Hi Code 不是空壳。当前已经具备可工作的 Electron/CLI/TUI 入口、LLM runtime、文件和 Bash 工具、MCP stdio/Streamable HTTP、权限、diff、Git、Job Center、worktree、Patch Arena、工业项目、Domain Pack、工业适配器、Quality Gate、Release Builder、Industrial Control Box 样板和较广的自动化测试。
 
 但它仍是 **广度较大、核心闭环不够深的 alpha 产品**。真正影响产品级交付的主要问题，不是缺少更多菜单，而是：
 
@@ -59,7 +59,7 @@ Hi Code 已经有一条竞争产品通常不会默认提供的产品骨架：
 | Runtime Protocol v1 | `src/runtime-protocol.ts`、`src/runtime-event-store.ts` | `test/runtime-protocol-tests.mjs` | 中低；协议不是事实源 |
 | 模型流式调用 | `src/llm.ts`、`src/agent.ts` | feature/runtime tests | 中；仅 OpenAI Chat Completions 兼容面 |
 | 文件/Bash/Git/Diff/权限 | `src/tools/*`、`src/git.ts`、`src/permissions.ts` | feature/security tests | 中高 |
-| MCP | `src/mcp.ts`、`src/config.ts` | feature/service tests | 中；仅 stdio |
+| MCP | `src/mcp.ts`、`src/mcp-transport.ts`、`src/mcp-auth.ts`、`src/config.ts` | feature/MCP/service/security tests | 中高；stdio 与 Streamable HTTP，共享会话与 OAuth 生命周期 |
 | Job Center | `src/job-center.ts`、`electron/services/job-service.mjs` | `test/job-center-tests.mjs` | 中高 |
 | Worktree 隔离 | `src/worktree-runner.ts`、对应 service | `test/worktree-runner-tests.mjs` | 中高 |
 | Patch Arena | `electron/services/patch-arena-service.mjs` | `test/patch-arena-tests.mjs` | 中；多 Provider 执行未完成 |
@@ -89,7 +89,7 @@ Hi Code 已经有一条竞争产品通常不会默认提供的产品骨架：
 | P0 | 跨平台命令隔离不足 | Windows/Linux 上 agent 命令边界弱 | Bash sandbox 主要依赖 macOS `sandbox-exec` | `src/tools/bash.ts` |
 | P1 | Codex/Claude/local Provider 为占位 | Patch Arena 不能真实比较多个 agent | Provider adapter 生命周期未实现 | `electron/services/provider-service.mjs` |
 | P1 | LLM 传输仅 OpenAI Chat Completions | 不同模型 reasoning、tool streaming、附件和 usage 语义丢失 | 缺 Provider-specific adapter | `src/llm.ts`、`src/config.ts` |
-| P1 | MCP 仅 stdio | 无远程 HTTP/OAuth 生态 | 配置和 transport 单一 | `src/config.ts`、`src/mcp.ts` |
+| P2 | MCP 交互式 OAuth 宿主流程尚未产品化 | 首次授权仍需宿主提供浏览器和回调绑定 | 核心 discovery/PKCE/token lifecycle 已完成，桌面 consent UX 留待独立任务 | `src/mcp-auth.ts`、`electron/services/mcp-service.mjs` |
 | P1 | Renderer 中央控制器和样式过大 | 改一个面板易破坏全局；响应式不稳定 | 渐进拆分未完成 | `renderer/app/bootstrap.js`、`renderer/style.css`、`renderer/index.html` |
 | P1 | 小窗口关键入口被隐藏 | 用户找不到任务、竞技场、工业项目和 timeline | 断点中 `display:none` / `overflow:hidden`，没有 overflow/drawer 替代 | `renderer/style.css` |
 | P1 | 缺少集成终端、文件编辑器、App Preview | 编码闭环不如一流桌面 coding agent | 当前主要是 chat + modal/file preview | Renderer/Electron 新模块 |
@@ -538,7 +538,7 @@ tests/
 ### v0.9：企业、安全与远程执行
 
 - managed policy
-- MCP HTTP/OAuth
+- MCP 企业网关、受管授权策略与远程连接治理
 - gateway/proxy
 - remote execution workers
 - SSO/组织账号（此时再替换当前单机本地 auth）

@@ -62,6 +62,10 @@ export function mcpEnvSecretRef(serverName: string, envName: string): string {
   return `${SECRET_REFERENCE_PREFIX}:mcp:${encodeSegment(serverName, "MCP server name")}:${encodeSegment(envName, "MCP environment name")}`;
 }
 
+export function mcpAuthSecretRef(serverName: string, fieldName: "token" | "accessToken" | "refreshToken"): string {
+  return `${SECRET_REFERENCE_PREFIX}:mcp:${encodeSegment(serverName, "MCP server name")}:${encodeSegment(`auth-${fieldName}`, "MCP authentication field")}`;
+}
+
 export function providerSecretRef(providerId: string, fieldName: string): string {
   return `${SECRET_REFERENCE_PREFIX}:provider:${encodeSegment(providerId, "provider id")}:${encodeSegment(fieldName, "provider secret field")}`;
 }
@@ -166,22 +170,50 @@ export function prepareConfigForSecretPersistence(input: unknown): PreparedSecre
     if (!isRecord(config.mcpServers)) throw new Error("mcpServers must be an object");
     for (const [serverName, rawServer] of Object.entries(config.mcpServers)) {
       if (!isRecord(rawServer)) throw new Error(`MCP server ${serverName} must be an object`);
-      if (rawServer.env === undefined) continue;
-      if (!isRecord(rawServer.env)) throw new Error(`MCP server ${serverName}.env must be an object`);
-      for (const [envName, rawValue] of Object.entries(rawServer.env)) {
-        if (!isSensitiveEnvName(envName)) continue;
-        const location = `mcpServers.${serverName}.env.${envName}`;
-        if (isSecretReferenceRecord(rawValue)) {
-          rawValue.secretRef = validateSecretRef(rawValue.secretRef, "mcp");
-          continue;
+      if (rawServer.env !== undefined) {
+        if (!isRecord(rawServer.env)) throw new Error(`MCP server ${serverName}.env must be an object`);
+        for (const [envName, rawValue] of Object.entries(rawServer.env)) {
+          if (!isSensitiveEnvName(envName)) continue;
+          const location = `mcpServers.${serverName}.env.${envName}`;
+          if (isSecretReferenceRecord(rawValue)) {
+            rawValue.secretRef = validateSecretRef(rawValue.secretRef, "mcp");
+            continue;
+          }
+          if (typeof rawValue !== "string") throw new Error(`${location} must be a string or secretRef`);
+          if (isCredentialPlaceholder(rawValue)) continue;
+          const value = normalizeSecretValue(rawValue, location);
+          const ref = mcpEnvSecretRef(serverName, envName);
+          rawServer.env[envName] = { secretRef: ref };
+          addWrite({ ref, value, location, scope: "mcp" });
+          changed = true;
         }
-        if (typeof rawValue !== "string") throw new Error(`${location} must be a string or secretRef`);
-        if (isCredentialPlaceholder(rawValue)) continue;
-        const value = normalizeSecretValue(rawValue, location);
-        const ref = mcpEnvSecretRef(serverName, envName);
-        rawServer.env[envName] = { secretRef: ref };
-        addWrite({ ref, value, location, scope: "mcp" });
-        changed = true;
+      }
+      if (rawServer.auth !== undefined) {
+        if (!isRecord(rawServer.auth)) throw new Error(`MCP server ${serverName}.auth must be an object`);
+        const authType = rawServer.auth.type;
+        if (!["none", "bearer", "oauth"].includes(String(authType))) throw new Error(`MCP server ${serverName}.auth.type is invalid`);
+        const fields = authType === "bearer" ? [["token", "tokenRef"]] : authType === "oauth"
+          ? [["accessToken", "accessTokenRef"], ["refreshToken", "refreshTokenRef"]]
+          : [];
+        for (const [valueKey, referenceKey] of fields) {
+          if (Object.prototype.hasOwnProperty.call(rawServer.auth, valueKey)) {
+            const location = `mcpServers.${serverName}.auth.${valueKey}`;
+            const rawValue = rawServer.auth[valueKey];
+            if (isCredentialPlaceholder(rawValue)) {
+              delete rawServer.auth[valueKey];
+              changed = true;
+              continue;
+            }
+            const value = normalizeSecretValue(rawValue, location);
+            const ref = mcpAuthSecretRef(serverName, valueKey as "token" | "accessToken" | "refreshToken");
+            rawServer.auth[referenceKey] = ref;
+            delete rawServer.auth[valueKey];
+            addWrite({ ref, value, location, scope: "mcp" });
+            changed = true;
+          } else if (Object.prototype.hasOwnProperty.call(rawServer.auth, referenceKey)) {
+            rawServer.auth[referenceKey] = validateSecretRef(rawServer.auth[referenceKey], "mcp");
+          }
+        }
       }
     }
   }
@@ -204,10 +236,19 @@ export function findPlaintextConfigSecrets(input: unknown): string[] {
   }
   if (isRecord(input.mcpServers)) {
     for (const [serverName, server] of Object.entries(input.mcpServers)) {
-      if (!isRecord(server) || !isRecord(server.env)) continue;
-      for (const [envName, value] of Object.entries(server.env)) {
-        if (isSensitiveEnvName(envName) && typeof value === "string" && !isCredentialPlaceholder(value)) {
-          findings.push(`mcpServers.${serverName}.env.${envName}`);
+      if (!isRecord(server)) continue;
+      if (isRecord(server.env)) {
+        for (const [envName, value] of Object.entries(server.env)) {
+          if (isSensitiveEnvName(envName) && typeof value === "string" && !isCredentialPlaceholder(value)) {
+            findings.push(`mcpServers.${serverName}.env.${envName}`);
+          }
+        }
+      }
+      if (isRecord(server.auth)) {
+        for (const field of ["token", "accessToken", "refreshToken"] as const) {
+          if (typeof server.auth[field] === "string" && !isCredentialPlaceholder(server.auth[field])) {
+            findings.push(`mcpServers.${serverName}.auth.${field}`);
+          }
         }
       }
     }

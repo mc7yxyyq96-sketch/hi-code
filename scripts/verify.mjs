@@ -10,6 +10,7 @@ const tsx = path.join(root, "node_modules", "tsx", "dist", "cli.mjs");
 
 const testFiles = [
   ["test:feature", "test/feature-tests.mjs"],
+  ["test:mcp", "test/mcp-connection-tests.mjs"],
   ["test:runtime-protocol", "test/runtime-protocol-tests.mjs"],
   ["test:runtime-stores", "test/runtime-store-tests.mjs"],
   ["test:runtime-store-integration", "test/runtime-store-integration-tests.mjs"],

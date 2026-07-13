@@ -104,7 +104,7 @@ async function main() {
       await rt.handleInput(promptParts.join(" "));
     } finally {
       disconnectAssistant();
-      rt.shutdown();
+      await rt.shutdown();
     }
     return;
   }
@@ -167,9 +167,12 @@ async function runReadline(opts: {
     eventSink: eventBus,
     legacyAssistantOutput: false,
   });
-  const shutdown = () => {
+  let shuttingDown = false;
+  const shutdown = async () => {
+    if (shuttingDown) return;
+    shuttingDown = true;
     disconnectAssistant();
-    rt.shutdown();
+    await rt.shutdown();
   };
 
   rl.prompt();
@@ -191,7 +194,7 @@ async function runReadline(opts: {
     }
     busy = false;
     if (exitWhenIdle) {
-      shutdown();
+      await shutdown();
       process.exit(0);
     }
     rl.prompt();
@@ -221,8 +224,7 @@ async function runReadline(opts: {
   rl.on("close", () => {
     if (busy || queue.length) exitWhenIdle = true;
     else {
-      shutdown();
-      process.exit(0);
+      void shutdown().finally(() => process.exit(0));
     }
   });
 }

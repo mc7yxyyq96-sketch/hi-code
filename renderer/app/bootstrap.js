@@ -1383,7 +1383,7 @@ const reasoningOptions = $("reasoningOptions"), compactThresholdSelect = $("comp
 const sandboxToggle = $("sandboxToggle"), sandboxHint = $("sandboxHint");
 const executionPolicyStatus = $("executionPolicyStatus"), executionPolicyBackend = $("executionPolicyBackend");
 const executionPolicyControlRows = $("executionPolicyControlRows"), executionPolicyWarnings = $("executionPolicyWarnings");
-const mcpCfg = $("mcpCfg"), mcpSave = $("mcp-save");
+const mcpCfg = $("mcpCfg"), mcpSave = $("mcp-save"), mcpReload = $("mcp-reload"), mcpLifecycleList = $("mcpLifecycleList");
 const dataDirPath = $("dataDirPath"), configFilePath = $("configFilePath");
 const openDataDirBtn = $("openDataDirBtn"), revealConfigBtn = $("revealConfigBtn");
 const aboutVersion = $("aboutVersion"), aboutRuntime = $("aboutRuntime"), aboutPlatform = $("aboutPlatform");
@@ -4526,9 +4526,103 @@ sandboxToggle.onchange = async () => {
 };
 
 async function renderMcpSettings() {
-  const config = await currentConfigObject();
+  const [config, lifecycle] = await Promise.all([
+    currentConfigObject(),
+    api.listMcpLifecycle(),
+  ]);
   mcpCfg.value = JSON.stringify(config.mcpServers && typeof config.mcpServers === "object" && !Array.isArray(config.mcpServers) ? config.mcpServers : {}, null, 2);
+  renderMcpLifecycle(lifecycle);
   setTimeout(() => mcpCfg.focus(), 0);
+}
+
+function renderMcpLifecycle(response) {
+  mcpLifecycleList.replaceChildren();
+  const servers = Array.isArray(response?.servers) ? response.servers : [];
+  if (!servers.length) {
+    const empty = document.createElement("p");
+    empty.className = "settings-hint";
+    empty.textContent = response?.error || "尚未配置 MCP 服务器。保存连接配置后可在这里管理生命周期。";
+    mcpLifecycleList.appendChild(empty);
+    return;
+  }
+  const stateLabels = {
+    disconnected: "已断开",
+    connecting: "连接中",
+    negotiating: "协商能力",
+    ready: "已就绪",
+    degraded: "降级",
+    reconnecting: "重连中",
+    closing: "关闭中",
+    failed: "失败",
+  };
+  for (const server of servers) {
+    const row = document.createElement("div");
+    row.className = "mcp-lifecycle-row";
+    const body = document.createElement("div");
+    body.className = "mcp-lifecycle-body";
+    const title = document.createElement("div");
+    title.className = "mcp-lifecycle-title";
+    const stateDot = document.createElement("span");
+    stateDot.className = `mcp-state-dot mcp-state-${server.state || "disconnected"}`;
+    stateDot.setAttribute("aria-hidden", "true");
+    const name = document.createElement("b");
+    name.textContent = server.server || "MCP";
+    const state = document.createElement("span");
+    state.textContent = stateLabels[server.state] || server.state || "状态未知";
+    title.append(stateDot, name, state);
+    const details = document.createElement("p");
+    const detailParts = [
+      server.transport === "streamable-http" ? "Streamable HTTP" : "stdio",
+      server.protocolVersion ? `协议 ${server.protocolVersion}` : "协议待协商",
+      `${Array.isArray(server.tools) ? server.tools.length : 0} 个工具`,
+      server.auth?.type && server.auth.type !== "none" ? `认证 ${server.auth.type}` : "无认证",
+    ];
+    details.textContent = detailParts.join(" · ");
+    if (server.lastError?.message) {
+      const error = document.createElement("p");
+      error.className = "mcp-lifecycle-error";
+      error.textContent = server.lastError.message;
+      body.append(title, details, error);
+    } else {
+      body.append(title, details);
+    }
+    const actions = document.createElement("div");
+    actions.className = "mcp-lifecycle-actions";
+    const activeCalls = Array.isArray(server.activeCalls) ? server.activeCalls : [];
+    if (activeCalls.length) {
+      actions.appendChild(mcpActionButton(`取消 ${activeCalls.length} 项`, () => api.cancelMcpRequest({ server: server.server, callId: "" })));
+    }
+    if (server.state === "ready") {
+      actions.appendChild(mcpActionButton("重连", () => api.reconnectMcpServer(server.server)));
+      actions.appendChild(mcpActionButton("断开", () => api.disconnectMcpServer(server.server)));
+    } else if (!["connecting", "negotiating", "reconnecting", "closing"].includes(server.state)) {
+      actions.appendChild(mcpActionButton("连接", () => api.connectMcpServer(server.server)));
+    }
+    row.append(body, actions);
+    mcpLifecycleList.appendChild(row);
+  }
+}
+
+function mcpActionButton(label, action) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "btn small";
+  button.textContent = label;
+  button.onclick = async () => {
+    button.disabled = true;
+    try {
+      const result = await action();
+      if (!result?.ok && result?.cancelled === undefined) throw new Error(result?.error || result?.normalizedError?.message || `${label}失败`);
+      toast.ok(result?.cancelled !== undefined ? `已取消 ${result.cancelled} 个 MCP 调用。` : `${label}完成。`);
+    } catch (error) {
+      toast.error(error?.message || `${label}失败`);
+    } finally {
+      button.disabled = false;
+      const lifecycle = await api.listMcpLifecycle();
+      renderMcpLifecycle(lifecycle);
+    }
+  };
+  return button;
 }
 
 let appInfoCache = null;
@@ -4641,6 +4735,21 @@ advancedToggle.onclick = () => {
 };
 cfgSave.onclick = async () => saveConfigText(cfg.value, "JSON 已保存,模型已重载。");
 mcpSave.onclick = async () => saveMcpConfigText();
+mcpReload.onclick = async () => {
+  mcpReload.disabled = true;
+  try {
+    const result = await api.reloadMcpServers();
+    renderMcpLifecycle(result);
+    if (!result?.ok) {
+      const failures = Array.isArray(result?.results) ? result.results.filter((item) => !item.ok) : [];
+      toast.error(failures.length ? `${failures.length} 个 MCP 连接失败，请查看连接状态。` : (result?.error || "MCP 重载失败。"));
+    } else {
+      toast.ok("MCP 连接已重载。");
+    }
+  } finally {
+    mcpReload.disabled = false;
+  }
+};
 quickSave.onclick = async () => {
   const problem = validateQuickProfile(quickProfile());
   if (problem) return setCfgStatus(problem);
@@ -4821,10 +4930,18 @@ async function saveMcpConfigText() {
     mcpServers: servers,
   };
   const text = JSON.stringify(next, null, 2);
-  const result = await saveConfigText(text, "MCP 配置已保存。");
+  const result = await saveConfigText(text, "MCP 配置已保存。", { closeSettings: false });
   if (result.ok) {
+    const reloaded = await api.reloadMcpServers();
+    renderMcpLifecycle(reloaded);
     capabilityCache = null;
     syncState({ capabilityCache });
+    if (!reloaded?.ok) {
+      const failures = Array.isArray(reloaded?.results) ? reloaded.results.filter((item) => !item.ok) : [];
+      setCfgStatus(failures.length ? `配置已保存，但 ${failures.length} 个 MCP 连接失败。请检查连接状态。` : (reloaded?.error || "配置已保存，但 MCP 重载失败。"));
+    } else {
+      setCfgStatus("MCP 配置已保存并完成连接协商。", true);
+    }
   }
 }
 
@@ -4833,9 +4950,38 @@ function validateMcpServersConfig(servers) {
   for (const [name, server] of Object.entries(servers)) {
     if (!/^[a-z0-9._:-]+$/i.test(name)) return `MCP server 名称不安全: ${name}`;
     if (!server || typeof server !== "object" || Array.isArray(server)) return `${name} 必须是对象。`;
-    if (typeof server.command !== "string" || !server.command.trim()) return `${name}.command 必须是非空字符串。`;
-    if (server.args && (!Array.isArray(server.args) || server.args.some((arg) => typeof arg !== "string"))) return `${name}.args 必须是字符串数组。`;
-    if (server.env && (typeof server.env !== "object" || Array.isArray(server.env))) return `${name}.env 必须是对象。`;
+    const transport = server.transport || "stdio";
+    if (!["stdio", "streamable-http"].includes(transport)) return `${name}.transport 只支持 stdio 或 streamable-http。`;
+    if (transport === "stdio") {
+      if (typeof server.command !== "string" || !server.command.trim()) return `${name}.command 必须是非空字符串。`;
+      if (server.args && (!Array.isArray(server.args) || server.args.some((arg) => typeof arg !== "string"))) return `${name}.args 必须是字符串数组。`;
+      if (server.env && (typeof server.env !== "object" || Array.isArray(server.env))) return `${name}.env 必须是对象。`;
+      continue;
+    }
+    if (typeof server.url !== "string" || !server.url.trim()) return `${name}.url 必须是非空字符串。`;
+    let endpoint;
+    try {
+      endpoint = new URL(server.url);
+    } catch {
+      return `${name}.url 不是有效 URL。`;
+    }
+    const loopback = ["localhost", "127.0.0.1", "::1", "[::1]"].includes(endpoint.hostname);
+    if (endpoint.protocol !== "https:" && !(endpoint.protocol === "http:" && loopback)) return `${name}.url 必须使用 HTTPS；仅本机回环地址允许 HTTP。`;
+    if (endpoint.username || endpoint.password || endpoint.search || endpoint.hash) return `${name}.url 不得包含凭据、查询参数或片段。`;
+    if (server.headers !== undefined) {
+      if (!server.headers || typeof server.headers !== "object" || Array.isArray(server.headers)) return `${name}.headers 必须是对象。`;
+      for (const [header, value] of Object.entries(server.headers)) {
+        if (!/^[A-Za-z0-9!#$%&'*+.^_`|~-]+$/.test(header) || typeof value !== "string") return `${name}.headers 包含无效名称或非字符串值。`;
+        if (["authorization", "cookie", "proxy-authorization"].includes(header.toLowerCase())) return `${name}.headers 不得直接保存认证信息，请使用 auth 配置。`;
+      }
+    }
+    if (server.auth !== undefined) {
+      if (!server.auth || typeof server.auth !== "object" || Array.isArray(server.auth)) return `${name}.auth 必须是对象。`;
+      const authType = server.auth.type || "none";
+      if (!["none", "bearer", "oauth"].includes(authType)) return `${name}.auth.type 只支持 none、bearer 或 oauth。`;
+      if (authType === "bearer" && !server.auth.token && !server.auth.tokenRef) return `${name}.auth 需要 token 或 tokenRef。`;
+      if (authType === "oauth" && (typeof server.auth.clientId !== "string" || !server.auth.clientId.trim())) return `${name}.auth.clientId 必须是非空字符串。`;
+    }
   }
   return "";
 }
