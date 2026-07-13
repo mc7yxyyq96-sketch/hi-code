@@ -62,7 +62,7 @@ const windowsBuildEnv = buildReleaseChildEnv({
   env: { PATH: "C:\\Windows\\System32", SystemRoot: "C:\\Windows", ComSpec: "C:\\attacker\\cmd.exe" },
   policy: { ...developmentPolicy, platform: "win32" },
 });
-check("Windows builder derives ComSpec from SystemRoot", windowsBuildEnv.ComSpec === "C:\\Windows\\System32\\cmd.exe");
+check("Windows builder derives command resolution from trusted constants", windowsBuildEnv.ComSpec === "C:\\Windows\\System32\\cmd.exe" && windowsBuildEnv.PATHEXT === ".COM;.EXE;.BAT;.CMD");
 const cleanSource = { ok: true, clean: true, commit: "a".repeat(40), changedPaths: 0 };
 const missingReleaseCredentials = createReleasePolicy({ version: "1.0.0", platform: "darwin", mode: "release", env: {}, sourceState: cleanSource });
 check("release mode fails closed without approval and signing", !missingReleaseCredentials.ok && missingReleaseCredentials.errors.length >= 3);

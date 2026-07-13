@@ -240,6 +240,7 @@ export function buildReleaseChildEnv({ env = process.env, policy, shimPath = "" 
   }
   if (output.SystemRoot) {
     output.ComSpec = path.win32.join(output.SystemRoot, "System32", "cmd.exe");
+    output.PATHEXT = ".COM;.EXE;.BAT;.CMD";
   }
   output.PATH = [shimPath, output.PATH].filter(Boolean).join(path.delimiter);
   output.HICODE_RELEASE_MODE = policy.mode;
