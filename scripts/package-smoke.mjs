@@ -104,11 +104,10 @@ function runWindowsProcessTree(command, args, label) {
   const env = {
     ...minimalSmokeEnv(),
     HICODE_NSIS_TARGET: command,
-    HICODE_NSIS_ARGUMENTS: JSON.stringify(args),
+    HICODE_NSIS_ARGUMENT_LINE: args.join(" "),
   };
   const script = [
-    "$arguments = @(ConvertFrom-Json -InputObject $env:HICODE_NSIS_ARGUMENTS);",
-    "$process = Start-Process -FilePath $env:HICODE_NSIS_TARGET -ArgumentList $arguments -PassThru -Wait;",
+    "$process = Start-Process -FilePath $env:HICODE_NSIS_TARGET -ArgumentList $env:HICODE_NSIS_ARGUMENT_LINE -PassThru -Wait;",
     "if ($null -eq $process.ExitCode) { exit 1 };",
     "exit $process.ExitCode",
   ].join(" ");

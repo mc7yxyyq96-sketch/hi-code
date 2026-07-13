@@ -274,6 +274,6 @@ check("signed package smoke verifies platform signatures", packageSmokeSource.in
   && packageSmokeSource.includes("Get-AuthenticodeSignature"));
 check("Windows package smoke waits for the complete NSIS process tree", packageSmokeSource.includes("Start-Process")
   && packageSmokeSource.includes("-PassThru -Wait")
-  && packageSmokeSource.includes("HICODE_NSIS_ARGUMENTS"));
+  && packageSmokeSource.includes("HICODE_NSIS_ARGUMENT_LINE"));
 
 console.log(`\n=== ${passed} passed, 0 failed ===`);
