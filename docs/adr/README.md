@@ -46,3 +46,4 @@ The file name is `ADR-NNNN-short-title.md`. Numbers are never reused. An accepte
 | [ADR-0017](ADR-0017-cross-platform-execution-policy.md) | Accepted | Evaluate every managed child against truthful platform capabilities, bounded execution, and metadata-only audit |
 | [ADR-0018](ADR-0018-controlled-desktop-release-pipeline.md) | Accepted | Gate native packaging, updater trust, SBOM, provenance, and publication through one fail-closed release policy |
 | [ADR-0019](ADR-0019-mcp-streamable-http-oauth.md) | Accepted | Preserve stdio while adding a transport-neutral Streamable HTTP, session, and OAuth lifecycle |
+| [ADR-0020](ADR-0020-unified-provider-control-plane.md) | Accepted | Keep model transports and external Agents distinct behind one secure, versioned Provider control plane |

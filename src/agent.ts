@@ -1,7 +1,9 @@
 import type { VibeConfig, ModelProfile } from "./config.js";
 import { defaultProfile } from "./config.js";
 import type { ChatMessage, ToolSchema, ContentPart } from "./llm.js";
-import { streamModelProfile, type ModelProviderEvent } from "./model-provider.js";
+import { createModelProfileAdapter, streamModelProfile, type ModelProviderEvent } from "./model-provider.js";
+import { normalizeProviderFailure } from "./provider-control-plane.js";
+import { recordProviderUsage } from "./provider-usage-store.js";
 import { TOOL_SCHEMAS, executeTool, isPlanModeToolName, type ExecEnv } from "./tools/index.js";
 import { mcpToolSchemas } from "./mcp.js";
 import { ui, startSpinner, stopSpinner } from "./ui.js";
@@ -91,6 +93,8 @@ export async function runLoop(
     };
 
     let turn;
+    const providerStartedAt = Date.now();
+    const modelProviderId = createModelProfileAdapter(p).descriptor.id;
     try {
       const persistedHistory = fullHistory(session);
       const history = hasAttachmentReferences(persistedHistory)
@@ -138,6 +142,16 @@ export async function runLoop(
         opts.signal,
       );
     } catch (e) {
+      const failure = normalizeProviderFailure(e);
+      recordProviderUsage({
+        providerId: modelProviderId,
+        providerKind: "model",
+        model: p.model,
+        success: false,
+        startedAt: providerStartedAt,
+        endedAt: Date.now(),
+        failureCategory: failure.category,
+      });
       if (legacyOutput) stopSpinner();
       const msg = `error: ${(e as Error).message}`;
       if (!quiet) {
@@ -167,6 +181,17 @@ export async function runLoop(
         reasoningLevel: cfg.reasoningLevel,
       });
     }
+    recordProviderUsage({
+      providerId: modelProviderId,
+      providerKind: "model",
+      model: p.model,
+      success: !turn.aborted,
+      startedAt: providerStartedAt,
+      endedAt: Date.now(),
+      inputTokens: turn.usage?.prompt_tokens,
+      outputTokens: turn.usage?.completion_tokens,
+      ...(turn.aborted ? { failureCategory: "cancelled" } : {}),
+    });
 
     // Cancelled mid-turn: record whatever streamed and stop cleanly.
     if (turn.aborted) {

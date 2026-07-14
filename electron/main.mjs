@@ -88,6 +88,7 @@ const SECRET_DIR = path.join(HICODE_DIR, "secrets");
 const JOB_CENTER_PATH = path.join(HICODE_DIR, "jobs", "job-center.json");
 const PROVIDER_CONFIG_PATH = path.join(HICODE_DIR, "providers", "providers.json");
 const PROVIDER_RUN_DIR = path.join(HICODE_DIR, "providers", "runs");
+const PROVIDER_USAGE_PATH = path.join(HICODE_DIR, "providers", "usage.json");
 const WORKTREE_RUNNER_DIR = path.join(HICODE_DIR, "worktrees");
 const PATCH_ARENA_PATH = path.join(HICODE_DIR, "patch-arena", "arena-runs.json");
 const PATCH_ARENA_ARTIFACT_DIR = path.join(HICODE_DIR, "patch-arena", "artifacts");
@@ -2799,7 +2800,10 @@ function createMainServices() {
       getCwd: () => cwd,
       configPath: PROVIDER_CONFIG_PATH,
       runArtifactDir: PROVIDER_RUN_DIR,
+      usagePath: PROVIDER_USAGE_PATH,
       secretStore: desktopSecretStore,
+      authorize: authorizeManagedExecution,
+      loadConfig: loadDesktopConfig,
       interruptRuntime: () => mainServices?.runtime?.interrupt(),
       logger: (event, payload) => appendRuntimeLog({ id: `provider-${Date.now()}`, type: event, title: event, payload, createdAt: Date.now() }),
     }),

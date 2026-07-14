@@ -59,6 +59,8 @@ const requiredFiles = [
   "docs/adr/ADR-0017-cross-platform-execution-policy.md",
   "docs/adr/ADR-0018-controlled-desktop-release-pipeline.md",
   "docs/adr/ADR-0019-mcp-streamable-http-oauth.md",
+  "docs/adr/ADR-0020-unified-provider-control-plane.md",
+  "docs/agent-providers.md",
   "docs/credential-storage.md",
   "docs/execution-policy.md",
   "docs/release-pipeline.md",
@@ -94,6 +96,7 @@ const requiredFiles = [
   "reports/tasks/HC-SEC-402.md",
   "reports/tasks/HC-REL-420.md",
   "reports/tasks/HC-MCP-410.md",
+  "reports/tasks/HC-PROV-301.md",
   "reports/tasks/HC-REL-STABLE-GATE.md",
   "reports/tasks/HC-REL-ALPHA-7.md",
   "reports/evidence/baseline/manifest.json",
@@ -125,6 +128,7 @@ const requiredFiles = [
   "reports/evidence/HC-REL-420/manifest.json",
   "reports/evidence/HC-REL-420/ci-matrix.json",
   "reports/evidence/HC-MCP-410/manifest.json",
+  "reports/evidence/HC-PROV-301/manifest.json",
   "reports/evidence/HC-REL-STABLE-GATE/gate-result.json",
   "reports/releases/0.6.0-stable/gate-report.md",
   "scripts/stable-release-gate.mjs",
@@ -183,6 +187,7 @@ const executionPolicyCiEvidence = readJson(root, "reports/evidence/HC-SEC-402/ci
 const releasePipelineManifest = readJson(root, "reports/evidence/HC-REL-420/manifest.json");
 const releasePipelineCiEvidence = readJson(root, "reports/evidence/HC-REL-420/ci-matrix.json");
 const mcpConnectionManifest = readJson(root, "reports/evidence/HC-MCP-410/manifest.json");
+const providerHardeningManifest = readJson(root, "reports/evidence/HC-PROV-301/manifest.json");
 const stableGateResult = readJson(root, "reports/evidence/HC-REL-STABLE-GATE/gate-result.json");
 const packageJson = readJson(root, "package.json");
 const packageLock = readJson(root, "package-lock.json");
@@ -206,6 +211,7 @@ const secretStorageTask = backlog.tasks.find((task) => task.id === "HC-SEC-401")
 const executionPolicyTask = backlog.tasks.find((task) => task.id === "HC-SEC-402");
 const releasePipelineTask = backlog.tasks.find((task) => task.id === "HC-REL-420");
 const mcpConnectionTask = backlog.tasks.find((task) => task.id === "HC-MCP-410");
+const providerHardeningTask = backlog.tasks.find((task) => task.id === "HC-PROV-301");
 const qaTask = board.tasks.find((task) => task.id === "HC-QA-101");
 const runtimeTask = board.tasks.find((task) => task.id === "HC-RUN-201");
 const runtimeStoreTask = board.tasks.find((task) => task.id === "HC-RUN-202");
@@ -226,6 +232,7 @@ const secretStorageBoardTask = board.tasks.find((task) => task.id === "HC-SEC-40
 const executionPolicyBoardTask = board.tasks.find((task) => task.id === "HC-SEC-402");
 const releasePipelineBoardTask = board.tasks.find((task) => task.id === "HC-REL-420");
 const mcpConnectionBoardTask = board.tasks.find((task) => task.id === "HC-MCP-410");
+const providerHardeningBoardTask = board.tasks.find((task) => task.id === "HC-PROV-301");
 const stableGateBoardTask = board.tasks.find((task) => task.id === "HC-REL-STABLE-GATE");
 
 console.log("\n[program-control] board and evidence contract");
@@ -730,6 +737,75 @@ check(
     fs.readFileSync(path.join(root, "scripts/capture-task-evidence.mjs"), "utf8").includes('"HC-MCP-410"'),
 );
 check(
+  "HC-PROV-301 completed only after its dependencies and evidence",
+  providerHardeningTask?.status === "completed" &&
+    providerHardeningTask?.branch === "codex/runtime-engine/hc-prov-301" &&
+    Boolean(providerHardeningTask?.startedAt) &&
+    Boolean(providerHardeningTask?.completedAt) &&
+    providerHardeningTask?.taskManifest === "reports/tasks/HC-PROV-301.md" &&
+    providerHardeningTask?.evidenceManifest === "reports/evidence/HC-PROV-301/manifest.json" &&
+    providerHardeningTask?.dependencies?.every((id) => backlog.tasks.find((task) => task.id === id)?.status === "completed") &&
+    providerHardeningBoardTask?.status === "completed" &&
+    providerHardeningBoardTask?.evidence === "reports/evidence/HC-PROV-301/manifest.json",
+  JSON.stringify(providerHardeningTask),
+);
+check(
+  "Provider production-hardening gate passed with evidence",
+  board.gates?.find((gate) => gate.id === "provider-production-hardening")?.status === "passed" &&
+    board.gates?.find((gate) => gate.id === "provider-production-hardening")?.owner === "HC-PROV-301" &&
+    board.gates?.find((gate) => gate.id === "provider-production-hardening")?.evidence === "reports/evidence/HC-PROV-301/manifest.json",
+);
+check(
+  "RISK-PROV-001 is closed by production-hardening evidence",
+  risks.risks?.some((risk) =>
+    risk.id === "RISK-PROV-001" &&
+    risk.status === "closed" &&
+    risk.evidence?.includes("reports/evidence/HC-PROV-301/manifest.json") &&
+    risk.evidence?.includes("test/provider-hardening-tests.mjs")),
+);
+check(
+  "HC-PROV-301 evidence records every command passing",
+  providerHardeningManifest.summary?.allPassed === true &&
+    providerHardeningManifest.summary?.total === 16 &&
+    providerHardeningManifest.summary?.failed === 0,
+  JSON.stringify(providerHardeningManifest.summary),
+);
+check(
+  "HC-PROV-301 evidence is captured from its isolated branch and accepted control base",
+  providerHardeningManifest.source?.branch === "codex/runtime-engine/hc-prov-301" &&
+    providerHardeningManifest.source?.parentCommit === "bc208d111b1d73704be63cfe28087b4f935f14b3",
+);
+for (const requiredCommand of ["build", "provider-hardening-tests", "provider-tests", "model-provider-tests", "service-tests", "renderer-tests", "security-tests", "verify", "release-check", "feature-tests", "dod-tests", "dod-scan", "production-audit", "electron-e2e", "program-control", "git-diff-check"]) {
+  check(`HC-PROV-301 captured ${requiredCommand}`, providerHardeningManifest.commands?.some((command) => command.id === requiredCommand && command.status === "passed"));
+}
+for (const command of providerHardeningManifest.commands || []) {
+  const absolute = path.join(root, command.logPath || "");
+  check(`HC-PROV-301 ${command.id} log exists`, Boolean(command.logPath) && fs.existsSync(absolute));
+  if (fs.existsSync(absolute)) check(`HC-PROV-301 ${command.id} log hash matches`, digest(absolute) === command.logSha256);
+}
+check(
+  "Provider hardening is part of global verification and reproducible evidence capture",
+  packageJson.scripts["test:provider-hardening"] === "node test/provider-hardening-tests.mjs" &&
+    fs.readFileSync(path.join(root, "scripts/verify.mjs"), "utf8").includes("test/provider-hardening-tests.mjs") &&
+    packageJson.scripts["program:evidence:provider-hardening"] === "node scripts/capture-task-evidence.mjs --task=HC-PROV-301" &&
+    fs.readFileSync(path.join(root, "scripts/capture-task-evidence.mjs"), "utf8").includes('"HC-PROV-301"'),
+);
+check(
+  "Provider architecture keeps models and autonomous Agents distinct",
+  fs.readFileSync(path.join(root, "docs/agent-providers.md"), "utf8").includes("Model Provider") &&
+    fs.readFileSync(path.join(root, "docs/agent-providers.md"), "utf8").includes("External Agent Provider") &&
+    fs.readFileSync(path.join(root, "electron/services/provider-service.mjs"), "utf8").includes("Model Providers run through the Hi Code model runtime") &&
+    fs.readFileSync(path.join(root, "renderer/components/patch-arena-panel.js"), "utf8").includes('provider.kind === "agent"'),
+);
+check(
+  "Provider Settings exposes health, capability, credential, privacy, and enable controls",
+  ["discoverProviders", "getProviderUsage", "getProviderRegistryVersion", "healthCheckProvider", "configureProvider"]
+    .every((entry) => fs.readFileSync(path.join(root, "renderer/components/provider-settings-panel.js"), "utf8").includes(entry)) &&
+    ["credential", "capability", "privacyLevel", "enabled"]
+      .every((entry) => fs.readFileSync(path.join(root, "renderer/components/provider-settings-panel.js"), "utf8").includes(entry)) &&
+    fs.readFileSync(path.join(root, "renderer/api/hicode-api.js"), "utf8").includes("rotateProviderCredential"),
+);
+check(
   "Stable Gate assessment task is completed without claiming promotion",
   stableGateBoardTask?.status === "completed" &&
     stableGateBoardTask?.branch === "codex/security-release/0.6.0-stable-gate" &&
@@ -764,13 +840,13 @@ check(
   JSON.stringify(stableGateResult.summary),
 );
 check(
-  "Stable Gate blocks unsigned release infrastructure and open Provider risk",
+  "Stable Gate preserves its historical unsigned and Provider blockers while Provider risk is now closed",
   stableGateResult.conditions?.find((item) => item.id === "signed-release-chain")?.status === "blocked" &&
     stableGateResult.conditions?.find((item) => item.id === "release-risk-disposition")?.status === "blocked" &&
     stableGateResult.blockers?.some((item) => item.id === "RISK-REL-001") &&
     stableGateResult.blockers?.some((item) => item.id === "RISK-PROV-001") &&
     risks.risks?.find((risk) => risk.id === "RISK-REL-001")?.status === "open" &&
-    risks.risks?.find((risk) => risk.id === "RISK-PROV-001")?.status === "open",
+    risks.risks?.find((risk) => risk.id === "RISK-PROV-001")?.status === "closed",
 );
 check(
   "Stable Gate scripts expose assessment and strict fail-closed modes",

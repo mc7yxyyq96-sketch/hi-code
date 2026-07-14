@@ -56,7 +56,9 @@ export function mountPatchArenaPanel({ elements, api, toast }) {
 
   const loadProviders = async () => {
     const result = await api.listProviders();
-    state.providers = Array.isArray(result?.providers) ? result.providers : [];
+    state.providers = Array.isArray(result?.providers)
+      ? result.providers.filter((provider) => provider.kind === "agent" || provider.metadata?.providerKind === "agent")
+      : [];
     renderProviders(state, elements);
   };
 

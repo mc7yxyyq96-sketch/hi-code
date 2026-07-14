@@ -109,6 +109,8 @@ Use `dist:win`/`--platform=win32` on Windows and `dist:linux`/`--platform=linux`
 - Unsupported PDF or general-file transport must fail before provider network I/O and must not be reported as processed.
 - Input classification must use the shared Command Registry. Unknown slash commands and ambiguous native matchers fail closed; ordinary coding requests must remain on the agent route.
 - Bash, MCP servers, and industrial adapters must not inherit the whole host environment. Bash uses the allowlist in `src/tools/bash.ts`; MCP/tool adapters use `src/process-env.ts` and only receive explicitly configured extra env.
+- Model Providers and External Agent Providers are distinct. Models run inside the Hi Code Runtime tool boundary; Codex CLI, Claude Code CLI, and custom Agent workers require explicit configuration, native authorization, isolated execution by default, an absolute executable, validated argv, no shell, minimal child env, bounded output/timeout, and process-tree cleanup.
+- Provider config, IPC, logs, Job events, usage records, and artifacts may contain only credential status or scoped `secretRef` metadata. Rotation writes raw values directly to the OS-backed secret store and persists only rotation/expiry metadata. Local, remote, and enterprise providers must expose truthful privacy labels.
 - MCP stdio remains the compatibility default. Streamable HTTP endpoints require
   HTTPS except loopback development, maintain bounded sessions/timeouts/cancel,
   and keep bearer/OAuth values behind opaque secret references. See

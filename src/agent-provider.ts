@@ -421,7 +421,44 @@ function uniqueStrings(values: string[]): string[] {
 
 function sanitizeMetadata(value: unknown): Record<string, unknown> | undefined {
   if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
-  return JSON.parse(JSON.stringify(value)) as Record<string, unknown>;
+  return sanitizeMetadataRecord(value as Record<string, unknown>, new WeakSet<object>());
+}
+
+function sanitizeMetadataRecord(value: Record<string, unknown>, seen: WeakSet<object>): Record<string, unknown> {
+  if (seen.has(value)) return { circular: "[REDACTED]" };
+  seen.add(value);
+  const out: Record<string, unknown> = {};
+  for (const [key, item] of Object.entries(value)) {
+    if (/token|secret|password|api[_-]?key|credential|authorization|cookie/i.test(key)) {
+      out[key] = "[REDACTED]";
+      continue;
+    }
+    if (typeof item === "string") {
+      out[key] = redactMetadataText(item).slice(0, 2_000);
+    } else if (Array.isArray(item)) {
+      out[key] = item.slice(0, 100).map((entry) => sanitizeMetadataValue(entry, seen));
+    } else if (item && typeof item === "object") {
+      out[key] = sanitizeMetadataRecord(item as Record<string, unknown>, seen);
+    } else if (item === null || typeof item === "number" || typeof item === "boolean") {
+      out[key] = item;
+    }
+  }
+  return out;
+}
+
+function sanitizeMetadataValue(value: unknown, seen: WeakSet<object>): unknown {
+  if (typeof value === "string") return redactMetadataText(value).slice(0, 2_000);
+  if (Array.isArray(value)) return value.slice(0, 100).map((entry) => sanitizeMetadataValue(entry, seen));
+  if (value && typeof value === "object") return sanitizeMetadataRecord(value as Record<string, unknown>, seen);
+  if (value === null || typeof value === "number" || typeof value === "boolean") return value;
+  return undefined;
+}
+
+function redactMetadataText(value: string): string {
+  return value
+    .replace(/(authorization\s*:\s*bearer\s+)[^\s]+/gi, "$1[REDACTED]")
+    .replace(/\b(?:sk|ghp|github_pat)-[a-z0-9._-]{6,}\b/gi, "[REDACTED]")
+    .replace(/((?:api[_-]?key|token|secret|password|private[_-]?key)\s*[=:]\s*)[^\s,;]+/gi, "$1[REDACTED]");
 }
 
 function providerErrorToException(error: ProviderError): Error {

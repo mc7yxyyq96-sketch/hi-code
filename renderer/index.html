@@ -616,6 +616,7 @@
             <button type="button" class="settings-tab" data-settings-tab="data">数据与存储</button>
             <div class="settings-nav-group">编码</div>
             <button type="button" class="settings-tab" data-settings-tab="model">模型 API</button>
+            <button type="button" class="settings-tab" data-settings-tab="providers">Provider 管理</button>
             <button type="button" class="settings-tab" data-settings-tab="chat">对话与推理</button>
             <button type="button" class="settings-tab" data-settings-tab="safety">权限与安全</button>
             <button type="button" class="settings-tab" data-settings-tab="mcp">MCP 服务器</button>
@@ -685,6 +686,10 @@
                   <button id="cfg-save" class="primary">保存 JSON</button>
                 </div>
               </div>
+            </section>
+
+            <section id="settingsProviderSection" class="settings-section hidden">
+              <div id="providerSettingsRoot" class="provider-settings-root" aria-live="polite"></div>
             </section>
 
             <section id="settingsChatSection" class="settings-section hidden">

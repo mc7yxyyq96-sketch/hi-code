@@ -16,6 +16,7 @@ import { capabilityDescription, capabilityLifecycleState, capabilityMeta, CAPABI
 import { normalizeRuntimeQueue, summarizeRunText } from "../components/runtime-panel.js";
 import { modelPickerSection, pickerRow } from "../components/settings-panel.js";
 import { renderUsagePanel } from "../components/settings-usage-panel.js";
+import { mountProviderSettingsPanel } from "../components/provider-settings-panel.js";
 import { buildUserProfile } from "../utils/profile.js";
 import { STORE_ACTION_LABELS, STORE_CATEGORY_LABELS, STORE_KIND_LABELS, STORE_PAGE_SIZE, storeChineseSummary, storeIcon, storeInstallActionState, storeQueryOptions as buildStoreQueryOptions } from "../components/store-panel.js";
 import { createToastController } from "../components/toast.js";
@@ -1372,6 +1373,7 @@ const settingsNav = $("settingsNav");
 const settingsSections = {
   usage: $("settingsUsageSection"),
   model: $("settingsModelSection"),
+  providers: $("settingsProviderSection"),
   chat: $("settingsChatSection"),
   safety: $("settingsSafetySection"),
   mcp: $("settingsMcpSection"),
@@ -1379,6 +1381,7 @@ const settingsSections = {
   about: $("settingsAboutSection"),
 };
 const usagePanelRoot = $("usagePanelRoot");
+const providerSettingsRoot = $("providerSettingsRoot");
 const reasoningOptions = $("reasoningOptions"), compactThresholdSelect = $("compactThresholdSelect");
 const sandboxToggle = $("sandboxToggle"), sandboxHint = $("sandboxHint");
 const executionPolicyStatus = $("executionPolicyStatus"), executionPolicyBackend = $("executionPolicyBackend");
@@ -4363,6 +4366,7 @@ function restoreStoreSearchFocus(inputEl) {
 const SETTINGS_TAB_META = {
   usage: ["用量与统计", "Token 消耗、活动热力图与会话概览"],
   model: ["接入模型 API", "配置保存引用，API Key 由系统安全存储加密"],
+  providers: ["Provider 管理", "模型 Provider 与外部 Agent Provider 的健康、能力、隐私和用量"],
   chat: ["对话与推理", "推理深度与上下文压缩策略"],
   safety: ["权限与安全", "命令沙箱与始终生效的安全边界"],
   mcp: ["MCP 服务器", "只编辑 ~/.hicode/config.json 里的 mcpServers"],
@@ -4382,6 +4386,8 @@ async function openSettings(tab = "usage") {
   settings.classList.remove("hidden");
   await switchSettingsTab(tab);
 }
+
+const providerSettingsPanel = mountProviderSettingsPanel(providerSettingsRoot, { api, toast });
 
 async function openMcpSettings() {
   return openSettings("mcp");
@@ -4405,6 +4411,7 @@ async function switchSettingsTab(tab) {
   setCfgStatus("");
   if (settingsMode === "usage") await renderUsageSettings();
   if (settingsMode === "model") setTimeout(() => quickApiKey.focus(), 0);
+  if (settingsMode === "providers") await providerSettingsPanel.render();
   if (settingsMode === "chat") await renderChatSettings();
   if (settingsMode === "safety") await renderSafetySettings();
   if (settingsMode === "mcp") await renderMcpSettings();

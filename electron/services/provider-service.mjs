@@ -7,13 +7,22 @@ import {
   createPlaceholderProvider,
 } from "../../dist/agent-provider.js";
 import {
+  ProviderControlRegistry,
+  credentialStatus,
+  executeWithProviderPolicy,
+  normalizeProviderFailure,
+} from "../../dist/provider-control-plane.js";
+import { ProviderUsageStore } from "../../dist/provider-usage-store.js";
+import {
   isCredentialPlaceholder,
   isSecretReferenceRecord,
   isSensitiveEnvName,
+  modelSecretRef,
   providerSecretRef,
   validateSecretRef,
 } from "../../dist/secret-references.js";
 import { ipcObject, ipcString } from "../ipc/ipc-utils.mjs";
+import { createExternalAgentProvider } from "./external-agent-provider-service.mjs";
 
 export function createProviderService({
   inputQueue,
@@ -24,6 +33,9 @@ export function createProviderService({
   configPath,
   runArtifactDir,
   secretStore,
+  authorize = null,
+  loadConfig = null,
+  usagePath = null,
   interruptRuntime = null,
   logger = null,
 }) {
@@ -35,6 +47,7 @@ export function createProviderService({
   if (!secretStore?.persistSecretWrites) throw new Error("provider-service requires secretStore");
 
   const registry = new AgentProviderRegistry();
+  const usageStore = new ProviderUsageStore(usagePath ? { storePath: usagePath } : {});
   registry.registerProvider(createInternalProvider({
     inputQueue,
     jobStore,
@@ -45,51 +58,185 @@ export function createProviderService({
     interruptRuntime,
     logger,
   }));
-  registry.registerProvider(createPlaceholderProvider({
+  registry.registerProvider(createExternalAgentProvider({
     id: "codex-cli",
     name: "Codex CLI",
-    description: "Reserved adapter for future Codex CLI collaboration. Sprint 3A does not execute this provider.",
-    capabilities: ["external.cli", "workspace.read", "workspace.write", "job.center"],
-    requiredConfig: ["commandPath"],
-    configSchema: [
-      { key: "commandPath", label: "Codex CLI path", type: "path", required: true, description: "Absolute path to the Codex CLI executable." },
-    ],
-    metadata: { adapter: "codex-cli", availability: "not_configured" },
+    adapterType: "codex-cli",
+    description: "Runs a locally installed Codex CLI in an isolated workspace after explicit approval.",
+    inputQueue,
+    jobStore,
+    worktreeRunner,
+    getCwd,
+    runArtifactDir,
+    authorize,
+    usageStore,
+    logger,
   }));
-  registry.registerProvider(createPlaceholderProvider({
+  registry.registerProvider(createExternalAgentProvider({
     id: "claude-code",
-    name: "Claude Code",
-    description: "Reserved adapter for future Claude Code collaboration. Sprint 3A does not execute this provider.",
-    capabilities: ["external.cli", "workspace.read", "workspace.write", "job.center"],
-    requiredConfig: ["commandPath"],
-    configSchema: [
-      { key: "commandPath", label: "Claude Code path", type: "path", required: true, description: "Absolute path to the Claude Code executable." },
-    ],
-    metadata: { adapter: "claude-code", availability: "not_configured" },
+    name: "Claude Code CLI",
+    adapterType: "claude-code",
+    description: "Runs a locally installed Claude Code CLI in an isolated workspace after explicit approval.",
+    inputQueue,
+    jobStore,
+    worktreeRunner,
+    getCwd,
+    runArtifactDir,
+    authorize,
+    usageStore,
+    logger,
+  }));
+  registry.registerProvider(createExternalAgentProvider({
+    id: "custom-agent-worker",
+    name: "Custom Agent Worker",
+    adapterType: "custom-agent-worker",
+    description: "Runs an explicitly configured enterprise Agent worker without a shell in an isolated workspace.",
+    inputQueue,
+    jobStore,
+    worktreeRunner,
+    getCwd,
+    runArtifactDir,
+    authorize,
+    usageStore,
+    logger,
   }));
   registry.registerProvider(createPlaceholderProvider({
     id: "local-model",
     name: "Local Model",
-    description: "Reserved adapter for a local model runtime. Sprint 3A only validates configuration.",
+    description: "Compatibility configuration for a local OpenAI-compatible or Ollama model endpoint.",
     capabilities: ["local.model", "workspace.read", "job.center"],
     requiredConfig: ["endpoint"],
     configSchema: [
       { key: "endpoint", label: "Endpoint", type: "string", required: true, description: "Local model endpoint, for example http://127.0.0.1:11434." },
       { key: "apiKey", label: "API Key", type: "secret", sensitive: true, description: "Optional local gateway token." },
     ],
-    metadata: { adapter: "local-model", availability: "not_configured" },
+    metadata: { adapter: "local-model", providerKind: "model", availability: "not_configured", implementation: "model-profile-compatibility" },
   }));
 
-  registry.applyState(migrateProviderState(configPath, registry, secretStore));
+  const persistedState = migrateProviderState(configPath, registry, secretStore);
+  registry.applyState(persistedState);
+  const modelProviderState = normalizeModelProviderState(persistedState.modelProviders);
+  const credentialMetadata = normalizeCredentialMetadata(persistedState.credentials);
+  const controlRegistry = new ProviderControlRegistry();
+  let modelProviderIds = new Map();
+
+  function exportCombinedState() {
+    return {
+      ...registry.exportState(),
+      modelProviders: cloneObject(modelProviderState),
+      credentials: cloneObject(credentialMetadata),
+    };
+  }
+
+  function persistCombinedState() {
+    persistProviderState(configPath, exportCombinedState());
+  }
+
+  function syncControlRegistry() {
+    const desired = new Set();
+    for (const provider of registry.listProviders()) {
+      const implementation = registry.getProviderImpl(provider.id);
+      const control = agentControlDescriptor(provider, implementation, credentialMetadata[provider.id], secretStore);
+      const existing = controlRegistry.get(control.descriptor.id);
+      if (existing) control.descriptor.health = existing.health;
+      desired.add(control.descriptor.id);
+      controlRegistry.upsert({
+        ...control,
+        setEnabled(enabled) {
+          if (enabled) registry.enableProvider(provider.id);
+          else registry.disableProvider(provider.id);
+          persistCombinedState();
+        },
+      });
+    }
+
+    modelProviderIds = new Map();
+    for (const entry of discoverModelProfiles(loadConfig, modelProviderState, credentialMetadata, secretStore)) {
+      modelProviderIds.set(entry.id, entry.profileKey);
+      desired.add(entry.id);
+      const existing = controlRegistry.get(entry.id);
+      controlRegistry.upsert({
+        descriptor: { ...entry.descriptor, ...(existing ? { health: existing.health } : {}) },
+        healthCheck: () => probeModelProfile(entry.profile),
+        setEnabled(enabled) {
+          modelProviderState[entry.profileKey] = {
+            ...(modelProviderState[entry.profileKey] || {}),
+            enabled,
+          };
+          persistCombinedState();
+        },
+      });
+    }
+    for (const current of controlRegistry.discover()) {
+      if (!desired.has(current.id)) controlRegistry.remove(current.id);
+    }
+  }
+
+  syncControlRegistry();
 
   return {
     listProviders() {
-      return { ok: true, providers: registry.listProviders() };
+      syncControlRegistry();
+      return { ok: true, providers: unifiedProviderDescriptors(registry, controlRegistry) };
+    },
+
+    discoverProviders(payload = {}) {
+      syncControlRegistry();
+      const input = ipcObject(payload);
+      const kind = ["model", "agent"].includes(input.kind) ? input.kind : undefined;
+      const health = ["healthy", "degraded", "unavailable", "not_configured", "disabled", "unknown"].includes(input.health)
+        ? input.health
+        : undefined;
+      return {
+        ok: true,
+        providers: controlRegistry.discover({
+          ...(kind ? { kind } : {}),
+          ...(typeof input.enabled === "boolean" ? { enabled: input.enabled } : {}),
+          ...(health ? { health } : {}),
+          ...(ipcString(input.capability).trim() ? { capability: ipcString(input.capability).trim() } : {}),
+        }),
+      };
     },
 
     getProvider(providerId) {
-      const provider = registry.getProvider(ipcString(providerId));
+      syncControlRegistry();
+      const provider = unifiedProviderDescriptors(registry, controlRegistry)
+        .find((entry) => entry.id === ipcString(providerId));
       return provider ? { ok: true, provider } : { ok: false, error: "provider not found" };
+    },
+
+    getProviderCapabilities(providerId) {
+      syncControlRegistry();
+      try {
+        return { ok: true, providerId: ipcString(providerId), capability: controlRegistry.queryCapabilities(ipcString(providerId)) };
+      } catch (error) {
+        return { ok: false, error: providerErrorMessage(error) };
+      }
+    },
+
+    async healthCheckProvider(providerId) {
+      syncControlRegistry();
+      try {
+        const id = ipcString(providerId);
+        const health = await controlRegistry.healthCheck(id);
+        return { ok: true, providerId: id, health };
+      } catch (error) {
+        return { ok: false, error: providerErrorMessage(error) };
+      }
+    },
+
+    getProviderRegistryVersion() {
+      syncControlRegistry();
+      return { ok: true, registry: controlRegistry.version() };
+    },
+
+    getProviderUsage(providerId = "") {
+      try {
+        const id = ipcString(providerId).trim();
+        return id ? { ok: true, usage: usageStore.get(id) } : { ok: true, usage: usageStore.list() };
+      } catch (error) {
+        return { ok: false, error: providerErrorMessage(error) };
+      }
     },
 
     configureProvider(providerId, payload = {}) {
@@ -97,8 +244,24 @@ export function createProviderService({
       if (!id) return { ok: false, error: "providerId is required" };
       const input = ipcObject(payload);
       let secretTransaction = null;
-      const previousState = registry.exportState();
+      const previousState = exportCombinedState();
       try {
+        syncControlRegistry();
+        if (modelProviderIds.has(id)) {
+          const profileKey = modelProviderIds.get(id);
+          if (Object.prototype.hasOwnProperty.call(input, "config")) {
+            throw new Error("Model endpoint settings are managed in Model API settings; use credential rotation for keys.");
+          }
+          if (input.enabled === true || input.enabled === false) {
+            modelProviderState[profileKey] = {
+              ...(modelProviderState[profileKey] || {}),
+              enabled: input.enabled,
+            };
+          }
+          persistCombinedState();
+          syncControlRegistry();
+          return { ok: true, provider: controlRegistry.get(id), validation: { ok: true } };
+        }
         if (Object.prototype.hasOwnProperty.call(input, "config")) {
           const prepared = prepareProviderConfig(id, ipcObject(input.config), registry.getProviderImpl(id));
           secretTransaction = secretStore.persistSecretWrites(prepared.writes);
@@ -106,16 +269,65 @@ export function createProviderService({
         }
         if (input.enabled === true) registry.enableProvider(id);
         if (input.enabled === false) registry.disableProvider(id);
-        persistProviderState(configPath, registry.exportState());
+        persistCombinedState();
         secretTransaction?.commit();
+        syncControlRegistry();
         return {
           ok: true,
-          provider: registry.getProvider(id),
+          provider: unifiedProviderDescriptors(registry, controlRegistry).find((entry) => entry.id === id),
           validation: registry.validateProviderConfig(id),
         };
       } catch (error) {
         secretTransaction?.rollback();
         registry.applyState(previousState);
+        replaceObject(modelProviderState, previousState.modelProviders);
+        replaceObject(credentialMetadata, previousState.credentials);
+        syncControlRegistry();
+        return { ok: false, error: providerErrorMessage(error) };
+      }
+    },
+
+    rotateProviderCredential(providerId, payload = {}) {
+      const id = ipcString(providerId).trim();
+      const input = ipcObject(payload);
+      const value = ipcString(input.value).trim();
+      const field = ipcString(input.field, "apiKey").trim();
+      if (!id) return { ok: false, error: "providerId is required" };
+      if (!value || isCredentialPlaceholder(value)) return { ok: false, error: "credential value is required" };
+      if (!/^[A-Za-z][A-Za-z0-9_-]{1,80}$/.test(field) || !isSensitiveEnvName(field)) {
+        return { ok: false, error: "credential field is not an allowed sensitive field" };
+      }
+      const expiresAt = normalizeOptionalTimestamp(input.expiresAt);
+      const rotatedAt = Date.now();
+      try {
+        syncControlRegistry();
+        if (modelProviderIds.has(id)) {
+          const profileKey = modelProviderIds.get(id);
+          rotateModelProfileCredential(secretStore, profileKey, value);
+          credentialMetadata[id] = { secretRef: modelSecretRef(profileKey), rotatedAt, ...(expiresAt ? { expiresAt } : {}) };
+        } else {
+          const implementation = registry.getProviderImpl(id);
+          if (!implementation) throw new Error("provider not found");
+          const prepared = prepareProviderConfig(id, { ...(implementation.config || {}), [field]: value }, implementation);
+          const transaction = secretStore.persistSecretWrites(prepared.writes);
+          try {
+            registry.configureProvider(id, prepared.config);
+            credentialMetadata[id] = {
+              secretRef: providerSecretRef(id, field),
+              rotatedAt,
+              ...(expiresAt ? { expiresAt } : {}),
+            };
+            persistCombinedState();
+            transaction.commit();
+          } catch (error) {
+            transaction.rollback();
+            throw error;
+          }
+        }
+        persistCombinedState();
+        syncControlRegistry();
+        return { ok: true, providerId: id, credential: controlRegistry.get(id)?.credential };
+      } catch (error) {
         return { ok: false, error: providerErrorMessage(error) };
       }
     },
@@ -127,7 +339,11 @@ export function createProviderService({
       if (!id) return { ok: false, error: "providerId is required" };
       if (!prompt) return { ok: false, error: "prompt is required" };
       try {
-        const result = await registry.runProvider(id, {
+        syncControlRegistry();
+        const descriptor = controlRegistry.get(id);
+        if (!descriptor) throw new Error("provider not found");
+        if (descriptor.kind !== "agent") throw new Error("Model Providers run through the Hi Code model runtime, not the External Agent execution API.");
+        const request = {
           prompt,
           cwd: ipcString(input.cwd, undefined),
           jobId: ipcString(input.jobId, undefined),
@@ -135,10 +351,52 @@ export function createProviderService({
           messages: Array.isArray(input.messages) ? input.messages : undefined,
           metadata: ipcObject(input.metadata),
           options: ipcObject(input.options),
+        };
+        const options = ipcObject(input.options);
+        const fallbackProviderIds = Array.isArray(options.fallbackProviderIds)
+          ? options.fallbackProviderIds.map((value) => ipcString(value).trim()).filter(Boolean)
+          : [];
+        for (const fallbackId of fallbackProviderIds) {
+          if (controlRegistry.get(fallbackId)?.kind !== "agent") throw new Error(`fallback provider must be an Agent Provider: ${fallbackId}`);
+        }
+        let lastFailedResult = null;
+        const outcome = await executeWithProviderPolicy({
+          providerId: id,
+          policy: {
+            retries: Number(options.retries || 0),
+            retryDelayMs: Number(options.retryDelayMs || 500),
+            fallbackProviderIds,
+          },
+          async run(candidateId) {
+            const result = await registry.runProvider(candidateId, request);
+            if (!result.ok) {
+              lastFailedResult = result;
+              const failure = Object.assign(new Error(result.error?.message || result.summary), {
+                code: result.error?.code,
+                retriable: result.error?.retriable,
+              });
+              throw failure;
+            }
+            return result;
+          },
         });
-        return result.ok ? { ok: true, result } : { ok: false, result, error: result.error?.message || result.summary };
+        if (!outcome.ok || !outcome.result) {
+          const attempts = publicExecutionAttempts(outcome.attempts);
+          return {
+            ok: false,
+            error: outcome.failure?.message || "provider run failed",
+            failure: outcome.failure,
+            attempts,
+            ...(lastFailedResult ? { result: { ...lastFailedResult, attempts } } : {}),
+          };
+        }
+        return {
+          ok: true,
+          result: { ...outcome.result, attempts: publicExecutionAttempts(outcome.attempts) },
+        };
       } catch (error) {
-        return { ok: false, error: providerErrorMessage(error) };
+        const failure = normalizeProviderFailure(error);
+        return { ok: false, error: failure.message, failure };
       }
     },
 
@@ -161,6 +419,8 @@ export function createProviderService({
     },
 
     _registry: registry,
+    _controlRegistry: controlRegistry,
+    _usageStore: usageStore,
   };
 }
 
@@ -169,7 +429,13 @@ export function registerProviderIpc({ register, provider }) {
   if (!provider) throw new Error("registerProviderIpc requires provider service");
 
   register.handle("provider:list", () => provider.listProviders());
+  register.handle("provider:discover", (_event, payload) => provider.discoverProviders(payload));
   register.handle("provider:get", (_event, providerId) => provider.getProvider(providerId));
+  register.handle("provider:capabilities", (_event, providerId) => provider.getProviderCapabilities(providerId));
+  register.handle("provider:health", (_event, providerId) => provider.healthCheckProvider(providerId));
+  register.handle("provider:registry-version", () => provider.getProviderRegistryVersion());
+  register.handle("provider:usage", (_event, providerId) => provider.getProviderUsage(providerId));
+  register.handle("provider:credential:rotate", (_event, providerId, payload) => provider.rotateProviderCredential(providerId, payload));
   register.handle("provider:configure", (_event, providerId, payload) => provider.configureProvider(providerId, payload));
   register.handle("provider:run", (_event, providerId, payload) => provider.runProvider(providerId, payload));
   register.handle("provider:cancel", (_event, providerId, payload) => provider.cancelProvider(providerId, payload));
@@ -618,4 +884,336 @@ function normalizeExecutionMode(value) {
   const mode = normalizeText(value) || "auto";
   if (["auto", "worktree", "copy", "dry-run", "direct"].includes(mode)) return mode;
   return "auto";
+}
+
+function unifiedProviderDescriptors(agentRegistry, controlRegistry) {
+  const agents = new Map(agentRegistry.listProviders().map((provider) => [provider.id, provider]));
+  return controlRegistry.discover().map((control) => {
+    const legacy = agents.get(control.id);
+    return {
+      ...(legacy || {}),
+      ...control,
+      status: !control.enabled ? "disabled" : control.configured ? "enabled" : "not_configured",
+      configured: control.configured,
+      kind: control.kind,
+      health: control.health,
+      capability: control.capability,
+      credential: control.credential,
+      metadata: { ...(legacy?.metadata || {}), ...(control.metadata || {}) },
+    };
+  });
+}
+
+function agentControlDescriptor(provider, implementation, storedCredential, secretStore) {
+  const kind = implementation?.metadata?.providerKind === "model" ? "model" : "agent";
+  const adapterType = normalizeText(implementation?.metadata?.adapter) || (provider.id === "hicode-internal" ? "hicode-internal" : provider.id);
+  const deployment = adapterType === "local-model"
+    ? "local"
+    : adapterType === "custom-agent-worker"
+      ? "enterprise"
+      : "remote";
+  const privacyLevel = deployment === "local" ? "local_only" : deployment === "enterprise" ? "enterprise_policy" : "remote_warning";
+  const configured = provider.id === "hicode-internal" || provider.configured === true;
+  const secretRef = storedCredential?.secretRef || findSecretRef(implementation?.config);
+  const credential = credentialStatus({
+    state: secretRef ? (safeSecretHas(secretStore, secretRef) ? "stored" : "missing") : "not_required",
+    ...(secretRef ? { secretRef } : {}),
+    ...(storedCredential?.expiresAt ? { expiresAt: storedCredential.expiresAt } : {}),
+    ...(storedCredential?.rotatedAt ? { rotatedAt: storedCredential.rotatedAt } : {}),
+  });
+  const healthCheck = typeof implementation?.healthCheck === "function"
+    ? () => implementation.healthCheck()
+    : provider.id === "hicode-internal"
+      ? () => ({ status: "healthy", checkedAt: Date.now(), version: provider.version, message: "Built-in runtime is available." })
+      : adapterType === "local-model"
+        ? () => probeLegacyLocalModel(implementation?.config)
+        : undefined;
+
+  return {
+    descriptor: {
+      id: provider.id,
+      kind,
+      adapterType,
+      name: provider.name,
+      version: provider.version,
+      description: provider.description,
+      enabled: provider.enabled,
+      configured,
+      health: {
+        status: !provider.enabled ? "disabled" : configured ? "unknown" : "not_configured",
+        checkedAt: Date.now(),
+      },
+      capability: {
+        ...(kind === "model" && normalizeText(implementation?.config?.model) ? { modelName: normalizeText(implementation.config.model) } : {}),
+        vision: kind === "model" ? "unknown" : false,
+        tools: kind === "agent" ? true : "unknown",
+        streaming: provider.id === "hicode-internal" ? true : false,
+        reasoning: provider.id === "hicode-internal" ? true : "unknown",
+        cost: { currency: "USD", source: "unknown" },
+        deployment,
+        privacyLevel,
+        capabilities: [...(provider.capabilities || [])],
+      },
+      credential,
+      metadata: {
+        providerKind: kind,
+        executionBoundary: kind === "agent" ? "managed-process" : "model-runtime",
+        ...(implementation?.metadata || {}),
+      },
+    },
+    healthCheck,
+  };
+}
+
+function discoverModelProfiles(loadConfig, modelProviderState, credentialMetadata, secretStore) {
+  if (typeof loadConfig !== "function") return [];
+  let config;
+  try { config = loadConfig(); } catch { return []; }
+  const profiles = config?.profiles && typeof config.profiles === "object" ? config.profiles : {};
+  return Object.entries(profiles).map(([profileKey, profile]) => {
+    const id = modelProviderId(profileKey);
+    const adapterType = modelAdapterType(profile);
+    const deployment = modelDeployment(profile);
+    const privacyLevel = deployment === "local" ? "local_only" : deployment === "enterprise" ? "enterprise_policy" : "remote_warning";
+    const enabled = modelProviderState[profileKey]?.enabled !== false;
+    const requiresCredential = deployment !== "local";
+    const secretRef = normalizeText(profile?.secretRef) || normalizeText(credentialMetadata[id]?.secretRef);
+    const hasRuntimeCredential = typeof profile?.apiKey === "string" && profile.apiKey.trim() && !isCredentialPlaceholder(profile.apiKey);
+    const configured = Boolean(normalizeText(profile?.baseURL) && normalizeText(profile?.model) && (!requiresCredential || hasRuntimeCredential));
+    const credential = credentialStatus({
+      state: !requiresCredential
+        ? "not_required"
+        : secretRef
+          ? (safeSecretHas(secretStore, secretRef) ? "stored" : "missing")
+          : hasRuntimeCredential ? "stored" : "missing",
+      ...(secretRef ? { secretRef } : {}),
+      ...(credentialMetadata[id]?.expiresAt ? { expiresAt: credentialMetadata[id].expiresAt } : {}),
+      ...(credentialMetadata[id]?.rotatedAt ? { rotatedAt: credentialMetadata[id].rotatedAt } : {}),
+      ...(!secretRef && hasRuntimeCredential && requiresCredential ? { message: "Credential is supplied at runtime and is not exposed." } : {}),
+    });
+    return {
+      id,
+      profileKey,
+      profile,
+      descriptor: {
+        id,
+        kind: "model",
+        adapterType,
+        name: profile?.name || profileKey,
+        version: "2.0.0",
+        description: `${adapterTypeLabel(adapterType)} model profile`,
+        enabled,
+        configured,
+        health: {
+          status: !enabled ? "disabled" : configured ? "unknown" : "not_configured",
+          checkedAt: Date.now(),
+        },
+        capability: modelCapabilityProfile(profile, adapterType, deployment, privacyLevel),
+        credential,
+        metadata: {
+          providerKind: "model",
+          profileKey,
+          protocol: profile?.protocol || "chat_completions",
+          dataBoundary: privacyLevel,
+        },
+      },
+    };
+  });
+}
+
+function modelCapabilityProfile(profile, adapterType, deployment, privacyLevel) {
+  const model = normalizeText(profile?.model);
+  const lower = model.toLowerCase();
+  const vision = /vision|gpt-4o|gpt-4\.1|claude-3|claude-sonnet|claude-opus|gemini|qwen.*vl/.test(lower) ? true : "unknown";
+  const reasoning = /reason|deepseek-r|(^|[-_.])o[134]($|[-_.])|r1/.test(lower) ? true : "unknown";
+  const inputCost = finiteNonNegative(profile?.cost?.inputPerMillionTokens);
+  const outputCost = finiteNonNegative(profile?.cost?.outputPerMillionTokens);
+  return {
+    ...(model ? { modelName: model } : {}),
+    ...(Number.isFinite(Number(profile?.contextWindow)) ? { contextLength: Math.max(1, Math.floor(Number(profile.contextWindow))) } : {}),
+    vision,
+    tools: true,
+    streaming: true,
+    reasoning,
+    cost: {
+      currency: normalizeText(profile?.cost?.currency) || "USD",
+      source: inputCost !== undefined || outputCost !== undefined ? "configured" : "unknown",
+      ...(inputCost !== undefined ? { inputPerMillionTokens: inputCost } : {}),
+      ...(outputCost !== undefined ? { outputPerMillionTokens: outputCost } : {}),
+    },
+    deployment,
+    privacyLevel,
+    capabilities: [
+      "input.text",
+      "input.image",
+      "tool.calling",
+      "tool.streaming",
+      "usage",
+      "interruption",
+      `transport.${adapterType}`,
+    ],
+  };
+}
+
+async function probeModelProfile(profile) {
+  const startedAt = Date.now();
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 5_000);
+  timer.unref?.();
+  try {
+    const url = modelHealthUrl(profile);
+    const headers = { accept: "application/json" };
+    if (modelDeployment(profile) !== "local" && normalizeText(profile?.apiKey)) {
+      if (profile?.protocol === "anthropic_messages") headers["x-api-key"] = profile.apiKey;
+      else headers.authorization = `Bearer ${profile.apiKey}`;
+    }
+    const response = await fetch(url, { method: "GET", headers, signal: controller.signal, redirect: "error" });
+    const latencyMs = Math.max(0, Date.now() - startedAt);
+    if (response.status === 401 || response.status === 403) {
+      return { status: "degraded", checkedAt: Date.now(), latencyMs, message: "Endpoint is reachable, but authentication failed.", failure: normalizeProviderFailure({ status: response.status, message: "authentication failed" }) };
+    }
+    if (response.status === 429) {
+      return { status: "degraded", checkedAt: Date.now(), latencyMs, message: "Endpoint is reachable, but quota or rate limit was exceeded.", failure: normalizeProviderFailure({ status: 429, message: "quota exceeded" }) };
+    }
+    if (response.status >= 500) {
+      return { status: "unavailable", checkedAt: Date.now(), latencyMs, message: `Endpoint returned HTTP ${response.status}.`, failure: normalizeProviderFailure({ status: response.status, message: "provider unavailable" }) };
+    }
+    return { status: "healthy", checkedAt: Date.now(), latencyMs, message: `Endpoint responded with HTTP ${response.status}.` };
+  } catch (error) {
+    const failure = normalizeProviderFailure(error);
+    return { status: "unavailable", checkedAt: Date.now(), latencyMs: Math.max(0, Date.now() - startedAt), message: failure.message, failure };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function probeLegacyLocalModel(config) {
+  const endpoint = normalizeText(config?.endpoint);
+  if (!endpoint) return { status: "not_configured", checkedAt: Date.now(), message: "Local endpoint is not configured." };
+  return probeModelProfile({ baseURL: endpoint, model: normalizeText(config?.model) || "local-model", protocol: "ollama_chat", apiKey: "" });
+}
+
+function modelHealthUrl(profile) {
+  const base = new URL(normalizeText(profile?.baseURL));
+  if (profile?.protocol === "ollama_chat") return new URL("/api/tags", base).toString();
+  if (profile?.protocol === "anthropic_messages") return base.toString();
+  const pathname = base.pathname.replace(/\/$/, "");
+  base.pathname = `${pathname}/models`;
+  return base.toString();
+}
+
+function modelProviderId(profileKey) {
+  const normalized = String(profileKey || "default").normalize("NFKD").replace(/[^a-z0-9._-]+/gi, "-").replace(/^-+|-+$/g, "").toLowerCase() || "default";
+  const hash = crypto.createHash("sha256").update(String(profileKey)).digest("hex").slice(0, 8);
+  return `model.${normalized.slice(0, 60)}.${hash}`;
+}
+
+function modelAdapterType(profile) {
+  if (profile?.protocol === "responses") return "openai-responses";
+  if (profile?.protocol === "anthropic_messages") return "anthropic";
+  if (profile?.protocol === "ollama_chat" || modelDeployment(profile) === "local") return "ollama-local";
+  return "openai-compatible";
+}
+
+function modelDeployment(profile) {
+  if (profile?.deployment === "enterprise" || profile?.privacyLevel === "enterprise_policy") return "enterprise";
+  try {
+    const host = new URL(normalizeText(profile?.baseURL)).hostname.toLowerCase();
+    if (["localhost", "127.0.0.1", "::1"].includes(host)) return "local";
+  } catch {}
+  return "remote";
+}
+
+function adapterTypeLabel(value) {
+  return ({
+    "openai-responses": "OpenAI Responses",
+    anthropic: "Anthropic Messages",
+    "ollama-local": "Ollama/local",
+    "openai-compatible": "OpenAI-compatible",
+  })[value] || value;
+}
+
+function rotateModelProfileCredential(secretStore, profileKey, value) {
+  const text = secretStore.readConfigForRenderer?.();
+  const config = text ? JSON.parse(text) : {};
+  if (config.profiles?.[profileKey] && typeof config.profiles[profileKey] === "object") {
+    config.profiles[profileKey].apiKey = value;
+  } else if ((config.defaultProfile || "default") === profileKey) {
+    config.apiKey = value;
+  } else {
+    throw new Error("Model profile must exist before its credential can be rotated.");
+  }
+  secretStore.persistConfig(config);
+}
+
+function normalizeModelProviderState(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const result = {};
+  for (const [key, state] of Object.entries(value)) {
+    if (!state || typeof state !== "object" || Array.isArray(state)) continue;
+    result[key] = { ...(typeof state.enabled === "boolean" ? { enabled: state.enabled } : {}) };
+  }
+  return result;
+}
+
+function normalizeCredentialMetadata(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const result = {};
+  for (const [id, item] of Object.entries(value)) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) continue;
+    try {
+      result[id] = {
+        ...(item.secretRef ? { secretRef: validateSecretRef(item.secretRef) } : {}),
+        ...(normalizeOptionalTimestamp(item.rotatedAt) ? { rotatedAt: normalizeOptionalTimestamp(item.rotatedAt) } : {}),
+        ...(normalizeOptionalTimestamp(item.expiresAt) ? { expiresAt: normalizeOptionalTimestamp(item.expiresAt) } : {}),
+      };
+    } catch {}
+  }
+  return result;
+}
+
+function normalizeOptionalTimestamp(value) {
+  if (value === undefined || value === null || value === "") return undefined;
+  const number = typeof value === "number" ? value : Date.parse(String(value));
+  if (!Number.isFinite(number) || number <= 0) throw new Error("timestamp must be a positive epoch value or ISO date");
+  return Math.floor(number);
+}
+
+function safeSecretHas(secretStore, secretRef) {
+  try { return secretStore.has(secretRef) === true; } catch { return false; }
+}
+
+function findSecretRef(value) {
+  if (!value || typeof value !== "object") return "";
+  for (const item of Object.values(value)) {
+    if (isSecretReferenceRecord(item)) return item.secretRef;
+    if (item && typeof item === "object") {
+      const nested = findSecretRef(item);
+      if (nested) return nested;
+    }
+  }
+  return "";
+}
+
+function finiteNonNegative(value) {
+  const number = Number(value);
+  return Number.isFinite(number) && number >= 0 ? number : undefined;
+}
+
+function publicExecutionAttempts(attempts) {
+  return (attempts || []).map((attempt) => ({
+    providerId: attempt.providerId,
+    attempt: attempt.attempt,
+    ok: attempt.ok,
+    ...(attempt.failure ? { failure: attempt.failure } : {}),
+  }));
+}
+
+function cloneObject(value) {
+  return JSON.parse(JSON.stringify(value || {}));
+}
+
+function replaceObject(target, value) {
+  for (const key of Object.keys(target)) delete target[key];
+  Object.assign(target, cloneObject(value));
 }

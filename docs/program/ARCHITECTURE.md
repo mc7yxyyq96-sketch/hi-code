@@ -51,9 +51,11 @@ Root-level legacy `main.mjs`, `renderer.js`, and `index.html` are not production
 
 `src/attachment-store.ts` owns typed, content-addressed app-data attachments. Session messages retain `attachment_ref` values while `src/attachment-materializer.ts` verifies and converts supported content at the provider boundary. `src/command-registry.ts` is the shared shell/slash/native/agent classifier; Electron may execute a resolved native route but does not maintain a second input classifier.
 
-The Model Provider Adapter is separate from `src/agent-provider.ts`. Model providers execute one model request and normalize text, tool-call, usage, interruption, and error semantics. Agent providers execute a whole delegated engineering task, potentially in an isolated workspace.
+The Model Provider Adapter is separate from `src/agent-provider.ts`. Model providers execute one model request and normalize text, tool-call, usage, interruption, and error semantics. Agent providers execute a whole delegated engineering task in an isolated workspace by default. `src/provider-control-plane.ts` unifies discovery, capabilities, health, enabled state, privacy, credential lifecycle, failure policy, usage projection, and registry version without merging those execution semantics.
 
 Model profiles select their wire transport explicitly. Existing profiles omit `protocol` and stay on the `src/llm.ts` Chat Completions compatibility path. Profiles can select `responses`, `anthropic_messages`, or `ollama_chat` for the dedicated modules under `src/`; all paths converge on the same Model Provider v2 events and Runtime Protocol. Transport selection never depends on hostname inference and does not rewrite persisted sessions or runtime stores. Native provider HTTP decoding is bounded, remote endpoints require HTTPS, and raw Anthropic/Ollama thinking remains outside assistant text and persistence.
+
+`electron/services/provider-service.mjs` projects active Model profiles and registered Agent providers into that control plane. Model profiles include OpenAI Responses, Anthropic Messages, OpenAI-compatible, and Ollama transports. Agent providers include the Hi Code runtime plus user-configured Codex CLI, Claude Code CLI, and custom Agent workers. External Agent execution is owned by `electron/services/external-agent-provider-service.mjs`: executable paths and argv are validated, a real run requires permission, Worktree Runner supplies isolation, managed execution supplies minimal environment and process-tree cleanup, and Job Center receives redacted events, gates, patches, and artifacts. Dry-run remains explicitly simulated.
 
 MCP remains behind the compatibility manager in `src/mcp.ts`. Existing and omitted transports resolve to managed stdio; remote servers opt into the transport-neutral Streamable HTTP implementation in `src/mcp-transport.ts`. JSON-RPC negotiation and normalized failures live in `src/mcp-protocol.ts`, while bearer/OAuth expiry, discovery, PKCE, refresh, and token rotation live in `src/mcp-auth.ts`. Desktop credentials are resolved through scoped secret references, never projected into Renderer state, and rotated credentials plus expiry metadata are committed atomically by the main-process secret store. Lifecycle operations retain the same manager API for CLI and TUI clients.
 
@@ -74,6 +76,8 @@ persistence. Config and Agent Provider state contain only scoped references;
 encrypted values remain in an owner-private `safeStorage` vault. Migration runs
 after Electron is ready and before services or Runtime start. The renderer sees
 sanitized config and configured/not-configured status only.
+
+Provider credential rotation replaces the referenced secret and persists only `secretRef`, rotation time, and optional expiry. `src/provider-usage-store.ts` keeps aggregate token, latency, cost, provider, and failure-rate telemetry in a private atomic ledger; prompts, completions, credentials, and unrestricted environment values are outside that schema.
 
 ### Renderer
 
@@ -165,6 +169,7 @@ Electron keeps its existing `output` and `tool-event` IPC channels while changin
 - Store and Domain Pack remote installs require HTTPS, safe destinations, and manifest validation. Remote manifests cannot inject local source paths or automatic scripts.
 - Commercial adapters never bypass licensing, VPN, identity, or enterprise authorization. Plaintext credentials are not persisted.
 - Logs and evidence redact secret-like data before persistence.
+- Provider descriptors expose local, remote-warning, or enterprise-policy privacy levels. External Agent adapters require an absolute configured executable, argv-only managed execution, explicit authorization, isolation by default, bounded timeout/output, and redacted Job evidence.
 - Desktop model, MCP, and Provider credentials are encrypted through Electron
   `safeStorage`; Linux `basic_text` and unavailable backends fail closed. CLI
   credentials use explicit environment variables and are never copied into

@@ -29,8 +29,13 @@ Sprint 1A splits Electron main-process IPC registration into service modules wit
   - Job Center create/list/get/control/event/artifact channels
   - Uses the persistent `JobStore` model from `src/job-center.ts`
 - `electron/services/provider-service.mjs`
-  - Agent Provider registry, configuration, run, cancel, and internal-runtime adapter channels
-  - Uses `src/agent-provider.ts` for Provider types and validation logic
+  - Unified Model/Agent discovery, capability, health, enable/disable, version, credential rotation, usage, run, and cancel channels
+  - Preserves the distinction between Model profiles consumed by Runtime and autonomous Agent providers consumed by Job Center/Patch Arena
+  - Uses `src/provider-control-plane.ts`, `src/agent-provider.ts`, and `src/provider-usage-store.ts` for versioned control, execution compatibility, and aggregate usage
+- `electron/services/external-agent-provider-service.mjs`
+  - Real Codex CLI, Claude Code CLI, and custom Agent worker execution path
+  - Requires explicit configuration and authorization, defaults to Worktree Runner isolation, executes absolute binaries with argv and no shell, and records redacted Job events, gates, patches, artifacts, cancellation, timeout, and usage
+  - Dry-run output remains `simulated: true`; unavailable or unconfigured executables never report successful execution
 - `electron/services/worktree-service.mjs`
   - Isolated workspace create/run/collect/cleanup channels
   - Uses `src/worktree-runner.ts` and records all operations in Job Center
@@ -94,6 +99,7 @@ Sprint 1A splits Electron main-process IPC registration into service modules wit
   - Electron `safeStorage` vault for model, MCP, and Agent Provider credentials
   - Atomic sanitized-config persistence, startup migration, encrypted recovery
     snapshot, controlled rollback, and status-only renderer projection
+  - Provider rotation persists scoped `secretRef`, rotation time, and optional expiry only; raw secret values are excluded from IPC responses, Provider JSON, Job artifacts, and usage records
 
 ## IPC Registration Rule
 

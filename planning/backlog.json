@@ -378,6 +378,23 @@
       "ciEvidence": "reports/evidence/HC-REL-420/ci-matrix.json"
     },
     {
+      "id": "HC-PROV-301",
+      "release": "0.6.0-rc.1",
+      "priority": "P0",
+      "title": "Provider Production Hardening",
+      "owner": "runtime-engine",
+      "estimatedDays": 6,
+      "dependencies": ["HC-PROV-212", "HC-SEC-401", "HC-SEC-402", "HC-MCP-410"],
+      "deliverables": ["unified provider control plane", "external Agent adapters", "credential lifecycle", "failure policy", "usage telemetry", "Provider Settings"],
+      "acceptance": ["Model and External Agent providers remain distinct", "credentials never enter JSON/logs/artifacts", "external Agents require authorization and isolation", "provider health/failure/usage are truthful"],
+      "status": "completed",
+      "startedAt": "2026-07-13T19:40:48Z",
+      "completedAt": "2026-07-14T03:33:00Z",
+      "branch": "codex/runtime-engine/hc-prov-301",
+      "taskManifest": "reports/tasks/HC-PROV-301.md",
+      "evidenceManifest": "reports/evidence/HC-PROV-301/manifest.json"
+    },
+    {
       "id": "HC-IND-501",
       "release": "Industrial Studio preview",
       "priority": "P1",

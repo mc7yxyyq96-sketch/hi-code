@@ -461,7 +461,20 @@ contextBridge.exposeInMainWorld("hicode", {
     return checkedArtifact.ok ? safeInvoke("job:artifact:open", checkedJob.value, checkedArtifact.value) : Promise.resolve(checkedArtifact);
   },
   listProviders: () => safeInvoke("provider:list"),
+  discoverProviders: (payload) => safeInvoke("provider:discover", optionalObject(payload)),
   getProvider: (providerId) => checkedInvoke("provider:get", providerId, "providerId"),
+  getProviderCapabilities: (providerId) => checkedInvoke("provider:capabilities", providerId, "providerId"),
+  healthCheckProvider: (providerId) => checkedInvoke("provider:health", providerId, "providerId"),
+  getProviderRegistryVersion: () => safeInvoke("provider:registry-version"),
+  getProviderUsage: (providerId) => {
+    if (providerId === undefined || providerId === null || providerId === "") return safeInvoke("provider:usage", "");
+    const checked = requireString(providerId, "providerId");
+    return checked.ok ? safeInvoke("provider:usage", checked.value) : Promise.resolve(checked);
+  },
+  rotateProviderCredential: (providerId, payload) => {
+    const checked = requireString(providerId, "providerId");
+    return checked.ok ? safeInvoke("provider:credential:rotate", checked.value, optionalObject(payload)) : Promise.resolve(checked);
+  },
   configureProvider: (providerId, payload) => {
     const checked = requireString(providerId, "providerId");
     return checked.ok ? safeInvoke("provider:configure", checked.value, optionalObject(payload)) : Promise.resolve(checked);

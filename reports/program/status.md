@@ -47,6 +47,7 @@ The final machine-captured evidence is written by `npm run program:baseline` to 
 | 19 | HC-SEC-402 | Completed | Security And Release | HC-PLAT-110 |
 | 20 | HC-REL-420 | Completed | Security And Release | HC-PLAT-110, HC-SEC-401 |
 | 21 | HC-MCP-410 | Completed | Runtime Engine | HC-SEC-401 |
+| 22 | HC-PROV-301 | Completed | Runtime Engine | HC-PROV-212, HC-SEC-401, HC-SEC-402, HC-MCP-410 |
 
 HC-QA-101 established a real Electron responsive baseline. HC-RUN-201 introduces protocol-native assistant output and concurrency isolation. No new industrial domain module is authorized before HC-RUN-201 completes.
 
@@ -98,11 +99,13 @@ HC-MCP-410 completed in the isolated `codex/runtime-engine/hc-mcp-410` worktree 
 
 The `0.6.0` Stable Release Gate was executed in the isolated `codex/security-release/0.6.0-stable-gate` worktree from HC-MCP-410 commit `eaa9f27`. Ten engineering conditions pass: Runtime Protocol authority, turn replay/recovery, client isolation, three-platform Electron and package smoke, Code Studio, MCP, DoD, explicit zero open P0/P1 work, and truthful documentation. Promotion remains **blocked**, not failed: `RISK-REL-001` remains OPEN because Apple signing/notarization, Windows code-signing, and stable update-chain evidence are external prerequisites, and Program Control still records high open `RISK-PROV-001`. The package stays `0.6.0-alpha.8`; no Release, tag, signature claim, publication, updater enablement, or industrial task was created.
 
+HC-PROV-301 completed in the isolated `codex/runtime-engine/hc-prov-301` worktree from the post-Stable-Gate control commit `bc208d1`. A versioned Provider control plane now keeps Model Providers and External Agent Providers semantically distinct while unifying discovery, capability, health, enabled state, version, credential lifecycle, failure policy, privacy, and aggregate usage. OpenAI Responses, Anthropic, OpenAI-compatible, and Ollama profiles are discovered as models; Hi Code internal runtime, configured Codex CLI, configured Claude Code CLI, and configured custom Agent workers are autonomous Agents. External CLIs require an absolute executable, native authorization, no-shell managed execution, Worktree Runner isolation by default, bounded timeout/output, cancellation, Job events, gates, patches, artifacts, and truthful simulated dry-run. Credential values stay in the OS-backed secret store while Provider JSON, IPC, logs, usage, and artifacts carry references/status only. Sixteen machine-captured gates passed, including real Electron E2E and a zero-finding DoD scan, so `RISK-PROV-001` is CLOSED. The prior Stable Gate result remains historical until its required post-task rerun; `RISK-REL-001` remains OPEN.
+
 ## Current Product Truth
 
 - Core Electron, CLI/TUI, runtime, tool, security, Job Center, Provider, Worktree, Arena, industrial, gate, sample, and release tests pass.
 - Runtime Protocol output is sink-driven, and complete normalized event streams can rebuild resumable system/user/assistant/tool context without session JSON. Older incomplete streams remain read-only.
-- External Codex/Claude providers are not configured production providers.
+- Codex CLI, Claude Code CLI, and custom Agent Worker are production-capable external Agent adapters only after the user supplies a valid local executable/configuration and approves isolated execution. Adapter presence does not claim that any external product is installed, licensed, authenticated, or healthy.
 - SolidWorks and AVEVA are bridge/external-required integrations, not automatic deep integrations.
 - Real Electron multi-width and protocol-native output E2E now runs locally and in the Linux/Xvfb CI job.
 - Desktop config and Agent Provider state contain secret references rather than
@@ -132,6 +135,7 @@ The `0.6.0` Stable Release Gate was executed in the isolated `codex/security-rel
 - Cross-platform execution policy evidence: `reports/tasks/HC-SEC-402.md`, `reports/evidence/HC-SEC-402/manifest.json`, `reports/evidence/HC-SEC-402/ci-matrix.json`
 - Controlled release pipeline evidence: `reports/tasks/HC-REL-420.md`, `reports/evidence/HC-REL-420/manifest.json`, `reports/evidence/HC-REL-420/ci-matrix.json`
 - MCP connection layer evidence: `reports/tasks/HC-MCP-410.md`, `reports/evidence/HC-MCP-410/manifest.json`
+- Provider production-hardening evidence: `reports/tasks/HC-PROV-301.md`, `reports/evidence/HC-PROV-301/manifest.json`
 - Stable release gate evidence: `reports/tasks/HC-REL-STABLE-GATE.md`, `reports/evidence/HC-REL-STABLE-GATE/manifest.json`, `reports/evidence/HC-REL-STABLE-GATE/gate-result.json`, `reports/releases/0.6.0-stable/gate-report.md`
 - Current risks: `reports/program/risks.json`
 - Historical final acceptance: `reports/final-acceptance-historical.md`

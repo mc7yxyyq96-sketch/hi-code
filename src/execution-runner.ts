@@ -26,6 +26,7 @@ export interface ManagedExecutionResult {
   stdout: string;
   stderr: string;
   timedOut: boolean;
+  cancelled: boolean;
   endedAt: number;
   policy: ManagedExecutionPolicyResult;
   error?: string;
@@ -33,6 +34,7 @@ export interface ManagedExecutionResult {
 
 export interface ManagedExecutionOptions {
   capabilities?: ExecutionCapabilities;
+  signal?: AbortSignal;
 }
 
 export interface ExecutionSupervisorEnvOptions {
@@ -62,21 +64,25 @@ export async function runManagedExecution(
     let stdout = "";
     let stderr = "";
     let timedOut = false;
+    let cancelled = options.signal?.aborted === true;
     let settled = false;
     let timer: NodeJS.Timeout | undefined;
     let forceTimer: NodeJS.Timeout | undefined;
+    let abortListener: (() => void) | undefined;
     const finish = (partial: Partial<ManagedExecutionResult>) => {
       if (settled) return;
       settled = true;
       if (timer) clearTimeout(timer);
       if (forceTimer) clearTimeout(forceTimer);
+      if (abortListener) options.signal?.removeEventListener("abort", abortListener);
       resolve({
-        ok: partial.exitCode === 0 && !timedOut && !partial.error,
+        ok: partial.exitCode === 0 && !timedOut && !cancelled && !partial.error,
         exitCode: partial.exitCode ?? null,
         signal: partial.signal ?? null,
         stdout,
         stderr,
         timedOut,
+        cancelled,
         endedAt: Date.now(),
         policy,
         ...(partial.error ? { error: partial.error } : {}),
@@ -84,6 +90,10 @@ export async function runManagedExecution(
     };
 
     let child;
+    if (cancelled) {
+      finish({ exitCode: null, error: "execution cancelled before launch" });
+      return;
+    }
     try {
       child = spawn(plan.command, plan.args, {
         cwd: plan.cwd,
@@ -102,6 +112,16 @@ export async function runManagedExecution(
     child.stderr?.on("data", (chunk) => { stderr = appendBounded(stderr, chunk, plan.outputBytes); });
     child.on("error", (error) => finish({ exitCode: 127, error: errorMessage(error) }));
     child.on("close", (exitCode, signal) => finish({ exitCode, signal }));
+
+    abortListener = () => {
+      cancelled = true;
+      if (child.pid) terminateExecutionProcessTree({ pid: child.pid, platform: capabilities.platform, signal: "SIGTERM" });
+      forceTimer = setTimeout(() => {
+        if (child.pid) terminateExecutionProcessTree({ pid: child.pid, platform: capabilities.platform, signal: "SIGKILL" });
+      }, 750);
+      forceTimer.unref?.();
+    };
+    options.signal?.addEventListener("abort", abortListener, { once: true });
 
     timer = setTimeout(() => {
       timedOut = true;
@@ -150,6 +170,7 @@ export function runManagedExecutionSync(
       stdout: "",
       stderr: boundedText(String(result.stderr || ""), plan.outputBytes),
       timedOut: Boolean(result.error && "code" in result.error && result.error.code === "ETIMEDOUT"),
+      cancelled: false,
       endedAt: Date.now(),
       policy,
       error: errorMessage(result.error || result.stderr || "execution supervisor failed"),
@@ -164,6 +185,7 @@ export function runManagedExecutionSync(
       stdout: boundedText(parsed.stdout, plan.outputBytes),
       stderr: boundedText(parsed.stderr, plan.outputBytes),
       timedOut: parsed.timedOut === true,
+      cancelled: false,
       endedAt: Number.isFinite(parsed.endedAt) ? parsed.endedAt : Date.now(),
       policy,
       ...(parsed.error ? { error: boundedText(parsed.error, 1_000) } : {}),
@@ -176,6 +198,7 @@ export function runManagedExecutionSync(
       stdout: "",
       stderr: "",
       timedOut: false,
+      cancelled: false,
       endedAt: Date.now(),
       policy,
       error: `invalid execution supervisor response: ${errorMessage(error)}`,
@@ -210,6 +233,7 @@ function prepareExecution(request: ExecutionPolicyRequest, options: ManagedExecu
         stdout: "",
         stderr: "",
         timedOut: false,
+        cancelled: false,
         endedAt: Date.now(),
         policy,
         error: decision.error || "execution policy denied the launch",

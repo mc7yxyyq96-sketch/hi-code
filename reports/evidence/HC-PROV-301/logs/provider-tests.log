@@ -1,0 +1,50 @@
+$ npm run test:providers
+
+> hi-code@0.6.0-alpha.8 test:providers
+> node test/provider-tests.mjs
+
+
+[providers] registry
+  ✓ registry lists registered provider
+  ✓ registry gets registered provider
+  ✓ registry validates provider config
+  ✓ disabled provider cannot run
+  ✓ enabled provider can run
+  ✓ missing config reports not_configured
+  ✓ validateProviderConfig reports missing config
+  ✓ missing config provider cannot run
+  ✓ configured reserved provider still does not report enabled
+
+[providers] service and internal provider
+  ✓ service lists internal provider
+  ✓ service lists reserved codex provider as not_configured
+
+[providers] credential persistence
+  ✓ provider credential config succeeds
+  ✓ provider state does not persist plaintext credential
+  ✓ provider state persists an opaque secret reference
+  ✓ provider credential resolves only through secure store
+  ✓ provider descriptor does not expose credential config
+  ✓ blank provider credential preserves the existing reference
+  ✓ blank provider credential does not erase the secure value
+  ✓ omitted provider credential preserves the existing reference
+  ✓ legacy provider credential is removed from persisted state
+  ✓ legacy provider credential migrates into secure storage
+  ✓ service can disable provider
+  ✓ disabled provider service run fails
+  ✓ missing config service run fails
+  ✓ internal provider run succeeds
+  ✓ internal provider creates Job
+  ✓ internal provider enqueues runtime job with Job Center id
+  ✓ internal provider defaults to isolated workspace
+  ✓ internal provider writes JobEvent logs
+  ✓ internal provider writes provider artifact
+  ✓ internal provider returns changed files
+
+[providers] failure handling
+  ✓ provider run failure returns failed result
+  ✓ provider run failure writes JobEvent
+  ✓ provider run failure writes gate result
+  ✓ provider run failure marks job failed
+
+=== 35 passed, 0 failed ===
