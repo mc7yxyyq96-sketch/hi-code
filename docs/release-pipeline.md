@@ -89,3 +89,14 @@ Use `dist:win` on Windows and `dist:linux` on Linux. `.github/workflows/release-
 ## Current Boundary
 
 The pipeline can prove unsigned package structure, updater fail-closed behavior, integrity metadata, and native installer extraction in CI. It cannot claim commercial signing, Apple notarization, Windows publisher reputation, or a formally published update until approved credentials are present and target-machine smoke passes.
+
+## Stable Gate States
+
+The stable evaluator keeps internal engineering acceptance separate from formal promotion:
+
+- `READY_FOR_FORMAL_RELEASE`: every engineering and promotion condition passes. Publication still requires a separate explicitly authorized release action.
+- `PASS_INTERNAL_ONLY`: every engineering condition passes and `RISK-REL-001` is the only blocker. This state does not authorize a Release, tag, signing claim, update enablement, or stable package promotion.
+- `BLOCKED`: engineering passes, but a blocker other than the sole external release-infrastructure risk remains.
+- `FAILED`: one or more engineering conditions fail.
+
+`npm run release:stable-gate` remains fail-closed and exits non-zero for `PASS_INTERNAL_ONLY` and `BLOCKED`. Only `READY_FOR_FORMAL_RELEASE` can satisfy strict promotion assessment.

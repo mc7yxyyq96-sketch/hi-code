@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "program": "Hi Code Product-Grade Desktop and Industrial Workbench",
-  "updatedAt": "2026-07-14T03:33:00Z",
+  "updatedAt": "2026-07-14T04:30:52Z",
   "status": "active",
   "source": {
     "version": "0.6.0-alpha.6",
@@ -21,12 +21,13 @@
   "stableGate": {
     "targetVersion": "0.6.0",
     "evaluatedVersion": "0.6.0-alpha.8",
-    "status": "blocked",
+    "status": "PASS_INTERNAL_ONLY",
     "engineeringStatus": "passed",
-    "evaluatedAt": "2026-07-13T17:58:31.130Z",
+    "promotionDecision": "blocked",
+    "evaluatedAt": "2026-07-14T04:30:52Z",
     "evidence": "reports/evidence/HC-REL-STABLE-GATE/gate-result.json",
     "report": "reports/releases/0.6.0-stable/gate-report.md",
-    "blockers": ["RISK-REL-001", "RISK-PROV-001"],
+    "blockers": ["RISK-REL-001"],
     "formalReleaseCreated": false,
     "tagCreated": false
   },
@@ -163,8 +164,8 @@
     },
     {
       "taskId": "HC-REL-STABLE-GATE",
-      "branch": "codex/security-release/0.6.0-stable-gate",
-      "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-0.6.0-stable-gate",
+      "branch": "codex/security-release/0.6.0-stable-gate-provider",
+      "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-0.6.0-stable-gate-provider",
       "mode": "stable-gate-assessment-worktree"
     },
     {
@@ -431,14 +432,15 @@
       "owner": "security-release",
       "priority": "P0",
       "status": "completed",
-      "dependencies": ["HC-REL-420", "HC-MCP-410"],
-      "branch": "codex/security-release/0.6.0-stable-gate",
+      "dependencies": ["HC-REL-420", "HC-MCP-410", "HC-PROV-301"],
+      "branch": "codex/security-release/0.6.0-stable-gate-provider",
       "startedAt": "2026-07-13T17:00:00Z",
-      "completedAt": "2026-07-13T17:59:47Z",
+      "completedAt": "2026-07-14T04:30:52Z",
       "taskManifest": "reports/tasks/HC-REL-STABLE-GATE.md",
       "evidence": "reports/evidence/HC-REL-STABLE-GATE/manifest.json",
       "gateResult": "reports/evidence/HC-REL-STABLE-GATE/gate-result.json",
-      "promotionDecision": "blocked"
+      "promotionDecision": "blocked",
+      "internalStatus": "PASS_INTERNAL_ONLY"
     },
     {
       "id": "HC-PROV-301",
@@ -619,10 +621,18 @@
       "id": "stable-release-promotion",
       "status": "blocked",
       "owner": "HC-REL-STABLE-GATE",
-      "verifiedAt": "2026-07-13T17:58:31.130Z",
+      "verifiedAt": "2026-07-14T04:30:52Z",
       "evidence": "reports/evidence/HC-REL-STABLE-GATE/gate-result.json",
       "report": "reports/releases/0.6.0-stable/gate-report.md",
-      "blockers": ["RISK-REL-001", "RISK-PROV-001"]
+      "blockers": ["RISK-REL-001"]
+    },
+    {
+      "id": "stable-internal-acceptance",
+      "status": "passed",
+      "owner": "HC-REL-STABLE-GATE",
+      "verifiedAt": "2026-07-14T04:30:52Z",
+      "evidence": "reports/evidence/HC-REL-STABLE-GATE/gate-result.json",
+      "result": "PASS_INTERNAL_ONLY"
     }
   ],
   "nextReleaseSlices": [

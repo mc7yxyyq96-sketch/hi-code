@@ -7,6 +7,7 @@ $ npm run test:stable-gate
 ✓ missing platform update-chain evidence blocks stable promotion
 ✓ unsigned artifacts block promotion without failing engineering
 ✓ an open high program risk blocks stable promotion
+✓ missing Provider hardening evidence rejects the engineering gate
 ✓ missing replay evidence rejects the engineering gate
 ✓ failed platform smoke cannot be hidden by successful package jobs
 ✓ open P0 or P1 board work rejects the engineering gate
@@ -15,4 +16,4 @@ $ npm run test:stable-gate
 ✓ gate output records decision without creating a release or tag
 ✓ repository evidence produces a fail-closed stable assessment
 
-Stable release gate tests: 11/11 passed
+Stable release gate tests: 12/12 passed

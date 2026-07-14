@@ -12,4 +12,4 @@ renderer/generated/hi-code.css                         5.24 kB │ gzip:   1.92 
 renderer/generated/app-shell.js                      288.98 kB │ gzip:  72.70 kB
 renderer/generated/chunks/xterm-runtime-DOnvTC-9.js  414.54 kB │ gzip:  92.86 kB
 renderer/generated/chunks/code-editor-oiW-xu-R.js    772.97 kB │ gzip: 232.99 kB
-✓ built in 744ms
+✓ built in 875ms

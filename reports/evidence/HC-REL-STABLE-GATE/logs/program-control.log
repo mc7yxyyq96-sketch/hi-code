@@ -33,6 +33,8 @@ $ npm run test:program
   ✓ docs/adr/ADR-0017-cross-platform-execution-policy.md exists and is non-empty
   ✓ docs/adr/ADR-0018-controlled-desktop-release-pipeline.md exists and is non-empty
   ✓ docs/adr/ADR-0019-mcp-streamable-http-oauth.md exists and is non-empty
+  ✓ docs/adr/ADR-0020-unified-provider-control-plane.md exists and is non-empty
+  ✓ docs/agent-providers.md exists and is non-empty
   ✓ docs/credential-storage.md exists and is non-empty
   ✓ docs/execution-policy.md exists and is non-empty
   ✓ docs/release-pipeline.md exists and is non-empty
@@ -68,6 +70,7 @@ $ npm run test:program
   ✓ reports/tasks/HC-SEC-402.md exists and is non-empty
   ✓ reports/tasks/HC-REL-420.md exists and is non-empty
   ✓ reports/tasks/HC-MCP-410.md exists and is non-empty
+  ✓ reports/tasks/HC-PROV-301.md exists and is non-empty
   ✓ reports/tasks/HC-REL-STABLE-GATE.md exists and is non-empty
   ✓ reports/tasks/HC-REL-ALPHA-7.md exists and is non-empty
   ✓ reports/evidence/baseline/manifest.json exists and is non-empty
@@ -99,6 +102,8 @@ $ npm run test:program
   ✓ reports/evidence/HC-REL-420/manifest.json exists and is non-empty
   ✓ reports/evidence/HC-REL-420/ci-matrix.json exists and is non-empty
   ✓ reports/evidence/HC-MCP-410/manifest.json exists and is non-empty
+  ✓ reports/evidence/HC-PROV-301/manifest.json exists and is non-empty
+  ✓ reports/evidence/HC-REL-STABLE-GATE/manifest.json exists and is non-empty
   ✓ reports/evidence/HC-REL-STABLE-GATE/gate-result.json exists and is non-empty
   ✓ reports/releases/0.6.0-stable/gate-report.md exists and is non-empty
   ✓ scripts/stable-release-gate.mjs exists and is non-empty
@@ -723,12 +728,140 @@ $ npm run test:program
   ✓ HC-MCP-410 git-diff-check log exists
   ✓ HC-MCP-410 git-diff-check log hash matches
   ✓ HC-MCP-410 evidence capture is reproducible
+  ✓ HC-PROV-301 completed only after its dependencies and evidence
+  ✓ Provider production-hardening gate passed with evidence
+  ✓ RISK-PROV-001 is closed by production-hardening evidence
+  ✓ HC-PROV-301 evidence records every command passing
+  ✓ HC-PROV-301 evidence is captured from its isolated branch and accepted control base
+  ✓ HC-PROV-301 captured build
+  ✓ HC-PROV-301 captured provider-hardening-tests
+  ✓ HC-PROV-301 captured provider-tests
+  ✓ HC-PROV-301 captured model-provider-tests
+  ✓ HC-PROV-301 captured service-tests
+  ✓ HC-PROV-301 captured renderer-tests
+  ✓ HC-PROV-301 captured security-tests
+  ✓ HC-PROV-301 captured verify
+  ✓ HC-PROV-301 captured release-check
+  ✓ HC-PROV-301 captured feature-tests
+  ✓ HC-PROV-301 captured dod-tests
+  ✓ HC-PROV-301 captured dod-scan
+  ✓ HC-PROV-301 captured production-audit
+  ✓ HC-PROV-301 captured electron-e2e
+  ✓ HC-PROV-301 captured program-control
+  ✓ HC-PROV-301 captured git-diff-check
+  ✓ HC-PROV-301 build log exists
+  ✓ HC-PROV-301 build log hash matches
+  ✓ HC-PROV-301 provider-hardening-tests log exists
+  ✓ HC-PROV-301 provider-hardening-tests log hash matches
+  ✓ HC-PROV-301 provider-tests log exists
+  ✓ HC-PROV-301 provider-tests log hash matches
+  ✓ HC-PROV-301 model-provider-tests log exists
+  ✓ HC-PROV-301 model-provider-tests log hash matches
+  ✓ HC-PROV-301 service-tests log exists
+  ✓ HC-PROV-301 service-tests log hash matches
+  ✓ HC-PROV-301 renderer-tests log exists
+  ✓ HC-PROV-301 renderer-tests log hash matches
+  ✓ HC-PROV-301 security-tests log exists
+  ✓ HC-PROV-301 security-tests log hash matches
+  ✓ HC-PROV-301 verify log exists
+  ✓ HC-PROV-301 verify log hash matches
+  ✓ HC-PROV-301 release-check log exists
+  ✓ HC-PROV-301 release-check log hash matches
+  ✓ HC-PROV-301 feature-tests log exists
+  ✓ HC-PROV-301 feature-tests log hash matches
+  ✓ HC-PROV-301 dod-tests log exists
+  ✓ HC-PROV-301 dod-tests log hash matches
+  ✓ HC-PROV-301 dod-scan log exists
+  ✓ HC-PROV-301 dod-scan log hash matches
+  ✓ HC-PROV-301 production-audit log exists
+  ✓ HC-PROV-301 production-audit log hash matches
+  ✓ HC-PROV-301 electron-e2e log exists
+  ✓ HC-PROV-301 electron-e2e log hash matches
+  ✓ HC-PROV-301 program-control log exists
+  ✓ HC-PROV-301 program-control log hash matches
+  ✓ HC-PROV-301 git-diff-check log exists
+  ✓ HC-PROV-301 git-diff-check log hash matches
+  ✓ Provider hardening is part of global verification and reproducible evidence capture
+  ✓ Provider architecture keeps models and autonomous Agents distinct
+  ✓ Provider Settings exposes health, capability, credential, privacy, and enable controls
   ✓ Stable Gate assessment task is completed without claiming promotion
-  ✓ Stable promotion gate is separately and truthfully blocked
+  ✓ Stable internal acceptance is separately recorded from blocked promotion
   ✓ Stable Gate result preserves passing engineering and blocked promotion
-  ✓ Stable Gate blocks unsigned release infrastructure and open Provider risk
+  ✓ Stable Gate consumes closed Provider evidence and preserves only the unsigned release blocker
   ✓ Stable Gate scripts expose assessment and strict fail-closed modes
   ✓ Evidence capture permits non-zero success only for the strict blocked Stable Gate assertion
+  ✓ Stable Gate evidence records every assessment command passing
+  ✓ Stable Gate evidence is captured from the Provider-derived isolated branch
+  ✓ HC-REL-STABLE-GATE captured stable-gate-assessment
+  ✓ HC-REL-STABLE-GATE captured build
+  ✓ HC-REL-STABLE-GATE captured stable-gate-tests
+  ✓ HC-REL-STABLE-GATE captured runtime-protocol
+  ✓ HC-REL-STABLE-GATE captured runtime-stores
+  ✓ HC-REL-STABLE-GATE captured runtime-store-integration
+  ✓ HC-REL-STABLE-GATE captured turn-recovery
+  ✓ HC-REL-STABLE-GATE captured runtime-clients
+  ✓ HC-REL-STABLE-GATE captured git-collaboration
+  ✓ HC-REL-STABLE-GATE captured mcp-tests
+  ✓ HC-REL-STABLE-GATE captured provider-hardening-tests
+  ✓ HC-REL-STABLE-GATE captured release-pipeline-tests
+  ✓ HC-REL-STABLE-GATE captured security-tests
+  ✓ HC-REL-STABLE-GATE captured verify
+  ✓ HC-REL-STABLE-GATE captured release-check
+  ✓ HC-REL-STABLE-GATE captured feature-tests
+  ✓ HC-REL-STABLE-GATE captured dod-tests
+  ✓ HC-REL-STABLE-GATE captured dod-scan
+  ✓ HC-REL-STABLE-GATE captured production-audit
+  ✓ HC-REL-STABLE-GATE captured electron-e2e
+  ✓ HC-REL-STABLE-GATE captured program-control
+  ✓ HC-REL-STABLE-GATE captured stable-gate-strict-block
+  ✓ HC-REL-STABLE-GATE captured git-diff-check
+  ✓ HC-REL-STABLE-GATE stable-gate-assessment log exists
+  ✓ HC-REL-STABLE-GATE stable-gate-assessment log hash matches
+  ✓ HC-REL-STABLE-GATE build log exists
+  ✓ HC-REL-STABLE-GATE build log hash matches
+  ✓ HC-REL-STABLE-GATE stable-gate-tests log exists
+  ✓ HC-REL-STABLE-GATE stable-gate-tests log hash matches
+  ✓ HC-REL-STABLE-GATE runtime-protocol log exists
+  ✓ HC-REL-STABLE-GATE runtime-protocol log hash matches
+  ✓ HC-REL-STABLE-GATE runtime-stores log exists
+  ✓ HC-REL-STABLE-GATE runtime-stores log hash matches
+  ✓ HC-REL-STABLE-GATE runtime-store-integration log exists
+  ✓ HC-REL-STABLE-GATE runtime-store-integration log hash matches
+  ✓ HC-REL-STABLE-GATE turn-recovery log exists
+  ✓ HC-REL-STABLE-GATE turn-recovery log hash matches
+  ✓ HC-REL-STABLE-GATE runtime-clients log exists
+  ✓ HC-REL-STABLE-GATE runtime-clients log hash matches
+  ✓ HC-REL-STABLE-GATE git-collaboration log exists
+  ✓ HC-REL-STABLE-GATE git-collaboration log hash matches
+  ✓ HC-REL-STABLE-GATE mcp-tests log exists
+  ✓ HC-REL-STABLE-GATE mcp-tests log hash matches
+  ✓ HC-REL-STABLE-GATE provider-hardening-tests log exists
+  ✓ HC-REL-STABLE-GATE provider-hardening-tests log hash matches
+  ✓ HC-REL-STABLE-GATE release-pipeline-tests log exists
+  ✓ HC-REL-STABLE-GATE release-pipeline-tests log hash matches
+  ✓ HC-REL-STABLE-GATE security-tests log exists
+  ✓ HC-REL-STABLE-GATE security-tests log hash matches
+  ✓ HC-REL-STABLE-GATE verify log exists
+  ✓ HC-REL-STABLE-GATE verify log hash matches
+  ✓ HC-REL-STABLE-GATE release-check log exists
+  ✓ HC-REL-STABLE-GATE release-check log hash matches
+  ✓ HC-REL-STABLE-GATE feature-tests log exists
+  ✓ HC-REL-STABLE-GATE feature-tests log hash matches
+  ✓ HC-REL-STABLE-GATE dod-tests log exists
+  ✓ HC-REL-STABLE-GATE dod-tests log hash matches
+  ✓ HC-REL-STABLE-GATE dod-scan log exists
+  ✓ HC-REL-STABLE-GATE dod-scan log hash matches
+  ✓ HC-REL-STABLE-GATE production-audit log exists
+  ✓ HC-REL-STABLE-GATE production-audit log hash matches
+  ✓ HC-REL-STABLE-GATE electron-e2e log exists
+  ✓ HC-REL-STABLE-GATE electron-e2e log hash matches
+  ✓ HC-REL-STABLE-GATE program-control log exists
+  ✓ HC-REL-STABLE-GATE program-control log hash matches
+  ✓ HC-REL-STABLE-GATE stable-gate-strict-block log exists
+  ✓ HC-REL-STABLE-GATE stable-gate-strict-block log hash matches
+  ✓ HC-REL-STABLE-GATE git-diff-check log exists
+  ✓ HC-REL-STABLE-GATE git-diff-check log hash matches
+  ✓ Stable Gate strict promotion assertion remains fail-closed
   ✓ Stable Gate keeps the alpha candidate and creates no release reference
   ✓ alpha.8 version is synchronized
   ✓ alpha.8 release candidate gate passed
@@ -1285,4 +1418,4 @@ $ npm run test:program
   ✓ high audit threshold blocks high advisories
   ✓ production audit rejects insecure registry
 
-=== 1275 passed, 0 failed ===
+=== 1408 passed, 0 failed ===

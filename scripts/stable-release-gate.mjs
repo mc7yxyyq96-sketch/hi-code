@@ -14,6 +14,7 @@ const ENGINEERING_CONDITION_IDS = new Set([
   "three-platform-package-smoke",
   "code-studio-core-flow",
   "mcp-connection-layer",
+  "provider-production-hardening",
   "full-tree-dod",
   "p0-p1-release-work",
   "truthful-documentation",
@@ -139,7 +140,11 @@ export function evaluateStableReleaseGate(input) {
   const mcp = taskCompleted(board, "HC-MCP-410")
     && commandPassed(manifests["HC-MCP-410"], "mcp-tests")
     && commandPassed(manifests["HC-MCP-410"], "security-tests");
-  const dod = commandPassed(manifests["HC-MCP-410"], "dod-scan");
+  const providerHardening = taskCompleted(board, "HC-PROV-301")
+    && commandPassed(manifests["HC-PROV-301"], "provider-hardening-tests")
+    && commandPassed(manifests["HC-PROV-301"], "security-tests")
+    && commandPassed(manifests["HC-PROV-301"], "dod-scan");
+  const dod = commandPassed(manifests["HC-PROV-301"], "dod-scan");
   const releasePipeline = taskCompleted(board, "HC-REL-420")
     && commandPassed(manifests["HC-REL-420"], "release-pipeline-tests")
     && commandPassed(manifests["HC-REL-420"], "checksum-verification");
@@ -219,10 +224,17 @@ export function evaluateStableReleaseGate(input) {
       reason: mcp ? null : "HC-MCP-410 lifecycle or security evidence is incomplete.",
     }),
     condition({
+      id: "provider-production-hardening",
+      title: "Model and External Agent Providers satisfy the production control contract",
+      status: providerHardening ? "passed" : "failed",
+      evidence: ["reports/evidence/HC-PROV-301/manifest.json"],
+      reason: providerHardening ? null : "HC-PROV-301 Provider, security, or full-tree evidence is incomplete.",
+    }),
+    condition({
       id: "full-tree-dod",
       title: "Latest full-tree DoD and Skeleton scan has no blocking findings",
       status: dod ? "passed" : "failed",
-      evidence: ["reports/evidence/HC-MCP-410/manifest.json"],
+      evidence: ["reports/evidence/HC-PROV-301/manifest.json"],
       reason: dod ? null : "The latest committed task does not contain a passing full-tree scan.",
     }),
     condition({
@@ -290,15 +302,24 @@ export function evaluateStableReleaseGate(input) {
       evidence: item.evidence,
     })),
   ];
+  const uniqueBlockerIds = [...new Set(blockers.map((item) => item.id))];
+  const internalStatus = engineeringFailed || decision === "rejected"
+    ? "FAILED"
+    : decision === "ready"
+      ? "READY_FOR_FORMAL_RELEASE"
+      : uniqueBlockerIds.length === 1 && uniqueBlockerIds[0] === "RISK-REL-001"
+        ? "PASS_INTERNAL_ONLY"
+        : "BLOCKED";
 
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     gateId: "HC-REL-STABLE-GATE",
     targetVersion: "0.6.0",
     evaluatedVersion: version,
     evaluatedAt,
     source,
     engineeringStatus: engineeringFailed ? "failed" : "passed",
+    internalStatus,
     decision,
     formalReleaseCreated: false,
     tagCreated: false,
@@ -324,6 +345,7 @@ export function collectStableReleaseInputs(root = defaultRoot) {
     "HC-GIT-320",
     "HC-REL-420",
     "HC-MCP-410",
+    "HC-PROV-301",
   ];
   return {
     version: readJson(root, "package.json").version,
@@ -357,6 +379,7 @@ function markdown(result) {
   return `# Hi Code 0.6.0 Stable Release Gate\n\n`
     + `- Decision: **${result.decision.toUpperCase()}**\n`
     + `- Engineering status: **${result.engineeringStatus.toUpperCase()}**\n`
+    + `- Internal status: **${result.internalStatus}**\n`
     + `- Evaluated source: \`${result.source.commit}\` on \`${result.source.branch}\`\n`
     + `- Evaluated package version: \`${result.evaluatedVersion}\`\n`
     + `- Formal Release created: **No**\n`
@@ -398,7 +421,7 @@ if (isMain()) {
     const args = parseArgs(process.argv.slice(2));
     const result = evaluateStableReleaseGate(collectStableReleaseInputs(args.root));
     writeStableReleaseGateOutputs(args.root, result);
-    console.log(`[stable-release-gate] engineering=${result.engineeringStatus} decision=${result.decision} passed=${result.summary.passed} blocked=${result.summary.blocked} failed=${result.summary.failed}`);
+    console.log(`[stable-release-gate] engineering=${result.engineeringStatus} internal=${result.internalStatus} decision=${result.decision} passed=${result.summary.passed} blocked=${result.summary.blocked} failed=${result.summary.failed}`);
     for (const blocker of result.blockers) {
       console.log(`[stable-release-gate] blocker ${blocker.id}: ${blocker.reason}`);
     }

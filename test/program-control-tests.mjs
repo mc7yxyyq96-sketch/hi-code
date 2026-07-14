@@ -129,6 +129,7 @@ const requiredFiles = [
   "reports/evidence/HC-REL-420/ci-matrix.json",
   "reports/evidence/HC-MCP-410/manifest.json",
   "reports/evidence/HC-PROV-301/manifest.json",
+  "reports/evidence/HC-REL-STABLE-GATE/manifest.json",
   "reports/evidence/HC-REL-STABLE-GATE/gate-result.json",
   "reports/releases/0.6.0-stable/gate-report.md",
   "scripts/stable-release-gate.mjs",
@@ -188,6 +189,7 @@ const releasePipelineManifest = readJson(root, "reports/evidence/HC-REL-420/mani
 const releasePipelineCiEvidence = readJson(root, "reports/evidence/HC-REL-420/ci-matrix.json");
 const mcpConnectionManifest = readJson(root, "reports/evidence/HC-MCP-410/manifest.json");
 const providerHardeningManifest = readJson(root, "reports/evidence/HC-PROV-301/manifest.json");
+const stableGateManifest = readJson(root, "reports/evidence/HC-REL-STABLE-GATE/manifest.json");
 const stableGateResult = readJson(root, "reports/evidence/HC-REL-STABLE-GATE/gate-result.json");
 const packageJson = readJson(root, "package.json");
 const packageLock = readJson(root, "package-lock.json");
@@ -808,43 +810,51 @@ check(
 check(
   "Stable Gate assessment task is completed without claiming promotion",
   stableGateBoardTask?.status === "completed" &&
-    stableGateBoardTask?.branch === "codex/security-release/0.6.0-stable-gate" &&
+    stableGateBoardTask?.branch === "codex/security-release/0.6.0-stable-gate-provider" &&
     stableGateBoardTask?.dependencies?.includes("HC-REL-420") &&
     stableGateBoardTask?.dependencies?.includes("HC-MCP-410") &&
+    stableGateBoardTask?.dependencies?.includes("HC-PROV-301") &&
     stableGateBoardTask?.promotionDecision === "blocked" &&
+    stableGateBoardTask?.internalStatus === "PASS_INTERNAL_ONLY" &&
     stableGateBoardTask?.gateResult === "reports/evidence/HC-REL-STABLE-GATE/gate-result.json",
   JSON.stringify(stableGateBoardTask),
 );
 check(
-  "Stable promotion gate is separately and truthfully blocked",
-  board.stableGate?.status === "blocked" &&
+  "Stable internal acceptance is separately recorded from blocked promotion",
+  board.stableGate?.status === "PASS_INTERNAL_ONLY" &&
     board.stableGate?.engineeringStatus === "passed" &&
+    board.stableGate?.promotionDecision === "blocked" &&
     board.stableGate?.evidence === "reports/evidence/HC-REL-STABLE-GATE/gate-result.json" &&
-    board.stableGate?.blockers?.includes("RISK-REL-001") &&
-    board.stableGate?.blockers?.includes("RISK-PROV-001") &&
+    JSON.stringify(board.stableGate?.blockers) === JSON.stringify(["RISK-REL-001"]) &&
     board.stableGate?.formalReleaseCreated === false &&
     board.stableGate?.tagCreated === false &&
-    board.gates?.find((gate) => gate.id === "stable-release-promotion")?.status === "blocked",
+    board.gates?.find((gate) => gate.id === "stable-release-promotion")?.status === "blocked" &&
+    JSON.stringify(board.gates?.find((gate) => gate.id === "stable-release-promotion")?.blockers) === JSON.stringify(["RISK-REL-001"]) &&
+    board.gates?.find((gate) => gate.id === "stable-internal-acceptance")?.status === "passed" &&
+    board.gates?.find((gate) => gate.id === "stable-internal-acceptance")?.result === "PASS_INTERNAL_ONLY",
   JSON.stringify(board.stableGate),
 );
 check(
   "Stable Gate result preserves passing engineering and blocked promotion",
   stableGateResult.gateId === "HC-REL-STABLE-GATE" &&
+    stableGateResult.schemaVersion === 2 &&
     stableGateResult.engineeringStatus === "passed" &&
+    stableGateResult.internalStatus === "PASS_INTERNAL_ONLY" &&
     stableGateResult.decision === "blocked" &&
     stableGateResult.formalReleaseCreated === false &&
     stableGateResult.tagCreated === false &&
-    stableGateResult.summary?.passed === 10 &&
-    stableGateResult.summary?.blocked === 2 &&
+    stableGateResult.summary?.passed === 12 &&
+    stableGateResult.summary?.blocked === 1 &&
     stableGateResult.summary?.failed === 0,
   JSON.stringify(stableGateResult.summary),
 );
 check(
-  "Stable Gate preserves its historical unsigned and Provider blockers while Provider risk is now closed",
+  "Stable Gate consumes closed Provider evidence and preserves only the unsigned release blocker",
+  stableGateResult.conditions?.find((item) => item.id === "provider-production-hardening")?.status === "passed" &&
   stableGateResult.conditions?.find((item) => item.id === "signed-release-chain")?.status === "blocked" &&
-    stableGateResult.conditions?.find((item) => item.id === "release-risk-disposition")?.status === "blocked" &&
+    stableGateResult.conditions?.find((item) => item.id === "release-risk-disposition")?.status === "passed" &&
     stableGateResult.blockers?.some((item) => item.id === "RISK-REL-001") &&
-    stableGateResult.blockers?.some((item) => item.id === "RISK-PROV-001") &&
+    !stableGateResult.blockers?.some((item) => item.id === "RISK-PROV-001") &&
     risks.risks?.find((risk) => risk.id === "RISK-REL-001")?.status === "open" &&
     risks.risks?.find((risk) => risk.id === "RISK-PROV-001")?.status === "closed",
 );
@@ -860,9 +870,45 @@ check(
   fs.readFileSync(path.join(root, "scripts/capture-task-evidence.mjs"), "utf8")
     .includes('taskId === "HC-REL-STABLE-GATE"') &&
     fs.readFileSync(path.join(root, "scripts/capture-task-evidence.mjs"), "utf8")
+      .includes('{ id: "provider-hardening-tests", command: npm, args: ["run", "test:provider-hardening"] }') &&
+    fs.readFileSync(path.join(root, "scripts/capture-task-evidence.mjs"), "utf8")
       .includes('spec.id === "stable-gate-strict-block"') &&
     fs.readFileSync(path.join(root, "scripts/capture-task-evidence.mjs"), "utf8")
       .includes("cannot treat a non-zero exit as passing"),
+);
+check(
+  "Stable Gate evidence records every assessment command passing",
+  stableGateManifest.summary?.allPassed === true &&
+    stableGateManifest.summary?.total === 23 &&
+    stableGateManifest.summary?.failed === 0,
+  JSON.stringify(stableGateManifest.summary),
+);
+check(
+  "Stable Gate evidence is captured from the Provider-derived isolated branch",
+  stableGateManifest.source?.branch === "codex/security-release/0.6.0-stable-gate-provider" &&
+    stableGateManifest.source?.parentCommit === "7a5d0545ed77b227b0f4c580797f69cd8decd553",
+);
+for (const requiredCommand of [
+  "stable-gate-assessment", "build", "stable-gate-tests", "runtime-protocol", "runtime-stores",
+  "runtime-store-integration", "turn-recovery", "runtime-clients", "git-collaboration", "mcp-tests",
+  "provider-hardening-tests", "release-pipeline-tests", "security-tests", "verify", "release-check",
+  "feature-tests", "dod-tests", "dod-scan", "production-audit", "electron-e2e", "program-control",
+  "stable-gate-strict-block", "git-diff-check",
+]) {
+  check(`HC-REL-STABLE-GATE captured ${requiredCommand}`, stableGateManifest.commands?.some((command) => command.id === requiredCommand && command.status === "passed"));
+}
+for (const command of stableGateManifest.commands || []) {
+  const absolute = path.join(root, command.logPath || "");
+  check(`HC-REL-STABLE-GATE ${command.id} log exists`, Boolean(command.logPath) && fs.existsSync(absolute));
+  if (fs.existsSync(absolute)) check(`HC-REL-STABLE-GATE ${command.id} log hash matches`, digest(absolute) === command.logSha256);
+}
+const strictStableGateCommand = stableGateManifest.commands?.find((command) => command.id === "stable-gate-strict-block");
+check(
+  "Stable Gate strict promotion assertion remains fail-closed",
+  strictStableGateCommand?.exitCode === 2 &&
+    JSON.stringify(strictStableGateCommand?.expectedExitCodes) === JSON.stringify([2]) &&
+    strictStableGateCommand?.expectedOutcome === "blocked",
+  JSON.stringify(strictStableGateCommand),
 );
 check(
   "Stable Gate keeps the alpha candidate and creates no release reference",

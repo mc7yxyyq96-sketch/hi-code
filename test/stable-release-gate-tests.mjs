@@ -39,6 +39,7 @@ function readyInput() {
     "HC-GIT-320",
     "HC-REL-420",
     "HC-MCP-410",
+    "HC-PROV-301",
   ];
   const tasks = taskIds.map((id) => ({ id, status: "completed" }));
   return {
@@ -59,6 +60,7 @@ function readyInput() {
       "HC-GIT-320": manifest(["git-collaboration"]),
       "HC-REL-420": manifest(["release-pipeline-tests", "checksum-verification"]),
       "HC-MCP-410": manifest(["mcp-tests", "security-tests", "dod-scan"]),
+      "HC-PROV-301": manifest(["provider-hardening-tests", "security-tests", "dod-scan"]),
     },
     releaseCi: {
       jobs: [
@@ -82,6 +84,7 @@ function readyInput() {
 await test("ready requires signed package and update-chain evidence", () => {
   const result = evaluateStableReleaseGate(readyInput());
   assert.equal(result.engineeringStatus, "passed");
+  assert.equal(result.internalStatus, "READY_FOR_FORMAL_RELEASE");
   assert.equal(result.decision, "ready");
   assert.equal(result.summary.blocked, 0);
   assert.equal(result.summary.failed, 0);
@@ -94,6 +97,7 @@ await test("missing platform update-chain evidence blocks stable promotion", () 
   delete input.releaseCi.jobs.find((job) => job.platform === "windows-latest").updateSmoke;
   const result = evaluateStableReleaseGate(input);
   assert.equal(result.engineeringStatus, "passed");
+  assert.equal(result.internalStatus, "PASS_INTERNAL_ONLY");
   assert.equal(result.decision, "blocked");
   assert.equal(result.conditions.find((item) => item.id === "signed-release-chain")?.status, "blocked");
   assert.ok(result.blockers.some((item) => item.id === "RISK-REL-001"));
@@ -108,6 +112,7 @@ await test("unsigned artifacts block promotion without failing engineering", () 
   input.releaseCi.annotations.push({ severity: "warning", message: "Packages remain unsigned and update-disabled." });
   const result = evaluateStableReleaseGate(input);
   assert.equal(result.engineeringStatus, "passed");
+  assert.equal(result.internalStatus, "PASS_INTERNAL_ONLY");
   assert.equal(result.decision, "blocked");
   assert.equal(result.conditions.find((item) => item.id === "signed-release-chain")?.status, "blocked");
   assert.ok(result.blockers.some((item) => item.id === "RISK-REL-001"));
@@ -123,9 +128,21 @@ await test("an open high program risk blocks stable promotion", () => {
     title: "Provider risk is unresolved",
   });
   const result = evaluateStableReleaseGate(input);
+  assert.equal(result.internalStatus, "BLOCKED");
   assert.equal(result.decision, "blocked");
   assert.equal(result.conditions.find((item) => item.id === "release-risk-disposition")?.status, "blocked");
   assert.ok(result.blockers.some((item) => item.id === "RISK-PROV-001"));
+});
+
+await test("missing Provider hardening evidence rejects the engineering gate", () => {
+  const input = readyInput();
+  input.manifests["HC-PROV-301"].commands = input.manifests["HC-PROV-301"].commands
+    .filter((command) => command.id !== "provider-hardening-tests");
+  const result = evaluateStableReleaseGate(input);
+  assert.equal(result.engineeringStatus, "failed");
+  assert.equal(result.internalStatus, "FAILED");
+  assert.equal(result.decision, "rejected");
+  assert.equal(result.conditions.find((item) => item.id === "provider-production-hardening")?.status, "failed");
 });
 
 await test("missing replay evidence rejects the engineering gate", () => {
@@ -134,6 +151,7 @@ await test("missing replay evidence rejects the engineering gate", () => {
     .filter((command) => command.id !== "runtime-store-integration");
   const result = evaluateStableReleaseGate(input);
   assert.equal(result.engineeringStatus, "failed");
+  assert.equal(result.internalStatus, "FAILED");
   assert.equal(result.decision, "rejected");
   assert.equal(result.conditions.find((item) => item.id === "complete-turn-replay")?.status, "failed");
 });
@@ -190,9 +208,11 @@ await test("gate output records decision without creating a release or tag", () 
     const json = JSON.parse(fs.readFileSync(path.join(root, "reports/evidence/HC-REL-STABLE-GATE/gate-result.json"), "utf8"));
     const report = fs.readFileSync(path.join(root, "reports/releases/0.6.0-stable/gate-report.md"), "utf8");
     assert.equal(json.decision, "blocked");
+    assert.equal(json.internalStatus, "PASS_INTERNAL_ONLY");
     assert.equal(json.formalReleaseCreated, false);
     assert.equal(json.tagCreated, false);
     assert.match(report, /Formal Release created: \*\*No\*\*/);
+    assert.match(report, /Internal status: \*\*PASS_INTERNAL_ONLY\*\*/);
     assert.match(report, /stable promotion is not authorized/i);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
@@ -202,9 +222,12 @@ await test("gate output records decision without creating a release or tag", () 
 await test("repository evidence produces a fail-closed stable assessment", () => {
   const result = evaluateStableReleaseGate(collectStableReleaseInputs());
   assert.equal(result.engineeringStatus, "passed");
+  assert.equal(result.internalStatus, "PASS_INTERNAL_ONLY");
   assert.equal(result.decision, "blocked");
   assert.ok(result.blockers.some((item) => item.id === "RISK-REL-001"));
-  assert.ok(result.blockers.some((item) => item.id === "RISK-PROV-001"));
+  assert.ok(!result.blockers.some((item) => item.id === "RISK-PROV-001"));
+  assert.equal(result.conditions.find((item) => item.id === "provider-production-hardening")?.status, "passed");
+  assert.deepEqual(result.summary, { total: 13, passed: 12, blocked: 1, failed: 0 });
 });
 
 console.log(`\nStable release gate tests: ${passed}/${passed} passed`);
