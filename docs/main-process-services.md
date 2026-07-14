@@ -1,6 +1,6 @@
 # Main Process Services
 
-Date: 2026-07-04
+Date: 2026-07-12
 
 Sprint 1A splits Electron main-process IPC registration into service modules without changing renderer/preload channels or user data locations.
 
@@ -14,21 +14,28 @@ Sprint 1A splits Electron main-process IPC registration into service modules wit
 - `electron/ipc/register-ipc-handlers.mjs`
   - Single registration entrypoint for all main-process channels
 - `electron/services/runtime-service.mjs`
-  - Runtime input, permission answer, and interrupt event channels
+  - Runtime input, Plan-mode queue submission, permission answer, truthful interrupt, and Steer follow-up channels
+  - Delegates execution order to the main-process `RuntimeJobQueue`; the renderer never owns an execution queue
 - `electron/services/queue-service.mjs`
-  - Existing runtime queue clear/snapshot behavior
+  - Runtime queue clear/snapshot behavior and persisted queue projection
   - This is not a DAG or Job Center implementation
 - `electron/services/mcp-service.mjs`
-  - Configured MCP server initialization
-  - Existing capability listing
+  - Configured MCP stdio and Streamable HTTP initialization
+  - Capability listing plus lifecycle/reload/connect/reconnect/disconnect/cancel channels
+  - OAuth token rotation and expiry metadata through one desktop secret-store configuration transaction, with recursively redacted lifecycle audit events
 - `electron/services/store-service.mjs`
   - Existing Store / Plugin / Skill / MCP install preview and install channels
 - `electron/services/job-service.mjs`
   - Job Center create/list/get/control/event/artifact channels
   - Uses the persistent `JobStore` model from `src/job-center.ts`
 - `electron/services/provider-service.mjs`
-  - Agent Provider registry, configuration, run, cancel, and internal-runtime adapter channels
-  - Uses `src/agent-provider.ts` for Provider types and validation logic
+  - Unified Model/Agent discovery, capability, health, enable/disable, version, credential rotation, usage, run, and cancel channels
+  - Preserves the distinction between Model profiles consumed by Runtime and autonomous Agent providers consumed by Job Center/Patch Arena
+  - Uses `src/provider-control-plane.ts`, `src/agent-provider.ts`, and `src/provider-usage-store.ts` for versioned control, execution compatibility, and aggregate usage
+- `electron/services/external-agent-provider-service.mjs`
+  - Real Codex CLI, Claude Code CLI, and custom Agent worker execution path
+  - Requires explicit configuration and authorization, defaults to Worktree Runner isolation, executes absolute binaries with argv and no shell, and records redacted Job events, gates, patches, artifacts, cancellation, timeout, and usage
+  - Dry-run output remains `simulated: true`; unavailable or unconfigured executables never report successful execution
 - `electron/services/worktree-service.mjs`
   - Isolated workspace create/run/collect/cleanup channels
   - Uses `src/worktree-runner.ts` and records all operations in Job Center
@@ -55,15 +62,44 @@ Sprint 1A splits Electron main-process IPC registration into service modules wit
 - `electron/services/release-service.mjs`
   - Release readiness, release package build, and open release folder channels
   - Uses `src/release-builder.ts`, reads `.hicode/project.json` plus Job Center gate results, writes `releases/<version>/*`, records release build Job events/gates, and stores `release-manifest.json` as a `release_package` Job artifact
+- `electron/services/release-policy.mjs`
+  - Defines release modes, stable/beta/nightly channel mapping, semantic version ordering, signing/notarization preflight, rollback policy, and the packaging child environment allowlist
+  - CI/development packages remain explicitly unsigned and update-disabled; release mode fails closed when approval or required platform signing evidence is missing
+- `electron/services/update-service.mjs`
+  - Owns packaged-app update capability, predefined channel persistence, manual check/download, and native-confirmed installation through `electron-updater`
+  - Never auto-downloads, installs on quit, accepts a Renderer feed URL, or permits automatic downgrade
 - `electron/services/git-service.mjs`
-  - Existing Git status, diff, stage, unstage, commit message, and commit channels
+  - Git status, diff, stage, unstage, commit message, commit, local branch, Pull Request, and CI-status channels
+  - Refuses dirty branch/PR mutations and requires a fresh native confirmation before PR creation
 - `electron/services/diff-service.mjs`
   - Existing tool events, recoverable tasks, and diff accept/reject channels
 - `electron/services/workspace-service.mjs`
   - Workspace folder selection, file preview, session operations, config save/load, and model connection test
+  - Imports image, PDF, text, and file attachments into the injected app-data `FileAttachmentStore`; returns opaque IDs and display metadata without source paths
+- `electron/services/editor-service.mjs`
+  - Workspace-confined UTF-8 file snapshots and saves for the integrated editor
+  - Enforces a 2 MiB bound, SHA-256 expected revisions, conflict refusal, sibling temporary writes, fsync, and atomic rename
+  - Force overwrite remains an explicit Renderer confirmation; the service never retries a stale normal save automatically
+- `electron/services/terminal-service.mjs`
+  - Owns real PTY capability detection, policy authorization, trusted shell selection, input/output, resize, and process-tree cleanup
+  - Binds one terminal to one renderer owner and the current workspace; workspace/window/app close ends the session
+  - Uses the shared safe child environment, 64 KiB IPC bounds, a one MiB in-memory transcript tail, and redacted metadata-only logs
+  - Terminal startup is one explicit authorization unit. Commands typed after startup are not approved one by one, and the shell retains the desktop user's OS permissions
+- `electron/services/preview-service.mjs`
+  - Owns canonical loopback-HTTP validation, isolated child BrowserWindows, preview lifecycle, DOM checks, screenshots, and owner-only evidence
+  - Binds each preview to one renderer owner and canonical workspace; owner/window/workspace/app close destroys its live window
+  - Denies preload access, Node integration, DevTools, permissions, downloads, popups, webviews, external navigation, and cross-origin network resources
 - `electron/services/security-service.mjs`
   - Auth IPC registration
   - Path guard and sensitive log redaction utilities
+- `electron/services/execution-policy-service.mjs`
+  - Owns the cached platform capability probe and policy evaluation used by desktop process launchers
+  - Exposes only `execution-policy:capabilities`; the Renderer cannot submit executables, roots, environment values, or policy overrides
+- `electron/services/secret-store-service.mjs`
+  - Electron `safeStorage` vault for model, MCP, and Agent Provider credentials
+  - Atomic sanitized-config persistence, startup migration, encrypted recovery
+    snapshot, controlled rollback, and status-only renderer projection
+  - Provider rotation persists scoped `secretRef`, rotation time, and optional expiry only; raw secret values are excluded from IPC responses, Provider JSON, Job artifacts, and usage records
 
 ## IPC Registration Rule
 
@@ -97,7 +133,19 @@ The normalized error path redacts API keys, bearer tokens, password-like fields,
 - Renderer sandbox remains enabled.
 - Renderer still has no raw `ipcRenderer`.
 - Preload validates parameter shape before invoking main-process channels.
+- Config IPC returns only sanitized JSON and credential-reference status.
+  Desktop secrets are decrypted in main-process service paths only; no preload
+  or renderer secret getter exists.
 - Workspace file reads use the existing workspace path confinement.
+- Integrated editor open/save uses the same workspace path authority. It rejects symlink escapes, binary or invalid UTF-8 content, oversized files, and stale normal saves. A force save is available only through an explicit typed request after visible user confirmation.
+- Integrated terminal creation uses the same Runtime permission state and a main-process-owned PTY. The renderer cannot select an executable, cwd, arguments, or environment. The terminal starts in the active workspace and is closed before workspace changes; this workspace binding is not an OS filesystem sandbox.
+- Worktree commands, custom command gates, and real industrial adapter execution require a fresh main-process permission decision. Renderer payload flags express intent only and cannot authorize a process.
+- Runtime Bash, terminal, Quality Gate, Worktree, Patch Arena, MCP, and supported industrial adapters consume the shared execution policy. Strict requests fail closed; compatible report-only launches preserve a `weak` warning and policy audit instead of claiming isolation.
+- Terminal children receive a minimal safe environment and never inherit API keys, tokens, passwords, unknown variables, or `SSH_AUTH_SOCK`. Raw input, output, and transcripts are not persisted in logs.
+- App Preview accepts only `http:` loopback targets. Every page runs in a unique non-persistent sandboxed session with no preload or Node access. The trusted renderer never navigates to preview content, and failed verification checks remain failed.
+- Plan mode remains read-only at the tool boundary even in higher-trust permission modes. Steer is persisted as cancel-and-follow-up; an interrupted queue item cannot later become successful.
+- Git and GitHub commands use bounded argument arrays, `shell: false`, timeouts, and the minimal child environment. Branch switching and PR creation refuse dirty worktrees. PR creation allows only a confirmed non-force upstream push and never auto-merges.
+- Attachment records and content-addressed blobs stay under app data, use owner permissions, and are revalidated on read. Attachment IDs are session-owned and bounded before Runtime queueing.
 - Store install validation continues to block remote `sourcePath` and `sourceRoot`.
 - Remote downloads continue to require HTTPS.
 - Domain Pack installation is confined to `~/.vibe/domain-packs`, remote pack URLs require HTTPS, local path references are rejected for remote manifests, and pack manifests cannot define automatic scripts or executable commands.
@@ -105,19 +153,26 @@ The normalized error path redacts API keys, bearer tokens, password-like fields,
 - Industrial Tool Adapter artifacts are confined to the current workspace, external tool execution requires explicit user approval, and Sprint 6G only permits the FreeCAD, KiCad, OpenPLC/IEC, and IfcOpenShell/IFC adapters to run real local tooling. PLC/OpenPLC execution is limited to local syntax-check style commands and never performs device download. IfcOpenShell/IFC execution is limited to local IFC inspection evidence and never declares building-code compliance. SolidWorks bridge generation never launches commercial software and marks native CAD outputs as external-required. AVEVA bridge generation never connects to enterprise systems and rejects plaintext credentials.
 - Quality Gate Runner command gates run without shell interpolation and with an allowlisted environment. Gate evidence must distinguish `simulated`, `not_run`, and `requires_approval` from `passed`.
 - Release Builder confines release outputs to `releases/<version>/` inside the workspace. Failed gates and `requires_approval` gates block release. Simulated, not-run, skipped, and warning gates are preserved as release risks and must appear in release notes instead of being promoted to passed.
+- Desktop packaging children receive a release-tool allowlist rather than the complete parent environment. CI/development artifacts embed `unsigned` and `updateEnabled: false`. macOS/Windows application updates require an approved signed package; approved Linux releases remain explicitly `integrity_verified` through HTTPS updater metadata rather than claiming platform signing.
+- Update installation is packaged-only and main-process controlled. The Renderer can select only `stable`, `beta`, or `nightly`; it cannot set a feed URL or authorization header. Download and install are separate actions, and installation requires a native confirmation after verified download.
 - Bash tool environment allowlisting remains in `src/tools/bash.ts`.
 - MCP server processes and industrial tool execution paths must use
-  `src/process-env.ts` (`buildSafeChildEnv`, `redactEnvForLogs`) instead of
-  inheriting the full parent `process.env`. Server-specific MCP credentials are
-  only passed from the explicit MCP server `env` config block.
+  `src/execution-policy.ts`, `src/execution-runner.ts`, and `src/process-env.ts`
+  instead of inheriting the full parent `process.env` or relying on direct-child
+  timeout behavior. Server-specific MCP credentials are only passed from the
+  explicit MCP server `env` config block; policy audit contains key names only.
+- Remote MCP connections require HTTPS except for loopback development. Tokens
+  are resolved only in the main process, custom authorization/cookie headers are
+  rejected, and lifecycle audit data is recursively redacted before persistence.
 
 ## Compatibility Boundary
 
-Renderer and preload channels are unchanged:
+Public renderer and preload channels include:
 
-- `runtime-queue:clear`
+- `runtime:enqueue`, `runtime:steer`, `runtime-queue:clear`
 - `auth-status`, `register`, `login`, `logout`
 - `list-capabilities`
+- `mcp:lifecycle`, `mcp:reload`, `mcp:connect`, `mcp:reconnect`, `mcp:disconnect`, `mcp:cancel`
 - `list-store`, `set-store-source`, `preview-store-item`, `install-store-item`
 - `job:create`, `job:list`, `job:get`, `job:cancel`, `job:retry`, `job:pause`, `job:resume`, `job:events`, `job:artifacts`, `job:artifact:preview`, `job:artifact:open`
 - `provider:list`, `provider:get`, `provider:configure`, `provider:run`, `provider:cancel`
@@ -129,12 +184,17 @@ Renderer and preload channels are unchanged:
 - `toolchain:list`, `toolchain:detect`, `toolchain:capabilities`, `toolchain:validate-adapter`, `toolchain:run`
 - `quality-gate:list`, `quality-gate:run`, `quality-gate:approve`
 - `release:readiness`, `release:build`, `release:open`
+- `app:update-status`, `app:update-channel`, `app:check-updates`, `app:update-download`, `app:update-install`
 - `tool-events:list`, `recoverable-tasks:list`
 - `diffs:list`, `diffs:accept`, `diffs:reject`, `diffs:accept-all`, `diffs:reject-all`, `diffs:clear-archived`
-- `git:status`, `git:diff`, `git:stage`, `git:unstage`, `git:commit-message`, `git:commit`
+- `git:status`, `git:diff`, `git:stage`, `git:unstage`, `git:commit-message`, `git:commit`, `git:branches`, `git:branch:create`, `git:branch:switch`, `git:collaboration`, `git:pr:create`
+- `editor:file:open`, `editor:file:save`
+- `terminal:capabilities`, `terminal:create`, `terminal:status`, `terminal:write`, `terminal:resize`, `terminal:close`
+- `preview:capabilities`, `preview:open`, `preview:list`, `preview:reopen`, `preview:reload`, `preview:verify`, `preview:close`, `preview:remove`
 - `pick-folder`, `get-cwd`, `list-dir`, `read-file`
+- `attach-file`, `attach-image`, `attachments:list`, `attachment:remove`
 - `list-sessions`, `resume-session`, `delete-session`
-- `get-config`, `save-config`, `test-model`
+- `get-config`, `config:credential-status`, `save-config`, `test-model`
 
 The event channels also remain unchanged:
 
@@ -148,9 +208,16 @@ Required validation for this layer:
 
 ```bash
 npm run build
+npm run test:mcp
 npm run verify
 node test/feature-tests.mjs
 node test/main-process-services-tests.mjs
+npm run test:editor-workbench
+npm run test:terminal
+npm run test:preview
+npm run test:release-pipeline
+npm run test:runtime-control
+npm run test:git-collaboration
 node test/patch-arena-tests.mjs
 node test/industrial-project-tests.mjs
 node test/domain-pack-tests.mjs
@@ -159,4 +226,6 @@ node test/industrial-tool-tests.mjs
 node test/release-builder-tests.mjs
 node --check electron/main.mjs
 node --check electron/preload.cjs
+npm run test:electron-e2e
+npm run release:package-smoke -- --platform=darwin
 ```

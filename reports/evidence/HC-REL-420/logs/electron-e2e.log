@@ -1,0 +1,39 @@
+$ npm run test:electron-e2e
+
+> hi-code@0.6.0-alpha.8 test:electron-e2e
+> node tests/electron-e2e/run.mjs
+
+
+[electron-e2e] real Electron smoke
+  ✓ launches the real local Electron renderer
+  ✓ runs the pinned Electron, Chromium, and Node baseline
+  ✓ isolates user data and excludes parent-process secrets
+  ✓ stores desktop credentials only through OS secure storage or fails closed
+  ✓ streams a desktop turn with the compatibility stdout bridge disabled
+  ✓ Plan queue and Steer use the authoritative runtime and durable Job records
+  ✓ 720px layout keeps the brand visible without horizontal overflow
+  ✓ 1024px layout keeps the brand visible without horizontal overflow
+  ✓ 1440px layout keeps the brand visible without horizontal overflow
+  ✓ 1920px layout keeps the brand visible without horizontal overflow
+  ✓ Settings reports the real cross-platform execution boundary
+  ✓ Settings keeps unpackaged and unsigned updates fail-closed
+  ✓ 720px core navigation and settings remain reachable
+  ✓ 1024px core navigation and settings remain reachable
+  ✓ 1440px core navigation and settings remain reachable
+  ✓ 1920px core navigation and settings remain reachable
+  ✓ typed App Shell controls legacy panels at compact width
+  ✓ responsive timeline and diff panels have real drawer access
+  ✓ long transcripts stay bounded and session keyboard navigation remains usable
+  ✓ CodeMirror opens edits saves reloads and refuses stale disk writes
+  ✓ diff review comment enters the real Runtime revision loop
+  ✓ Git delivery protects dirty worktrees and completes commit and branch actions
+    [terminal] prepare execution policy
+    [terminal] open workbench
+    [terminal] start PTY
+    [terminal] execute command
+    [terminal] capture responsive layouts
+    [terminal] stop PTY
+  ✓ integrated terminal runs real PTY input output resize and close
+  ✓ secure app preview isolates local content and writes truthful evidence
+  ✓ renderer produced no uncaught page errors
+  ✓ blocks untrusted renderer navigation and new windows

@@ -1,11 +1,21 @@
 import type { VibeConfig, ModelProfile } from "./config.js";
 import { defaultProfile } from "./config.js";
-import { streamChat, type ChatMessage, type ToolSchema, type ContentPart } from "./llm.js";
-import { TOOL_SCHEMAS, executeTool, type ExecEnv } from "./tools/index.js";
+import type { ChatMessage, ToolSchema, ContentPart } from "./llm.js";
+import { createModelProfileAdapter, streamModelProfile, type ModelProviderEvent } from "./model-provider.js";
+import { normalizeProviderFailure } from "./provider-control-plane.js";
+import { recordProviderUsage } from "./provider-usage-store.js";
+import { TOOL_SCHEMAS, executeTool, isPlanModeToolName, type ExecEnv } from "./tools/index.js";
 import { mcpToolSchemas } from "./mcp.js";
 import { ui, startSpinner, stopSpinner } from "./ui.js";
 import { type Session, fullHistory, estimateTokens, compact } from "./context.js";
 import { recordUsage } from "./usage-store.js";
+import {
+  newEventId,
+  type AssistantCompletedPayload,
+  type AssistantDeltaPayload,
+  type RuntimeMessageAppendedPayload,
+} from "./events.js";
+import { AttachmentMaterializationError, hasAttachmentReferences, materializeAttachmentMessages } from "./attachment-materializer.js";
 
 export interface LoopOpts {
   /** Restrict the toolset (e.g. read-only tools for an architect subagent). */
@@ -33,10 +43,14 @@ export async function runLoop(
   opts: LoopOpts = {},
 ): Promise<string> {
   // The lead agent (default toolset) also gets any connected MCP tools.
-  const tools = opts.tools ?? [...TOOL_SCHEMAS, ...mcpToolSchemas()];
+  const defaultTools = env.executionMode === "plan"
+    ? TOOL_SCHEMAS.filter((tool) => isPlanModeToolName(tool.function.name))
+    : [...TOOL_SCHEMAS, ...mcpToolSchemas()];
+  const tools = opts.tools ?? defaultTools;
   const maxSteps = opts.maxSteps ?? 50;
   const p = opts.profile ?? defaultProfile(cfg);
   const quiet = env.quiet === true;
+  const legacyOutput = !quiet && env.legacyAssistantOutput !== false;
   let finalText = "";
 
   for (let step = 0; step < maxSteps; step++) {
@@ -51,14 +65,14 @@ export async function runLoop(
           status: "running",
           payload: { phase: "compacting", estimatedTokens: est, contextWindow: p.contextWindow },
         });
-        if (!quiet) startSpinner("compacting context");
+        if (legacyOutput) startSpinner("compacting context");
         const removed = await compact(p, session).catch(() => 0);
-        if (!quiet) stopSpinner();
-        if (removed > 0 && !quiet) ui.info(`  ↳ compacted ${removed} messages to stay within context`);
+        if (legacyOutput) stopSpinner();
+        if (removed > 0 && legacyOutput) ui.info(`  ↳ compacted ${removed} messages to stay within context`);
       }
     }
 
-    if (!quiet) startSpinner(opts.label ? `${opts.label} thinking` : "thinking");
+    if (legacyOutput) startSpinner(opts.label ? `${opts.label} thinking` : "thinking");
     env.emitEvent?.({
       type: "turn:update",
       tool: "agent",
@@ -68,6 +82,8 @@ export async function runLoop(
       payload: { phase: "thinking", step, model: p.model },
     });
     let started = false;
+    const messageId = newEventId("msg");
+    let deltaSequence = 0;
     const ensurePrefix = () => {
       if (!started) {
         stopSpinner();
@@ -77,30 +93,83 @@ export async function runLoop(
     };
 
     let turn;
+    const providerStartedAt = Date.now();
+    const modelProviderId = createModelProfileAdapter(p).descriptor.id;
     try {
-      turn = await streamChat(
+      const persistedHistory = fullHistory(session);
+      const history = hasAttachmentReferences(persistedHistory)
+        ? env.attachmentStore
+          ? materializeAttachmentMessages(persistedHistory, env.attachmentStore, p)
+          : missingAttachmentStore()
+        : persistedHistory;
+      turn = await streamModelProfile(
         p,
-        fullHistory(session),
+        history,
         tools,
         {
+          requirements: { contextTokens: estimateTokens(history) },
+          onProviderEvent: (event) => emitProviderRuntimeEvent(env, event, {
+            step,
+            model: p.model,
+            ...(opts.label ? { label: opts.label } : {}),
+          }),
           onText: quiet
             ? undefined
             : (delta) => {
-                ensurePrefix();
-                process.stdout.write(delta);
+                const payload: AssistantDeltaPayload = {
+                  messageId,
+                  delta,
+                  model: p.model,
+                  step,
+                  sequence: ++deltaSequence,
+                  ...(opts.label ? { label: opts.label } : {}),
+                };
+                env.emitEvent?.({
+                  type: "assistant:delta",
+                  tool: "agent",
+                  title: opts.label ? `${opts.label} response` : "Assistant response",
+                  summary: summarizeAssistantText(delta),
+                  status: "running",
+                  payload,
+                });
+                if (legacyOutput) {
+                  ensurePrefix();
+                  process.stdout.write(delta);
+                }
               },
-          onToolCallStart: quiet ? undefined : () => stopSpinner(),
+          onToolCallStart: legacyOutput ? () => stopSpinner() : undefined,
         },
         opts.signal,
       );
     } catch (e) {
-      if (!quiet) stopSpinner();
+      const failure = normalizeProviderFailure(e);
+      recordProviderUsage({
+        providerId: modelProviderId,
+        providerKind: "model",
+        model: p.model,
+        success: false,
+        startedAt: providerStartedAt,
+        endedAt: Date.now(),
+        failureCategory: failure.category,
+      });
+      if (legacyOutput) stopSpinner();
       const msg = `error: ${(e as Error).message}`;
-      if (!quiet) ui.error(msg);
+      if (!quiet) {
+        emitAssistantCompleted(env, {
+          messageId,
+          content: "",
+          model: p.model,
+          step,
+          finishReason: "error",
+          error: summarizeAssistantText((e as Error).message),
+          ...(opts.label ? { label: opts.label } : {}),
+        }, "error");
+      }
+      if (legacyOutput) ui.error(msg);
       throw e;
     }
-    if (!quiet) stopSpinner();
-    if (started) ui.newline();
+    if (legacyOutput) stopSpinner();
+    if (legacyOutput && started) ui.newline();
 
     if (turn.usage) {
       session.totalPromptTokens += turn.usage.prompt_tokens ?? 0;
@@ -112,10 +181,33 @@ export async function runLoop(
         reasoningLevel: cfg.reasoningLevel,
       });
     }
+    recordProviderUsage({
+      providerId: modelProviderId,
+      providerKind: "model",
+      model: p.model,
+      success: !turn.aborted,
+      startedAt: providerStartedAt,
+      endedAt: Date.now(),
+      inputTokens: turn.usage?.prompt_tokens,
+      outputTokens: turn.usage?.completion_tokens,
+      ...(turn.aborted ? { failureCategory: "cancelled" } : {}),
+    });
 
     // Cancelled mid-turn: record whatever streamed and stop cleanly.
     if (turn.aborted) {
-      session.messages.push({ role: "assistant", content: turn.content || "[interrupted]" });
+      const interruptedMessage: ChatMessage = { role: "assistant", content: turn.content || "[interrupted]" };
+      session.messages.push(interruptedMessage);
+      emitMessageAppended(env, messageId, interruptedMessage, { step, finishReason: "interrupted" });
+      if (!quiet) {
+        emitAssistantCompleted(env, {
+          messageId,
+          content: turn.content,
+          model: p.model,
+          step,
+          finishReason: "interrupted",
+          ...(opts.label ? { label: opts.label } : {}),
+        }, "interrupted");
+      }
       env.emitEvent?.({
         type: "turn:update",
         tool: "agent",
@@ -124,7 +216,7 @@ export async function runLoop(
         status: "interrupted",
         payload: { phase: "interrupted", step },
       });
-      if (!quiet) ui.warn("  ⏹ interrupted");
+      if (legacyOutput) ui.warn("  ⏹ interrupted");
       return turn.content || finalText;
     }
 
@@ -134,7 +226,20 @@ export async function runLoop(
       tool_calls: turn.tool_calls.length ? turn.tool_calls : undefined,
     };
     session.messages.push(assistantMsg);
+    emitMessageAppended(env, messageId, assistantMsg, { step, finishReason: "completed" });
     if (turn.content) finalText = turn.content;
+
+    if (!quiet) {
+      emitAssistantCompleted(env, {
+        messageId,
+        content: turn.content,
+        model: p.model,
+        step,
+        finishReason: turn.content || turn.tool_calls.length ? "completed" : "error",
+        toolCallCount: turn.tool_calls.length,
+        ...(opts.label ? { label: opts.label } : {}),
+      }, turn.content || turn.tool_calls.length ? "done" : "error");
+    }
 
     if (!turn.tool_calls.length) return finalText;
 
@@ -162,21 +267,138 @@ export async function runLoop(
           status: "interrupted",
           payload: { phase: "interrupted", step },
         });
-        if (!quiet) ui.warn("  ⏹ interrupted");
+        if (legacyOutput) ui.warn("  ⏹ interrupted");
         return finalText;
       }
       const outcome = await executeTool(env, call.function.name, call.function.arguments);
-      session.messages.push({
+      const toolMessage: ChatMessage = {
         role: "tool",
         tool_call_id: call.id,
         name: call.function.name,
         content: outcome.content,
-      });
+      };
+      session.messages.push(toolMessage);
+      emitMessageAppended(env, newEventId("msg-tool"), toolMessage, { step, sourceToolCallId: call.id });
     }
   }
 
-  ui.warn(`  ↳ stopped after ${maxSteps} tool steps (possible loop)`);
+  if (legacyOutput) ui.warn(`  ↳ stopped after ${maxSteps} tool steps (possible loop)`);
   return finalText;
+}
+
+function missingAttachmentStore(): never {
+  throw new AttachmentMaterializationError("attachment_store_unavailable", "Attachment storage is unavailable for this runtime.");
+}
+
+function emitProviderRuntimeEvent(
+  env: ExecEnv,
+  event: ModelProviderEvent,
+  metadata: Record<string, unknown>,
+): void {
+  const correlation = {
+    providerId: event.providerId,
+    runId: event.runId,
+    providerSequence: event.sequence,
+    providerSchemaVersion: event.schemaVersion,
+    ...metadata,
+  };
+  if (event.type === "request.started") {
+    env.emitEvent?.({
+      type: "provider:request",
+      tool: "model-provider",
+      title: "Model request started",
+      summary: event.model || event.providerId,
+      status: "running",
+      payload: { ...correlation, model: event.model, requirements: event.requirements },
+    });
+    return;
+  }
+  if (event.type === "tool.call.started") {
+    env.emitEvent?.({
+      type: "provider:tool:start",
+      tool: event.name || "model-tool",
+      title: event.name ? `Model selected ${event.name}` : "Model tool call started",
+      summary: event.callId,
+      status: "running",
+      payload: { ...correlation, callId: event.callId, index: event.index, name: event.name },
+    });
+    return;
+  }
+  if (event.type === "tool.call.delta") {
+    env.emitEvent?.({
+      type: "provider:tool:delta",
+      tool: "model-tool",
+      title: "Model tool call streaming",
+      summary: event.nameDelta || "arguments",
+      status: "running",
+      payload: {
+        ...correlation,
+        callId: event.callId,
+        index: event.index,
+        ...(event.nameDelta ? { nameDelta: event.nameDelta } : {}),
+        ...(event.argumentsDelta ? { argumentsDelta: event.argumentsDelta } : {}),
+      },
+    });
+    return;
+  }
+  if (event.type === "tool.call.completed") {
+    env.emitEvent?.({
+      type: "provider:tool:done",
+      tool: event.call.function.name,
+      title: `Model prepared ${event.call.function.name}`,
+      summary: event.call.id,
+      status: "done",
+      payload: {
+        ...correlation,
+        callId: event.call.id,
+        index: event.index,
+        name: event.call.function.name,
+        arguments: event.call.function.arguments,
+      },
+    });
+    return;
+  }
+  if (event.type === "usage.updated") {
+    env.emitEvent?.({
+      type: "provider:usage",
+      tool: "model-provider",
+      title: "Model usage updated",
+      summary: `${event.usage.totalTokens ?? 0} tokens`,
+      status: "done",
+      payload: { ...correlation, usage: event.usage },
+    });
+    return;
+  }
+  if (event.type === "response.failed") {
+    env.emitEvent?.({
+      type: "provider:error",
+      tool: "model-provider",
+      title: "Model request failed",
+      summary: event.error.message,
+      status: "error",
+      payload: { ...correlation, error: event.error },
+    });
+  }
+}
+
+function emitAssistantCompleted(
+  env: ExecEnv,
+  payload: AssistantCompletedPayload,
+  status: "done" | "error" | "interrupted",
+): void {
+  env.emitEvent?.({
+    type: "assistant:completed",
+    tool: "agent",
+    title: status === "error" ? "Assistant response failed" : status === "interrupted" ? "Assistant response interrupted" : "Assistant response complete",
+    summary: summarizeAssistantText(payload.content) || (status === "error" ? "empty or failed response" : status),
+    status,
+    payload,
+  });
+}
+
+function summarizeAssistantText(value: string): string {
+  const text = value.replace(/\s+/g, " ").trim();
+  return text.length > 160 ? `${text.slice(0, 157)}...` : text;
 }
 
 /** Interactive single user turn (the REPL entry point). */
@@ -188,10 +410,32 @@ export async function runTurn(
   signal?: AbortSignal,
   onUserMessageSaved?: () => void,
 ): Promise<void> {
-  session.messages.push({ role: "user", content: userInput });
+  const userMessage: ChatMessage = { role: "user", content: userInput };
+  session.messages.push(userMessage);
+  emitMessageAppended(env, newEventId("msg-user"), userMessage);
   onUserMessageSaved?.();
   const finalText = await runLoop(cfg, session, env, { signal });
   if (!signal?.aborted && !finalText.trim()) {
     throw new Error(`模型 ${defaultProfile(cfg).model} 返回了空内容。请重试，或在“接入 API”里切换到稳定的对话/视觉模型并测试连接。`);
   }
+}
+
+function emitMessageAppended(
+  env: ExecEnv,
+  messageId: string,
+  message: ChatMessage,
+  metadata: Record<string, unknown> = {},
+): void {
+  const payload: RuntimeMessageAppendedPayload = {
+    messageId,
+    message,
+    ...metadata,
+  };
+  env.emitEvent?.({
+    type: "message:appended",
+    tool: message.role === "tool" ? message.name : "agent",
+    title: `${message.role} message persisted`,
+    status: "done",
+    payload,
+  });
 }

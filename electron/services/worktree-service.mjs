@@ -1,9 +1,10 @@
 import { ipcBoundedNumber, ipcObject, ipcString } from "../ipc/ipc-utils.mjs";
 
-export function createWorktreeService({ runner, jobStore, getCwd }) {
+export function createWorktreeService({ runner, jobStore, getCwd, authorize }) {
   if (!runner) throw new Error("worktree-service requires runner");
   if (!jobStore) throw new Error("worktree-service requires jobStore");
   if (typeof getCwd !== "function") throw new Error("worktree-service requires getCwd");
+  if (typeof authorize !== "function") throw new Error("worktree-service requires authorize");
 
   return {
     createWorkspace(payload = {}) {
@@ -33,31 +34,43 @@ export function createWorktreeService({ runner, jobStore, getCwd }) {
       }
     },
 
-    run(payload = {}) {
+    async run(payload = {}) {
       const input = ipcObject(payload);
       const command = ipcString(input.command).trim();
       if (!command) return { ok: false, error: "command is required" };
+      const decision = normalizeDecision(await authorize({
+        tool: "worktree",
+        label: "在隔离工作区执行命令",
+        mutating: true,
+      }));
+      if (decision === "deny") return { ok: false, denied: true, error: "隔离工作区命令已拒绝" };
       const created = this.createWorkspace(input);
       if (!created.ok) return created;
       const workspace = created.workspace;
       const jobId = created.jobId;
       appendEvent(jobStore, jobId, {
         type: "worktree.command.started",
-        message: command,
+        message: "Isolated command started",
         actor: "worktree-runner",
-        data: { workspaceId: workspace.id, command },
+        data: { workspaceId: workspace.id, commandBytes: Buffer.byteLength(command) },
       });
       const result = runner.runInIsolatedWorkspace({
         workspace,
         command,
         timeoutMs: ipcBoundedNumber(input.timeoutMs, 120000, { min: 1000, max: 600000 }),
+        userApproved: true,
       });
       appendEvent(jobStore, jobId, {
         type: "worktree.command.finished",
         message: `Command exited with ${result.exitCode}`,
         actor: "worktree-runner",
         status: result.ok ? "succeeded" : "failed",
-        data: { workspaceId: workspace.id, exitCode: result.exitCode, output: result.output.slice(-4000) },
+        data: {
+          workspaceId: workspace.id,
+          exitCode: result.exitCode,
+          outputBytes: Buffer.byteLength(result.output || ""),
+          executionPolicy: result.executionPolicy,
+        },
       });
       const changes = this.collectChanges({ workspace, jobId });
       let cleanup = null;
@@ -212,4 +225,8 @@ function normalizeWorkspacePayload(value) {
 
 function errorMessage(error) {
   return error?.message ? String(error.message) : String(error || "worktree operation failed");
+}
+
+function normalizeDecision(value) {
+  return value === "allow" || value === "always" || value === "y" || value === "a" ? "allow" : "deny";
 }

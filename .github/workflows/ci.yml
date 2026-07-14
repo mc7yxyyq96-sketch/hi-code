@@ -3,8 +3,7 @@ name: CI
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
+  pull_request: {}
 
 jobs:
   test:
@@ -34,10 +33,52 @@ jobs:
           set -e
           for t in feature services jobs providers worktrees arena industrial \
                    domain-packs agent-team industrial-tools quality-gates \
-                   release-builder samples dod renderer entrypoints security; do
+                   release-builder samples dod renderer terminal entrypoints security; do
             echo "=== test:$t ==="
             npm run -s "test:$t"
           done
 
       - name: Definition-of-Done scan
         run: npm run -s scan:dod
+
+  electron-smoke:
+    name: Electron smoke (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies with Electron
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Real Electron responsive smoke (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a npm run test:electron-e2e
+        env:
+          CI: "true"
+
+      - name: Real Electron responsive smoke (macOS and Windows)
+        if: runner.os != 'Linux'
+        run: npm run test:electron-e2e
+        env:
+          CI: "true"
+
+      - name: Upload Electron smoke artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: electron-smoke-${{ matrix.os }}-${{ runner.arch }}
+          path: test-results/electron-e2e/
+          if-no-files-found: warn

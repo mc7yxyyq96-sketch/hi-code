@@ -1,0 +1,373 @@
+{
+  "schemaVersion": 1,
+  "evidenceType": "isolated-loopback-app-preview-acceptance",
+  "taskId": "HC-UI-312",
+  "source": {
+    "version": "0.6.0-alpha.8",
+    "parentCommit": "d1138ab3583bb22117fb2e097acbd76e986b00e2",
+    "branch": "codex/desktop-ux/hc-ui-312"
+  },
+  "capture": {
+    "startedAt": "2026-07-12T05:17:35.492Z",
+    "completedAt": "2026-07-12T05:18:52.919Z",
+    "workingTreeClean": true,
+    "dirtyPaths": [],
+    "note": "Task evidence is captured before the task commit; artifact hashes bind the tested implementation and reviewed screenshots."
+  },
+  "environment": {
+    "platform": "darwin",
+    "architecture": "arm64",
+    "osRelease": "25.5.0",
+    "node": "v22.22.3"
+  },
+  "artifacts": [
+    {
+      "path": "docs/adr/ADR-0014-isolated-loopback-app-preview.md",
+      "bytes": 4126,
+      "sha256": "d394c1c22b2973b741edf46bc3145d58b6b2fa695e856601b6e7bc3f4d889686"
+    },
+    {
+      "path": "docs/adr/README.md",
+      "bytes": 3510,
+      "sha256": "a90113bbf2b0a0e8997577896a516205cd2895a2f1b9b0e70a120676c38d7a8f"
+    },
+    {
+      "path": "docs/definition-of-done.md",
+      "bytes": 5143,
+      "sha256": "68fe7283523968739811d29702cbf7f17b370d79a6730d750926bb3c3d6b2bc6"
+    },
+    {
+      "path": "docs/engineering-baseline.md",
+      "bytes": 5775,
+      "sha256": "e2cd61b611328fd0a92161a6012a33d6f2b687560a5c9feb2d495580cd0999ce"
+    },
+    {
+      "path": "docs/main-process-services.md",
+      "bytes": 13917,
+      "sha256": "96b2b6a92090c90f11a515eb17726c16a32c88fe6230307ed7d167afd662b53c"
+    },
+    {
+      "path": "docs/renderer-architecture.md",
+      "bytes": 9550,
+      "sha256": "90785c90fc795205c37d21755790d0d33e5f5efa41bb1009d90d9d3a4e41e954"
+    },
+    {
+      "path": "docs/secure-app-preview.md",
+      "bytes": 4161,
+      "sha256": "0ff29eb02ce36994c9e4a3ca8fc60f3000f98aed94518d0d441d26b7cfa79477"
+    },
+    {
+      "path": "electron/ipc/register-ipc-handlers.mjs",
+      "bytes": 3688,
+      "sha256": "eb19a5b11d2756fb4f461ed2c0e3421db1fb06218f801565f36b8de555af2b34"
+    },
+    {
+      "path": "electron/main.mjs",
+      "bytes": 103760,
+      "sha256": "8f77e0c76ed3ff4fd8f0034208547e02a3ab181ddafaa2c8c7659a8d274377f2"
+    },
+    {
+      "path": "electron/preload.cjs",
+      "bytes": 27219,
+      "sha256": "fede53828615a43f73f97ad05d3dcb5b8ae1d65dcab7aaeaeae9ef17851284b0"
+    },
+    {
+      "path": "electron/services/preview-service.mjs",
+      "bytes": 31134,
+      "sha256": "a75296b6ed394ce17fe21f438890b2295931e30c054fc873d28103f81f811438"
+    },
+    {
+      "path": "package.json",
+      "bytes": 8395,
+      "sha256": "c077040981709e89917a5f32a24d329899a16945528d85aea413960d8e93232d"
+    },
+    {
+      "path": "planning/backlog.json",
+      "bytes": 18369,
+      "sha256": "ebc880fbd08cfa74e9ced8aea00b5eb2cfb24962c0ee08776aff4309e8bbd02a"
+    },
+    {
+      "path": "planning/release-board.json",
+      "bytes": 14905,
+      "sha256": "d62bebba7819a6e5d76680deb38ed11f01131cd6fd9d608d2b1b3a3d33f7a6b5"
+    },
+    {
+      "path": "renderer/app-shell/contracts.ts",
+      "bytes": 4356,
+      "sha256": "5a41ae24e599afd06452154fb19e31bffe00fe906fcd1bbf04963afa9726c584"
+    },
+    {
+      "path": "renderer/app-shell/main.tsx",
+      "bytes": 3725,
+      "sha256": "fe8a7897a93824d52618cfaf41b1e735132fa4c3b5790250c13438a7e8fbee7f"
+    },
+    {
+      "path": "renderer/app-shell/preview/PreviewPortal.tsx",
+      "bytes": 10810,
+      "sha256": "7b1a8dc173e468b050607a6e3de26ae76f9f013d90d7053532bdb1d06c8d78ee"
+    },
+    {
+      "path": "renderer/app-shell/preview/api.ts",
+      "bytes": 10613,
+      "sha256": "ae0a7957537b27d39f906209dee35ba4c6394d31738a502f3c4fb61a05aa99b5"
+    },
+    {
+      "path": "renderer/app/bootstrap.js",
+      "bytes": 212500,
+      "sha256": "ed6a16178953d112da2a41edb45c59c5a13694ca10036c763d3b446b8a52b570"
+    },
+    {
+      "path": "renderer/index.html",
+      "bytes": 46473,
+      "sha256": "68b59093afea45034d2e060e5b66fc388e96befa34fe645a9a5e488dc6abe21e"
+    },
+    {
+      "path": "renderer/style.css",
+      "bytes": 139846,
+      "sha256": "aac17f1fa88794f6cf8393a19cc46c63740e16576b749e0c54eb9cb8c73e324d"
+    },
+    {
+      "path": "reports/program/risks.json",
+      "bytes": 17273,
+      "sha256": "485d767a37a0beedb92fa9efe375e7644725242eb70aee03994ca6761b0f8bd5"
+    },
+    {
+      "path": "reports/program/status.md",
+      "bytes": 14078,
+      "sha256": "d1e4221fdea8af25bdea55ef51f4934976199231cf5ef73ac6f99589a310fe3f"
+    },
+    {
+      "path": "reports/tasks/HC-UI-312.md",
+      "bytes": 3539,
+      "sha256": "32fa35fa3f00de4b386eeb5c17388541782aad7d693350669b7d4cc162d37736"
+    },
+    {
+      "path": "scripts/capture-task-evidence.mjs",
+      "bytes": 45737,
+      "sha256": "cae242d7ce7bb9605dd448ee104f05b43a237914cd14ab6ea39484f5c1f3be00"
+    },
+    {
+      "path": "scripts/verify.mjs",
+      "bytes": 4100,
+      "sha256": "c0471fb317cfcc19b315b9774817e0377664b8f49f8bf1e5af2baace4d401762"
+    },
+    {
+      "path": "test/app-shell-tests.ts",
+      "bytes": 9190,
+      "sha256": "cd7f3c259be66bd158349f321a211af595e54fa00bbc573e66ff2b85d3bf6072"
+    },
+    {
+      "path": "test/main-process-services-tests.mjs",
+      "bytes": 31683,
+      "sha256": "d08b1edd6a77db61280c96678b3ee2235ba9465b9d01d5e72777b8e40d940b1a"
+    },
+    {
+      "path": "test/preview-service-tests.mjs",
+      "bytes": 11277,
+      "sha256": "4737bffc87f4f43effa63d9c664cdab2a3b940ba340bf99c62144ffa017625ea"
+    },
+    {
+      "path": "test/preview-workbench-tests.ts",
+      "bytes": 5875,
+      "sha256": "165a535e853a02907f1878a3b19f6de8aa2423765ba2444445e842e3d51e79f1"
+    },
+    {
+      "path": "test/program-control-tests.mjs",
+      "bytes": 51122,
+      "sha256": "961e35807121d18b35fc06f41ce91638a8ede7a0214606842987a09b46fd1416"
+    },
+    {
+      "path": "test/renderer-architecture-tests.mjs",
+      "bytes": 64586,
+      "sha256": "5ad20979ba3e256c4035ab94fc110fa1a6197d997e33ecc24fba7c116a577933"
+    },
+    {
+      "path": "test/security-baseline.mjs",
+      "bytes": 45899,
+      "sha256": "8bc27e3d00951adde0e050948d3d5289dde014a7a352e5d0c6f1b25edbb440e2"
+    },
+    {
+      "path": "tests/electron-e2e/fixtures/layout-baseline.json",
+      "bytes": 842,
+      "sha256": "8398c7fa65c367f8d6c2afd7300d369f9df57939744972f68e85583ce3c5e05a"
+    },
+    {
+      "path": "tests/electron-e2e/run.mjs",
+      "bytes": 40604,
+      "sha256": "9040ae0b0665822934aae0e42b4b3362e932017d282e7a20be482e84a70afa69"
+    }
+  ],
+  "commands": [
+    {
+      "id": "build",
+      "command": "npm run build",
+      "startedAt": "2026-07-12T05:17:35.506Z",
+      "endedAt": "2026-07-12T05:17:39.197Z",
+      "durationMs": 3691,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-UI-312/logs/build.log",
+      "logSha256": "588832a6fe6f0a71554307513597341ef195e2a44a91783c37ff6d6aed11e15a"
+    },
+    {
+      "id": "preview-tests",
+      "command": "npm run test:preview",
+      "startedAt": "2026-07-12T05:17:39.198Z",
+      "endedAt": "2026-07-12T05:17:40.324Z",
+      "durationMs": 1125,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-UI-312/logs/preview-tests.log",
+      "logSha256": "d4a133e35dfcd776deee00c3fe464bc689210d02086738766294167b7bc1701e"
+    },
+    {
+      "id": "service-tests",
+      "command": "npm run test:services",
+      "startedAt": "2026-07-12T05:17:40.324Z",
+      "endedAt": "2026-07-12T05:17:43.022Z",
+      "durationMs": 2698,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-UI-312/logs/service-tests.log",
+      "logSha256": "2ef0a8b0caa6240b389dd0a7148754f995329f286e1fadde8e72bc2dd049d256"
+    },
+    {
+      "id": "app-shell-tests",
+      "command": "npm run test:app-shell",
+      "startedAt": "2026-07-12T05:17:43.023Z",
+      "endedAt": "2026-07-12T05:17:44.129Z",
+      "durationMs": 1106,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-UI-312/logs/app-shell-tests.log",
+      "logSha256": "bfb9446576afe538ff477eb50c9031a5c3667efcc215223f7ff922cf76c5ecba"
+    },
+    {
+      "id": "renderer-tests",
+      "command": "npm run test:renderer",
+      "startedAt": "2026-07-12T05:17:44.129Z",
+      "endedAt": "2026-07-12T05:17:44.249Z",
+      "durationMs": 119,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-UI-312/logs/renderer-tests.log",
+      "logSha256": "a7639b9e0def2521672dd8dc6b36cd0dc58d1b160787e6670bbce43dffe08a1b"
+    },
+    {
+      "id": "security-tests",
+      "command": "npm run test:security",
+      "startedAt": "2026-07-12T05:17:44.249Z",
+      "endedAt": "2026-07-12T05:17:44.359Z",
+      "durationMs": 110,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-UI-312/logs/security-tests.log",
+      "logSha256": "e27ee4ae2779f783d8bb3cf7f12c14f7be4285d315cc09c30657637c7e948396"
+    },
+    {
+      "id": "verify",
+      "command": "npm run verify",
+      "startedAt": "2026-07-12T05:17:44.359Z",
+      "endedAt": "2026-07-12T05:18:05.892Z",
+      "durationMs": 21533,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-UI-312/logs/verify.log",
+      "logSha256": "b7efa0dc4c5b41664f95465a6414e9d08a82885d2bc3f7f1965d49c56a19872d"
+    },
+    {
+      "id": "release-check",
+      "command": "npm run release:check",
+      "startedAt": "2026-07-12T05:18:05.893Z",
+      "endedAt": "2026-07-12T05:18:27.357Z",
+      "durationMs": 21464,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-UI-312/logs/release-check.log",
+      "logSha256": "474d3ad735d61998d9ad0f6f4c8fbc634ceaa92ef3d7bd20c75e43638ef86082"
+    },
+    {
+      "id": "feature-tests",
+      "command": "/Applications/QClaw.app/Contents/Resources/node/node test/feature-tests.mjs",
+      "startedAt": "2026-07-12T05:18:27.359Z",
+      "endedAt": "2026-07-12T05:18:29.699Z",
+      "durationMs": 2341,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-UI-312/logs/feature-tests.log",
+      "logSha256": "534392df37db2b86175f799134782b59da7e9cc1cb02dd93a54b660ee384f930"
+    },
+    {
+      "id": "dod-tests",
+      "command": "npm run test:dod",
+      "startedAt": "2026-07-12T05:18:29.700Z",
+      "endedAt": "2026-07-12T05:18:29.968Z",
+      "durationMs": 268,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-UI-312/logs/dod-tests.log",
+      "logSha256": "f8b3096032e626f999dd376ae91b433d713bc544686c172eeb7bcc40c2e3154e"
+    },
+    {
+      "id": "dod-scan",
+      "command": "npm run scan:dod",
+      "startedAt": "2026-07-12T05:18:29.968Z",
+      "endedAt": "2026-07-12T05:18:30.245Z",
+      "durationMs": 277,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-UI-312/logs/dod-scan.log",
+      "logSha256": "f829dae77b91220bd06fb6d8d959750d5a8162baa24c6e24b75e66b19ed8e997"
+    },
+    {
+      "id": "production-audit",
+      "command": "npm run audit:prod",
+      "startedAt": "2026-07-12T05:18:30.245Z",
+      "endedAt": "2026-07-12T05:18:31.356Z",
+      "durationMs": 1112,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-UI-312/logs/production-audit.log",
+      "logSha256": "391684e9c344c6559a3bfb2f15f086473d44002aac29f69f60eea2f8832b4aae"
+    },
+    {
+      "id": "electron-e2e",
+      "command": "npm run test:electron-e2e",
+      "startedAt": "2026-07-12T05:18:31.357Z",
+      "endedAt": "2026-07-12T05:18:52.710Z",
+      "durationMs": 21353,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-UI-312/logs/electron-e2e.log",
+      "logSha256": "9b95709d19269c92d59bddb97a71b62183af3ef2b12cb296f62bd4df0d11372f"
+    },
+    {
+      "id": "program-control",
+      "command": "npm run test:program",
+      "startedAt": "2026-07-12T05:18:52.711Z",
+      "endedAt": "2026-07-12T05:18:52.888Z",
+      "durationMs": 178,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-UI-312/logs/program-control.log",
+      "logSha256": "4722fd5bba1e67b0c569298090371efb321464de343ab202bd0400ba8c7d6c9f"
+    },
+    {
+      "id": "git-diff-check",
+      "command": "git diff --check",
+      "startedAt": "2026-07-12T05:18:52.889Z",
+      "endedAt": "2026-07-12T05:18:52.899Z",
+      "durationMs": 10,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-UI-312/logs/git-diff-check.log",
+      "logSha256": "3d4d50cd32af92c6d4df37c1df74a96622fca8cfb5643a155c91f034a42f2068"
+    }
+  ],
+  "summary": {
+    "total": 15,
+    "passed": 15,
+    "failed": 0,
+    "allPassed": true
+  }
+}

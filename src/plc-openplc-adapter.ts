@@ -1,7 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
-import { spawnSync } from "node:child_process";
+
+import { runIndustrialCommand } from "./industrial-execution.js";
+import type { ManagedExecutionPolicyResult } from "./execution-runner.js";
 
 import type {
   IndustrialToolAdapter,
@@ -71,6 +73,7 @@ interface PlcCompileResult {
   exitCode: number | null;
   signal?: string | null;
   reason?: string;
+  executionPolicy?: ManagedExecutionPolicyResult;
 }
 
 const DEFAULT_PLC_REQUEST: PlcTaskRequest = {
@@ -195,7 +198,7 @@ export function runOpenPlcAdapterTask(input: PlcRunInput): ToolRunResult {
     fs.writeFileSync(path.join(resolved.outputDir, "plc-program.st"), renderStructuredText(resolved.request), { mode: 0o600 });
   }
   const compileResult = compileCommand
-    ? runPlcSyntaxCheck({ executablePath: compileCommand, outputDir: resolved.outputDir, programPath: path.join(resolved.outputDir, "plc-program.st") })
+    ? runPlcSyntaxCheck({ executablePath: compileCommand, outputDir: resolved.outputDir, programPath: path.join(resolved.outputDir, "plc-program.st"), workspace, userApproved: request.userApproved === true })
     : {
       status: "not_run" as PlcCompileStatus,
       command: compilePreviewCommand(detection.executablePath || "iec2c", resolved),
@@ -233,6 +236,7 @@ export function runOpenPlcAdapterTask(input: PlcRunInput): ToolRunResult {
     artifacts: artifactList(files, compileResult.status),
     diagnostics,
     detection,
+    executionPolicy: compileResult.executionPolicy,
     error: ok ? undefined : compileDiagnostic.message,
   };
 }
@@ -540,19 +544,23 @@ function metadata({ resolved, detection, inputArtifacts, compileResult, files }:
       executablePath: detection.executablePath ? redactPath(detection.executablePath) : undefined,
     },
     inputArtifacts,
+    executionPolicy: compileResult.executionPolicy,
     artifacts: Object.fromEntries(Object.entries(files).filter(([, value]) => typeof value === "string").map(([key, value]) => [key, value])),
   };
 }
 
-function runPlcSyntaxCheck({ executablePath, outputDir, programPath }: { executablePath: string; outputDir: string; programPath: string }): PlcCompileResult {
+function runPlcSyntaxCheck({ executablePath, outputDir, programPath, workspace, userApproved }: { executablePath: string; outputDir: string; programPath: string; workspace: string; userApproved: boolean }): PlcCompileResult {
   const command = compilePreviewCommand(executablePath, { outputDir });
-  const result = spawnSync(executablePath, [programPath], {
+  const result = runIndustrialCommand({
+    id: "openplc.syntax-check",
+    executable: executablePath,
+    args: [programPath],
     cwd: outputDir,
-    encoding: "utf8",
-    shell: false,
-    timeout: 120000,
-    windowsHide: true,
-    env: plcProcessEnv(),
+    workspaceRoot: workspace,
+    timeoutMs: 120000,
+    environment: plcProcessEnv(),
+    userApproved,
+    network: "deny",
   });
   return {
     status: result.status === 0 ? "passed" : "failed",
@@ -562,6 +570,7 @@ function runPlcSyntaxCheck({ executablePath, outputDir, programPath }: { executa
     exitCode: result.status,
     signal: result.signal,
     reason: result.status === 0 ? "compiler command exited successfully" : "compiler command failed",
+    executionPolicy: result.executionPolicy,
   };
 }
 

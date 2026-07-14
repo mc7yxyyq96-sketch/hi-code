@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-import { spawn } from "node:child_process";
+
+import { runManagedExecution } from "./execution-runner.js";
 
 export const QUALITY_GATE_STATUSES = [
   "passed",
@@ -113,6 +114,7 @@ export interface QualityGateRunnerOptions {
   env?: NodeJS.ProcessEnv;
   timeoutMs?: number;
   outputLimit?: number;
+  approvalGranted?: boolean;
 }
 
 export class QualityGateRunner {
@@ -120,12 +122,14 @@ export class QualityGateRunner {
   private readonly env: NodeJS.ProcessEnv;
   private readonly timeoutMs: number;
   private readonly outputLimit: number;
+  private readonly approvalGranted: boolean;
 
   constructor(options: QualityGateRunnerOptions = {}) {
     this.cwd = path.resolve(options.cwd || process.cwd());
     this.env = options.env || process.env;
     this.timeoutMs = Math.max(1_000, Number(options.timeoutMs || 30_000));
     this.outputLimit = Math.max(2_000, Number(options.outputLimit || 20_000));
+    this.approvalGranted = options.approvalGranted === true;
   }
 
   listBuiltInGates(): QualityGate[] {
@@ -184,19 +188,38 @@ export class QualityGateRunner {
     if (hasShellSyntax(command) || args.some(hasShellSyntax)) {
       return this.makeResult({ gate, status: "failed", startedAt, message: "Command gate rejected unsafe shell syntax.", command: [command, ...args].join(" ") });
     }
-    const completed = await runCommand({ command, args, cwd: workspace, env: filteredEnv(this.env), timeoutMs: this.timeoutMs, outputLimit: this.outputLimit });
+    const completed = await runManagedExecution({
+      id: `quality-gate:${gate.id}`,
+      surface: "quality-gate",
+      executable: command,
+      args,
+      cwd: workspace,
+      allowedRoots: [workspace],
+      filesystem: "workspace-write",
+      network: "allow",
+      environment: { source: this.env },
+      limits: { timeoutMs: this.timeoutMs, outputBytes: this.outputLimit },
+      approval: { required: true, granted: this.approvalGranted },
+      processTree: { required: true },
+      enforcementMode: "report-only",
+    });
     const status: QualityGateStatus = completed.exitCode === 0 ? "passed" : "failed";
     return this.makeResult({
       gate,
       status,
       startedAt,
       endedAt: completed.endedAt,
-      message: completed.exitCode === 0 ? `${gate.name} passed` : `${gate.name} failed with exit code ${completed.exitCode}`,
+      message: completed.exitCode === 0 ? `${gate.name} passed` : `${gate.name} failed${completed.error ? `: ${completed.error}` : ` with exit code ${completed.exitCode}`}`,
       command: [command, ...args].join(" "),
       stdoutSummary: summarize(completed.stdout),
       stderrSummary: summarize(completed.stderr),
       artifactLinks: input.artifactPaths,
-      metadata: { exitCode: completed.exitCode, signal: completed.signal },
+      metadata: {
+        exitCode: completed.exitCode,
+        signal: completed.signal,
+        timedOut: completed.timedOut,
+        executionPolicy: completed.policy,
+      },
     });
   }
 
@@ -584,41 +607,6 @@ function firstString(value: unknown): string | undefined {
 
 function hasShellSyntax(value: string): boolean {
   return /[;&|`$<>]/.test(value);
-}
-
-function filteredEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
-  const safe: NodeJS.ProcessEnv = {};
-  for (const key of ["PATH", "HOME", "TMPDIR", "TEMP", "TMP", "SystemRoot", "ComSpec"]) {
-    if (env[key]) safe[key] = env[key];
-  }
-  return safe;
-}
-
-function runCommand({ command, args, cwd, env, timeoutMs, outputLimit }: { command: string; args: string[]; cwd: string; env: NodeJS.ProcessEnv; timeoutMs: number; outputLimit: number }): Promise<{ exitCode: number | null; signal: NodeJS.Signals | null; stdout: string; stderr: string; endedAt: number }> {
-  return new Promise((resolve) => {
-    const child = spawn(command, args, { cwd, env, shell: false, stdio: ["ignore", "pipe", "pipe"] });
-    let stdout = "";
-    let stderr = "";
-    const timer = setTimeout(() => child.kill("SIGTERM"), timeoutMs);
-    child.stdout?.on("data", (chunk) => {
-      stdout = trimOutput(stdout + String(chunk), outputLimit);
-    });
-    child.stderr?.on("data", (chunk) => {
-      stderr = trimOutput(stderr + String(chunk), outputLimit);
-    });
-    child.on("error", (error) => {
-      clearTimeout(timer);
-      resolve({ exitCode: 127, signal: null, stdout, stderr: trimOutput(stderr + errorMessage(error), outputLimit), endedAt: Date.now() });
-    });
-    child.on("close", (exitCode, signal) => {
-      clearTimeout(timer);
-      resolve({ exitCode, signal, stdout, stderr, endedAt: Date.now() });
-    });
-  });
-}
-
-function trimOutput(value: string, limit: number): string {
-  return value.length > limit ? value.slice(value.length - limit) : value;
 }
 
 function summarize(value: string): string {

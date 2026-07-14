@@ -14,15 +14,16 @@ import { runBuild } from "./agents/manager.js";
 import { gitDiff } from "./git.js";
 import { listSessions, loadSession, replaySessionMessages, type StoredSession, type SessionDisplayMessage } from "./session-store.js";
 import { mcpStatus } from "./mcp.js";
+import {
+  createDefaultCommandRegistry,
+  type CommandRegistry,
+  type CommandResolution,
+  type CommandSurface,
+} from "./command-registry.js";
 
 /** All user-facing slash commands, for tab-completion. */
-export const COMMAND_NAMES = [
-  "help", "clear", "compact", "undo", "diff",
-  "team", "build", "agent", "agents", "council", "debate",
-  "models", "model", "mode", "yolo",
-  "sessions", "resume", "mcp", "sandbox",
-  "cost", "tools", "init", "cwd", "exit",
-].map((c) => "/" + c);
+export const DEFAULT_COMMAND_REGISTRY = createDefaultCommandRegistry();
+export const COMMAND_NAMES = DEFAULT_COMMAND_REGISTRY.listSlashCommands("runtime");
 
 export interface CommandEnv {
   cfg: VibeConfig;
@@ -34,6 +35,8 @@ export interface CommandEnv {
   sessionId: string;
   /** Whether slash commands may terminate the current Node process. Disabled for Electron. */
   allowProcessExit?: boolean;
+  commandRegistry?: CommandRegistry;
+  commandSurface?: CommandSurface;
   /** Load a saved session into the active runtime, updating the runtime session id as well as messages. */
   resumeStoredSession?: (id: string) => StoredSession | undefined;
   /** Revert the file changes made during the last turn. */
@@ -41,10 +44,17 @@ export interface CommandEnv {
 }
 
 /** Returns true if input was a slash command (and was handled). */
-export async function handleCommand(input: string, env: CommandEnv): Promise<boolean> {
-  if (!input.startsWith("/")) return false;
-  const [cmd, ...rest] = input.slice(1).trim().split(/\s+/);
-  const arg = rest.join(" ");
+export async function handleCommand(input: string, env: CommandEnv, resolved?: CommandResolution): Promise<boolean> {
+  const resolution = resolved ?? (env.commandRegistry ?? DEFAULT_COMMAND_REGISTRY).resolve(input, { surface: env.commandSurface ?? "runtime" });
+  if (!resolution.ok) {
+    if (!input.trimStart().startsWith("/")) return false;
+    ui.error(`  ${resolution.message}`);
+    return true;
+  }
+  if (resolution.route !== "slash") return false;
+  const cmd = resolution.commandId;
+  const arg = resolution.args;
+  const rest = arg ? arg.split(/\s+/) : [];
 
   switch (cmd) {
     case "help":

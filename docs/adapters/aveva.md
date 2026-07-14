@@ -14,6 +14,8 @@ Sprint 6G adds the AVEVA / industrial engineering software bridge foundation for
 
 Real AVEVA API calls, project database reads/writes, tag sync, equipment sync, document register sync, VPN use, license checkout, and credential handling are out of scope for Sprint 6G.
 
+The current bridge starts no connector process and opens no network connection. Any future connector must enter through the shared execution-policy runner, require fresh main-process approval, reference credentials rather than persist values, and retain `external_required` until real connector evidence is attached.
+
 ## Enterprise Authorization
 
 Hi Code must not bypass enterprise authorization. A production AVEVA connector requires:

@@ -9,7 +9,7 @@ v0.5.2 is a stabilization and open-source alignment release. It should make the 
 
 ## Source Of Truth
 
-- Active development repository: `work/Hi-Code-v0.5.0`
+- Active development repository: `work/Hi-Code`
 - GitHub remote: `https://github.com/mc7yxyyq96-sketch/hi-code.git`
 - Active branch: `main`
 - Legacy comparison copy: `work/Hi Code副本`

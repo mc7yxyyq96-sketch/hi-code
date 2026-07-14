@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
-import { spawnSync } from "node:child_process";
+
+import { runIndustrialCommand, type IndustrialExecutionResult } from "./industrial-execution.js";
 
 import type {
   IndustrialToolAdapter,
@@ -247,7 +248,7 @@ export function runBimIfcAdapterTask(input: BimIfcRunInput): ToolRunResult {
   if (shouldDryRun) {
     return writeBimDryRun({ adapter, request, resolved, detection, commandPreview, inputArtifacts, reason: hasPythonModule ? "dry-run requested" : "IfcOpenShell Python module is not installed" });
   }
-  return runIfcInspection({ adapter, resolved, detection, pythonPath: detection.executablePath || "python3", inputArtifacts });
+  return runIfcInspection({ adapter, resolved, detection, pythonPath: detection.executablePath || "python3", inputArtifacts, workspace, userApproved: request.userApproved === true });
 }
 
 function bimCapability(id: string, name: string, artifactTypes: ToolCapability["artifactTypes"], requiresInstalledTool: boolean): ToolCapability {
@@ -311,12 +312,14 @@ function writeBimDryRun({ adapter, request, resolved, detection, commandPreview,
   };
 }
 
-function runIfcInspection({ adapter, resolved, detection, pythonPath, inputArtifacts }: {
+function runIfcInspection({ adapter, resolved, detection, pythonPath, inputArtifacts, workspace, userApproved }: {
   adapter: IndustrialToolAdapter;
   resolved: ResolvedBimIfcRequest;
   detection: ToolDetectionResult;
   pythonPath: string;
   inputArtifacts: string[];
+  workspace: string;
+  userApproved: boolean;
 }): ToolRunResult {
   fs.mkdirSync(resolved.outputDir, { recursive: true, mode: 0o700 });
   const diagnostics = [...detection.diagnostics, ...bimGateDiagnostics(resolved, undefined)];
@@ -343,19 +346,22 @@ function runIfcInspection({ adapter, resolved, detection, pythonPath, inputArtif
     };
   }
   const command = inspectionCommand(pythonPath, resolved);
-  const result = spawnSync(pythonPath, ["-c", IFC_INSPECT_SCRIPT, resolved.ifcFile || "", String(resolved.request.checkProperties)], {
+  const result = runIndustrialCommand({
+    id: "ifcopenshell.inspect",
+    executable: pythonPath,
+    args: ["-c", IFC_INSPECT_SCRIPT, resolved.ifcFile || "", String(resolved.request.checkProperties)],
     cwd: resolved.outputDir,
-    encoding: "utf8",
-    shell: false,
-    timeout: 120000,
-    windowsHide: true,
-    env: bimProcessEnv(),
+    workspaceRoot: workspace,
+    timeoutMs: 120000,
+    environment: bimProcessEnv(),
+    userApproved,
+    network: "deny",
   });
   fs.writeFileSync(logPath, renderInspectionLog(command, result), { mode: 0o600 });
   if (result.status !== 0) {
     const message = redactText(result.stderr || result.stdout || result.error?.message || "IfcOpenShell inspection failed");
     diagnostics.push(diagnostic("bim.ifc.inspection_failed", "error", message, "bim_check", "failed"));
-    fs.writeFileSync(metadataPath, JSON.stringify(bimMetadata({ resolved, detection, inputArtifacts, simulated: false, inspection: null, reason: message }), null, 2), { mode: 0o600 });
+    fs.writeFileSync(metadataPath, JSON.stringify({ ...bimMetadata({ resolved, detection, inputArtifacts, simulated: false, inspection: null, reason: message }), executionPolicy: result.executionPolicy }, null, 2), { mode: 0o600 });
     return {
       ok: false,
       adapterId: adapter.id,
@@ -366,6 +372,7 @@ function runIfcInspection({ adapter, resolved, detection, pythonPath, inputArtif
       artifacts: [artifact("tool_log", logPath, false, { adapterId: "ifcopenshell" }), artifact("bim-metadata", metadataPath, false, { adapterId: "ifcopenshell" })],
       diagnostics,
       detection,
+      executionPolicy: result.executionPolicy,
       error: message,
     };
   }
@@ -373,7 +380,7 @@ function runIfcInspection({ adapter, resolved, detection, pythonPath, inputArtif
   fs.writeFileSync(reportPath, JSON.stringify({ ...inspection, targetStandard: resolved.request.targetStandard || null, complianceConclusion: null }, null, 2), { mode: 0o600 });
   fs.writeFileSync(summaryPath, renderBimSummary({ resolved, inspection }), { mode: 0o600 });
   if (checklistPath) fs.writeFileSync(checklistPath, renderDeliveryChecklist(resolved.request, false), { mode: 0o600 });
-  fs.writeFileSync(metadataPath, JSON.stringify(bimMetadata({ resolved, detection, inputArtifacts, simulated: false, inspection, reason: "inspection completed" }), null, 2), { mode: 0o600 });
+  fs.writeFileSync(metadataPath, JSON.stringify({ ...bimMetadata({ resolved, detection, inputArtifacts, simulated: false, inspection, reason: "inspection completed" }), executionPolicy: result.executionPolicy }, null, 2), { mode: 0o600 });
   diagnostics.push(...inspectionDiagnostics(inspection));
   const ok = diagnostics.every((item) => item.severity !== "error");
   return {
@@ -392,6 +399,7 @@ function runIfcInspection({ adapter, resolved, detection, pythonPath, inputArtif
     ],
     diagnostics,
     detection,
+    executionPolicy: result.executionPolicy,
     error: ok ? undefined : diagnostics.filter((item) => item.severity === "error").map((item) => item.message).join("; "),
   };
 }
@@ -579,14 +587,16 @@ function detectIfcOpenShellProbe({ manual, commands, executablePaths, environmen
   environment: Array<{ name: string; set: boolean; path?: string; exists?: boolean; executable?: boolean }>;
   pathEnv: string;
 }): IfcDetectionProbe {
-  const pythonCandidates = unique([
-    ...(manual && isPythonExecutable(manual) ? [manual] : []),
+  const automaticPythonCandidates = unique([
     ...environment.filter((item) => item.executable && item.name.includes("PYTHON") && item.path).map((item) => item.path as string),
-    ...executablePaths.filter((item) => item.found && isPythonExecutable(item.path)).map((item) => item.path),
     findCommand("python3", pathEnv),
     findCommand("python", pathEnv),
+    ...executablePaths.filter((item) => item.found && isPythonExecutable(item.path)).map((item) => item.path),
   ].filter(Boolean) as string[]);
-  for (const pythonPath of pythonCandidates) {
+  const pythonPath = manual && isPythonExecutable(manual)
+    ? manual
+    : automaticPythonCandidates[0];
+  if (pythonPath) {
     const probe = probePythonModule(pythonPath);
     if (probe.moduleAvailable) return probe;
   }
@@ -596,7 +606,18 @@ function detectIfcOpenShellProbe({ manual, commands, executablePaths, environmen
     ...executablePaths.filter((item) => item.found && /ifcconvert|ifcopenshell/i.test(item.path)).map((item) => item.path),
   ].filter(Boolean) as string[]);
   for (const cliPath of cliCandidates) {
-    const result = spawnSync(cliPath, ["--version"], { encoding: "utf8", shell: false, timeout: 5000, windowsHide: true, env: { PATH: pathEnv } });
+    const result = runIndustrialCommand({
+      id: "ifcopenshell.version",
+      executable: cliPath,
+      args: ["--version"],
+      cwd: process.cwd(),
+      workspaceRoot: process.cwd(),
+      timeoutMs: 5000,
+      outputBytes: 2000,
+      environment: { PATH: pathEnv },
+      mutating: false,
+      network: "deny",
+    });
     const output = redactText([result.stdout, result.stderr].filter(Boolean).join("\n").trim()).slice(0, 2000);
     return { cliPath, cliAvailable: true, moduleAvailable: false, output, version: /([0-9]+(?:\.[0-9]+)+[^\s]*)/.exec(output)?.[1] };
   }
@@ -605,7 +626,18 @@ function detectIfcOpenShellProbe({ manual, commands, executablePaths, environmen
 
 function probePythonModule(pythonPath: string): IfcDetectionProbe {
   try {
-    const result = spawnSync(pythonPath, ["-c", PYTHON_PROBE], { encoding: "utf8", shell: false, timeout: 5000, windowsHide: true, env: bimProcessEnv() });
+    const result = runIndustrialCommand({
+      id: "ifcopenshell.python-probe",
+      executable: pythonPath,
+      args: ["-c", PYTHON_PROBE],
+      cwd: process.cwd(),
+      workspaceRoot: process.cwd(),
+      timeoutMs: 5000,
+      outputBytes: 2000,
+      environment: bimProcessEnv(),
+      mutating: false,
+      network: "deny",
+    });
     const output = redactText([result.stdout, result.stderr].filter(Boolean).join("\n").trim()).slice(0, 2000);
     const parsed = JSON.parse(result.stdout || "{}") as { ok?: boolean; version?: string; error?: string };
     return {
@@ -628,7 +660,7 @@ function renderCommandPreview(command: string[]): string {
   return ["#!/bin/sh", "set -eu", command.map(shellQuote).join(" ")].join("\n") + "\n";
 }
 
-function renderInspectionLog(command: string[], result: ReturnType<typeof spawnSync>): string {
+function renderInspectionLog(command: string[], result: IndustrialExecutionResult): string {
   return [
     `$ ${command.map(shellQuote).join(" ")}`,
     `status=${result.status ?? "null"} signal=${result.signal || ""}`,

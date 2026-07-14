@@ -1,0 +1,177 @@
+{
+  "schemaVersion": 1,
+  "evidenceType": "program-baseline",
+  "taskId": "HC-PROG-100",
+  "source": {
+    "version": "0.6.0-alpha.6",
+    "commit": "6ed9ed666bb817f8d1e863c76b0bf61b31c7b52d",
+    "commitDate": "2026-07-09T17:58:13-07:00",
+    "commitSubject": "feat: recover tasks from runtime protocol store",
+    "branch": "codex/program-control/hc-prog-100",
+    "remote": "https://github.com/mc7yxyyq96-sketch/hi-code.git",
+    "sourceCommitRecorded": true
+  },
+  "capture": {
+    "startedAt": "2026-07-10T08:38:01.817Z",
+    "completedAt": "2026-07-10T08:38:25.953Z",
+    "workingTreeClean": false,
+    "dirtyPaths": [
+      ".gitignore",
+      "AGENTS.md",
+      "CONTINUE-\\344\\270\\255\\346\\226\\255\\345\\220\\216\\345\\244\\215\\345\\210\\266\\347\\273\\231Codex.txt",
+      "PROMPT-\\345\\244\\215\\345\\210\\266\\347\\273\\231Codex.txt",
+      "START-HERE-\\345\\205\\210\\347\\234\\213\\350\\277\\231\\351\\207\\214.md",
+      "docs/adr/ADR-0001-program-control-and-evidence.md",
+      "docs/adr/ADR-0002-runtime-protocol-authority-migration.md",
+      "docs/adr/README.md",
+      "docs/program/ARCHITECTURE.md",
+      "docs/program/EXECUTION_PLAN.md",
+      "docs/program/PROGRAM.md",
+      "docs/program/PROGRAM_DIRECTOR.md",
+      "docs/release-v0.5.2-plan.md",
+      "package.json",
+      "planning/backlog.json",
+      "planning/release-board.json",
+      "reports/audit/README.md",
+      "reports/evidence/baseline/logs/build.log",
+      "reports/evidence/baseline/logs/dod-scan.log",
+      "reports/evidence/baseline/logs/dod-tests.log",
+      "reports/evidence/baseline/logs/feature-tests.log",
+      "reports/evidence/baseline/logs/git-diff-check.log",
+      "reports/evidence/baseline/logs/production-audit.log",
+      "reports/evidence/baseline/logs/release-check.log",
+      "reports/evidence/baseline/logs/security-tests.log",
+      "reports/evidence/baseline/logs/verify.log",
+      "reports/evidence/baseline/manifest.json",
+      "reports/final-acceptance-historical.md",
+      "reports/program/risks.json",
+      "reports/program/status.md",
+      "reports/tasks/HC-PROG-100.md",
+      "scripts/audit-production.mjs",
+      "scripts/capture-program-baseline.mjs",
+      "scripts/verify.mjs",
+      "test/program-control-tests.mjs",
+      "test/security-baseline.mjs"
+    ],
+    "runtimeProductDirtyPaths": [],
+    "note": "The source commit is the immutable baseline. Control-plane bootstrap files were intentionally uncommitted during capture."
+  },
+  "environment": {
+    "platform": "darwin",
+    "architecture": "arm64",
+    "osRelease": "25.5.0",
+    "node": "v22.16.0"
+  },
+  "commands": [
+    {
+      "id": "build",
+      "command": "npm run build",
+      "startedAt": "2026-07-10T08:38:01.863Z",
+      "endedAt": "2026-07-10T08:38:02.913Z",
+      "durationMs": 1050,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/baseline/logs/build.log",
+      "logSha256": "17e6624484486c543e9a3e4f9007c750423ba27af0634a3bf3474f0a0ce9d36c"
+    },
+    {
+      "id": "verify",
+      "command": "npm run verify",
+      "startedAt": "2026-07-10T08:38:02.914Z",
+      "endedAt": "2026-07-10T08:38:12.208Z",
+      "durationMs": 9294,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/baseline/logs/verify.log",
+      "logSha256": "961685dbb3450cbe6d94019a9d2947b877e7c795ac85c45924e896093ca3ec35"
+    },
+    {
+      "id": "release-check",
+      "command": "npm run release:check",
+      "startedAt": "2026-07-10T08:38:12.209Z",
+      "endedAt": "2026-07-10T08:38:21.508Z",
+      "durationMs": 9299,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/baseline/logs/release-check.log",
+      "logSha256": "2bc500c51ed0287da28b256227cdeb398e409d225c2b54a0101169eede2e4878"
+    },
+    {
+      "id": "feature-tests",
+      "command": "/Applications/QClaw.app/Contents/Resources/node/node test/feature-tests.mjs",
+      "startedAt": "2026-07-10T08:38:21.509Z",
+      "endedAt": "2026-07-10T08:38:23.408Z",
+      "durationMs": 1899,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/baseline/logs/feature-tests.log",
+      "logSha256": "e58ffdb75e4f22f322c47e1b8f4a404d9ed125898e6ee4a6ff2c7fe78a621d5b"
+    },
+    {
+      "id": "security-tests",
+      "command": "npm run test:security",
+      "startedAt": "2026-07-10T08:38:23.408Z",
+      "endedAt": "2026-07-10T08:38:23.606Z",
+      "durationMs": 198,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/baseline/logs/security-tests.log",
+      "logSha256": "e93eec86078c6dbed7e75a14de074ed67f16ea3b9d49b16bdc7ee97afcdc7cfa"
+    },
+    {
+      "id": "dod-tests",
+      "command": "npm run test:dod",
+      "startedAt": "2026-07-10T08:38:23.606Z",
+      "endedAt": "2026-07-10T08:38:23.961Z",
+      "durationMs": 355,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/baseline/logs/dod-tests.log",
+      "logSha256": "7b930c4c653e5308cdf9d7214d261a7f56c846fe9e4b5abc8ddc1ea52d5e1de0"
+    },
+    {
+      "id": "dod-scan",
+      "command": "npm run scan:dod",
+      "startedAt": "2026-07-10T08:38:23.961Z",
+      "endedAt": "2026-07-10T08:38:24.237Z",
+      "durationMs": 276,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/baseline/logs/dod-scan.log",
+      "logSha256": "acab685b3a63b091e2f82c133134756238001688f8f81f4ba43617257f1e0740"
+    },
+    {
+      "id": "production-audit",
+      "command": "npm run audit:prod",
+      "startedAt": "2026-07-10T08:38:24.238Z",
+      "endedAt": "2026-07-10T08:38:25.932Z",
+      "durationMs": 1694,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/baseline/logs/production-audit.log",
+      "logSha256": "906907c650e2e56216501e3c86b5a1793c95580e8f99bb271a8a3f2abba3349e"
+    },
+    {
+      "id": "git-diff-check",
+      "command": "git diff --check",
+      "startedAt": "2026-07-10T08:38:25.933Z",
+      "endedAt": "2026-07-10T08:38:25.953Z",
+      "durationMs": 20,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/baseline/logs/git-diff-check.log",
+      "logSha256": "3d4d50cd32af92c6d4df37c1df74a96622fca8cfb5643a155c91f034a42f2068"
+    }
+  ],
+  "summary": {
+    "total": 9,
+    "passed": 9,
+    "failed": 0,
+    "allPassed": true
+  },
+  "historicalEvidence": {
+    "finalAcceptance": "reports/final-acceptance-historical.md",
+    "auditArchivePolicy": "reports/audit/README.md",
+    "authoritativeCurrentStatus": "reports/program/status.md"
+  }
+}

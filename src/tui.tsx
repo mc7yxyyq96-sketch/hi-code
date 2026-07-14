@@ -13,6 +13,8 @@ import { createRuntime, type Runtime } from "./runtime.js";
 import { makeCompleter, type Completer } from "./completer.js";
 import { setSpinnerEnabled } from "./ui.js";
 import { estimateTokens, fullHistory } from "./context.js";
+import { RuntimeEventBus } from "./runtime-event-sink.js";
+import { connectAssistantTextOutput } from "./runtime-client-adapters.js";
 
 export interface TuiOpts {
   cfg: VibeConfig;
@@ -32,8 +34,8 @@ export function runTui(opts: TuiOpts): Promise<void> {
   const inkStdout: NodeJS.WriteStream = Object.create(real);
   (inkStdout as any).write = realWrite;
 
-  // The agent core prints via console.* and process.stdout.write; route all of
-  // that into the React log instead of straight to the terminal.
+  // Compatibility command/tool output still uses console/stdout. Assistant
+  // model text is projected from RuntimeEventBus inside the React app.
   const bridge = { feed: (_: string) => {} };
   const origLog = console.log;
   const origErr = console.error;
@@ -76,6 +78,8 @@ function App({ opts, bridge, onExit }: AppProps) {
   const [stats, setStats] = useState({ ctx: 0, used: 0 });
 
   const runtimeRef = useRef<Runtime | null>(null);
+  const assistantDisconnectRef = useRef<(() => void) | null>(null);
+  const quittingRef = useRef(false);
   const askResolveRef = useRef<((s: string) => void) | null>(null);
   const lineBuf = useRef("");
   const completer = useRef<Completer>(makeCompleter(opts.cwd));
@@ -100,12 +104,26 @@ function App({ opts, bridge, onExit }: AppProps) {
         setPendingAsk(q);
         askResolveRef.current = resolve;
       });
-    runtimeRef.current = createRuntime({ ...opts, ask });
+    const eventBus = new RuntimeEventBus();
+    assistantDisconnectRef.current = connectAssistantTextOutput(eventBus, {
+      write: feed,
+      prefix: ({ label }) => `\n${chalk.green("● ")}${label ? chalk.dim(`[${label}] `) : ""}`,
+    });
+    runtimeRef.current = createRuntime({
+      ...opts,
+      ask,
+      eventSink: eventBus,
+      legacyAssistantOutput: false,
+    });
   }
   const rt = runtimeRef.current;
 
-  const quit = () => {
-    rt.shutdown();
+  const quit = async () => {
+    if (quittingRef.current) return;
+    quittingRef.current = true;
+    assistantDisconnectRef.current?.();
+    assistantDisconnectRef.current = null;
+    await rt.shutdown();
     onExit();
     exit();
     process.exit(0);
@@ -115,7 +133,7 @@ function App({ opts, bridge, onExit }: AppProps) {
   useInput((input, key) => {
     if (key.ctrl && input === "c") {
       if (rt.abort()) feed(chalk.yellow("\n  ⏹ interrupting…\n"));
-      else quit();
+      else void quit();
     }
   });
 

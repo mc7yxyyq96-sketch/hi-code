@@ -36,6 +36,8 @@ The detector flags:
 
 Warnings are allowed to proceed when they are intentionally non-blocking. Blocking findings fail Definition of Done and prevent release readiness.
 
+The repository-wide `scan:dod` command scans first-party source, tests, docs, scripts, and reports. It excludes the exact ignored Vite output root `renderer/generated/`, because that directory is rebuilt from first-party source plus third-party dependencies and may contain upstream abstract-method marker strings. This does not exempt `renderer/`, terminal source, or any other production path from Skeleton Detector rules. The generated bundle is independently checked by `build`, Electron compatibility, Electron E2E, and packaged-native integrity gates.
+
 ## Release Blocking
 
 Release Builder runs Definition of Done during readiness checks. It adds the DoD result as a release gate named `definition-of-done`.
@@ -78,6 +80,7 @@ Patch Arena candidates write:
 - Release Center shows the DoD checklist and skeleton findings.
 - Patch Arena shows candidate skeleton risk and DoD evidence path.
 - Industrial Project shows artifact completeness: total, complete real artifacts, simulated/dry-run artifacts, missing paths, release-required artifacts, and gate-linked artifacts.
+- App Preview writes a real PNG plus bounded DOM/check evidence. Missing selectors, failed captures, and incomplete document state remain failed and cannot be represented as verified UI.
 
 ## Agent Guidance
 

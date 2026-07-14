@@ -1,0 +1,13 @@
+$ npm run release:checksums
+
+> hi-code@0.6.0-alpha.8 release:checksums
+> node scripts/checksum-release.mjs
+
+[checksums] wrote release/SHA256SUMS-v0.6.0-alpha.8.txt
+3be306c90307251f6ed0be6fab83f95e7bef6dd871723e77a63e59ace42d2565  alpha-mac.yml
+bde5b7413b1be8ea8b58c20da68a563b538b4c1bb94c0eb38b6977d0037edc07  Hi-Code-0.6.0-alpha.8-mac-arm64.dmg
+c3a44d6dbd17499f2005524eafc7155bcdbc9cb3ae48101f3650cd1f52866ad7  Hi-Code-0.6.0-alpha.8-mac-arm64.dmg.blockmap
+95d7ed9e4b39f4aa75382ac736bbd734bdc08b8db156177c789d90badf9e8e91  Hi-Code-0.6.0-alpha.8-mac-arm64.zip
+241afe4aca0eba0906b56946a2fa8f7457f3e753a80d1818423f5d8cdec3c03a  Hi-Code-0.6.0-alpha.8-mac-arm64.zip.blockmap
+6823d05c5e8f8daa26b54e978e992bf434dd1e093c748671f79defff050d648d  provenance-v0.6.0-alpha.8.json
+0ecf2ef2277fddeeef4e54f3087b25ee35f600fa94c8d30f2a2ce3b5ead349e1  sbom-v0.6.0-alpha.8.cdx.json

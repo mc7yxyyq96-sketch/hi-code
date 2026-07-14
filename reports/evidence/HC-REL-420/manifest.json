@@ -1,0 +1,433 @@
+{
+  "schemaVersion": 1,
+  "evidenceType": "three-platform-release-pipeline-acceptance",
+  "taskId": "HC-REL-420",
+  "source": {
+    "version": "0.6.0-alpha.8",
+    "parentCommit": "6e42ce3e30028ba9a6e8aee920865a68704b7571",
+    "branch": "codex/security-release/hc-rel-420"
+  },
+  "capture": {
+    "startedAt": "2026-07-13T09:36:59.030Z",
+    "completedAt": "2026-07-13T09:39:04.326Z",
+    "workingTreeClean": true,
+    "dirtyPaths": [],
+    "note": "Task evidence is captured before the task commit; artifact hashes bind the tested implementation and reviewed screenshots."
+  },
+  "environment": {
+    "platform": "darwin",
+    "architecture": "arm64",
+    "osRelease": "25.5.0",
+    "node": "v22.22.3"
+  },
+  "artifacts": [
+    {
+      "path": ".github/workflows/release-packaging.yml",
+      "bytes": 2659,
+      "sha256": "764b9a76bd451f748978918653cfba73b4ab3c5c9815ebfe5419707aecf61de3"
+    },
+    {
+      "path": "docs/adr/ADR-0018-controlled-desktop-release-pipeline.md",
+      "bytes": 3292,
+      "sha256": "64cc96f004bcb68801d7e7382a9cf1b2c29d6d5df9820b06bc99edb4aa5980e2"
+    },
+    {
+      "path": "docs/adr/README.md",
+      "bytes": 4269,
+      "sha256": "97f916e0043f367c661f8d3e0fe0e7d4182133b5609d0523b0247c00b9efb979"
+    },
+    {
+      "path": "docs/engineering-baseline.md",
+      "bytes": 9084,
+      "sha256": "ef6261fdf8f1df5dfe9307392184add78d4479a042950983fc84348a9849fc3d"
+    },
+    {
+      "path": "docs/main-process-services.md",
+      "bytes": 17792,
+      "sha256": "000d11fc6cd8497208d3c57ce263169c6f2372681431bbe0e088918c698942d9"
+    },
+    {
+      "path": "docs/release-pipeline.md",
+      "bytes": 6035,
+      "sha256": "a31a7fdb83b7097138e6ccffd2d0e096b51fd28cbacc19c073634ed5bba93360"
+    },
+    {
+      "path": "electron/main.mjs",
+      "bytes": 110051,
+      "sha256": "919c723f47942a280d6ca5949b283cb9807a26eed7d0eca811436b32efcf10d7"
+    },
+    {
+      "path": "electron/preload.cjs",
+      "bytes": 29786,
+      "sha256": "352f9a2b5510cff70294c41b8eafb0f1a90862d4354ca9136c8d87215a60de3d"
+    },
+    {
+      "path": "electron/services/app-info-service.mjs",
+      "bytes": 6501,
+      "sha256": "03d49e80a91eab02d6ffab5a32f3d1640c435fccffe328db4c476ab8f143e587"
+    },
+    {
+      "path": "electron/services/release-policy.mjs",
+      "bytes": 13840,
+      "sha256": "6575db1a52224f67006255d3fe04eee7e519d0e124a6b80869ad35002c3c0a1a"
+    },
+    {
+      "path": "electron/services/update-service.mjs",
+      "bytes": 12276,
+      "sha256": "88139375bc551dfae6f538b2b35e9267b1d974856164590a150d81bdb4e68bfa"
+    },
+    {
+      "path": "package.json",
+      "bytes": 10836,
+      "sha256": "47d7abdf68127e3e5e82e5eee3eb9b2489bd3f531f45837148043391b943063f"
+    },
+    {
+      "path": "package-lock.json",
+      "bytes": 273721,
+      "sha256": "b8c58cf9a12968e3d6456c62a486cab60693ba0d4fc25e1bcc0bcb9ccb275dc8"
+    },
+    {
+      "path": "planning/backlog.json",
+      "bytes": 19697,
+      "sha256": "653fbb3d94100a63ada52007fbf537e9e4cde9181612257e48b3ea6273798791"
+    },
+    {
+      "path": "planning/release-board.json",
+      "bytes": 18454,
+      "sha256": "8fc8a923c1a48ba2a59d6fb388e4da70598d24db2a04ceedef16a3946f406c9c"
+    },
+    {
+      "path": "renderer/api/hicode-api.js",
+      "bytes": 15413,
+      "sha256": "22f9faf848858f946363f9d8071217160c7af577a546eae99d40795d69724b26"
+    },
+    {
+      "path": "renderer/app/bootstrap.js",
+      "bytes": 230599,
+      "sha256": "b2c43aaed198f7f5355dc9448c91ff9c95291cdd287788ddaefc68d8ec5a0ce5"
+    },
+    {
+      "path": "renderer/index.html",
+      "bytes": 50093,
+      "sha256": "d4bec226692a90553cfcc6d98454a1a758eb307704ea0a50fd3c584bc10100a4"
+    },
+    {
+      "path": "renderer/style.css",
+      "bytes": 143369,
+      "sha256": "918300a1099eff88b3849e1dbf0fbb783beb411add287fcef3e620e9f07025ca"
+    },
+    {
+      "path": "reports/program/risks.json",
+      "bytes": 22578,
+      "sha256": "935b25f80fa8a29ff13ea9de25bf4328bc47ae7a85f65410fb19ca048d805475"
+    },
+    {
+      "path": "reports/program/status.md",
+      "bytes": 18900,
+      "sha256": "8bf013556a8060ef49a81824a75e2294ce6d6656ad5b6a7b959fa604d47f15e8"
+    },
+    {
+      "path": "reports/tasks/HC-REL-420.md",
+      "bytes": 4633,
+      "sha256": "a6fd7085959dc10d06da9713d699cd941f54719e1b8cade3c3c649c4d2a238d4"
+    },
+    {
+      "path": "scripts/capture-task-evidence.mjs",
+      "bytes": 56945,
+      "sha256": "dbc9f85025338898be2372baff1887bb88eab63939ce25364353c82f38ff28dd"
+    },
+    {
+      "path": "scripts/checksum-release.mjs",
+      "bytes": 2761,
+      "sha256": "f576f67330901b497f314af7100e493b110d37dcc404377e8907dc10d4f239c7"
+    },
+    {
+      "path": "scripts/generate-provenance.mjs",
+      "bytes": 4486,
+      "sha256": "c1b363a09b651f7def52a78e8604472da358e47a3f224da2e740328f24d0c4b5"
+    },
+    {
+      "path": "scripts/generate-sbom.mjs",
+      "bytes": 7081,
+      "sha256": "113eb799f27c3e3843e917a0dcc035ad5529f77ce248c6f97eaab8d1947ee44b"
+    },
+    {
+      "path": "scripts/package-smoke.mjs",
+      "bytes": 14730,
+      "sha256": "40c22309f5b060fff39681aa4697089ddc807ed07e328a19bb239f0ca2dfc549"
+    },
+    {
+      "path": "scripts/release-artifacts.mjs",
+      "bytes": 1476,
+      "sha256": "e3354b42e215209d7231fda1c4e9533031bcfbb7dec114163d4e549151ea5b1f"
+    },
+    {
+      "path": "scripts/release-preflight.mjs",
+      "bytes": 1210,
+      "sha256": "e54e3ba257a245881959cb3e3d764e256a8dd696592fbb9249e4fd3f51df9862"
+    },
+    {
+      "path": "scripts/release-source.mjs",
+      "bytes": 1994,
+      "sha256": "402b36ff377a3287e889e875a473ce9372559c21e0db745d51f99909dcce3e13"
+    },
+    {
+      "path": "scripts/run-electron-builder.mjs",
+      "bytes": 4261,
+      "sha256": "18a0508d2b89bef6da733d8ed95f7fe28c2ed905d416d58cc2b46fc6f65d038c"
+    },
+    {
+      "path": "scripts/verify.mjs",
+      "bytes": 4475,
+      "sha256": "a68efa6877a8e7ed93d3874dfb0eaa3230ecfe5506f99721ef9b7be92321e636"
+    },
+    {
+      "path": "test/main-process-services-tests.mjs",
+      "bytes": 35981,
+      "sha256": "139762616eb87b88f3aced46c6b147dfa27499d53d83844fca9cd365f57b841a"
+    },
+    {
+      "path": "test/release-pipeline-tests.mjs",
+      "bytes": 20546,
+      "sha256": "f31fd2f8798554ccfc75ecd96f1e4900ebdf48123ee08f360a3c11d70c4f603d"
+    },
+    {
+      "path": "test/security-baseline.mjs",
+      "bytes": 55631,
+      "sha256": "3c241d28a5405e9c7c17fb8d51a6f5b2c4af8a11b85700ffe7ef3b08bd6de808"
+    },
+    {
+      "path": "tests/electron-e2e/run.mjs",
+      "bytes": 58643,
+      "sha256": "0b56f07a51f8a00168917ee9ec9a4bb2bd5ea1bebf9ae92a2d9e8956a6ddab16"
+    }
+  ],
+  "commands": [
+    {
+      "id": "build",
+      "command": "npm run build",
+      "startedAt": "2026-07-13T09:36:59.043Z",
+      "endedAt": "2026-07-13T09:37:01.760Z",
+      "durationMs": 2717,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-REL-420/logs/build.log",
+      "logSha256": "d144f34c5d9ef879a5b2ad314092e0d79a3c40e1053d9645dfa5caf10f5a1dcc"
+    },
+    {
+      "id": "release-preflight",
+      "command": "npm run release:preflight -- --platform=darwin --mode=development --channel=nightly",
+      "startedAt": "2026-07-13T09:37:01.762Z",
+      "endedAt": "2026-07-13T09:37:01.881Z",
+      "durationMs": 120,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-REL-420/logs/release-preflight.log",
+      "logSha256": "27f372e7862fe80d74cc8be14d0ecd03140e95d62f87e50622a9debf3960eec7"
+    },
+    {
+      "id": "release-pipeline-tests",
+      "command": "npm run test:release-pipeline",
+      "startedAt": "2026-07-13T09:37:01.882Z",
+      "endedAt": "2026-07-13T09:37:02.073Z",
+      "durationMs": 191,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-REL-420/logs/release-pipeline-tests.log",
+      "logSha256": "a71d58f0af16aebafab336010bcd6041d089b0c963f298b8f063a03d27cf8d9b"
+    },
+    {
+      "id": "service-tests",
+      "command": "npm run test:services",
+      "startedAt": "2026-07-13T09:37:02.073Z",
+      "endedAt": "2026-07-13T09:37:06.064Z",
+      "durationMs": 3991,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-REL-420/logs/service-tests.log",
+      "logSha256": "07e22d5484895e05af79c4868f6dac5c7de0ac73dc43addd22929b6cf7bf0663"
+    },
+    {
+      "id": "security-tests",
+      "command": "npm run test:security",
+      "startedAt": "2026-07-13T09:37:06.066Z",
+      "endedAt": "2026-07-13T09:37:06.194Z",
+      "durationMs": 128,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-REL-420/logs/security-tests.log",
+      "logSha256": "f55c3f1ec0b2678b52940a3198842dbec7a41631cbc04c13035b9eb2b3d32f60"
+    },
+    {
+      "id": "verify",
+      "command": "npm run verify",
+      "startedAt": "2026-07-13T09:37:06.194Z",
+      "endedAt": "2026-07-13T09:37:36.436Z",
+      "durationMs": 30242,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-REL-420/logs/verify.log",
+      "logSha256": "d95701a47613f0fa0631d200666fe1daf59ecfcc69c16bf34b9626559776bde2"
+    },
+    {
+      "id": "release-check",
+      "command": "npm run release:check",
+      "startedAt": "2026-07-13T09:37:36.437Z",
+      "endedAt": "2026-07-13T09:38:06.089Z",
+      "durationMs": 29517,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-REL-420/logs/release-check.log",
+      "logSha256": "9170081b6914d7346c307679832eb729375a1153de199eb760a336f23195c909"
+    },
+    {
+      "id": "feature-tests",
+      "command": "/Applications/QClaw.app/Contents/Resources/node/node test/feature-tests.mjs",
+      "startedAt": "2026-07-13T09:38:06.091Z",
+      "endedAt": "2026-07-13T09:38:08.441Z",
+      "durationMs": 2350,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-REL-420/logs/feature-tests.log",
+      "logSha256": "534392df37db2b86175f799134782b59da7e9cc1cb02dd93a54b660ee384f930"
+    },
+    {
+      "id": "dod-tests",
+      "command": "npm run test:dod",
+      "startedAt": "2026-07-13T09:38:08.441Z",
+      "endedAt": "2026-07-13T09:38:08.811Z",
+      "durationMs": 370,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-REL-420/logs/dod-tests.log",
+      "logSha256": "f8b3096032e626f999dd376ae91b433d713bc544686c172eeb7bcc40c2e3154e"
+    },
+    {
+      "id": "dod-scan",
+      "command": "npm run scan:dod",
+      "startedAt": "2026-07-13T09:38:08.812Z",
+      "endedAt": "2026-07-13T09:38:09.121Z",
+      "durationMs": 310,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-REL-420/logs/dod-scan.log",
+      "logSha256": "50209bc6f65f9626720530bfd9e1d8f6f291b27f7724db87673f71d53c59497b"
+    },
+    {
+      "id": "production-audit",
+      "command": "npm run audit:prod",
+      "startedAt": "2026-07-13T09:38:09.121Z",
+      "endedAt": "2026-07-13T09:38:10.482Z",
+      "durationMs": 1360,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-REL-420/logs/production-audit.log",
+      "logSha256": "9f7c507d9af3253a1010988af30c28077e02547298ce7818fd3b1d736442f8b2"
+    },
+    {
+      "id": "electron-e2e",
+      "command": "npm run test:electron-e2e",
+      "startedAt": "2026-07-13T09:38:10.482Z",
+      "endedAt": "2026-07-13T09:38:35.847Z",
+      "durationMs": 25365,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-REL-420/logs/electron-e2e.log",
+      "logSha256": "df2a5b46a79d543c5bff318030dc790bd55fd26e14433e998a27c671cc72aa8c"
+    },
+    {
+      "id": "mac-package",
+      "command": "npm run dist:mac",
+      "startedAt": "2026-07-13T09:38:35.848Z",
+      "endedAt": "2026-07-13T09:38:59.079Z",
+      "durationMs": 23231,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-REL-420/logs/mac-package.log",
+      "logSha256": "8003d65d01b4620a49df4d1f9aea3b02e71e04d5bb1f67fb253c602b565d628a"
+    },
+    {
+      "id": "mac-package-smoke",
+      "command": "npm run release:package-smoke -- --platform=darwin",
+      "startedAt": "2026-07-13T09:38:59.079Z",
+      "endedAt": "2026-07-13T09:39:03.350Z",
+      "durationMs": 4271,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-REL-420/logs/mac-package-smoke.log",
+      "logSha256": "7e95f23eafe17856c51373863a387334b5fcd496a8addca2ca43276843504cb6"
+    },
+    {
+      "id": "sbom",
+      "command": "npm run release:sbom",
+      "startedAt": "2026-07-13T09:39:03.351Z",
+      "endedAt": "2026-07-13T09:39:03.472Z",
+      "durationMs": 121,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-REL-420/logs/sbom.log",
+      "logSha256": "7cae381a83eeff6f7b3296cfecda8dabcaa647b0bc08eec9a19048ef4df2a671"
+    },
+    {
+      "id": "provenance",
+      "command": "npm run release:provenance",
+      "startedAt": "2026-07-13T09:39:03.472Z",
+      "endedAt": "2026-07-13T09:39:03.717Z",
+      "durationMs": 245,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-REL-420/logs/provenance.log",
+      "logSha256": "f25b2541bea66474dc021ea828eb57fc3a17283e8f3a765ad86093c2091db668"
+    },
+    {
+      "id": "checksums",
+      "command": "npm run release:checksums",
+      "startedAt": "2026-07-13T09:39:03.717Z",
+      "endedAt": "2026-07-13T09:39:03.926Z",
+      "durationMs": 209,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-REL-420/logs/checksums.log",
+      "logSha256": "499daa2aa6520485bce13391c3f8960d57de7128e713845bb1b5cfcfad56f601"
+    },
+    {
+      "id": "checksum-verification",
+      "command": "npm run release:verify-checksums",
+      "startedAt": "2026-07-13T09:39:03.926Z",
+      "endedAt": "2026-07-13T09:39:04.130Z",
+      "durationMs": 204,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-REL-420/logs/checksum-verification.log",
+      "logSha256": "5995ec0313e03c14c761fb7209f070b5cf4809c81ee132009927084baf018241"
+    },
+    {
+      "id": "program-control",
+      "command": "npm run test:program",
+      "startedAt": "2026-07-13T09:39:04.130Z",
+      "endedAt": "2026-07-13T09:39:04.287Z",
+      "durationMs": 158,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-REL-420/logs/program-control.log",
+      "logSha256": "da4c10cebec78bba7def32fd1036016aa4192bbad1c80a4fe5e0bf97f781cfce"
+    },
+    {
+      "id": "git-diff-check",
+      "command": "git diff --check",
+      "startedAt": "2026-07-13T09:39:04.288Z",
+      "endedAt": "2026-07-13T09:39:04.304Z",
+      "durationMs": 16,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-REL-420/logs/git-diff-check.log",
+      "logSha256": "3d4d50cd32af92c6d4df37c1df74a96622fca8cfb5643a155c91f034a42f2068"
+    }
+  ],
+  "summary": {
+    "total": 20,
+    "passed": 20,
+    "failed": 0,
+    "allPassed": true
+  }
+}

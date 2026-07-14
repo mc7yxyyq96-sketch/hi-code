@@ -1,0 +1,106 @@
+$ npm run test:anthropic-ollama
+
+> hi-code@0.6.0-alpha.8 test:anthropic-ollama
+> node test/anthropic-ollama-provider-tests.mjs
+
+
+[anthropic-ollama] explicit routing and capability truth
+  ✓ Anthropic protocol validates
+  ✓ Ollama protocol validates
+  ✓ Anthropic adapter routes to Messages
+  ✓ Ollama adapter routes to native chat
+  ✓ legacy default remains Chat Completions
+  ✓ Anthropic descriptor never exposes credentials
+  ✓ Ollama descriptor never exposes credentials
+  ✓ raw reasoning is not advertised as a summary
+  ✓ anthropic-messages rejects unsupported reasoning summaries before network
+  ✓ ollama-chat rejects unsupported reasoning summaries before network
+
+[anthropic-ollama] Anthropic Messages wire contract
+  ✓ Anthropic request uses required headers
+  ✓ Anthropic system prompt is outside messages
+  ✓ Anthropic data image becomes base64 source
+  ✓ Anthropic prior call becomes tool_use
+  ✓ Anthropic tool result preserves tool_use_id
+  ✓ Anthropic tools use input_schema
+  ✓ Anthropic text and tool call normalize
+  ✓ Anthropic usage combines message_start and message_delta
+  ✓ Anthropic tool lifecycle completes exactly once
+  ✓ Anthropic events never expose the API key
+  ✓ Anthropic non-streaming completion works
+
+[anthropic-ollama] Ollama native wire contract
+  ✓ Ollama request uses native endpoint without placeholder auth
+  ✓ Ollama disables raw thinking by default
+  ✓ Ollama data image becomes base64 images entry
+  ✓ Ollama prior assistant call keeps function shape
+  ✓ Ollama tool result resolves call id to tool_name
+  ✓ Ollama text and tool call normalize
+  ✓ Ollama usage normalizes
+  ✓ raw Ollama thinking never enters chat or provider events
+  ✓ Ollama tool lifecycle completes exactly once
+  ✓ Ollama non-streaming completion works
+
+[anthropic-ollama] interruption and failure semantics
+  ✓ anthropic cancellation returns interrupted
+  ✓ anthropic cancellation never false-completes
+  ✓ ollama cancellation returns interrupted
+  ✓ ollama cancellation never false-completes
+  ✓ authentication failure rejects with normalized code
+  ✓ authentication failure ends failed, never complete
+  ✓ authentication failure errors redact provider credentials
+  ✓ bad anthropic tool sequence rejects with normalized code
+  ✓ bad anthropic tool sequence ends failed, never complete
+  ✓ bad anthropic tool sequence errors redact provider credentials
+  ✓ ollama stream failure rejects with normalized code
+  ✓ ollama stream failure ends failed, never complete
+  ✓ ollama stream failure errors redact provider credentials
+  ✓ bad ollama terminal rejects with normalized code
+  ✓ bad ollama terminal ends failed, never complete
+  ✓ bad ollama terminal errors redact provider credentials
+
+[anthropic-ollama] shared Runtime tool loops
+
+⏺ read_file  README.md
+  │     1	<div align="center">
+  │     2	  <img src="build/icon.png" width="112" alt="Hi Code" />
+  │     3	  <h1>Hi Code</h1>
+  │     4	  <p><strong>简体中文</strong> | <a href="README.en.md">English</a></p>
+  │     5	  <p>本地优先的桌面编码 Agent 工作台 · 接入任意 OpenAI 兼容模型</p>
+  │     6	  <p>
+  │     7	    <img src="https://img.shields.io/badge/version-0.5.2-4f6f64" alt="version" />
+  │     8	    <img src="https://img.shields.io/badge/license-MIT-5b6f92" alt="license" />
+  │     9	    <img src="https://img.shields.io/badge/node-%3E%3D18-3c873a" alt="node" />
+  │    10	    <img src="https://img.shields.io/badge/status-起步阶段·持续更新-e0a458" alt="status" />
+  │    11	  </p>
+  │    12	</div>
+  │ … (+187 more lines)
+  ✓ anthropic completes a real two-request Runtime loop
+  ✓ anthropic sends the correlated tool result
+  ✓ anthropic Runtime Protocol records two model requests
+  ✓ anthropic Runtime Protocol records tool completion and usage
+
+⏺ read_file  README.md
+  │     1	<div align="center">
+  │     2	  <img src="build/icon.png" width="112" alt="Hi Code" />
+  │     3	  <h1>Hi Code</h1>
+  │     4	  <p><strong>简体中文</strong> | <a href="README.en.md">English</a></p>
+  │     5	  <p>本地优先的桌面编码 Agent 工作台 · 接入任意 OpenAI 兼容模型</p>
+  │     6	  <p>
+  │     7	    <img src="https://img.shields.io/badge/version-0.5.2-4f6f64" alt="version" />
+  │     8	    <img src="https://img.shields.io/badge/license-MIT-5b6f92" alt="license" />
+  │     9	    <img src="https://img.shields.io/badge/node-%3E%3D18-3c873a" alt="node" />
+  │    10	    <img src="https://img.shields.io/badge/status-起步阶段·持续更新-e0a458" alt="status" />
+  │    11	  </p>
+  │    12	</div>
+  │ … (+187 more lines)
+  ✓ ollama completes a real two-request Runtime loop
+  ✓ ollama sends the correlated tool result
+  ✓ ollama Runtime Protocol records two model requests
+  ✓ ollama Runtime Protocol records tool completion and usage
+
+[anthropic-ollama] endpoint security
+  ✓ anthropic remote endpoints require HTTPS
+  ✓ ollama remote endpoints require HTTPS
+
+=== 57 passed, 0 failed ===

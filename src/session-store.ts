@@ -10,6 +10,7 @@ import {
   readRuntimeProtocolEvents,
 } from "./runtime-event-store.js";
 import type { RuntimeProtocolEvent } from "./runtime-protocol.js";
+import { FileRuntimeStore } from "./runtime-stores.js";
 
 const SESSIONS_DIR = path.join(HICODE_DIR, "sessions");
 
@@ -23,6 +24,7 @@ export interface StoredSession {
   totalPromptTokens: number;
   totalCompletionTokens: number;
   messages: ChatMessage[];
+  source?: "session" | "runtime-store";
 }
 
 export interface SessionMeta {
@@ -32,7 +34,7 @@ export interface SessionMeta {
   updatedAt: number;
   firstPrompt: string;
   messageCount: number;
-  source?: "session" | "runtime-events";
+  source?: "session" | "runtime-store" | "runtime-events";
   eventCount?: number;
   replayOnly?: boolean;
 }
@@ -70,6 +72,12 @@ export function saveSession(id: string, cwd: string, model: string, session: Ses
       messages: session.messages,
     };
     fs.writeFileSync(file, JSON.stringify(data), { mode: 0o600 });
+    try { fs.chmodSync(file, 0o600); } catch {}
+    const synced = new FileRuntimeStore().syncSession({
+      ...data,
+      systemMessage: session.system,
+    });
+    if (!synced.ok && process.env.VIBE_DEBUG) console.error(`[hicode] typed session sync failed: ${synced.error}`);
   } catch (e) {
     // Persistence is best-effort; never crash the session over it.
     if (process.env.VIBE_DEBUG) console.error(`[vibe] saveSession failed: ${(e as Error).message}`);
@@ -78,7 +86,36 @@ export function saveSession(id: string, cwd: string, model: string, session: Ses
 
 export function loadSession(id: string): StoredSession | undefined {
   const file = path.join(SESSIONS_DIR, `${id}.json`);
-  return fs.existsSync(file) ? readRaw(file) : undefined;
+  const legacy = fs.existsSync(file) ? readRaw(file) : undefined;
+  try {
+    readRuntimeProtocolEvents(id);
+    const runtimeStore = new FileRuntimeStore();
+    const typed = runtimeStore.loadSession(id);
+    if (typed?.contextComplete) {
+      const activeRuntimeContext = runtimeStore.loadTranscript(id).messages.some((message) => message.source === "runtime-event");
+      if (!legacy || activeRuntimeContext) {
+        return {
+          id: typed.id,
+          cwd: typed.cwd,
+          model: typed.model,
+          createdAt: typed.createdAt,
+          updatedAt: typed.updatedAt,
+          firstPrompt: typed.firstPrompt,
+          totalPromptTokens: typed.totalPromptTokens,
+          totalCompletionTokens: typed.totalCompletionTokens,
+          messages: typed.messages,
+          source: "runtime-store",
+        };
+      }
+    }
+  } catch {
+    // Fall through to the intact legacy source when typed replay is unavailable.
+  }
+  if (legacy) {
+    importLegacySession(legacy);
+    return legacy;
+  }
+  return undefined;
 }
 
 export function deleteSession(id: string): boolean {
@@ -97,13 +134,18 @@ export function deleteSession(id: string): boolean {
   } catch {
     /* ignore invalid or missing event-store ids */
   }
+  try {
+    deleted = new FileRuntimeStore().deleteSession(id) || deleted;
+  } catch {
+    /* ignore invalid or missing typed-store ids */
+  }
   return deleted;
 }
 
 /** All sessions, newest first. Optionally only those for a given cwd. */
 export function listSessions(cwd?: string): SessionMeta[] {
   const metas: SessionMeta[] = [];
-  const savedIds = new Set<string>();
+  const representedIds = new Set<string>();
   if (fs.existsSync(SESSIONS_DIR)) {
     for (const f of fs.readdirSync(SESSIONS_DIR)) {
       if (!f.endsWith(".json")) continue;
@@ -111,7 +153,8 @@ export function listSessions(cwd?: string): SessionMeta[] {
         const s = readRaw(path.join(SESSIONS_DIR, f));
         if (!s) continue;
         if (cwd && s.cwd !== cwd) continue;
-        savedIds.add(s.id);
+        representedIds.add(s.id);
+        importLegacySession(s);
         metas.push({
           id: s.id,
           cwd: s.cwd,
@@ -127,8 +170,28 @@ export function listSessions(cwd?: string): SessionMeta[] {
     }
   }
 
+  const runtimeStore = new FileRuntimeStore();
+  for (const thread of runtimeStore.threads.list()) {
+    if (representedIds.has(thread.id)) continue;
+    const stored = runtimeStore.loadSession(thread.id);
+    if (!stored?.contextComplete) continue;
+    if (cwd && stored.cwd !== cwd) continue;
+    representedIds.add(stored.id);
+    metas.push({
+      id: stored.id,
+      cwd: stored.cwd,
+      model: stored.model,
+      updatedAt: stored.updatedAt,
+      firstPrompt: stored.firstPrompt,
+      messageCount: stored.messages.length,
+      source: "runtime-store",
+      eventCount: runtimeStore.events.list(stored.id).records.length,
+      replayOnly: false,
+    });
+  }
+
   for (const eventMeta of listRuntimeProtocolEventSessions()) {
-    if (savedIds.has(eventMeta.sessionId)) continue;
+    if (representedIds.has(eventMeta.sessionId)) continue;
     const events = readRuntimeProtocolEvents(eventMeta.sessionId);
     const meta = sessionMetaFromRuntimeEvents(eventMeta.sessionId, events, eventMeta.updatedAt);
     if (!meta) continue;
@@ -191,6 +254,28 @@ function readRaw(file: string): StoredSession | undefined {
     return JSON.parse(fs.readFileSync(file, "utf8")) as StoredSession;
   } catch {
     return undefined;
+  }
+}
+
+function importLegacySession(session: StoredSession): void {
+  try {
+    const runtimeStore = new FileRuntimeStore();
+    if (runtimeStore.threads.get(session.id)?.contextComplete) return;
+    const synced = runtimeStore.syncSession({
+      id: session.id,
+      cwd: session.cwd,
+      model: session.model,
+      systemMessage: { role: "system", content: "" },
+      createdAt: session.createdAt,
+      updatedAt: session.updatedAt,
+      firstPrompt: session.firstPrompt,
+      totalPromptTokens: session.totalPromptTokens,
+      totalCompletionTokens: session.totalCompletionTokens,
+      messages: session.messages,
+    }, "legacy-session");
+    if (!synced.ok && process.env.VIBE_DEBUG) console.error(`[hicode] legacy session import failed: ${synced.error}`);
+  } catch (error) {
+    if (process.env.VIBE_DEBUG) console.error(`[hicode] legacy session import failed: ${(error as Error).message}`);
   }
 }
 

@@ -2,7 +2,6 @@ import { getState, setState } from "./state.js";
 import { showRoute } from "./router.js";
 import { createHiCodeApi } from "../api/hicode-api.js";
 import { mountAiTeamPanel } from "../components/ai-team-panel.js";
-import { diffStatusText, renderUnifiedDiff } from "../components/diff-viewer.js";
 import { mountFileTree } from "../components/file-tree.js";
 import { mountJobCenterPanel } from "../components/job-center-panel.js";
 import { mountPatchArenaPanel } from "../components/patch-arena-panel.js";
@@ -17,6 +16,7 @@ import { capabilityDescription, capabilityLifecycleState, capabilityMeta, CAPABI
 import { normalizeRuntimeQueue, summarizeRunText } from "../components/runtime-panel.js";
 import { modelPickerSection, pickerRow } from "../components/settings-panel.js";
 import { renderUsagePanel } from "../components/settings-usage-panel.js";
+import { mountProviderSettingsPanel } from "../components/provider-settings-panel.js";
 import { buildUserProfile } from "../utils/profile.js";
 import { STORE_ACTION_LABELS, STORE_CATEGORY_LABELS, STORE_KIND_LABELS, STORE_PAGE_SIZE, storeChineseSummary, storeIcon, storeInstallActionState, storeQueryOptions as buildStoreQueryOptions } from "../components/store-panel.js";
 import { createToastController } from "../components/toast.js";
@@ -483,7 +483,8 @@ if (!window.hicode) {
     onToolEvent: (cb) => toolEventHandlers.push(cb),
     onDiffsChanged: (cb) => diffsChangedHandlers.push(cb),
     onRuntimeQueue: (cb) => runtimeQueueHandlers.push(cb),
-    send: (text) => {
+    send: (inputPayload) => {
+      const text = typeof inputPayload === "string" ? inputPayload : String(inputPayload?.text || "");
       const now = Date.now();
       const evt = {
         id: `evt-demo-${now}`,
@@ -513,6 +514,7 @@ if (!window.hicode) {
         }
       };
       setTimeout(tick, 80);
+      return { ok: true, jobId: `demo-runtime-${now}` };
     },
     answer: () => {},
     interrupt: () => turnDoneHandlers.forEach((cb) => cb()),
@@ -524,10 +526,17 @@ if (!window.hicode) {
     listRecoverableTasks: async () => [
       {
         id: "demo-recovery-1",
+        sessionId: "demo-1",
+        turnId: "demo-1-turn-1",
         title: "Run npm test",
-        summary: "exit 1",
+        summary: "模型输出中断，可以从原会话安全重试",
         status: "error",
         retryInput: "!npm test",
+        phase: "streaming",
+        recoveryAction: "retry_turn",
+        canRetry: true,
+        requiresApproval: false,
+        reason: "模型输出中断，可以从原会话安全重试",
         createdAt: Date.now() - 1000 * 60 * 7,
         updatedAt: Date.now() - 1000 * 60 * 7,
         durationMs: 12_400,
@@ -598,6 +607,27 @@ if (!window.hicode) {
     gitCommitMessage: async () => ({ ok: true, message: "Update Hi Code workspace" }),
     gitCommit: async () => ({ ok: true, hash: "demo123", output: "Committed demo123" }),
     pickFolder: async () => "/demo/hicode-project",
+    getTerminalCapabilities: async () => ({
+      ok: true,
+      available: false,
+      platform: "browser-preview",
+      shell: null,
+      supportsResize: false,
+      profileLoading: false,
+      maxSessionsPerWindow: 1,
+      reason: "浏览器预览不提供本机 PTY。",
+      setupHint: "请在 Hi Code 桌面 App 中打开集成终端。",
+    }),
+    createTerminal: async () => ({ ok: false, code: "terminal_unavailable", error: "浏览器预览不提供本机 PTY" }),
+    getTerminalStatus: async () => ({ ok: true, active: false, session: null, snapshot: "" }),
+    writeTerminal: async () => ({ ok: false, code: "terminal_closed", error: "没有活动终端" }),
+    resizeTerminal: async () => ({ ok: false, code: "terminal_closed", error: "没有活动终端" }),
+    closeTerminal: async () => ({ ok: true, closed: false }),
+    onTerminalEvent: () => () => {},
+    attachFile: async () => ({ ok: true, id: "att-00000000-0000-4000-8000-000000000001", name: "demo-notes.txt", kind: "text", mimeType: "text/plain", size: 32, sha256: "0".repeat(64) }),
+    attachImage: async () => ({ ok: true, id: "att-00000000-0000-4000-8000-000000000002", name: "demo-image.png", kind: "image", mimeType: "image/png", size: 68, sha256: "1".repeat(64) }),
+    listAttachments: async () => [],
+    removeAttachment: async () => ({ ok: true }),
     getCwd: async () => "/demo/hicode-project",
     listDir: async (dir) => demoFiles[dir || "/demo/hicode-project"] || [],
     readFile: async (p) => ({ path: p, content: `// ${p}\n\nexport function demo() {\n  return "Hi Code";\n}\n` }),
@@ -620,6 +650,18 @@ if (!window.hicode) {
       : [{ role: "user", text: "hello" }, { role: "assistant", text: "你好，有什么可以帮你？" }]),
     deleteSession: async () => true,
     getConfig: async () => JSON.stringify(demoConfig, null, 2),
+	getExecutionPolicyCapabilities: async () => ({
+      ok: true,
+      capabilities: {
+        schemaVersion: 1,
+        platform: "browser",
+        backend: { id: "none", available: false, reason: "浏览器演示模式不执行本机命令。" },
+        strength: "unavailable",
+        controls: {},
+        warnings: ["浏览器演示模式没有本机执行能力。"],
+        setupHint: "请使用 Hi Code 桌面应用查看真实平台能力。",
+      },
+    }),
 	    saveConfig: async (text) => {
       try {
         demoConfig = JSON.parse(text);
@@ -641,6 +683,10 @@ if (!window.hicode) {
     revealConfigFile: async () => ({ ok: false, error: "浏览器演示模式无法定位本地文件。" }),
     openAppPage: async () => ({ ok: false, error: "浏览器演示模式无法打开外部链接。" }),
     checkUpdates: async () => ({ ok: false, error: "浏览器演示模式无法检查更新。" }),
+    getUpdateStatus: async () => ({ ok: true, capability: { available: false, reason: "browser_demo", message: "浏览器演示模式不安装更新。" }, state: { status: "disabled", channel: "stable" } }),
+    setUpdateChannel: async () => ({ ok: false, error: "浏览器演示模式无法设置更新通道。" }),
+    downloadUpdate: async () => ({ ok: false, error: "浏览器演示模式无法下载更新。" }),
+    installUpdate: async () => ({ ok: false, error: "浏览器演示模式无法安装更新。" }),
     getUsageStats: async () => buildDemoUsageStats(),
     authStatus: async () => ({ user: demoUser }),
     register: async ({ email, name }) => {
@@ -1268,6 +1314,8 @@ if (!window.hicode) {
 const appState = getState();
 const toast = createToastController();
 const api = createHiCodeApi(window.hicode, { onError: (message) => toast.error(message) });
+const workspace = window.hicodeAppShell?.workspace;
+if (!workspace) throw new Error("Typed workspace bridge is unavailable");
 const syncState = (patch) => {
   setState(patch);
   return appState;
@@ -1280,20 +1328,17 @@ const loginTab = $("loginTab"), registerTab = $("registerTab"), authSubmit = $("
 const userName = $("userName"), userEmail = $("userEmail"), userInitial = $("userInitial"), userBadge = $("userBadge");
 const main = $("main"), home = $("home"), chatview = $("chatview"), chat = $("chat");
 const homeSlot = $("homeSlot"), chatSlot = $("chatSlot");
-const greeting = $("greeting"), sessionsEl = $("sessions"), searchInput = $("search");
+const greeting = $("greeting"), searchInput = $("search");
 const projName = $("projName"), modelSide = $("modelNameSide"), appVersionEl = $("appVersion");
 const askBox = $("ask"), askQ = $("ask-q");
 const runStatus = $("runStatus"), runStatusDot = $("runStatusDot"), runStatusText = $("runStatusText"), runStatusMeta = $("runStatusMeta"), runStatusDetail = $("runStatusDetail");
-const timelineList = $("timelineList");
-const recoveryPanel = $("recoveryPanel"), recoveryList = $("recoveryList"), recoveryRefresh = $("recoveryRefresh");
-const diffList = $("diffList"), diffView = $("diffView"), diffSummary = $("diffSummary");
-const diffAccept = $("diffAccept"), diffReject = $("diffReject");
-const diffAcceptAll = $("diffAcceptAll"), diffRejectAll = $("diffRejectAll"), diffHistory = $("diffHistory"), diffClear = $("diffClear");
 const settings = $("settings"), cfg = $("cfg"), cfgErr = $("cfg-err");
 const currentProject = $("currentProject");
-const filesModal = $("files"), filePath = $("filePath"), fileList = $("fileList"), filePreview = $("filePreview");
+const filesModal = $("files"), filePath = $("filePath"), fileList = $("fileList"), fileEditorMount = $("fileEditorMount");
 const capabilityView = $("capabilityView"), capTitle = $("capTitle"), capSubtitle = $("capSubtitle"), capSummary = $("capSummary"), capList = $("capList"), capActions = $("capActions");
 const commandView = $("commandView"), commandSearch = $("commandSearch"), commandSummary = $("commandSummary"), commandList = $("commandList"), commandComposerSlot = $("commandComposerSlot"), commandFocusInput = $("commandFocusInput"), commandRunInput = $("commandRunInput");
+const terminalView = $("terminalView");
+const previewView = $("previewView");
 const gitView = $("gitView"), gitSub = $("gitSub"), gitBranch = $("gitBranch"), gitDirty = $("gitDirty"), gitStaged = $("gitStaged"), gitUnstaged = $("gitUnstaged");
 const jobView = $("jobView"), jobSummary = $("jobSummary"), jobList = $("jobList"), jobDetail = $("jobDetail"), jobRefresh = $("jobRefresh"), jobStatusText = $("jobStatusText");
 const arenaView = $("arenaView"), arenaSummary = $("arenaSummary"), arenaRunList = $("arenaRunList"), arenaCandidateList = $("arenaCandidateList"), arenaDetail = $("arenaDetail");
@@ -1315,6 +1360,9 @@ const releaseCenterSummary = $("releaseCenterSummary"), releaseCenterDetail = $(
 const gitFiles = $("gitFiles"), gitSelected = $("gitSelected"), gitDiffView = $("gitDiffView"), gitCommitMessage = $("gitCommitMessage"), gitCommitStatus = $("gitCommitStatus");
 const gitRefresh = $("gitRefresh"), gitStageAll = $("gitStageAll"), gitUnstageAll = $("gitUnstageAll"), gitWorktreeMode = $("gitWorktreeMode"), gitStagedMode = $("gitStagedMode");
 const gitGenerateMessage = $("gitGenerateMessage"), gitCommitBtn = $("gitCommitBtn");
+const gitBranchSelect = $("gitBranchSelect"), gitBranchName = $("gitBranchName"), gitCreateBranchBtn = $("gitCreateBranch"), gitSwitchBranchBtn = $("gitSwitchBranch");
+const gitCollaborationRefresh = $("gitCollaborationRefresh"), gitCollaborationStatus = $("gitCollaborationStatus"), gitChecks = $("gitChecks");
+const gitPrTitle = $("gitPrTitle"), gitPrBase = $("gitPrBase"), gitPrBody = $("gitPrBody"), gitPrDraft = $("gitPrDraft"), gitCreatePr = $("gitCreatePr");
 const storeConfirm = $("storeConfirm"), storeConfirmTitle = $("storeConfirmTitle"), storeConfirmSub = $("storeConfirmSub");
 const storeConfirmSummary = $("storeConfirmSummary"), storeConfirmChanges = $("storeConfirmChanges"), storeConfirmPerms = $("storeConfirmPerms"), storeConfirmWarnings = $("storeConfirmWarnings");
 const storeConfirmClose = $("storeConfirmClose"), storeConfirmCancel = $("storeConfirmCancel"), storeConfirmInstall = $("storeConfirmInstall");
@@ -1325,6 +1373,7 @@ const settingsNav = $("settingsNav");
 const settingsSections = {
   usage: $("settingsUsageSection"),
   model: $("settingsModelSection"),
+  providers: $("settingsProviderSection"),
   chat: $("settingsChatSection"),
   safety: $("settingsSafetySection"),
   mcp: $("settingsMcpSection"),
@@ -1332,18 +1381,22 @@ const settingsSections = {
   about: $("settingsAboutSection"),
 };
 const usagePanelRoot = $("usagePanelRoot");
+const providerSettingsRoot = $("providerSettingsRoot");
 const reasoningOptions = $("reasoningOptions"), compactThresholdSelect = $("compactThresholdSelect");
 const sandboxToggle = $("sandboxToggle"), sandboxHint = $("sandboxHint");
-const mcpCfg = $("mcpCfg"), mcpSave = $("mcp-save");
+const executionPolicyStatus = $("executionPolicyStatus"), executionPolicyBackend = $("executionPolicyBackend");
+const executionPolicyControlRows = $("executionPolicyControlRows"), executionPolicyWarnings = $("executionPolicyWarnings");
+const mcpCfg = $("mcpCfg"), mcpSave = $("mcp-save"), mcpReload = $("mcp-reload"), mcpLifecycleList = $("mcpLifecycleList");
 const dataDirPath = $("dataDirPath"), configFilePath = $("configFilePath");
 const openDataDirBtn = $("openDataDirBtn"), revealConfigBtn = $("revealConfigBtn");
 const aboutVersion = $("aboutVersion"), aboutRuntime = $("aboutRuntime"), aboutPlatform = $("aboutPlatform");
 const updateStatus = $("updateStatus"), checkUpdatesBtn = $("checkUpdatesBtn");
+const updateChannelSelect = $("updateChannelSelect"), downloadUpdateBtn = $("downloadUpdateBtn"), installUpdateBtn = $("installUpdateBtn");
 const aboutRepoBtn = $("aboutRepoBtn"), aboutReleasesBtn = $("aboutReleasesBtn"), aboutIssuesBtn = $("aboutIssuesBtn");
 const providerHint = $("providerHint");
 const quickBaseURL = $("quickBaseURL"), quickApiKey = $("quickApiKey"), quickModel = $("quickModel"), quickContext = $("quickContext");
 const advancedConfig = $("advanced-config");
-const routeViews = { home, chatview, capabilityView, commandView, gitView, jobView, arenaView, industrialView };
+const routeViews = { home, chatview, capabilityView, commandView, terminalView, previewView, gitView, jobView, arenaView, industrialView };
 
 // Build the single composer from the template, start it in the home slot.
 const composer = $("composer-tpl").content.firstElementChild.cloneNode(true);
@@ -1359,18 +1412,24 @@ const modelPill = composer.querySelector("#modelPill");
 const modelName = composer.querySelector("#modelName");
 const accessBtn = composer.querySelector("#access");
 const accessLabel = composer.querySelector("#accessLabel");
+const planModeBtn = composer.querySelector("#planMode");
+const planModeLabel = composer.querySelector("#planModeLabel");
+const steerBtn = composer.querySelector("#steer");
 const queueStatus = composer.querySelector("#queueStatus");
 const queueCount = composer.querySelector("#queueCount");
 const queuePreview = composer.querySelector("#queuePreview");
 const queueOpenJob = composer.querySelector("#queueOpenJob");
 const queueClear = composer.querySelector("#queueClear");
 
-let busy = false, agentBody = null, agentRaw = "", yolo = false, cwd = "", inChat = false;
+let busy = false, activeAssistantMessageId = null, agentRaw = "", yolo = false, cwd = "", inChat = false;
 let currentModel = { model: "", baseURL: "", capabilities: null };
 let pendingAttachments = [];
-let queuedInputs = [];
 let runtimeQueueState = { running: null, queued: [] };
-let cfgText = "", selectedProvider = "deepseek", settingsMode = "model";
+let executionMode = "default";
+let activeRuntimeJobId = "";
+const queuedInputPresentations = new Map();
+let cfgText = "", selectedProvider = "deepseek", settingsMode = "model", credentialStartupWarningShown = false;
+let credentialStatusCache = { ok: true, references: [] };
 let authMode = "login", currentCapability = "";
 let capabilityCache = null;
 let storeCache = null, storeCacheKey = "", storeKind = "all", storeCategory = "all", storeQuery = "", storeMessage = "", storeSearchTimer = null, storeRequestSeq = 0;
@@ -1379,17 +1438,19 @@ let pendingStoreInstall = null;
 let toolEvents = [], recoverableTasks = [], diffs = [], selectedDiffId = null, showArchivedDiffs = false;
 let runState = null, runTimer = null, runHideTimer = null, lastRunErrorDetail = "";
 let gitState = null, selectedGitPath = "", selectedGitStaged = false;
+let gitBranchState = null, gitCollaborationState = null;
 let storeSearchComposing = false, composerComposing = false;
 syncState({
   busy,
-  agentBody,
+  activeAssistantMessageId,
   agentRaw,
   yolo,
   cwd,
   inChat,
   pendingAttachments,
-  queuedInputs,
   runtimeQueueState,
+  executionMode,
+  activeRuntimeJobId,
   cfgText,
   selectedProvider,
   authMode,
@@ -1410,6 +1471,8 @@ syncState({
   showArchivedDiffs,
   runState,
   gitState,
+  gitBranchState,
+  gitCollaborationState,
   selectedGitPath,
   selectedGitStaged,
 });
@@ -1419,11 +1482,17 @@ const fileTree = mountFileTree({
     modal: filesModal,
     pathLabel: filePath,
     list: fileList,
-    preview: filePreview,
+    editorMount: fileEditorMount,
+    emptyState: $("fileEditorEmpty"),
+    status: $("fileEditorStatus"),
+    saveButton: $("fileSave"),
+    reloadButton: $("fileReload"),
+    forceButton: $("fileForceSave"),
     closeButton: $("file-close"),
   },
   api,
   getCwd: () => cwd,
+  toast,
 });
 
 const jobCenter = mountJobCenterPanel({
@@ -1707,15 +1776,27 @@ const PROVIDERS = {
     apiOnly: true,
     note: "OpenAI 官方接口，填 API Key 即可。",
   },
+  anthropic: {
+    label: "Anthropic",
+    baseURL: "https://api.anthropic.com/v1",
+    model: "claude-sonnet-5",
+    contextWindow: 1000000,
+    apiKey: "",
+    keyPlaceholder: "sk-ant-...",
+    apiOnly: true,
+    protocol: "anthropic_messages",
+    note: "Anthropic 官方 Messages API。Hi Code 会保留原生工具调用、图片和 SSE 语义。",
+  },
   ollama: {
     label: "Ollama",
-    baseURL: "http://127.0.0.1:11434/v1",
+    baseURL: "http://127.0.0.1:11434",
     model: "deepseek-chat",
     contextWindow: 65536,
     apiKey: "sk-no-key-required",
     keyPlaceholder: "sk-no-key-required",
     apiOnly: false,
-    note: "本地 OpenAI 兼容服务，通常不需要真实 API Key。",
+    protocol: "ollama_chat",
+    note: "Ollama 原生 /api/chat，通常不需要 API Key；工具、图片和 NDJSON 流会按原生语义处理。",
   },
   custom: {
     label: "自定义",
@@ -1822,29 +1903,6 @@ $("logoutBtn").onclick = async () => {
   showSignedOut();
 };
 
-/* ---------- ANSI → HTML ---------- */
-const esc = (c) => (c === "&" ? "&amp;" : c === "<" ? "&lt;" : c === ">" ? "&gt;" : c);
-const escAll = (s) => s.replace(/[&<>]/g, esc);
-const colorClass = (n) => ({30:"c-gray",90:"c-gray",31:"c-red",91:"c-red",32:"c-green",92:"c-green",33:"c-yellow",93:"c-yellow",34:"c-blue",94:"c-blue",35:"c-magenta",95:"c-magenta",36:"c-cyan",96:"c-cyan"})[n];
-function ansiToHtml(s) {
-  let html = "", i = 0, bold = false, color = null, open = false;
-  const cur = () => [bold ? "c-bold" : null, color].filter(Boolean);
-  const sync = () => { if (open) { html += "</span>"; open = false; } const c = cur(); if (c.length) { html += `<span class="${c.join(" ")}">`; open = true; } };
-  while (i < s.length) {
-    const ch = s[i];
-    if (ch === "\x1b" && s[i + 1] === "[") {
-      const m = /^\x1b\[([0-9;]*)m/.exec(s.slice(i));
-      if (!m) break;
-      const codes = m[1].split(";").filter((x) => x !== "").map(Number);
-      if (!codes.length) codes.push(0);
-      for (const c of codes) { if (c === 0) { bold = false; color = null; } else if (c === 1) bold = true; else if (c === 22) bold = false; else if (c === 39) color = null; else color = colorClass(c) ?? color; }
-      sync(); i += m[0].length;
-    } else { html += esc(ch); i++; }
-  }
-  if (open) html += "</span>";
-  return html;
-}
-
 const COMMANDS = [
   ["/team", "架构师→程序员→审查员"],
   ["/build", "经理拆解 + 并行执行"],
@@ -1884,7 +1942,17 @@ const COMMAND_CATEGORIES = {
 
 /* ---------- view switching ---------- */
 function setActiveNav(id) {
+  closeWorkbenchDrawers();
+  if (window.hicodeAppShell?.ownsNavigation) return;
   document.querySelectorAll(".nav-row").forEach((btn) => btn.classList.toggle("active", btn.id === id));
+}
+
+function setWorkbenchDrawer(name = "") {
+  workspace.setDrawer(name === "timeline" ? "timeline" : name === "diff" || name === "inspector" ? "inspector" : "none");
+}
+
+function closeWorkbenchDrawers() {
+  setWorkbenchDrawer("");
 }
 
 function showChat() {
@@ -1978,6 +2046,35 @@ function showCommandCenter() {
   if (input.value === "/") showMenu("/");
 }
 
+function showTerminal() {
+  jobCenter.stop();
+  patchArena.stop();
+  industrialProject.stop();
+  domainPacks.stop();
+  agentTeam.stop();
+  toolchain.stop();
+  qualityGates.stop();
+  releaseCenter.stop();
+  inChat = false;
+  syncState({ inChat });
+  showRoute({ main, views: routeViews, route: "terminalView", mainClass: "terminal", activeNav: "terminalBtn", setActiveNav });
+  window.hicodeAppShell?.terminal?.focus();
+}
+
+function showPreview() {
+  jobCenter.stop();
+  patchArena.stop();
+  industrialProject.stop();
+  domainPacks.stop();
+  agentTeam.stop();
+  toolchain.stop();
+  qualityGates.stop();
+  releaseCenter.stop();
+  inChat = false;
+  syncState({ inChat });
+  showRoute({ main, views: routeViews, route: "previewView", mainClass: "preview", activeNav: "previewBtn", setActiveNav });
+}
+
 async function showGit() {
   jobCenter.stop();
   patchArena.stop();
@@ -1991,6 +2088,7 @@ async function showGit() {
   syncState({ inChat });
   showRoute({ main, views: routeViews, route: "gitView", mainClass: "git", activeNav: "gitBtn", setActiveNav });
   await refreshGitStatus();
+  await Promise.all([refreshGitBranches(), refreshGitCollaboration()]);
 }
 
 async function showJobCenter(jobId = "") {
@@ -2036,13 +2134,9 @@ async function showIndustrialProject() {
 }
 
 /* ---------- chat rendering ---------- */
-const atBottom = () => chat.scrollHeight - chat.scrollTop - chat.clientHeight < 90;
-const scrollDown = () => (chat.scrollTop = chat.scrollHeight);
-function inputTextWithAttachments(text, attachments = []) {
-  const refs = attachments
-    .map((attachment) => attachment?.relativePath ? `@${attachment.relativePath}` : "")
-    .filter(Boolean);
-  return refs.length ? `${text}\n${refs.join("\n")}` : text;
+const scrollDown = () => requestAnimationFrame(() => { chat.scrollTop = chat.scrollHeight; });
+function attachmentKindLabel(attachment) {
+  return { image: "图片", pdf: "PDF", text: "文本", file: "文件" }[attachment?.kind] || "附件";
 }
 function renderPendingAttachments() {
   if (!attachmentTray) return;
@@ -2051,14 +2145,19 @@ function renderPendingAttachments() {
   pendingAttachments.forEach((attachment, index) => {
     const chip = document.createElement("span");
     chip.className = "attachment-chip";
-    chip.title = attachment.relativePath || attachment.name || "图片附件";
+    chip.title = attachment.name || "附件";
     const label = document.createElement("span");
-    label.textContent = `图片：${attachment.name || "image"}`;
+    label.textContent = `${attachmentKindLabel(attachment)}：${attachment.name || "attachment"}`;
     const remove = document.createElement("button");
     remove.type = "button";
-    remove.title = "移除图片";
+    remove.title = "移除附件";
     remove.textContent = "×";
-    remove.onclick = () => {
+    remove.onclick = async () => {
+      const result = await api.removeAttachment(attachment.id);
+      if (result?.ok === false) {
+        toast.error(result.error || "附件移除失败");
+        return;
+      }
       pendingAttachments.splice(index, 1);
       syncState({ pendingAttachments });
       renderPendingAttachments();
@@ -2072,60 +2171,69 @@ function clearPendingAttachments() {
   syncState({ pendingAttachments });
   renderPendingAttachments();
 }
+async function discardPendingAttachments() {
+  const discarded = pendingAttachments.slice();
+  if (!discarded.length) return;
+  const failed = [];
+  for (const attachment of discarded) {
+    const result = await api.removeAttachment(attachment.id);
+    if (result?.ok === false) failed.push(attachment.name || "attachment");
+  }
+  clearPendingAttachments();
+  if (failed.length) toast.info(`已切换会话；${failed.length} 个旧附件将在会话清理时移除。`);
+}
 function appendPendingAttachment(result) {
-  if (!result?.ok || !result.relativePath) return false;
+  if (!result?.ok || !result.id) return false;
   pendingAttachments.push({
-    name: result.name || result.relativePath.split("/").pop() || "image",
-    relativePath: result.relativePath,
-    mime: result.mime || "image/*",
+    id: result.id,
+    name: result.name || "attachment",
+    kind: result.kind || "file",
+    mimeType: result.mimeType || result.mime || "application/octet-stream",
     size: result.size || 0,
+    sha256: result.sha256 || "",
   });
   syncState({ pendingAttachments });
   renderPendingAttachments();
   input.focus();
   return true;
 }
+let conversationMessageSequence = 0;
+function nextConversationMessageId(prefix) {
+  conversationMessageSequence += 1;
+  return `${prefix}-${Date.now().toString(36)}-${conversationMessageSequence.toString(36)}`;
+}
 function addUserMessage(text, attachments = []) {
-  const el = document.createElement("div");
-  el.className = "msg user";
-  const bubble = document.createElement("div");
-  bubble.className = "bubble";
-  bubble.textContent = text;
-  if (Array.isArray(attachments) && attachments.length) {
-    const tray = document.createElement("div");
-    tray.className = "attachment-tray";
-    for (const attachment of attachments) {
-      const chip = document.createElement("span");
-      chip.className = "attachment-chip";
-      const label = document.createElement("span");
-      label.textContent = `图片：${attachment.name || attachment.relativePath || "image"}`;
-      chip.appendChild(label);
-      tray.appendChild(chip);
-    }
-    bubble.appendChild(tray);
-  }
-  el.appendChild(bubble);
-  chat.appendChild(el); scrollDown();
+  workspace.appendMessage({
+    id: nextConversationMessageId("user"),
+    role: "user",
+    text: String(text || ""),
+    status: "complete",
+    attachments: Array.isArray(attachments) ? attachments : [],
+  });
+  scrollDown();
 }
 function startAgentMessage() {
-  const el = document.createElement("div"); el.className = "msg agent";
-  el.innerHTML = `<div class="avatar"><span class="logo"></span></div><div class="agent-body agent-pending"></div>`;
-  chat.appendChild(el);
-  agentBody = el.querySelector(".agent-body");
-  agentBody.textContent = "Hi Code 正在思考…";
+  activeAssistantMessageId = workspace.startAssistantMessage(nextConversationMessageId("assistant"));
   agentRaw = "";
+  syncState({ activeAssistantMessageId, agentRaw });
   scrollDown();
+  return activeAssistantMessageId;
 }
 function appendOutput(chunk) {
   if (busy && runningSessionId && currentSessionId !== runningSessionId) {
-    if (liveSessionSnapshot?.id === runningSessionId) liveSessionSnapshot.agentRaw += chunk;
+    if (liveSessionSnapshot?.id === runningSessionId) {
+      liveSessionSnapshot.agentRaw += chunk;
+      const id = liveSessionSnapshot.activeAssistantMessageId;
+      liveSessionSnapshot.messages = liveSessionSnapshot.messages.map((message) => message.id === id
+        ? { ...message, text: `${message.text}${chunk}`, status: "streaming" }
+        : message);
+    }
     return;
   }
-  if (!agentBody) startAgentMessage();
-  const stick = atBottom();
+  if (!activeAssistantMessageId) startAgentMessage();
   agentRaw += chunk;
-  agentBody.classList.remove("agent-pending", "agent-empty", "agent-error");
-  agentBody.innerHTML = ansiToHtml(agentRaw);
+  workspace.appendAssistantDelta(chunk);
+  syncState({ agentRaw });
   const outputError = detectRuntimeOutputError(chunk);
   if (outputError) {
     lastRunErrorDetail = outputError;
@@ -2141,23 +2249,43 @@ function appendOutput(chunk) {
       status: "running",
     });
   }
-  if (stick) scrollDown();
+  scrollDown();
 }
 function finishAgentMessageIfEmpty(status = "done", detail = "") {
-  if (!agentBody || agentRaw.trim()) return;
-  agentBody.classList.remove("agent-pending", "agent-empty", "agent-error");
+  if (!activeAssistantMessageId) return;
   if (status === "error" || status === "denied" || status === "interrupted") {
-    agentBody.classList.add("agent-error");
-    agentBody.textContent = detail || "任务没有完成。请查看上方状态或时间线里的失败原因。";
-    return;
+    workspace.finishAssistantMessage("error", agentRaw.trim() ? "" : detail || "任务没有完成。请查看上方状态或时间线里的失败原因。");
+  } else if (!agentRaw.trim()) {
+    workspace.finishAssistantMessage("empty", "这次模型没有返回可显示内容。可以重试，或在“接入 API”里测试/切换模型。");
+  } else {
+    workspace.finishAssistantMessage("complete");
   }
-  agentBody.classList.add("agent-empty");
-  agentBody.textContent = "这次模型没有返回可显示内容。可以重试，或在“接入 API”里测试/切换模型。";
+  activeAssistantMessageId = null;
+  syncState({ activeAssistantMessageId });
+}
+function finishLiveSessionSnapshot(status = "done", detail = "") {
+  if (!liveSessionSnapshot?.activeAssistantMessageId) return;
+  const id = liveSessionSnapshot.activeAssistantMessageId;
+  const hasOutput = Boolean(liveSessionSnapshot.agentRaw.trim());
+  const failed = status === "error" || status === "denied" || status === "interrupted";
+  const messageStatus = failed ? "error" : hasOutput ? "complete" : "empty";
+  const fallback = failed
+    ? detail || "任务没有完成。请查看时间线里的失败原因。"
+    : "这次模型没有返回可显示内容。可以重试，或在“接入 API”里测试/切换模型。";
+  liveSessionSnapshot.messages = liveSessionSnapshot.messages.map((message) => message.id === id
+    ? { ...message, text: message.text || fallback, status: messageStatus }
+    : message);
+  liveSessionSnapshot.activeAssistantMessageId = null;
 }
 function addSystemNote(text) {
-  const el = document.createElement("div"); el.className = "msg agent";
-  el.innerHTML = `<div class="avatar"><span class="logo"></span></div><div class="agent-body c-gray"></div>`;
-  el.querySelector(".agent-body").textContent = text; chat.appendChild(el); scrollDown();
+  workspace.appendMessage({
+    id: nextConversationMessageId("system"),
+    role: "system",
+    text: String(text || ""),
+    status: "complete",
+    attachments: [],
+  });
+  scrollDown();
 }
 function setBusy(v) {
   busy = v;
@@ -2166,65 +2294,95 @@ function setBusy(v) {
   sendBtn.classList.remove("hidden");
   sendBtn.title = v ? "加入待发送队列" : "发送";
   stopBtn.classList.toggle("hidden", !v);
+  steerBtn?.classList.toggle("hidden", !v);
   input.disabled = false;
   input.focus();
 }
 function runLine(text, options = {}) {
   if (!text) return;
-  if (busy) return enqueueInput(text);
+  if (busy) return enqueueInput(text, options);
+  const mode = options.executionMode === "plan" ? "plan" : executionMode;
   showChat();
-  beginRunStatus(text);
+  beginRunStatus(text, mode);
   addUserMessage(options.displayText || text, options.attachments || []); startAgentMessage(); setBusy(true);
   runningSessionId = activeRuntimeSessionId || runningSessionId || currentSessionId;
   if (runningSessionId && !currentSessionId) currentSessionId = runningSessionId;
   liveSessionSnapshot = null;
   renderSessions(searchInput.value.trim());
-  api.send(text);
+  const attachmentIds = (options.attachments || []).map((attachment) => attachment.id).filter(Boolean);
+  const payload = { text, attachmentIds, executionMode: mode };
+  void api.send(payload).then((result) => {
+    if (result?.ok === false) {
+      toast.error(result.error || "消息发送失败");
+      finishAgentMessageIfEmpty("error", result.error || "消息发送失败");
+      setBusy(false);
+      return;
+    }
+    if (result?.jobId) {
+      activeRuntimeJobId = result.jobId;
+      syncState({ activeRuntimeJobId });
+    }
+  });
 }
 function submit() {
   const text = input.value.trim();
   if (!text && !pendingAttachments.length) return;
   const attachments = pendingAttachments.slice();
-  const displayText = text || "请识别这张图片。";
-  const payload = inputTextWithAttachments(displayText, attachments);
+  const displayText = text || "请分析这些附件。";
   input.value = "";
   input.style.height = "auto";
   clearPendingAttachments();
   hideMenu();
-  runLine(payload, { displayText, attachments });
+  runLine(displayText, { displayText, attachments });
 }
 
-function enqueueInput(text) {
-  queuedInputs.push(text);
-  syncState({ queuedInputs });
+async function enqueueInput(text, options = {}) {
+  const mode = options.executionMode === "plan" ? "plan" : executionMode;
+  const attachments = [...(options.attachments || [])];
+  const attachmentIds = attachments.map((attachment) => attachment.id).filter(Boolean);
+  const result = await api.send({ text, attachmentIds, executionMode: mode });
+  if (!result?.ok) {
+    toast.error(result?.error || "加入队列失败");
+    return result;
+  }
+  if (result.jobId) queuedInputPresentations.set(result.jobId, { text, mode, attachments, displayText: options.displayText || text });
   renderQueueStatus();
   updateRunStatus({
     label: "当前任务执行中",
-    detail: `已排队 ${queuedInputs.length} 条，当前任务结束后自动发送`,
+    detail: `${mode === "plan" ? "计划" : "执行"}请求已进入主队列`,
     status: "running",
   });
+  return result;
 }
 
-function runNextQueuedInput() {
-  if (busy || !queuedInputs.length) return;
-  const next = queuedInputs.shift();
-  syncState({ queuedInputs });
-  renderQueueStatus();
-  if (next) runLine(next);
+function beginQueuedRuntimeJob(job) {
+  const presentation = queuedInputPresentations.get(job.id) || {};
+  queuedInputPresentations.delete(job.id);
+  const text = presentation.text || job.summary || "排队任务";
+  const mode = presentation.mode || job.executionMode || "default";
+  showChat();
+  beginRunStatus(text, mode);
+  addUserMessage(presentation.displayText || text, presentation.attachments || []);
+  startAgentMessage();
+  setBusy(true);
+  activeRuntimeJobId = job.id;
+  runningSessionId = activeRuntimeSessionId || runningSessionId || currentSessionId;
+  liveSessionSnapshot = null;
+  syncState({ activeRuntimeJobId });
+  renderSessions(searchInput.value.trim());
 }
 
 function renderQueueStatus() {
   if (!queueStatus || !queueCount || !queuePreview) return;
   const runtimeQueued = Array.isArray(runtimeQueueState?.queued) ? runtimeQueueState.queued : [];
   const runtimeRunning = runtimeQueueState?.running || null;
-  const total = queuedInputs.length + runtimeQueued.length + (runtimeRunning ? 1 : 0);
+  const total = runtimeQueued.length + (runtimeRunning ? 1 : 0);
   queueStatus.classList.toggle("hidden", total === 0);
   const labels = [];
-  if (runtimeRunning) labels.push("运行中 1 条");
-  if (queuedInputs.length) labels.push(`待发送 ${queuedInputs.length} 条`);
-  if (runtimeQueued.length) labels.push(`主队列 ${runtimeQueued.length} 条`);
+  if (runtimeRunning) labels.push(`${runtimeRunning.executionMode === "plan" ? "计划" : "执行"}中 1 条`);
+  if (runtimeQueued.length) labels.push(`待执行 ${runtimeQueued.length} 条`);
   queueCount.textContent = labels.join(" · ") || "没有排队任务";
-  const preview = runtimeRunning?.summary || queuedInputs[0] || runtimeQueued[0]?.summary || "";
+  const preview = runtimeRunning?.summary || runtimeQueued[0]?.summary || "";
   queuePreview.textContent = preview.slice(0, 90);
   const jobCenterId = runtimeRunning?.jobCenterId || runtimeQueued.find((job) => job.jobCenterId)?.jobCenterId || "";
   if (queueOpenJob) {
@@ -2233,13 +2391,13 @@ function renderQueueStatus() {
   }
 }
 
-function beginRunStatus(inputText) {
+function beginRunStatus(inputText, mode = executionMode) {
   clearTimeout(runHideTimer);
   lastRunErrorDetail = "";
   runState = {
     active: true,
     status: "running",
-    label: inputText.startsWith("!") ? "准备执行命令" : "发送给模型",
+    label: mode === "plan" ? "生成只读计划" : inputText.startsWith("!") ? "准备执行命令" : "发送给模型",
     detail: inputText,
     startedAt: Date.now(),
     updatedAt: Date.now(),
@@ -2439,103 +2597,44 @@ function mergeToolEventInto(list, event) {
 }
 
 function renderRecoverableTasks() {
-  if (!recoveryPanel || !recoveryList) return;
-  recoveryList.innerHTML = "";
   const tasks = Array.isArray(recoverableTasks) ? recoverableTasks : [];
-  recoveryPanel.classList.toggle("hidden", tasks.length === 0);
-  if (!tasks.length) return;
+  workspace.setRecoveryTasks(tasks.slice(0, 6));
+}
 
-  for (const task of tasks.slice(0, 6)) {
-    const row = document.createElement("div");
-    row.className = `recovery-row ${statusClass(task.status)}`;
-    row.innerHTML = `
-      <span class="recovery-status"></span>
-      <span class="recovery-main">
-        <span class="recovery-title"></span>
-        <span class="recovery-meta"></span>
-      </span>
-      <button class="timeline-action recovery-retry" type="button">Retry</button>
-    `;
-    row.querySelector(".recovery-status").textContent = statusText(task.status);
-    row.querySelector(".recovery-title").textContent = task.summary || task.title || "可恢复任务";
-    row.querySelector(".recovery-meta").textContent = recoveryMeta(task);
-    row.querySelector(".recovery-retry").onclick = () => {
-      if (busy) return addSystemNote("当前任务还在执行，稍后再重试。");
-      runLine(String(task.retryInput || ""));
-    };
-    recoveryList.appendChild(row);
+async function handleRecoverableTask(task) {
+  if (busy) return addSystemNote("当前任务还在执行，稍后再处理恢复任务。");
+  if (!task?.sessionId) return addSystemNote("恢复记录缺少原会话标识，已阻止在当前会话中执行。");
+  await openSession(task.sessionId);
+  if (currentSessionId !== task.sessionId) return addSystemNote("未能恢复原会话，已阻止重试。");
+
+  const action = task.recoveryAction || "inspect_tool";
+  if ((action === "retry_turn" || action === "retry_with_approval") && task.canRetry === true) {
+    if (sessionMetaById(task.sessionId)?.replayOnly) {
+      return addSystemNote("该会话目前只能回放，无法安全恢复运行时；请检查记录后手动创建新任务。");
+    }
+    const retryInput = String(task.retryInput || "").trim();
+    if (!retryInput) return addSystemNote("恢复记录缺少原始输入，已阻止空任务重试。");
+    if (action === "retry_with_approval") addSystemNote("已恢复原会话；本次重试会重新请求人工审批。");
+    return runLine(retryInput);
   }
+
+  addSystemNote(task.reason || "已打开原会话。请先检查未完成输出和工具副作用，再决定后续操作。");
 }
 
 function renderTimeline() {
-  if (!timelineList) return;
-  timelineList.innerHTML = "";
-  const items = [...toolEvents].sort((a, b) => (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0));
-  if (!items.length) {
-    const empty = document.createElement("div");
-    empty.className = "timeline-empty";
-    empty.textContent = "工具调用会显示在这里。";
-    timelineList.appendChild(empty);
-    return;
-  }
-  for (const event of items.slice(0, 80)) {
-    const row = document.createElement("div");
-    row.className = `timeline-row ${statusClass(event.status)} ${event.type.replace(":", "-")}`;
-    row.innerHTML = `
-      <span class="timeline-dot"></span>
-      <span class="timeline-main">
-        <span class="timeline-title"></span>
-        <span class="timeline-meta"></span>
-      </span>
-      <span class="timeline-actions"></span>
-    `;
-    row.querySelector(".timeline-title").textContent = event.title || event.tool || event.type;
-    row.querySelector(".timeline-meta").textContent = timelineMeta(event);
-    row.onclick = (clickEvent) => {
-      if (clickEvent.target.closest("button")) return;
-      if (event.diffId) selectDiff(event.diffId);
-    };
-    const actions = row.querySelector(".timeline-actions");
-    const retryInput = event.payload?.retryInput;
-    if (isRetryableTurn(event) && retryInput) {
-      const retry = document.createElement("button");
-      retry.className = "timeline-action";
-      retry.textContent = "Retry";
-      retry.title = "重新执行这个任务";
-      retry.onclick = () => {
-        if (busy) return addSystemNote("当前任务还在执行，稍后再重试。");
-        runLine(String(retryInput));
-      };
-      actions.appendChild(retry);
-    }
-    timelineList.appendChild(row);
-  }
+  workspace.setTimeline(toolEvents);
+}
+
+function retryTimelineEvent(id) {
+  const event = toolEvents.find((item) => item.id === id);
+  const retryInput = event?.payload?.retryInput;
+  if (!event || !isRetryableTurn(event) || !retryInput) return addSystemNote("这条时间线记录不可重试。");
+  if (busy) return addSystemNote("当前任务还在执行，稍后再重试。");
+  return runLine(String(retryInput));
 }
 
 function isRetryableTurn(event) {
   return event.type?.startsWith("turn:") && ["error", "interrupted", "denied"].includes(event.status);
-}
-
-function timelineMeta(event) {
-  const bits = [];
-  if (event.type?.startsWith("turn:")) bits.push("turn");
-  else if (event.type === "permission:requested") bits.push("permission");
-  else bits.push(event.tool || event.type);
-  if (event.status) bits.push(statusText(event.status));
-  const duration = formatDuration(event.payload?.durationMs);
-  if (duration) bits.push(duration);
-  if (event.summary && event.summary !== event.title) bits.push(String(event.summary).slice(0, 80));
-  return bits.filter(Boolean).join(" · ");
-}
-
-function recoveryMeta(task) {
-  const bits = [];
-  const when = task.updatedAt || task.createdAt;
-  if (when) bits.push(new Date(when).toLocaleString());
-  const duration = formatDuration(task.durationMs);
-  if (duration) bits.push(duration);
-  if (task.title && task.title !== task.summary) bits.push(task.title);
-  return bits.filter(Boolean).join(" · ");
 }
 
 function statusText(status) {
@@ -2581,44 +2680,9 @@ function diffBuckets() {
 }
 
 function renderDiffs() {
-  if (!diffList || !diffView) return;
-  diffList.innerHTML = "";
-  const { pending, archived, visible } = diffBuckets();
-  diffSummary.textContent = `${pending.length} 个可回滚${archived.length ? ` · ${archived.length} 个已归档` : ""}`;
-  updateDiffChrome(pending.length, archived.length);
-
-  if (!diffs.length) {
-    diffList.innerHTML = `<div class="diff-empty">Agent 修改文件后会出现在这里。</div>`;
-    diffView.textContent = "还没有文件改动。";
-    setDiffButtons(false);
-    return;
-  }
-  if (!visible.length) {
-    selectedDiffId = null;
-    diffList.innerHTML = `<div class="diff-empty">没有可回滚改动。${archived.length ? `${archived.length} 个历史改动已归档。` : ""}</div>`;
-    diffView.textContent = "当前没有可归档或回滚的文件改动。";
-    setDiffButtons(false);
-    return;
-  }
-
-  for (const diff of visible) {
-    const row = document.createElement("button");
-    row.className = `diff-row ${diff.id === selectedDiffId ? "active" : ""} diff-${diff.status}`;
-    row.innerHTML = `
-      <span class="diff-file"></span>
-      <span class="diff-status"></span>
-    `;
-    row.querySelector(".diff-file").textContent = diff.path;
-    row.querySelector(".diff-status").textContent = diffStatusText(diff.status);
-    row.onclick = () => selectDiff(diff.id);
-    diffList.appendChild(row);
-  }
-
-  const selected = visible.find((diff) => diff.id === selectedDiffId) || visible[0];
-  selectedDiffId = selected?.id || null;
-  if (!selected) return;
-  diffView.innerHTML = renderUnifiedDiff(selected);
-  setDiffButtons(selected.status === "pending");
+  const { visible } = diffBuckets();
+  if (!selectedDiffId || !visible.some((diff) => diff.id === selectedDiffId)) selectedDiffId = visible[0]?.id || null;
+  workspace.setDiffs(diffs, selectedDiffId, showArchivedDiffs);
 }
 
 function selectDiff(id) {
@@ -2629,66 +2693,60 @@ function selectDiff(id) {
   renderDiffs();
 }
 
-function updateDiffChrome(pendingCount, archivedCount) {
-  if (diffAcceptAll) diffAcceptAll.disabled = pendingCount === 0;
-  if (diffRejectAll) diffRejectAll.disabled = pendingCount === 0;
-  if (diffHistory) {
-    diffHistory.disabled = archivedCount === 0;
-    diffHistory.classList.toggle("active", showArchivedDiffs);
-    diffHistory.textContent = showArchivedDiffs ? "隐藏历史" : "历史";
-  }
-  if (diffClear) diffClear.disabled = archivedCount === 0;
-}
-
-function setDiffButtons(enabled) {
-  diffAccept.disabled = !enabled;
-  diffReject.disabled = !enabled;
-}
-
-if (recoveryRefresh) recoveryRefresh.onclick = refreshRecoverableTasks;
-
-diffAccept.onclick = async () => {
+async function archiveSelectedDiff() {
   if (!selectedDiffId || !api.has("acceptDiff")) return;
   const diff = diffs.find((item) => item.id === selectedDiffId);
   if (!diff || diff.status !== "pending") return;
   const r = await api.acceptDiff(selectedDiffId);
   if (!r?.ok) addSystemNote(r?.error || "归档改动失败");
   await refreshDiffs();
-};
-diffReject.onclick = async () => {
+}
+async function rollbackSelectedDiff() {
   if (!selectedDiffId || !api.has("rejectDiff")) return;
   const diff = diffs.find((item) => item.id === selectedDiffId);
   if (!diff || diff.status !== "pending") return;
   const r = await api.rejectDiff(selectedDiffId);
   if (!r?.ok) addSystemNote(r?.error || "回滚改动失败");
   await refreshDiffs();
-};
-diffAcceptAll.onclick = async () => {
+}
+async function archiveAllDiffs() {
   if (!api.has("acceptAllDiffs")) return;
   const r = await api.acceptAllDiffs();
   if (!r?.ok) addSystemNote(r?.error || "全部归档失败");
   await refreshDiffs();
-};
-diffRejectAll.onclick = async () => {
+}
+async function rollbackAllDiffs() {
   if (!api.has("rejectAllDiffs")) return;
   const r = await api.rejectAllDiffs();
   if (!r?.ok) addSystemNote(r?.error || "全部回滚失败");
   await refreshDiffs();
-};
-diffHistory.onclick = () => {
+}
+function toggleDiffHistory() {
   showArchivedDiffs = !showArchivedDiffs;
   const { visible } = diffBuckets();
   selectedDiffId = visible[0]?.id || null;
   syncState({ showArchivedDiffs, selectedDiffId });
   renderDiffs();
-};
-diffClear.onclick = async () => {
+}
+async function clearDiffHistory() {
   if (!api.has("clearArchivedDiffs")) return;
   const r = await api.clearArchivedDiffs();
   if (!r?.ok) addSystemNote(r?.error || "清理历史改动失败");
   if (r?.ok) showArchivedDiffs = false;
   await refreshDiffs();
-};
+}
+
+function requestDiffRevision(comment) {
+  const diff = workspace.getSnapshot().diffs.find((item) => item.id === comment?.diffId);
+  if (!diff) throw new Error("审查对应的改动已不存在，请刷新后重试");
+  const builder = window.hicodeAppShell?.review?.buildRevisionRequest;
+  if (!builder) throw new Error("审查请求构造器不可用，请重启 Hi Code 后重试");
+  const request = builder({ comment, diff });
+  const queued = busy;
+  setWorkbenchDrawer("");
+  runLine(request.runtimeText, { displayText: request.displayText });
+  return { ok: true, queued };
+}
 
 /* ---------- Git workflow ---------- */
 async function refreshGitStatus() {
@@ -2842,6 +2900,86 @@ function setGitButtons(canStage, canUnstage) {
   gitUnstageAll.disabled = !canUnstage;
   gitGenerateMessage.disabled = !canUnstage;
   gitCommitBtn.disabled = !canUnstage;
+  updateGitDeliveryButtons();
+}
+
+function updateGitDeliveryButtons() {
+  const available = gitState?.ok === true;
+  const clean = available && Number(gitState?.dirty || 0) === 0;
+  const githubCliAvailable = gitCollaborationState?.available !== false;
+  gitBranchSelect.disabled = !available;
+  gitBranchName.disabled = !clean;
+  gitCreateBranchBtn.disabled = !clean;
+  gitSwitchBranchBtn.disabled = !clean || !gitBranchSelect.value;
+  gitCreatePr.disabled = !clean || !githubCliAvailable || !gitPrTitle.value.trim();
+}
+
+async function refreshGitBranches() {
+  if (!api.has("gitBranches")) return;
+  gitBranchState = await api.gitBranches();
+  syncState({ gitBranchState });
+  gitBranchSelect.innerHTML = "";
+  if (!gitBranchState?.ok) {
+    const option = document.createElement("option");
+    option.textContent = "分支不可用";
+    option.value = "";
+    gitBranchSelect.appendChild(option);
+    updateGitDeliveryButtons();
+    return;
+  }
+  for (const branch of gitBranchState.branches || []) {
+    const option = document.createElement("option");
+    option.value = branch.name;
+    option.textContent = `${branch.current ? "当前 · " : ""}${branch.name}${branch.upstream ? ` · ${branch.upstream}` : ""}`;
+    option.selected = branch.current === true;
+    gitBranchSelect.appendChild(option);
+  }
+  updateGitDeliveryButtons();
+}
+
+async function refreshGitCollaboration() {
+  if (!api.has("gitCollaboration")) return;
+  gitCollaborationStatus.textContent = "正在读取 PR/CI 状态…";
+  gitCollaborationStatus.className = "git-collaboration-status";
+  gitCollaborationState = await api.gitCollaboration();
+  syncState({ gitCollaborationState });
+  renderGitCollaboration();
+  updateGitDeliveryButtons();
+}
+
+function renderGitCollaboration() {
+  gitChecks.innerHTML = "";
+  const state = gitCollaborationState;
+  if (!state?.ok) {
+    gitCollaborationStatus.textContent = state?.error || "PR/CI 状态读取失败";
+    gitCollaborationStatus.className = "git-collaboration-status is-error";
+    return;
+  }
+  if (!state.available || !state.pullRequest) {
+    gitCollaborationStatus.textContent = state.reason || "当前分支还没有 Pull Request";
+    gitCollaborationStatus.className = "git-collaboration-status is-muted";
+    return;
+  }
+  const pr = state.pullRequest;
+  const ci = state.ci || {};
+  gitCollaborationStatus.textContent = `#${pr.number} ${pr.title} · ${pr.draft ? "Draft" : pr.state} · CI ${gitCiLabel(ci.status)}`;
+  gitCollaborationStatus.title = pr.url || "";
+  gitCollaborationStatus.className = `git-collaboration-status is-${ci.status || "unknown"}`;
+  for (const check of state.checks || []) {
+    const row = document.createElement("div");
+    row.className = `git-check is-${check.status || "unknown"}`;
+    const name = document.createElement("span");
+    name.textContent = check.workflow ? `${check.workflow} / ${check.name}` : check.name;
+    name.title = check.detailsUrl || "";
+    const status = document.createElement("strong");
+    status.textContent = gitCiLabel(check.status);
+    row.append(name, status);
+    gitChecks.appendChild(row);
+  }
+}
+
+function gitCiLabel(status) {
+  return ({ passed: "通过", failed: "失败", pending: "运行中", skipped: "已跳过", unknown: "未知" })[status] || "未知";
 }
 
 function gitSetStatus(text, kind = "") {
@@ -2851,6 +2989,46 @@ function gitSetStatus(text, kind = "") {
 }
 
 gitRefresh.onclick = refreshGitStatus;
+gitCollaborationRefresh.onclick = refreshGitCollaboration;
+gitBranchSelect.onchange = updateGitDeliveryButtons;
+gitPrTitle.oninput = updateGitDeliveryButtons;
+gitCreateBranchBtn.onclick = async () => {
+  const name = gitBranchName.value.trim();
+  if (!name) return gitSetStatus("请输入新分支名", "error");
+  const result = await api.gitCreateBranch({ name });
+  if (!result?.ok) return gitSetStatus(result?.error || "创建分支失败", "error");
+  gitBranchName.value = "";
+  gitSetStatus(`已切换到 ${result.branch}`, "ok");
+  await Promise.all([refreshGitStatus(), refreshGitBranches(), refreshGitCollaboration()]);
+};
+gitSwitchBranchBtn.onclick = async () => {
+  const name = gitBranchSelect.value;
+  if (!name) return;
+  const result = await api.gitSwitchBranch({ name });
+  if (!result?.ok) return gitSetStatus(result?.error || "切换分支失败", "error");
+  gitSetStatus(`已切换到 ${result.branch}`, "ok");
+  selectedGitPath = "";
+  await Promise.all([refreshGitStatus(), refreshGitBranches(), refreshGitCollaboration()]);
+};
+gitCreatePr.onclick = async () => {
+  const title = gitPrTitle.value.trim();
+  if (!title) return gitSetStatus("请输入 PR 标题", "error");
+  gitCreatePr.disabled = true;
+  gitSetStatus("等待确认并创建 Pull Request…");
+  try {
+    const result = await api.gitCreatePullRequest({
+      title,
+      body: gitPrBody.value,
+      base: gitPrBase.value.trim() || "main",
+      draft: gitPrDraft.checked,
+    });
+    if (!result?.ok) return gitSetStatus(result?.error || "创建 Pull Request 失败", "error");
+    gitSetStatus(`Pull Request 已创建：${result.url}`, "ok");
+    await refreshGitCollaboration();
+  } finally {
+    updateGitDeliveryButtons();
+  }
+};
 gitStageAll.onclick = async () => {
   const paths = (gitState?.files || []).filter((file) => file.unstaged).map((file) => file.path);
   await stageGitPaths(paths);
@@ -2876,8 +3054,10 @@ gitGenerateMessage.onclick = async () => {
 };
 gitCommitBtn.onclick = async () => {
   if (!api.has("gitCommit")) return;
-  const r = await api.gitCommit(gitCommitMessage.value);
+  const message = gitCommitMessage.value;
+  const r = await api.gitCommit(message);
   if (!r?.ok) return gitSetStatus(r?.error || "commit 失败", "error");
+  if (!gitPrTitle.value.trim()) gitPrTitle.value = message.trim();
   gitCommitMessage.value = "";
   gitSetStatus(`已提交 ${r.hash || ""}`.trim(), "ok");
   selectedGitPath = "";
@@ -2887,6 +3067,7 @@ gitCommitBtn.onclick = async () => {
 /* ---------- IPC in ---------- */
 api.onReady((d) => {
   cwd = d.cwd;
+  if (d.credentialStatus) credentialStatusCache = d.credentialStatus;
   syncState({ cwd });
   setCurrentModelDisplay(d);
   setSidebarVersion(d.version);
@@ -2896,9 +3077,15 @@ api.onReady((d) => {
   currentProject.textContent = shortPath(d.cwd);
   loadSessions();
   refreshWorkbench();
+  const credentialStartup = d.credentialStatus?.startup;
+  if (credentialStartup?.ok === false && !credentialStartupWarningShown) {
+    credentialStartupWarningShown = true;
+    toast.error(`API Key 安全迁移未完成：${credentialStartup.error || "系统安全存储不可用"}。桌面端不会读取旧明文密钥，请在模型设置中重新保存，或为 CLI 配置环境变量。`);
+  }
 });
 api.onOutput((s) => appendOutput(s));
 api.onTurnDone(() => {
+  const completedInBackground = Boolean(liveSessionSnapshot?.id === runningSessionId && currentSessionId !== runningSessionId);
   setBusy(false);
   let finalStatus = "done";
   let finalDetail = "任务已结束";
@@ -2913,16 +3100,18 @@ api.onTurnDone(() => {
     finalDetail = finalStatus === "done" ? "任务已结束" : lastRunErrorDetail || runState.detail;
     finishRunStatus(finalStatus, finalDetail);
   }
-  finishAgentMessageIfEmpty(finalStatus, finalDetail);
+  if (completedInBackground) finishLiveSessionSnapshot(finalStatus, finalDetail);
+  else finishAgentMessageIfEmpty(finalStatus, finalDetail);
   if (liveSessionSnapshot?.id === runningSessionId) {
     liveSessionSnapshot = null;
   }
   runningSessionId = null;
+  activeRuntimeJobId = "";
   if (currentSessionId === null && activeRuntimeSessionId) currentSessionId = activeRuntimeSessionId;
-  agentBody = null;
+  activeAssistantMessageId = null;
+  syncState({ activeAssistantMessageId, activeRuntimeJobId });
   loadSessions();
   refreshWorkbench();
-  setTimeout(runNextQueuedInput, 80);
 });
 api.onToolEvent?.((event) => addToolEvent(event));
 api.onDiffsChanged?.((nextDiffs) => setDiffs(nextDiffs));
@@ -2930,6 +3119,14 @@ api.onRuntimeQueue?.((state) => {
   runtimeQueueState = normalizeRuntimeQueue(state);
   syncState({ runtimeQueueState });
   renderQueueStatus();
+  const running = runtimeQueueState.running;
+  if (!running) return;
+  if (busy && !activeRuntimeJobId) {
+    activeRuntimeJobId = running.id || "";
+    syncState({ activeRuntimeJobId });
+    return;
+  }
+  if (!busy && running.id && running.id !== activeRuntimeJobId) beginQueuedRuntimeJob(running);
 });
 api.onAsk(({ id, q }) => {
   askQ.textContent = q; askBox.classList.remove("hidden");
@@ -2944,35 +3141,13 @@ let activeRuntimeSessionId = null;
 let runningSessionId = null;
 let liveSessionSnapshot = null;
 
-function formatSessionAge(value) {
-  const ts = new Date(value).getTime();
-  if (!Number.isFinite(ts)) return "";
-  const delta = Date.now() - ts;
-  if (delta < 60_000) return "刚刚";
-  if (delta < 60 * 60_000) return `${Math.max(1, Math.round(delta / 60_000))} 分钟前`;
-  if (delta < 24 * 60 * 60_000) return `${Math.round(delta / (60 * 60_000))} 小时前`;
-  if (delta < 7 * 24 * 60 * 60_000) return `${Math.round(delta / (24 * 60 * 60_000))} 天前`;
-  return new Date(ts).toLocaleDateString("zh-CN", { month: "numeric", day: "numeric" });
-}
-
-function sessionMatchesFilter(session, filter) {
-  if (!filter) return true;
-  const q = filter.toLowerCase();
-  return [
-    session.firstPrompt,
-    session.model,
-    session.cwd,
-  ].some((value) => String(value || "").toLowerCase().includes(q));
-}
-
 function chatHasMessages() {
-  return Boolean(chat?.querySelector(".msg"));
+  return workspace.getSnapshot().messages.length > 0;
 }
 
 function firstPromptFromVisibleChat() {
-  const bubble = chat?.querySelector(".msg.user .bubble");
-  const text = bubble?.childNodes?.[0]?.textContent || bubble?.textContent || "";
-  return text.replace(/\s+/g, " ").trim();
+  const message = workspace.getSnapshot().messages.find((item) => item.role === "user");
+  return String(message?.text || "").replace(/\s+/g, " ").trim();
 }
 
 function makeRuntimeSessionFallback() {
@@ -2980,7 +3155,7 @@ function makeRuntimeSessionFallback() {
   if (!id || allSessions.some((session) => session.id === id)) return null;
   const isRunning = Boolean(busy && runningSessionId === id);
   const hasLiveSnapshot = liveSessionSnapshot?.id === id;
-  const visibleMessageCount = chat.querySelectorAll(".msg").length;
+  const visibleMessageCount = workspace.getSnapshot().messages.length;
   if (!isRunning && !hasLiveSnapshot && !(currentSessionId === id && visibleMessageCount > 0)) return null;
   const messageCount = Math.max(visibleMessageCount, liveSessionSnapshot?.messageCount || 0, 1);
   const firstPrompt = firstPromptFromVisibleChat() || runState?.detail || liveSessionSnapshot?.firstPrompt || "正在进行的会话";
@@ -3007,34 +3182,22 @@ async function loadSessions() {
 function renderSessions(filter) {
   const runtimeFallback = makeRuntimeSessionFallback();
   const source = runtimeFallback ? [runtimeFallback, ...allSessions] : allSessions;
-  const list = source.filter((session) => sessionMatchesFilter(session, filter));
-  sessionsEl.innerHTML = "";
-  if (!list.length) { sessionsEl.innerHTML = `<div class="sessions-empty">还没有最近会话</div>`; return; }
-  for (const s of list) {
-    const running = Boolean(s.running || (busy && runningSessionId && s.id === runningSessionId));
-    const transient = Boolean(s.transient);
-    const el = document.createElement("div");
-    el.className = `sess${s.id === currentSessionId ? " active" : ""}${running ? " sess-running" : ""}${transient ? " sess-transient" : ""}`;
-    el.innerHTML = `<button class="sess-main" title="打开会话"><span class="t"></span><span class="s"><span class="sess-time"></span><span class="sess-count"></span></span></button><button class="sess-del" title="删除">×</button>`;
-    el.querySelector(".t").textContent = (running ? "● " : "") + (s.firstPrompt || "(空会话)");
-    el.querySelector(".sess-time").textContent = running ? "进行中" : transient ? "未保存" : s.replayOnly ? "回放" : formatSessionAge(s.updatedAt);
-    el.querySelector(".sess-count").textContent = s.replayOnly ? `${s.eventCount || s.messageCount || 0} 事件` : `${s.messageCount || 0} 条`;
-    el.querySelector(".sess-main").onclick = () => openSession(s.id);
-    if (transient) {
-      const del = el.querySelector(".sess-del");
-      del.disabled = true;
-      del.classList.add("hidden");
-      del.title = "运行中的会话结束后可删除";
-    }
-    el.querySelector(".sess-del").onclick = async (e) => {
-      e.stopPropagation();
-      if (transient || (busy && s.id === runningSessionId)) return;
-      await api.deleteSession(s.id);
-      if (currentSessionId === s.id) currentSessionId = null;
-      loadSessions();
-    };
-    sessionsEl.appendChild(el);
+  workspace.setSessionFilter(filter);
+  workspace.setSessions(source.map((session) => ({
+    ...session,
+    running: Boolean(session.running || (busy && runningSessionId && session.id === runningSessionId)),
+  })), currentSessionId);
+}
+
+async function deleteSession(id) {
+  const session = sessionMetaById(id);
+  if (!session || session.transient || (busy && id === runningSessionId)) return;
+  await api.deleteSession(id);
+  if (currentSessionId === id) {
+    currentSessionId = null;
+    workspace.clearConversation(null);
   }
+  await loadSessions();
 }
 
 function sessionMetaById(id) {
@@ -3042,14 +3205,19 @@ function sessionMetaById(id) {
 }
 
 function renderChatFromMessages(msgs) {
-  chat.innerHTML = "";
   showChat();
-  for (const m of msgs) {
-    if (m.role === "user") addUserMessage(m.text);
-    else { startAgentMessage(); agentBody.textContent = m.text; }
-  }
-  agentBody = null;
+  const sessionKey = currentSessionId || activeRuntimeSessionId || "local";
+  const messages = (Array.isArray(msgs) ? msgs : []).map((message, index) => ({
+    id: `${String(message.id || `${sessionKey}-${index}`)}-${index}`,
+    role: message.role === "user" ? "user" : message.role === "system" ? "system" : "assistant",
+    text: String(message.text || ""),
+    status: "complete",
+    attachments: Array.isArray(message.attachments) ? message.attachments : [],
+  }));
+  workspace.setConversation(messages, currentSessionId || activeRuntimeSessionId, null);
+  activeAssistantMessageId = null;
   agentRaw = "";
+  syncState({ activeAssistantMessageId, agentRaw });
   scrollDown();
 }
 
@@ -3057,20 +3225,20 @@ function saveLiveSessionSnapshot() {
   if (!busy || !runningSessionId) return;
   liveSessionSnapshot = {
     id: runningSessionId,
-    chatHtml: chat.innerHTML,
+    messages: workspace.getConversationMessages(),
+    activeAssistantMessageId,
     agentRaw,
     firstPrompt: runState?.detail || "",
-    messageCount: Math.max(chat.querySelectorAll(".msg").length, 1),
+    messageCount: Math.max(workspace.getSnapshot().messages.length, 1),
   };
 }
 
 function restoreLiveSessionSnapshot() {
   if (!liveSessionSnapshot || liveSessionSnapshot.id !== runningSessionId) return false;
-  chat.innerHTML = liveSessionSnapshot.chatHtml;
+  workspace.setConversation(liveSessionSnapshot.messages, liveSessionSnapshot.id, liveSessionSnapshot.activeAssistantMessageId);
+  activeAssistantMessageId = liveSessionSnapshot.activeAssistantMessageId || null;
   agentRaw = liveSessionSnapshot.agentRaw;
-  const bodies = chat.querySelectorAll(".msg.agent .agent-body");
-  agentBody = bodies.length ? bodies[bodies.length - 1] : null;
-  if (agentBody && agentRaw) agentBody.innerHTML = ansiToHtml(agentRaw);
+  syncState({ activeAssistantMessageId, agentRaw });
   scrollDown();
   return true;
 }
@@ -3085,7 +3253,7 @@ async function openSession(id) {
       const msgs = await api.readSession(id).catch(() => []);
       if (msgs.length) renderChatFromMessages(msgs);
       else {
-        chat.innerHTML = "";
+        workspace.clearConversation(id);
         showChat();
         addSystemNote("这个会话还没有保存内容。发送第一条消息后会出现在最近列表。");
       }
@@ -3097,6 +3265,8 @@ async function openSession(id) {
     scrollDown();
     return;
   }
+
+  await discardPendingAttachments();
 
   if (meta?.replayOnly) {
     const msgs = await api.readSession(id).catch(() => []);
@@ -3116,7 +3286,7 @@ async function openSession(id) {
       const msgs = await api.readSession(id).catch(() => []);
       if (msgs.length) renderChatFromMessages(msgs);
       else if (previousSessionId && previousSessionId !== id) {
-        chat.innerHTML = "";
+        workspace.clearConversation(id);
         addSystemNote("正在恢复进行中的会话，新的输出会继续显示在这里。");
       }
     }
@@ -3151,6 +3321,7 @@ async function startNewConversation() {
     renderSessions(searchInput.value.trim());
     return;
   }
+  await discardPendingAttachments();
   const result = api.has("newSession") ? await api.newSession() : { ok: false };
   if (result?.ok && result.sessionId) {
     activeRuntimeSessionId = result.sessionId;
@@ -3161,9 +3332,10 @@ async function startNewConversation() {
   currentSessionId = null;
   runningSessionId = null;
   liveSessionSnapshot = null;
-  agentBody = null;
+  activeAssistantMessageId = null;
   agentRaw = "";
-  chat.innerHTML = "";
+  workspace.clearConversation(activeRuntimeSessionId);
+  syncState({ activeAssistantMessageId, agentRaw });
   renderSessions(searchInput.value.trim());
   showHome();
   setGreeting();
@@ -3266,7 +3438,10 @@ function executeCommand(name) {
   }
   if (name === "/tools") return showIndustrialProject();
   if (name === "/clear") {
-    chat.innerHTML = "";
+    workspace.clearConversation(currentSessionId || activeRuntimeSessionId);
+    activeAssistantMessageId = null;
+    agentRaw = "";
+    syncState({ activeAssistantMessageId, agentRaw });
     api.send("/clear");
     showHome();
     setGreeting();
@@ -3334,6 +3509,8 @@ $("searchToggle").onclick = () => {
   if (!w.classList.contains("hidden")) searchInput.focus(); else { searchInput.value = ""; renderSessions(""); }
 };
 $("cmdBtn").onclick = showCommandCenter;
+$("terminalBtn").onclick = showTerminal;
+$("previewBtn").onclick = showPreview;
 commandSearch.addEventListener("input", () => renderCommandCenter(commandSearch.value.trim()));
 commandFocusInput.onclick = () => {
   if (!input.value.trim()) input.value = "/";
@@ -3353,24 +3530,29 @@ async function pickFolder() {
     syncState({ cwd });
     projName.textContent = shortPath(dir);
     currentProject.textContent = shortPath(dir);
-    chat.innerHTML = "";
+    workspace.clearConversation(null);
+    currentSessionId = null;
     loadSessions();
     if (inChat) addSystemNote("已切换到 " + dir);
   }
 }
-async function chooseImageAttachment() {
-  const result = await api.attachImage({});
+async function chooseAttachment() {
+  const result = await api.attachFile({});
   if (result?.canceled) return;
   if (!appendPendingAttachment(result)) {
-    toast.error(result?.error || "图片附件失败");
+    toast.error(result?.error || "附件添加失败");
     return;
   }
-  const message = visionCapabilityNotice();
-  if (currentModel.capabilities?.vision?.status === "supported") toast.ok(message);
-  else toast.info(message);
+  if (result.kind === "image") {
+    const message = visionCapabilityNotice();
+    if (currentModel.capabilities?.vision?.status === "supported") toast.ok(message);
+    else toast.info(message);
+  } else {
+    toast.ok(`已添加${attachmentKindLabel(result)}，发送前会检查当前模型能力。`);
+  }
 }
 async function attachImageDataUrl(dataUrl, name = "pasted-image.png") {
-  const result = await api.attachImage({ dataUrl, name });
+  const result = await api.attachFile({ dataUrl, name });
   if (!appendPendingAttachment(result)) {
     toast.error(result?.error || "图片附件失败");
     return false;
@@ -3398,6 +3580,25 @@ async function attachImageFile(file) {
     return false;
   }
 }
+workspace.configureActions({
+  openSession,
+  deleteSession,
+  retryRecovery: (id) => {
+    const task = recoverableTasks.find((item) => item.id === id);
+    if (!task) return addSystemNote("恢复任务已不存在，请刷新后重试。");
+    return handleRecoverableTask(task);
+  },
+  refreshRecovery: refreshRecoverableTasks,
+  retryTimeline: retryTimelineEvent,
+  selectDiff,
+  archiveDiff: archiveSelectedDiff,
+  rollbackDiff: rollbackSelectedDiff,
+  archiveAllDiffs,
+  rollbackAllDiffs,
+  toggleDiffHistory,
+  clearDiffHistory,
+  requestDiffRevision,
+});
 $("projRow").onclick = pickFolder;
 $("settingsBtn").onclick = () => openSettings("usage");
 $("filesBtn").onclick = () => fileTree.open(cwd);
@@ -3418,7 +3619,7 @@ $("jobsTopBtn").onclick = () => showJobCenter();
 $("arenaTopBtn").onclick = showPatchArena;
 $("industrialTopBtn").onclick = showIndustrialProject;
 $("modelsBtn").onclick = () => openSettings("model");
-attachBtn.onclick = chooseImageAttachment;
+attachBtn.onclick = chooseAttachment;
 modelPill.onclick = (e) => {
   e.stopPropagation();
   toggleModelPicker();
@@ -3426,7 +3627,10 @@ modelPill.onclick = (e) => {
 modelPicker.addEventListener("click", (e) => e.stopPropagation());
 document.addEventListener("click", () => hideModelPicker());
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape") hideModelPicker();
+  if (e.key === "Escape") {
+    hideModelPicker();
+    closeWorkbenchDrawers();
+  }
 });
 accessBtn.onclick = () => {
   yolo = !yolo;
@@ -3434,15 +3638,44 @@ accessBtn.onclick = () => {
   accessLabel.textContent = yolo ? "完全访问" : "需确认";
   api.send("/yolo");
 };
+planModeBtn.onclick = () => {
+  executionMode = executionMode === "plan" ? "default" : "plan";
+  planModeBtn.classList.toggle("active", executionMode === "plan");
+  planModeLabel.textContent = executionMode === "plan" ? "计划" : "执行";
+  planModeBtn.setAttribute("aria-pressed", executionMode === "plan" ? "true" : "false");
+  syncState({ executionMode });
+};
 sendBtn.onclick = submit;
 if (queueClear) queueClear.onclick = async () => {
-  queuedInputs = [];
-  syncState({ queuedInputs });
   try {
-    if (api.has("clearRuntimeQueue")) await api.clearRuntimeQueue();
+    if (api.has("clearRuntimeQueue")) {
+      const queuedIds = new Set((runtimeQueueState.queued || []).map((job) => job.id));
+      const result = await api.clearRuntimeQueue();
+      if (result?.ok) for (const id of queuedIds) queuedInputPresentations.delete(id);
+    }
   } finally {
     renderQueueStatus();
   }
+};
+steerBtn.onclick = async () => {
+  if (!busy) return;
+  const text = input.value.trim();
+  if (!text && !pendingAttachments.length) {
+    toast.info("先输入要调整的方向");
+    input.focus();
+    return;
+  }
+  const attachments = pendingAttachments.slice();
+  const displayText = text || "请根据这些附件调整当前方向。";
+  const attachmentIds = attachments.map((attachment) => attachment.id).filter(Boolean);
+  const result = await api.steer({ text: displayText, attachmentIds, executionMode });
+  if (!result?.ok) return;
+  if (result.jobId) queuedInputPresentations.set(result.jobId, { text: displayText, displayText, attachments, mode: executionMode });
+  input.value = "";
+  input.style.height = "auto";
+  clearPendingAttachments();
+  updateRunStatus({ label: "正在调整方向", detail: "当前任务已中断，调整指令将作为下一条执行", status: "interrupted" });
+  renderQueueStatus();
 };
 stopBtn.onclick = () => {
   if (!busy) return;
@@ -4132,7 +4365,8 @@ function restoreStoreSearchFocus(inputEl) {
 /* ---------- settings ---------- */
 const SETTINGS_TAB_META = {
   usage: ["用量与统计", "Token 消耗、活动热力图与会话概览"],
-  model: ["接入模型 API", "默认写入 ~/.hicode/config.json"],
+  model: ["接入模型 API", "配置保存引用，API Key 由系统安全存储加密"],
+  providers: ["Provider 管理", "模型 Provider 与外部 Agent Provider 的健康、能力、隐私和用量"],
   chat: ["对话与推理", "推理深度与上下文压缩策略"],
   safety: ["权限与安全", "命令沙箱与始终生效的安全边界"],
   mcp: ["MCP 服务器", "只编辑 ~/.hicode/config.json 里的 mcpServers"],
@@ -4142,7 +4376,9 @@ const SETTINGS_TAB_META = {
 
 async function openSettings(tab = "usage") {
   setCfgStatus("");
-  cfgText = (await api.getConfig()) || "";
+  const [configText, credentialStatus] = await Promise.all([api.getConfig(), api.getCredentialStatus()]);
+  cfgText = configText || "";
+  credentialStatusCache = credentialStatus || { ok: false, references: [] };
   syncState({ cfgText });
   cfg.value = cfgText || JSON.stringify(makeConfigFromQuick({}), null, 2);
   hydrateQuickForm(cfg.value);
@@ -4150,6 +4386,8 @@ async function openSettings(tab = "usage") {
   settings.classList.remove("hidden");
   await switchSettingsTab(tab);
 }
+
+const providerSettingsPanel = mountProviderSettingsPanel(providerSettingsRoot, { api, toast });
 
 async function openMcpSettings() {
   return openSettings("mcp");
@@ -4173,6 +4411,7 @@ async function switchSettingsTab(tab) {
   setCfgStatus("");
   if (settingsMode === "usage") await renderUsageSettings();
   if (settingsMode === "model") setTimeout(() => quickApiKey.focus(), 0);
+  if (settingsMode === "providers") await providerSettingsPanel.render();
   if (settingsMode === "chat") await renderChatSettings();
   if (settingsMode === "safety") await renderSafetySettings();
   if (settingsMode === "mcp") await renderMcpSettings();
@@ -4223,15 +4462,67 @@ compactThresholdSelect.onchange = async () => {
 };
 
 async function renderSafetySettings() {
-  const config = await currentConfigObject();
+  const [config, policyResponse] = await Promise.all([currentConfigObject(), api.getExecutionPolicyCapabilities()]);
   sandboxToggle.checked = config.sandbox === true;
-  const info = await getAppInfoCached();
-  if (info && info.platform !== "darwin") {
+  const capabilities = policyResponse?.ok ? policyResponse.capabilities : null;
+  renderExecutionPolicyCapabilities(capabilities, policyResponse?.error || "");
+  const filesystemAvailable = capabilities?.controls?.filesystem?.available === true;
+  if (!filesystemAvailable) {
     sandboxToggle.disabled = true;
-    sandboxHint.textContent = "当前平台不是 macOS，sandbox-exec 不可用；写入仍受工作区路径校验和逐项确认保护。";
+    sandboxHint.textContent = config.sandbox === true
+      ? "配置要求写入隔离，但当前平台后端不可用；bash 会按严格策略拒绝执行，不会无保护运行。"
+      : "当前平台没有可用的 OS 写入隔离后端。命令仍经过确认、最小环境和进程树管理，但边界属于弱隔离。";
   } else {
     sandboxToggle.disabled = false;
+    const backend = capabilities.backend?.id === "linux-bubblewrap" ? "bubblewrap" : capabilities.backend?.id === "macos-sandbox-exec" ? "sandbox-exec" : capabilities.backend?.id || "当前后端";
+    sandboxHint.textContent = `${backend} 可把命令写入限制在当前工作区；宿主读取能力仍会单独提示，因此不会标为完整容器隔离。`;
   }
+}
+
+function renderExecutionPolicyCapabilities(capabilities, error = "") {
+  executionPolicyControlRows.replaceChildren();
+  if (!capabilities) {
+    executionPolicyStatus.textContent = "执行策略状态不可用";
+    executionPolicyBackend.textContent = error || "无法读取主进程执行能力，请重启桌面应用。";
+    executionPolicyWarnings.textContent = "未知边界不会被当作安全沙箱。";
+    return;
+  }
+  const strengthLabels = { strong: "强隔离", partial: "部分隔离", weak: "弱隔离", unavailable: "不可用" };
+  const backendLabels = {
+    "macos-sandbox-exec": "macOS sandbox-exec",
+    "linux-bubblewrap": "Linux bubblewrap",
+    "windows-restricted-token": "Windows restricted token",
+    none: "无 OS 隔离后端",
+  };
+  executionPolicyStatus.textContent = `${strengthLabels[capabilities.strength] || "未知"} · ${capabilities.platform || "unknown"}`;
+  executionPolicyBackend.textContent = `${backendLabels[capabilities.backend?.id] || capabilities.backend?.id || "unknown"}：${capabilities.backend?.reason || "未提供检测原因"}`;
+  const labels = {
+    filesystem: "文件系统",
+    environment: "环境变量",
+    network: "网络",
+    processTree: "进程树",
+    timeout: "超时",
+    output: "输出边界",
+    approval: "人工确认",
+    audit: "审计",
+  };
+  for (const [key, label] of Object.entries(labels)) {
+    const control = capabilities.controls?.[key];
+    if (!control) continue;
+    const row = document.createElement("div");
+    row.className = "settings-row";
+    const body = document.createElement("div");
+    body.className = "settings-row-label";
+    const title = document.createElement("b");
+    title.textContent = `${label} · ${control.available ? "可执行" : "未执行"}`;
+    const detail = document.createElement("p");
+    detail.textContent = `${control.enforcement || "none"} · ${control.detail || "无说明"}`;
+    body.append(title, detail);
+    row.appendChild(body);
+    executionPolicyControlRows.appendChild(row);
+  }
+  const warnings = Array.isArray(capabilities.warnings) ? capabilities.warnings.filter(Boolean) : [];
+  executionPolicyWarnings.textContent = [warnings.join(" "), capabilities.setupHint || ""].filter(Boolean).join(" ");
 }
 
 sandboxToggle.onchange = async () => {
@@ -4242,9 +4533,103 @@ sandboxToggle.onchange = async () => {
 };
 
 async function renderMcpSettings() {
-  const config = await currentConfigObject();
+  const [config, lifecycle] = await Promise.all([
+    currentConfigObject(),
+    api.listMcpLifecycle(),
+  ]);
   mcpCfg.value = JSON.stringify(config.mcpServers && typeof config.mcpServers === "object" && !Array.isArray(config.mcpServers) ? config.mcpServers : {}, null, 2);
+  renderMcpLifecycle(lifecycle);
   setTimeout(() => mcpCfg.focus(), 0);
+}
+
+function renderMcpLifecycle(response) {
+  mcpLifecycleList.replaceChildren();
+  const servers = Array.isArray(response?.servers) ? response.servers : [];
+  if (!servers.length) {
+    const empty = document.createElement("p");
+    empty.className = "settings-hint";
+    empty.textContent = response?.error || "尚未配置 MCP 服务器。保存连接配置后可在这里管理生命周期。";
+    mcpLifecycleList.appendChild(empty);
+    return;
+  }
+  const stateLabels = {
+    disconnected: "已断开",
+    connecting: "连接中",
+    negotiating: "协商能力",
+    ready: "已就绪",
+    degraded: "降级",
+    reconnecting: "重连中",
+    closing: "关闭中",
+    failed: "失败",
+  };
+  for (const server of servers) {
+    const row = document.createElement("div");
+    row.className = "mcp-lifecycle-row";
+    const body = document.createElement("div");
+    body.className = "mcp-lifecycle-body";
+    const title = document.createElement("div");
+    title.className = "mcp-lifecycle-title";
+    const stateDot = document.createElement("span");
+    stateDot.className = `mcp-state-dot mcp-state-${server.state || "disconnected"}`;
+    stateDot.setAttribute("aria-hidden", "true");
+    const name = document.createElement("b");
+    name.textContent = server.server || "MCP";
+    const state = document.createElement("span");
+    state.textContent = stateLabels[server.state] || server.state || "状态未知";
+    title.append(stateDot, name, state);
+    const details = document.createElement("p");
+    const detailParts = [
+      server.transport === "streamable-http" ? "Streamable HTTP" : "stdio",
+      server.protocolVersion ? `协议 ${server.protocolVersion}` : "协议待协商",
+      `${Array.isArray(server.tools) ? server.tools.length : 0} 个工具`,
+      server.auth?.type && server.auth.type !== "none" ? `认证 ${server.auth.type}` : "无认证",
+    ];
+    details.textContent = detailParts.join(" · ");
+    if (server.lastError?.message) {
+      const error = document.createElement("p");
+      error.className = "mcp-lifecycle-error";
+      error.textContent = server.lastError.message;
+      body.append(title, details, error);
+    } else {
+      body.append(title, details);
+    }
+    const actions = document.createElement("div");
+    actions.className = "mcp-lifecycle-actions";
+    const activeCalls = Array.isArray(server.activeCalls) ? server.activeCalls : [];
+    if (activeCalls.length) {
+      actions.appendChild(mcpActionButton(`取消 ${activeCalls.length} 项`, () => api.cancelMcpRequest({ server: server.server, callId: "" })));
+    }
+    if (server.state === "ready") {
+      actions.appendChild(mcpActionButton("重连", () => api.reconnectMcpServer(server.server)));
+      actions.appendChild(mcpActionButton("断开", () => api.disconnectMcpServer(server.server)));
+    } else if (!["connecting", "negotiating", "reconnecting", "closing"].includes(server.state)) {
+      actions.appendChild(mcpActionButton("连接", () => api.connectMcpServer(server.server)));
+    }
+    row.append(body, actions);
+    mcpLifecycleList.appendChild(row);
+  }
+}
+
+function mcpActionButton(label, action) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "btn small";
+  button.textContent = label;
+  button.onclick = async () => {
+    button.disabled = true;
+    try {
+      const result = await action();
+      if (!result?.ok && result?.cancelled === undefined) throw new Error(result?.error || result?.normalizedError?.message || `${label}失败`);
+      toast.ok(result?.cancelled !== undefined ? `已取消 ${result.cancelled} 个 MCP 调用。` : `${label}完成。`);
+    } catch (error) {
+      toast.error(error?.message || `${label}失败`);
+    } finally {
+      button.disabled = false;
+      const lifecycle = await api.listMcpLifecycle();
+      renderMcpLifecycle(lifecycle);
+    }
+  };
+  return button;
 }
 
 let appInfoCache = null;
@@ -4264,6 +4649,39 @@ async function renderAppInfoSettings() {
   aboutVersion.title = info.version ? `当前版本 v${info.version}` : "当前版本";
   aboutRuntime.textContent = `Electron ${info.electron || "?"} · Chromium ${info.chrome || "?"} · Node ${info.node || "?"}`;
   aboutPlatform.textContent = `${info.platform || "?"} · ${info.arch || "?"}`;
+  await renderUpdateStatus();
+}
+
+async function renderUpdateStatus() {
+  const result = await api.getUpdateStatus();
+  if (!result?.ok) {
+    updateStatus.textContent = result?.error || "无法读取更新状态。";
+    checkUpdatesBtn.disabled = true;
+    return;
+  }
+  const capability = result.capability || {};
+  const state = result.state || {};
+  updateChannelSelect.value = state.channel || "stable";
+  checkUpdatesBtn.disabled = !capability.available || state.status === "checking" || state.status === "downloading" || state.status === "installing";
+  downloadUpdateBtn.classList.toggle("hidden", state.status !== "available" && state.status !== "downloading");
+  downloadUpdateBtn.disabled = state.status !== "available";
+  installUpdateBtn.classList.toggle("hidden", state.status !== "downloaded");
+  installUpdateBtn.disabled = state.status !== "downloaded";
+  if (!capability.available) {
+    updateStatus.textContent = capability.message || "当前安装包未启用应用内更新。";
+  } else if (state.status === "available") {
+    updateStatus.textContent = `发现新版本 v${state.availableVersion}，可由 Hi Code 下载并在确认后安装。`;
+  } else if (state.status === "downloading") {
+    updateStatus.textContent = `正在下载 v${state.availableVersion}… ${Math.round(state.progress?.percent || 0)}%`;
+  } else if (state.status === "downloaded") {
+    updateStatus.textContent = `v${state.availableVersion} 已下载并验证，等待确认安装。`;
+  } else if (state.status === "up_to_date") {
+    updateStatus.textContent = `当前通道已是最新版本（v${state.currentVersion}）。`;
+  } else if (state.status === "error") {
+    updateStatus.textContent = state.error || "更新失败。";
+  } else {
+    updateStatus.textContent = `更新通道：${state.channel === "stable" ? "稳定版" : state.channel === "beta" ? "测试版" : "每夜版"}。仅签名发布包启用应用内更新。`;
+  }
 }
 
 openDataDirBtn.onclick = async () => {
@@ -4285,11 +4703,34 @@ checkUpdatesBtn.onclick = async () => {
   checkUpdatesBtn.disabled = false;
   if (!r.ok) {
     updateStatus.textContent = r.error || "检查更新失败。";
+    await renderUpdateStatus();
     return;
   }
   updateStatus.textContent = r.hasUpdate
-    ? `发现新版本 v${r.latest}（当前 v${r.current}），请到下载页获取。`
+    ? `发现新版本 v${r.latest}（当前 v${r.current}）。`
     : `已是最新版本（v${r.current}）。`;
+  await renderUpdateStatus();
+};
+
+updateChannelSelect.onchange = async () => {
+  const result = await api.setUpdateChannel(updateChannelSelect.value);
+  if (!result?.ok) updateStatus.textContent = result?.error || "更新通道设置失败。";
+  await renderUpdateStatus();
+};
+
+downloadUpdateBtn.onclick = async () => {
+  downloadUpdateBtn.disabled = true;
+  updateStatus.textContent = "正在下载并验证更新包…";
+  const result = await api.downloadUpdate();
+  if (!result?.ok) updateStatus.textContent = result?.error || "更新下载失败。";
+  await renderUpdateStatus();
+};
+
+installUpdateBtn.onclick = async () => {
+  installUpdateBtn.disabled = true;
+  const result = await api.installUpdate();
+  if (!result?.ok && !result?.cancelled) updateStatus.textContent = result?.error || "更新安装失败。";
+  await renderUpdateStatus();
 };
 
 $("cfg-cancel").onclick = () => settings.classList.add("hidden");
@@ -4301,6 +4742,21 @@ advancedToggle.onclick = () => {
 };
 cfgSave.onclick = async () => saveConfigText(cfg.value, "JSON 已保存,模型已重载。");
 mcpSave.onclick = async () => saveMcpConfigText();
+mcpReload.onclick = async () => {
+  mcpReload.disabled = true;
+  try {
+    const result = await api.reloadMcpServers();
+    renderMcpLifecycle(result);
+    if (!result?.ok) {
+      const failures = Array.isArray(result?.results) ? result.results.filter((item) => !item.ok) : [];
+      toast.error(failures.length ? `${failures.length} 个 MCP 连接失败，请查看连接状态。` : (result?.error || "MCP 重载失败。"));
+    } else {
+      toast.ok("MCP 连接已重载。");
+    }
+  } finally {
+    mcpReload.disabled = false;
+  }
+};
 quickSave.onclick = async () => {
   const problem = validateQuickProfile(quickProfile());
   if (problem) return setCfgStatus(problem);
@@ -4452,9 +4908,12 @@ function reasoningLabel(level) {
 async function saveConfigText(text, okMessage, options = {}) {
   const r = await api.saveConfig(text);
   if (r.ok) {
-    cfgText = text;
+    cfgText = r.configText || (await api.getConfig()) || "";
+    credentialStatusCache = r.credentials || (await api.getCredentialStatus()) || { ok: false, references: [] };
+    cfg.value = cfgText;
     syncState({ cfgText });
-    setCurrentModelDisplay(defaultProfileFromConfig(parseConfig(text)));
+    setCurrentModelDisplay(defaultProfileFromConfig(parseConfig(cfgText)));
+    hydrateQuickForm(cfgText);
     if (options.closeSettings !== false) settings.classList.add("hidden");
     if (inChat) addSystemNote(okMessage);
   } else {
@@ -4478,10 +4937,18 @@ async function saveMcpConfigText() {
     mcpServers: servers,
   };
   const text = JSON.stringify(next, null, 2);
-  const result = await saveConfigText(text, "MCP 配置已保存。");
+  const result = await saveConfigText(text, "MCP 配置已保存。", { closeSettings: false });
   if (result.ok) {
+    const reloaded = await api.reloadMcpServers();
+    renderMcpLifecycle(reloaded);
     capabilityCache = null;
     syncState({ capabilityCache });
+    if (!reloaded?.ok) {
+      const failures = Array.isArray(reloaded?.results) ? reloaded.results.filter((item) => !item.ok) : [];
+      setCfgStatus(failures.length ? `配置已保存，但 ${failures.length} 个 MCP 连接失败。请检查连接状态。` : (reloaded?.error || "配置已保存，但 MCP 重载失败。"));
+    } else {
+      setCfgStatus("MCP 配置已保存并完成连接协商。", true);
+    }
   }
 }
 
@@ -4490,9 +4957,38 @@ function validateMcpServersConfig(servers) {
   for (const [name, server] of Object.entries(servers)) {
     if (!/^[a-z0-9._:-]+$/i.test(name)) return `MCP server 名称不安全: ${name}`;
     if (!server || typeof server !== "object" || Array.isArray(server)) return `${name} 必须是对象。`;
-    if (typeof server.command !== "string" || !server.command.trim()) return `${name}.command 必须是非空字符串。`;
-    if (server.args && (!Array.isArray(server.args) || server.args.some((arg) => typeof arg !== "string"))) return `${name}.args 必须是字符串数组。`;
-    if (server.env && (typeof server.env !== "object" || Array.isArray(server.env))) return `${name}.env 必须是对象。`;
+    const transport = server.transport || "stdio";
+    if (!["stdio", "streamable-http"].includes(transport)) return `${name}.transport 只支持 stdio 或 streamable-http。`;
+    if (transport === "stdio") {
+      if (typeof server.command !== "string" || !server.command.trim()) return `${name}.command 必须是非空字符串。`;
+      if (server.args && (!Array.isArray(server.args) || server.args.some((arg) => typeof arg !== "string"))) return `${name}.args 必须是字符串数组。`;
+      if (server.env && (typeof server.env !== "object" || Array.isArray(server.env))) return `${name}.env 必须是对象。`;
+      continue;
+    }
+    if (typeof server.url !== "string" || !server.url.trim()) return `${name}.url 必须是非空字符串。`;
+    let endpoint;
+    try {
+      endpoint = new URL(server.url);
+    } catch {
+      return `${name}.url 不是有效 URL。`;
+    }
+    const loopback = ["localhost", "127.0.0.1", "::1", "[::1]"].includes(endpoint.hostname);
+    if (endpoint.protocol !== "https:" && !(endpoint.protocol === "http:" && loopback)) return `${name}.url 必须使用 HTTPS；仅本机回环地址允许 HTTP。`;
+    if (endpoint.username || endpoint.password || endpoint.search || endpoint.hash) return `${name}.url 不得包含凭据、查询参数或片段。`;
+    if (server.headers !== undefined) {
+      if (!server.headers || typeof server.headers !== "object" || Array.isArray(server.headers)) return `${name}.headers 必须是对象。`;
+      for (const [header, value] of Object.entries(server.headers)) {
+        if (!/^[A-Za-z0-9!#$%&'*+.^_`|~-]+$/.test(header) || typeof value !== "string") return `${name}.headers 包含无效名称或非字符串值。`;
+        if (["authorization", "cookie", "proxy-authorization"].includes(header.toLowerCase())) return `${name}.headers 不得直接保存认证信息，请使用 auth 配置。`;
+      }
+    }
+    if (server.auth !== undefined) {
+      if (!server.auth || typeof server.auth !== "object" || Array.isArray(server.auth)) return `${name}.auth 必须是对象。`;
+      const authType = server.auth.type || "none";
+      if (!["none", "bearer", "oauth"].includes(authType)) return `${name}.auth.type 只支持 none、bearer 或 oauth。`;
+      if (authType === "bearer" && !server.auth.token && !server.auth.tokenRef) return `${name}.auth 需要 token 或 tokenRef。`;
+      if (authType === "oauth" && (typeof server.auth.clientId !== "string" || !server.auth.clientId.trim())) return `${name}.auth.clientId 必须是非空字符串。`;
+    }
   }
   return "";
 }
@@ -4511,6 +5007,7 @@ function normalizeConfig(config = {}) {
       model: config.model,
       contextWindow: config.contextWindow,
       temperature: config.temperature,
+      protocol: config.protocol,
     };
   }
   const defaultProfile = config.defaultProfile || Object.keys(profiles)[0] || "default";
@@ -4531,7 +5028,8 @@ function hydrateQuickForm(text) {
   syncState({ selectedProvider });
   setProviderActive(selectedProvider);
   quickBaseURL.value = current.baseURL || PROVIDERS[selectedProvider].baseURL;
-  quickApiKey.value = current.apiKey || PROVIDERS[selectedProvider].apiKey;
+  quickApiKey.value = "";
+  quickApiKey.dataset.configured = isConfiguredSecretRef(current.secretRef) ? "true" : "false";
   quickModel.value = current.model || PROVIDERS[selectedProvider].model;
   quickContext.value = String(current.contextWindow || PROVIDERS[selectedProvider].contextWindow);
   syncProviderFormMode();
@@ -4545,16 +5043,23 @@ function defaultProfileFromConfig(config) {
   return {
     baseURL: config.baseURL,
     apiKey: config.apiKey,
+    secretRef: config.secretRef,
     model: config.model,
     contextWindow: config.contextWindow,
     temperature: config.temperature,
+    protocol: config.protocol,
   };
 }
 
 function quickProfile() {
   const preset = PROVIDERS[selectedProvider] || PROVIDERS.custom;
+  const saved = savedProfileForProvider(selectedProvider);
+  const savedRef = isConfiguredSecretRef(saved?.secretRef)
+    ? saved.secretRef
+    : savedSecretRefForProvider(selectedProvider);
   const baseURL = quickBaseURL.value.trim() || preset.baseURL;
   const apiKey = quickApiKey.value.trim() || (isLocalEndpoint(baseURL) ? "sk-no-key-required" : preset.apiKey);
+  const protocol = configuredQuickProtocol();
   return {
     name: "default",
     baseURL,
@@ -4562,7 +5067,23 @@ function quickProfile() {
     model: quickModel.value.trim() || preset.model,
     contextWindow: Number(quickContext.value) || preset.contextWindow,
     temperature: typeof preset.temperature === "number" ? preset.temperature : 0.2,
+    ...(!apiKey && savedRef
+      ? { secretRef: savedRef }
+      : {}),
+    ...(protocol ? { protocol } : {}),
   };
+}
+
+function configuredQuickProtocol() {
+  const config = parseConfig(cfg.value || cfgText || "{}");
+  const profiles = config.profiles && typeof config.profiles === "object" ? config.profiles : {};
+  const profileKey = providerProfileKey(selectedProvider);
+  const profile = profiles[profileKey]
+    || (config.defaultProfile === profileKey ? profiles[config.defaultProfile] : null);
+  const protocol = profile
+    ? profile.protocol
+    : (!Object.keys(profiles).length ? config.protocol : (PROVIDERS[selectedProvider] || PROVIDERS.custom).protocol);
+  return ["responses", "chat_completions", "anthropic_messages", "ollama_chat"].includes(protocol) ? protocol : undefined;
 }
 
 function validateQuickProfile(profile) {
@@ -4611,7 +5132,7 @@ function applyProvider(key, overwrite, previousKey = selectedProvider) {
   selectedProvider = key;
   syncState({ selectedProvider });
   const saved = overwrite ? savedProfileForProvider(key) : null;
-  const savedApiKey = saved?.apiKey || savedApiKeyForProvider(key);
+  const savedSecretRef = isConfiguredSecretRef(saved?.secretRef) ? saved.secretRef : savedSecretRefForProvider(key);
   setProviderActive(key);
   if (overwrite || !quickBaseURL.value) quickBaseURL.value = saved?.baseURL || preset.baseURL;
   if (overwrite || !quickModel.value) quickModel.value = saved?.model || preset.model;
@@ -4620,9 +5141,10 @@ function applyProvider(key, overwrite, previousKey = selectedProvider) {
     && quickApiKey.value
     && providerCredentialGroup(previousKey) === providerCredentialGroup(key)
     && !preset.apiKey
-    && !savedApiKey;
-  if (overwrite && !keepApiKey) quickApiKey.value = savedApiKey || preset.apiKey || "";
+    && !savedSecretRef;
+  if (overwrite && !keepApiKey) quickApiKey.value = preset.apiKey || "";
   else if (!quickApiKey.value && preset.apiKey) quickApiKey.value = preset.apiKey;
+  quickApiKey.dataset.configured = savedSecretRef ? "true" : "false";
   syncProviderFormMode();
   setCfgStatus("");
 }
@@ -4635,12 +5157,18 @@ function savedProfileForProvider(key) {
   return Object.values(profiles).find((profile) => guessProvider(profile?.baseURL || "") === key);
 }
 
-function savedApiKeyForProvider(key) {
+function savedSecretRefForProvider(key) {
   const preset = PROVIDERS[key] || PROVIDERS.custom;
   if (!preset.credentialGroup) return "";
   const config = normalizeConfig(parseConfig(cfg.value || cfgText));
   const profiles = Object.values(config.profiles || {});
-  return profiles.find((profile) => providerCredentialGroup(guessProvider(profile?.baseURL || "")) === preset.credentialGroup)?.apiKey || "";
+  return profiles.find((profile) => providerCredentialGroup(guessProvider(profile?.baseURL || "")) === preset.credentialGroup
+    && isConfiguredSecretRef(profile?.secretRef))?.secretRef || "";
+}
+
+function isConfiguredSecretRef(secretRef) {
+  if (!secretRef || credentialStatusCache?.ok !== true) return false;
+  return (credentialStatusCache.references || []).some((entry) => entry.secretRef === secretRef && entry.configured === true);
 }
 
 function setCfgStatus(text, ok = false) {
@@ -4664,6 +5192,7 @@ function guessProvider(baseURL = "") {
   if (baseURL.includes("generativelanguage.googleapis.com")) return "gemini";
   if (baseURL.includes("openrouter.ai")) return "openrouter";
   if (baseURL.includes("api.openai.com")) return "openai";
+  if (baseURL.includes("api.anthropic.com")) return "anthropic";
   if (baseURL.includes("127.0.0.1") || baseURL.includes("localhost")) return "ollama";
   return "custom";
 }
@@ -4683,7 +5212,9 @@ function syncProviderFormMode() {
   const card = settings.querySelector(".settings-card");
   const apiOnly = providerIsApiOnly(selectedProvider);
   card.classList.toggle("api-key-only", apiOnly);
-  quickApiKey.placeholder = preset.keyPlaceholder || "sk-...";
+  quickApiKey.placeholder = quickApiKey.dataset.configured === "true"
+    ? "已安全保存，留空保持不变"
+    : (preset.keyPlaceholder || "sk-...");
   providerHint.textContent = apiOnly
     ? `${preset.label} 已内置 Base URL、默认模型和上下文窗口，只需要粘贴 API Key。${preset.note ? " " + preset.note : ""}`
     : preset.note || "";

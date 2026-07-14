@@ -1,0 +1,17 @@
+$ npm run test:runtime-clients
+
+> hi-code@0.6.0-alpha.8 test:runtime-clients
+> node test/runtime-client-adapter-tests.mjs
+
+
+[runtime-client-adapter] text projection
+  ✓ delta stream renders one prefix and no duplicate completion
+  ✓ completed-only providers still render their content
+  ✓ session filter blocks foreign output
+  ✓ disconnect stops text projection
+
+[runtime-client-adapter] structured projection
+  ✓ structured adapter exposes model and sequence
+  ✓ interrupted completion reports prior deltas without replaying content
+
+=== 6 passed, 0 failed ===

@@ -1,0 +1,416 @@
+{
+  "schemaVersion": 1,
+  "evidenceType": "mcp-next-generation-connection-layer-acceptance",
+  "taskId": "HC-MCP-410",
+  "source": {
+    "version": "0.6.0-alpha.8",
+    "parentCommit": "630b19d7d1d326cef6cb01341c4b2bc36a43ab59",
+    "branch": "codex/runtime-engine/hc-mcp-410"
+  },
+  "capture": {
+    "startedAt": "2026-07-13T17:03:58.001Z",
+    "completedAt": "2026-07-13T17:09:50.373Z",
+    "workingTreeClean": false,
+    "dirtyPaths": [
+      "docs/adr/README.md",
+      "docs/engineering-baseline.md",
+      "docs/main-process-services.md",
+      "docs/program/ARCHITECTURE.md",
+      "docs/program/EXECUTION_PLAN.md",
+      "electron/main.mjs",
+      "electron/preload.cjs",
+      "electron/services/mcp-service.mjs",
+      "electron/services/secret-store-service.mjs",
+      "package.json",
+      "planning/backlog.json",
+      "planning/release-board.json",
+      "renderer/api/hicode-api.js",
+      "renderer/app/bootstrap.js",
+      "renderer/index.html",
+      "renderer/style.css",
+      "reports/program/risks.json",
+      "reports/program/status.md",
+      "scripts/capture-task-evidence.mjs",
+      "scripts/verify.mjs",
+      "src/config.ts",
+      "src/index.ts",
+      "src/mcp.ts",
+      "src/runtime.ts",
+      "src/secret-references.ts",
+      "src/tui.tsx",
+      "test/main-process-services-tests.mjs",
+      "test/program-control-tests.mjs",
+      "test/renderer-architecture-tests.mjs",
+      "test/security-baseline.mjs",
+      "docs/adr/ADR-0019-mcp-streamable-http-oauth.md",
+      "docs/mcp-connection-layer.md",
+      "reports/evidence/HC-MCP-410/",
+      "reports/tasks/HC-MCP-410.md",
+      "src/mcp-auth.ts",
+      "src/mcp-protocol.ts",
+      "src/mcp-transport.ts",
+      "test/mcp-connection-tests.mjs"
+    ],
+    "note": "Task evidence is captured before the task commit; artifact hashes bind the tested implementation and reviewed screenshots."
+  },
+  "environment": {
+    "platform": "darwin",
+    "architecture": "arm64",
+    "osRelease": "25.5.0",
+    "node": "v22.22.3"
+  },
+  "artifacts": [
+    {
+      "path": "docs/adr/ADR-0019-mcp-streamable-http-oauth.md",
+      "bytes": 3040,
+      "sha256": "860a78419231f9f79acbe6df2408df30aede3b8921dec59bd954bd919a97feee"
+    },
+    {
+      "path": "docs/adr/README.md",
+      "bytes": 4430,
+      "sha256": "2c73cf8d76eec005ed713e9e013937991d05f1004bee2362d5cba0576dcc6c89"
+    },
+    {
+      "path": "docs/engineering-baseline.md",
+      "bytes": 9364,
+      "sha256": "2d918b1aabba10f316d461f6e1a320bedf2d8f8d23935c4512700c6bfcc2074d"
+    },
+    {
+      "path": "docs/main-process-services.md",
+      "bytes": 18377,
+      "sha256": "a584f78191f6cec63422a1e8b3fd68ef23da2115c0061932504d04cdd5b13546"
+    },
+    {
+      "path": "docs/mcp-connection-layer.md",
+      "bytes": 5648,
+      "sha256": "d8579d052cd69f6f90de5fb3ce17c9a7a67193cf6343f8cd2d257d70effac87f"
+    },
+    {
+      "path": "docs/program/ARCHITECTURE.md",
+      "bytes": 16991,
+      "sha256": "348e117dadb1ff4f9dd5e595212ff08e86304e91db03fb6342e8b4cff90c6a2c"
+    },
+    {
+      "path": "docs/program/EXECUTION_PLAN.md",
+      "bytes": 33566,
+      "sha256": "ab61116e0940e7963a7753f17c78260f37b38fbe67666612ad8f4d07b637fe72"
+    },
+    {
+      "path": "electron/main.mjs",
+      "bytes": 111179,
+      "sha256": "3f6e2292a4e521e5d608470544fc316bfe5100f54a25c3044145f2207ed8b22d"
+    },
+    {
+      "path": "electron/preload.cjs",
+      "bytes": 31262,
+      "sha256": "8407b4c877379848b5533559b4da0bf9908f442f7dd7174d6117a2e8a59e0733"
+    },
+    {
+      "path": "electron/services/mcp-service.mjs",
+      "bytes": 8059,
+      "sha256": "9cde6f2cc42d3a414a406591989fa71138a4c37def77f6834d01bfb2134cbbf9"
+    },
+    {
+      "path": "electron/services/secret-store-service.mjs",
+      "bytes": 19571,
+      "sha256": "764fe2641cecde0592f16083603949c88d0a542e35e55b4ae747afe3546c32b2"
+    },
+    {
+      "path": "package.json",
+      "bytes": 10995,
+      "sha256": "b3d57f10e7a2d416eaab044f93859c93c90476f9497b33c85132fa3a0de8bc29"
+    },
+    {
+      "path": "planning/backlog.json",
+      "bytes": 20142,
+      "sha256": "2bc12ae2b4d69a19f48c5fee39532584cd09a834c5609694193c41d8a7d8fad3"
+    },
+    {
+      "path": "planning/release-board.json",
+      "bytes": 19767,
+      "sha256": "e0c24cf4ca6572bcfc2d04efc040e39760d8963c7d4e39c4a402e4b0c07df7b6"
+    },
+    {
+      "path": "renderer/api/hicode-api.js",
+      "bytes": 15941,
+      "sha256": "a4ba385688e7361578475f6dbd18cb69cd729bfb7e5f3b696334f11ae10429c3"
+    },
+    {
+      "path": "renderer/app/bootstrap.js",
+      "bytes": 237900,
+      "sha256": "3f2c25d797a5732d02b69a64d262f7266d849d1382aec4369ab2a0713f1e73de"
+    },
+    {
+      "path": "renderer/index.html",
+      "bytes": 50634,
+      "sha256": "519b7b3f389804727f12c99d58223706009b96cb8fa43e787a19098dddef07e2"
+    },
+    {
+      "path": "renderer/style.css",
+      "bytes": 144859,
+      "sha256": "c91cdd89fb645d08f62bb211fb6329f8dc923d3213d572d34d490b8715220fc1"
+    },
+    {
+      "path": "reports/program/risks.json",
+      "bytes": 23808,
+      "sha256": "295bbf05829b951be1fe0479d05461c166a7412a8fe738d4eb688cf13025c53c"
+    },
+    {
+      "path": "reports/program/status.md",
+      "bytes": 20732,
+      "sha256": "2b2a2d0d8a8662eac29d7c73c4f0cc9e7e624a1499480503169624dd46d75edf"
+    },
+    {
+      "path": "reports/tasks/HC-MCP-410.md",
+      "bytes": 6615,
+      "sha256": "8769f0275488e142f6155caca113652bb995cbd8563739cdf879d261e9b33f2e"
+    },
+    {
+      "path": "scripts/capture-task-evidence.mjs",
+      "bytes": 59410,
+      "sha256": "54a3c91fbb8748dc128b72afc13cac082ae8dcf0b92678e87f647ca1f891bf35"
+    },
+    {
+      "path": "scripts/verify.mjs",
+      "bytes": 4524,
+      "sha256": "35f79dc05b2adfd63fd198563150b6794a0188f06ee12fb7be2c30030bdc7af9"
+    },
+    {
+      "path": "src/config.ts",
+      "bytes": 20180,
+      "sha256": "33cc3b6d2b8f41b3a7a9ee8d8d0c96dfd6c5207d1bb89a1d7febe14048ca0ada"
+    },
+    {
+      "path": "src/index.ts",
+      "bytes": 7817,
+      "sha256": "3d26c2fd5fc79fc8d3e297f61b2b5c7960773b75f0be5158e1bdb1a983926cba"
+    },
+    {
+      "path": "src/mcp-auth.ts",
+      "bytes": 16921,
+      "sha256": "97e81597b6357e820aae084cec0f46f40c80bb8ed649039ecd2b2284cd43a4b5"
+    },
+    {
+      "path": "src/mcp-protocol.ts",
+      "bytes": 7262,
+      "sha256": "7b8a74b254c25f231e92fdd143b9289fa93088546243d1f6cafdc37215a082b4"
+    },
+    {
+      "path": "src/mcp-transport.ts",
+      "bytes": 29694,
+      "sha256": "358369971291ba8861d66dfab7d0d4a4ee33ea8a3b12b50dcf63a7c131ea0917"
+    },
+    {
+      "path": "src/mcp.ts",
+      "bytes": 18468,
+      "sha256": "b67a05544f77c36ccc591786a258dfff8c5b9028c11f5290727879d3eb3f4bff"
+    },
+    {
+      "path": "src/runtime.ts",
+      "bytes": 25975,
+      "sha256": "5dccc1f19419a84e47622c666ce6d8a929f49eb470f71e83a176251fa12b74ec"
+    },
+    {
+      "path": "src/secret-references.ts",
+      "bytes": 13705,
+      "sha256": "2afa4ee32f6f190921e525eb74e30f69e56324049d1b01b506f09ee8a5e5f288"
+    },
+    {
+      "path": "src/tui.tsx",
+      "bytes": 10081,
+      "sha256": "5524a473452e9616b9f16f74c8ec59be3b1f1650c123e3b1f1575d5e0c9184e1"
+    },
+    {
+      "path": "test/main-process-services-tests.mjs",
+      "bytes": 39874,
+      "sha256": "f102f7f170a413cb017b85ed6eb6f6628df763f5f4bfc6af217acac1a2eccea7"
+    },
+    {
+      "path": "test/mcp-connection-tests.mjs",
+      "bytes": 19434,
+      "sha256": "49f2207f427aae443aeac5f08db7497dc532f52d537b1fd464eb9b8edb56964a"
+    },
+    {
+      "path": "test/program-control-tests.mjs",
+      "bytes": 80492,
+      "sha256": "05e7c4924d231712c62fccfc23e9331da57cb01b554e3afd2b4faf1e00f73955"
+    },
+    {
+      "path": "test/renderer-architecture-tests.mjs",
+      "bytes": 70841,
+      "sha256": "ebe4049039a56f75838b3feb0550378534c875aa6bcf957593a41b244081b1a7"
+    },
+    {
+      "path": "test/security-baseline.mjs",
+      "bytes": 59072,
+      "sha256": "e11d59031a2abf512924e27b4ac747012c62951114a72c763fe87ec6e5497f38"
+    },
+    {
+      "path": "tests/electron-e2e/run.mjs",
+      "bytes": 58643,
+      "sha256": "0b56f07a51f8a00168917ee9ec9a4bb2bd5ea1bebf9ae92a2d9e8956a6ddab16"
+    }
+  ],
+  "commands": [
+    {
+      "id": "build",
+      "command": "npm run build",
+      "startedAt": "2026-07-13T17:03:58.016Z",
+      "endedAt": "2026-07-13T17:04:00.911Z",
+      "durationMs": 2896,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-MCP-410/logs/build.log",
+      "logSha256": "92333a1d4ee62f1c09609f2c6ed2938fcace55815a8f6959511e5d9a68b0aebc"
+    },
+    {
+      "id": "mcp-tests",
+      "command": "npm run test:mcp",
+      "startedAt": "2026-07-13T17:04:00.913Z",
+      "endedAt": "2026-07-13T17:04:08.355Z",
+      "durationMs": 7443,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-MCP-410/logs/mcp-tests.log",
+      "logSha256": "33b3909ea510174be4ae6d17d8f027f4f5e161b844105c62d319cf29b3ad3272"
+    },
+    {
+      "id": "service-tests",
+      "command": "npm run test:services",
+      "startedAt": "2026-07-13T17:04:08.357Z",
+      "endedAt": "2026-07-13T17:04:12.128Z",
+      "durationMs": 3772,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-MCP-410/logs/service-tests.log",
+      "logSha256": "4033503b83b8c639d98578ca37969ca85a1efbd871370ef3301fedabb8a0b167"
+    },
+    {
+      "id": "renderer-tests",
+      "command": "npm run test:renderer",
+      "startedAt": "2026-07-13T17:04:12.129Z",
+      "endedAt": "2026-07-13T17:04:12.283Z",
+      "durationMs": 154,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-MCP-410/logs/renderer-tests.log",
+      "logSha256": "8cd45239566fbba03a5c48008edc6b80a891290416636fb218d8739ec5cca7e0"
+    },
+    {
+      "id": "security-tests",
+      "command": "npm run test:security",
+      "startedAt": "2026-07-13T17:04:12.283Z",
+      "endedAt": "2026-07-13T17:04:12.384Z",
+      "durationMs": 101,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-MCP-410/logs/security-tests.log",
+      "logSha256": "bfa5bbfcbf27b54e36ea2ca114e706154a33ec7fca0d7e3c6fd01ed480833542"
+    },
+    {
+      "id": "verify",
+      "command": "npm run verify",
+      "startedAt": "2026-07-13T17:04:12.385Z",
+      "endedAt": "2026-07-13T17:08:39.495Z",
+      "durationMs": 267110,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-MCP-410/logs/verify.log",
+      "logSha256": "8f2db87c6e19261b39804f741017cffb57bc0d99d3037a5695e616c61a077827"
+    },
+    {
+      "id": "release-check",
+      "command": "npm run release:check",
+      "startedAt": "2026-07-13T17:08:39.496Z",
+      "endedAt": "2026-07-13T17:09:19.210Z",
+      "durationMs": 39714,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-MCP-410/logs/release-check.log",
+      "logSha256": "3b0e28e882a69ce7848049dfc7dadf01e238a7ad9c8798a990597be8a5b494c9"
+    },
+    {
+      "id": "feature-tests",
+      "command": "/Applications/QClaw.app/Contents/Resources/node/node test/feature-tests.mjs",
+      "startedAt": "2026-07-13T17:09:19.213Z",
+      "endedAt": "2026-07-13T17:09:21.612Z",
+      "durationMs": 2400,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-MCP-410/logs/feature-tests.log",
+      "logSha256": "534392df37db2b86175f799134782b59da7e9cc1cb02dd93a54b660ee384f930"
+    },
+    {
+      "id": "dod-tests",
+      "command": "npm run test:dod",
+      "startedAt": "2026-07-13T17:09:21.613Z",
+      "endedAt": "2026-07-13T17:09:21.999Z",
+      "durationMs": 386,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-MCP-410/logs/dod-tests.log",
+      "logSha256": "f8b3096032e626f999dd376ae91b433d713bc544686c172eeb7bcc40c2e3154e"
+    },
+    {
+      "id": "dod-scan",
+      "command": "npm run scan:dod",
+      "startedAt": "2026-07-13T17:09:21.999Z",
+      "endedAt": "2026-07-13T17:09:22.352Z",
+      "durationMs": 353,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-MCP-410/logs/dod-scan.log",
+      "logSha256": "b91b106299d47b8ead1e1070accb3a8dbab1b5c24297dd0ed3517aa05d21e0b4"
+    },
+    {
+      "id": "production-audit",
+      "command": "npm run audit:prod",
+      "startedAt": "2026-07-13T17:09:22.353Z",
+      "endedAt": "2026-07-13T17:09:23.669Z",
+      "durationMs": 1316,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-MCP-410/logs/production-audit.log",
+      "logSha256": "9f7c507d9af3253a1010988af30c28077e02547298ce7818fd3b1d736442f8b2"
+    },
+    {
+      "id": "electron-e2e",
+      "command": "npm run test:electron-e2e",
+      "startedAt": "2026-07-13T17:09:23.669Z",
+      "endedAt": "2026-07-13T17:09:50.196Z",
+      "durationMs": 26526,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-MCP-410/logs/electron-e2e.log",
+      "logSha256": "df2a5b46a79d543c5bff318030dc790bd55fd26e14433e998a27c671cc72aa8c"
+    },
+    {
+      "id": "program-control",
+      "command": "npm run test:program",
+      "startedAt": "2026-07-13T17:09:50.196Z",
+      "endedAt": "2026-07-13T17:09:50.329Z",
+      "durationMs": 133,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-MCP-410/logs/program-control.log",
+      "logSha256": "6b4e8e49ca51233fde29c3a065981b911d64a85eb90ac82ade9bd5225d8f221c"
+    },
+    {
+      "id": "git-diff-check",
+      "command": "git diff --check",
+      "startedAt": "2026-07-13T17:09:50.330Z",
+      "endedAt": "2026-07-13T17:09:50.356Z",
+      "durationMs": 26,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-MCP-410/logs/git-diff-check.log",
+      "logSha256": "3d4d50cd32af92c6d4df37c1df74a96622fca8cfb5643a155c91f034a42f2068"
+    }
+  ],
+  "summary": {
+    "total": 14,
+    "passed": 14,
+    "failed": 0,
+    "allPassed": true
+  }
+}

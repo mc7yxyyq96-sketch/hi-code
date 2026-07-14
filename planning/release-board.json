@@ -1,0 +1,652 @@
+{
+  "schemaVersion": 1,
+  "program": "Hi Code Product-Grade Desktop and Industrial Workbench",
+  "updatedAt": "2026-07-14T04:30:52Z",
+  "status": "active",
+  "source": {
+    "version": "0.6.0-alpha.6",
+    "commit": "6ed9ed666bb817f8d1e863c76b0bf61b31c7b52d",
+    "branch": "codex/program-control/hc-prog-100"
+  },
+  "currentRelease": "0.6.0-alpha.8",
+  "releaseObjective": "Integrate typed runtime replay, conservative turn recovery, and the supported Electron line into one auditable alpha.8 candidate.",
+  "candidate": {
+    "version": "0.6.0-alpha.8",
+    "parentCommit": "265a69f3aaffa13772d80d0ab9087d9e8ff7f9ed",
+    "branch": "codex/release/0.6.0-alpha.8",
+    "status": "passed",
+    "verifiedAt": "2026-07-10T19:53:55Z",
+    "evidence": "reports/evidence/HC-REL-ALPHA-8/manifest.json"
+  },
+  "stableGate": {
+    "targetVersion": "0.6.0",
+    "evaluatedVersion": "0.6.0-alpha.8",
+    "status": "PASS_INTERNAL_ONLY",
+    "engineeringStatus": "passed",
+    "promotionDecision": "blocked",
+    "evaluatedAt": "2026-07-14T04:30:52Z",
+    "evidence": "reports/evidence/HC-REL-STABLE-GATE/gate-result.json",
+    "report": "reports/releases/0.6.0-stable/gate-report.md",
+    "blockers": ["RISK-REL-001"],
+    "formalReleaseCreated": false,
+    "tagCreated": false
+  },
+  "releaseExitCriteria": [
+    "HC-RUN-202, HC-RUN-203, and HC-PLAT-110 are completed with committed evidence",
+    "all repository gates pass from the release candidate commit",
+    "event-only sessions reconstruct exact resumable model context when the stream is complete",
+    "interrupted turns cannot replay unknown or completed mutating side effects",
+    "real Electron startup passes on Linux, macOS, and Windows with the pinned embedded runtime",
+    "no blocking DoD or Skeleton Detector finding",
+    "no security boundary is weaker than the source baseline"
+  ],
+  "worktrees": [
+    {
+      "taskId": "HC-PROG-100",
+      "branch": "codex/program-control/hc-prog-100",
+      "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/work/Hi-Code",
+      "mode": "bootstrap-primary-checkout",
+      "reason": "Imported program-control files were already uncommitted in the primary checkout."
+    },
+    {
+      "taskId": "HC-QA-101",
+      "branch": "codex/desktop-ux/hc-qa-101",
+      "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-hc-qa-101",
+      "mode": "completed-worktree"
+    },
+    {
+      "taskId": "HC-RUN-201",
+      "branch": "codex/runtime-engine/hc-run-201",
+      "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-hc-run-201",
+      "mode": "completed-worktree"
+    },
+    {
+      "taskId": "HC-REL-ALPHA-7",
+      "branch": "codex/release/0.6.0-alpha.7",
+      "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-release-alpha-7",
+      "mode": "release-integration-worktree"
+    },
+    {
+      "taskId": "HC-RUN-202",
+      "branch": "codex/runtime-engine/hc-run-202",
+      "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-hc-run-202",
+      "mode": "completed-worktree"
+    },
+    {
+      "taskId": "HC-RUN-203",
+      "branch": "codex/runtime-engine/hc-run-203",
+      "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-hc-run-203",
+      "mode": "completed-worktree"
+    },
+    {
+      "taskId": "HC-PLAT-110",
+      "branch": "codex/security-release/hc-plat-110",
+      "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-hc-plat-110",
+      "mode": "completed-worktree"
+    },
+    {
+      "taskId": "HC-REL-ALPHA-8",
+      "branch": "codex/release/0.6.0-alpha.8",
+      "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-release-alpha-8",
+      "mode": "release-integration-worktree"
+    },
+    {
+      "taskId": "HC-PROV-210",
+      "branch": "codex/runtime-engine/hc-prov-210",
+      "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-hc-prov-210",
+      "mode": "completed-worktree"
+    },
+    {
+      "taskId": "HC-PROV-211",
+      "branch": "codex/runtime-engine/hc-prov-211",
+      "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-hc-prov-211",
+      "mode": "completed-worktree"
+    },
+    {
+      "taskId": "HC-PROV-212",
+      "branch": "codex/runtime-engine/hc-prov-212",
+      "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-hc-prov-212",
+      "mode": "completed-worktree"
+    },
+    {
+      "taskId": "HC-RUN-220",
+      "branch": "codex/runtime-engine/hc-run-220",
+      "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-hc-run-220",
+      "mode": "completed-worktree"
+    },
+    {
+      "taskId": "HC-UI-301",
+      "branch": "codex/desktop-ux/hc-ui-301",
+      "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-hc-ui-301",
+      "mode": "completed-worktree"
+    },
+    {
+      "taskId": "HC-UI-302",
+      "branch": "codex/desktop-ux/hc-ui-302",
+      "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-hc-ui-302",
+      "mode": "completed-worktree"
+    },
+    {
+      "taskId": "HC-UI-310",
+      "branch": "codex/desktop-ux/hc-ui-310",
+      "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-hc-ui-310",
+      "mode": "completed-worktree"
+    },
+    {
+      "taskId": "HC-UI-311",
+      "branch": "codex/desktop-ux/hc-ui-311",
+      "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-hc-ui-311",
+      "mode": "completed-worktree"
+    },
+    {
+      "taskId": "HC-UI-312",
+      "branch": "codex/desktop-ux/hc-ui-312",
+      "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-hc-ui-312",
+      "mode": "completed-worktree"
+    },
+    {
+      "taskId": "HC-GIT-320",
+      "branch": "codex/runtime-engine/hc-git-320",
+      "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-hc-git-320",
+      "mode": "completed-worktree"
+    },
+    {
+      "taskId": "HC-REL-420",
+      "branch": "codex/security-release/hc-rel-420",
+      "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-hc-rel-420",
+      "mode": "completed-worktree"
+    },
+    {
+      "taskId": "HC-MCP-410",
+      "branch": "codex/runtime-engine/hc-mcp-410",
+      "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-hc-mcp-410",
+      "mode": "completed-worktree"
+    },
+    {
+      "taskId": "HC-REL-STABLE-GATE",
+      "branch": "codex/security-release/0.6.0-stable-gate-provider",
+      "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-0.6.0-stable-gate-provider",
+      "mode": "stable-gate-assessment-worktree"
+    },
+    {
+      "taskId": "HC-PROV-301",
+      "branch": "codex/runtime-engine/hc-prov-301",
+      "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-hc-prov-301",
+      "mode": "completed-worktree"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "HC-PROG-100",
+      "owner": "program-director",
+      "priority": "P0",
+      "status": "completed",
+      "dependencies": [],
+      "branch": "codex/program-control/hc-prog-100",
+      "completedAt": "2026-07-10T08:27:46Z",
+      "evidence": "reports/tasks/HC-PROG-100.md"
+    },
+    {
+      "id": "HC-QA-101",
+      "owner": "desktop-ux",
+      "priority": "P0",
+      "status": "completed",
+      "dependencies": ["HC-PROG-100"],
+      "branch": "codex/desktop-ux/hc-qa-101",
+      "completedAt": "2026-07-10T10:14:14Z",
+      "evidence": "reports/evidence/HC-QA-101/manifest.json"
+    },
+    {
+      "id": "HC-RUN-201",
+      "owner": "runtime-engine",
+      "priority": "P0",
+      "status": "completed",
+      "dependencies": ["HC-PROG-100"],
+      "branch": "codex/runtime-engine/hc-run-201",
+      "startedAt": "2026-07-10T11:16:43Z",
+      "completedAt": "2026-07-10T12:08:12Z",
+      "evidence": "reports/evidence/HC-RUN-201/manifest.json"
+    },
+    {
+      "id": "HC-RUN-202",
+      "owner": "runtime-engine",
+      "priority": "P0",
+      "status": "completed",
+      "dependencies": ["HC-RUN-201"],
+      "branch": "codex/runtime-engine/hc-run-202",
+      "startedAt": "2026-07-10T14:15:23Z",
+      "completedAt": "2026-07-10T15:48:14Z",
+      "evidence": "reports/evidence/HC-RUN-202/manifest.json"
+    },
+    {
+      "id": "HC-RUN-203",
+      "owner": "runtime-engine",
+      "priority": "P0",
+      "status": "completed",
+      "dependencies": ["HC-RUN-202"],
+      "branch": "codex/runtime-engine/hc-run-203",
+      "startedAt": "2026-07-10T16:13:35Z",
+      "completedAt": "2026-07-10T17:32:06Z",
+      "evidence": "reports/evidence/HC-RUN-203/manifest.json"
+    },
+    {
+      "id": "HC-PLAT-110",
+      "owner": "security-release",
+      "priority": "P0",
+      "status": "completed",
+      "dependencies": ["HC-QA-101"],
+      "branch": "codex/security-release/hc-plat-110",
+      "startedAt": "2026-07-10T17:48:41Z",
+      "completedAt": "2026-07-10T19:01:57Z",
+      "evidence": "reports/evidence/HC-PLAT-110/manifest.json"
+    },
+    {
+      "id": "HC-REL-ALPHA-8",
+      "owner": "security-release",
+      "priority": "P0",
+      "dependencies": ["HC-RUN-202", "HC-RUN-203", "HC-PLAT-110"],
+      "branch": "codex/release/0.6.0-alpha.8",
+      "startedAt": "2026-07-10T19:25:33Z",
+      "status": "completed",
+      "completedAt": "2026-07-10T19:55:25Z",
+      "evidence": "reports/evidence/HC-REL-ALPHA-8/manifest.json"
+    },
+    {
+      "id": "HC-PROV-210",
+      "owner": "runtime-engine",
+      "priority": "P0",
+      "status": "completed",
+      "dependencies": ["HC-RUN-202"],
+      "branch": "codex/runtime-engine/hc-prov-210",
+      "startedAt": "2026-07-10T23:40:52Z",
+      "completedAt": "2026-07-11T00:38:19Z",
+      "evidence": "reports/evidence/HC-PROV-210/manifest.json"
+    },
+    {
+      "id": "HC-PROV-211",
+      "owner": "runtime-engine",
+      "priority": "P1",
+      "status": "completed",
+      "dependencies": ["HC-PROV-210"],
+      "branch": "codex/runtime-engine/hc-prov-211",
+      "startedAt": "2026-07-11T00:51:02Z",
+      "completedAt": "2026-07-11T02:17:26Z",
+      "evidence": "reports/evidence/HC-PROV-211/manifest.json"
+    },
+    {
+      "id": "HC-PROV-212",
+      "owner": "runtime-engine",
+      "priority": "P1",
+      "status": "completed",
+      "dependencies": ["HC-PROV-210", "HC-PROV-211"],
+      "branch": "codex/runtime-engine/hc-prov-212",
+      "startedAt": "2026-07-11T02:40:19Z",
+      "completedAt": "2026-07-11T04:18:59Z",
+      "evidence": "reports/evidence/HC-PROV-212/manifest.json"
+    },
+    {
+      "id": "HC-RUN-220",
+      "owner": "runtime-engine",
+      "priority": "P1",
+      "status": "completed",
+      "dependencies": ["HC-PROV-210"],
+      "branch": "codex/runtime-engine/hc-run-220",
+      "startedAt": "2026-07-11T05:03:45Z",
+      "completedAt": "2026-07-11T07:00:39Z",
+      "evidence": "reports/evidence/HC-RUN-220/manifest.json"
+    },
+    {
+      "id": "HC-UI-301",
+      "owner": "desktop-ux",
+      "priority": "P0",
+      "status": "completed",
+      "dependencies": [
+        "HC-RUN-201",
+        "HC-QA-101"
+      ],
+      "branch": "codex/desktop-ux/hc-ui-301",
+      "startedAt": "2026-07-11T07:52:25Z",
+      "completedAt": "2026-07-11T09:47:05Z",
+      "taskManifest": "reports/tasks/HC-UI-301.md",
+      "evidence": "reports/evidence/HC-UI-301/manifest.json"
+    },
+    {
+      "id": "HC-UI-302",
+      "owner": "desktop-ux",
+      "priority": "P0",
+      "status": "completed",
+      "dependencies": [
+        "HC-UI-301",
+        "HC-RUN-202"
+      ],
+      "branch": "codex/desktop-ux/hc-ui-302",
+      "startedAt": "2026-07-11T10:21:16Z",
+      "completedAt": "2026-07-11T12:31:58Z",
+      "taskManifest": "reports/tasks/HC-UI-302.md",
+      "evidence": "reports/evidence/HC-UI-302/manifest.json"
+    },
+    {
+      "id": "HC-UI-310",
+      "owner": "desktop-ux",
+      "priority": "P0",
+      "status": "completed",
+      "dependencies": ["HC-UI-302"],
+      "branch": "codex/desktop-ux/hc-ui-310",
+      "startedAt": "2026-07-11T14:02:09Z",
+      "completedAt": "2026-07-11T16:02:52Z",
+      "taskManifest": "reports/tasks/HC-UI-310.md",
+      "evidence": "reports/evidence/HC-UI-310/manifest.json"
+    },
+    {
+      "id": "HC-UI-311",
+      "owner": "desktop-ux",
+      "priority": "P0",
+      "status": "completed",
+      "dependencies": ["HC-UI-301", "HC-PLAT-110"],
+      "branch": "codex/desktop-ux/hc-ui-311",
+      "startedAt": "2026-07-11T17:58:50Z",
+      "completedAt": "2026-07-11T20:35:56Z",
+      "taskManifest": "reports/tasks/HC-UI-311.md",
+      "evidence": "reports/evidence/HC-UI-311/manifest.json",
+      "ciEvidence": "reports/evidence/HC-UI-311/ci-matrix.json"
+    },
+    {
+      "id": "HC-UI-312",
+      "owner": "desktop-ux",
+      "priority": "P1",
+      "status": "completed",
+      "dependencies": ["HC-UI-301", "HC-PLAT-110"],
+      "branch": "codex/desktop-ux/hc-ui-312",
+      "startedAt": "2026-07-12T02:53:12Z",
+      "completedAt": "2026-07-12T05:41:01Z",
+      "taskManifest": "reports/tasks/HC-UI-312.md",
+      "evidence": "reports/evidence/HC-UI-312/manifest.json",
+      "ciEvidence": "reports/evidence/HC-UI-312/ci-matrix.json"
+    },
+    {
+      "id": "HC-GIT-320",
+      "owner": "runtime-engine",
+      "priority": "P1",
+      "status": "completed",
+      "dependencies": ["HC-RUN-203", "HC-UI-310"],
+      "branch": "codex/runtime-engine/hc-git-320",
+      "startedAt": "2026-07-12T06:16:00Z",
+      "completedAt": "2026-07-12T10:47:48Z",
+      "taskManifest": "reports/tasks/HC-GIT-320.md",
+      "evidence": "reports/evidence/HC-GIT-320/manifest.json",
+      "ciEvidence": "reports/evidence/HC-GIT-320/ci-matrix.json"
+    },
+    {
+      "id": "HC-SEC-401",
+      "owner": "security-release",
+      "priority": "P0",
+      "status": "completed",
+      "dependencies": ["HC-PLAT-110"],
+      "branch": "codex/security-release/hc-sec-401",
+      "startedAt": "2026-07-12T11:27:16Z",
+      "completedAt": "2026-07-12T14:37:48Z",
+      "taskManifest": "reports/tasks/HC-SEC-401.md",
+      "evidence": "reports/evidence/HC-SEC-401/manifest.json",
+      "ciEvidence": "reports/evidence/HC-SEC-401/ci-matrix.json"
+    },
+    {
+      "id": "HC-SEC-402",
+      "owner": "security-release",
+      "priority": "P0",
+      "status": "completed",
+      "dependencies": ["HC-PLAT-110"],
+      "branch": "codex/security-release/hc-sec-402",
+      "startedAt": "2026-07-12T15:15:48Z",
+      "completedAt": "2026-07-13T03:32:56Z",
+      "taskManifest": "reports/tasks/HC-SEC-402.md",
+      "evidence": "reports/evidence/HC-SEC-402/manifest.json",
+      "ciEvidence": "reports/evidence/HC-SEC-402/ci-matrix.json"
+    },
+    {
+      "id": "HC-REL-420",
+      "owner": "security-release",
+      "priority": "P0",
+      "status": "completed",
+      "dependencies": ["HC-PLAT-110", "HC-SEC-401"],
+      "branch": "codex/security-release/hc-rel-420",
+      "startedAt": "2026-07-13T04:48:41Z",
+      "taskManifest": "reports/tasks/HC-REL-420.md",
+      "completedAt": "2026-07-13T09:49:20Z",
+      "evidence": "reports/evidence/HC-REL-420/manifest.json",
+      "ciEvidence": "reports/evidence/HC-REL-420/ci-matrix.json"
+    },
+    {
+      "id": "HC-MCP-410",
+      "owner": "runtime-engine",
+      "priority": "P1",
+      "status": "completed",
+      "dependencies": ["HC-SEC-401"],
+      "branch": "codex/runtime-engine/hc-mcp-410",
+      "startedAt": "2026-07-13T11:39:31Z",
+      "completedAt": "2026-07-13T16:58:48Z",
+      "taskManifest": "reports/tasks/HC-MCP-410.md",
+      "evidence": "reports/evidence/HC-MCP-410/manifest.json"
+    },
+    {
+      "id": "HC-REL-STABLE-GATE",
+      "owner": "security-release",
+      "priority": "P0",
+      "status": "completed",
+      "dependencies": ["HC-REL-420", "HC-MCP-410", "HC-PROV-301"],
+      "branch": "codex/security-release/0.6.0-stable-gate-provider",
+      "startedAt": "2026-07-13T17:00:00Z",
+      "completedAt": "2026-07-14T04:30:52Z",
+      "taskManifest": "reports/tasks/HC-REL-STABLE-GATE.md",
+      "evidence": "reports/evidence/HC-REL-STABLE-GATE/manifest.json",
+      "gateResult": "reports/evidence/HC-REL-STABLE-GATE/gate-result.json",
+      "promotionDecision": "blocked",
+      "internalStatus": "PASS_INTERNAL_ONLY"
+    },
+    {
+      "id": "HC-PROV-301",
+      "owner": "runtime-engine",
+      "priority": "P0",
+      "status": "completed",
+      "dependencies": ["HC-PROV-212", "HC-SEC-401", "HC-SEC-402", "HC-MCP-410"],
+      "branch": "codex/runtime-engine/hc-prov-301",
+      "startedAt": "2026-07-13T19:40:48Z",
+      "completedAt": "2026-07-14T03:33:00Z",
+      "taskManifest": "reports/tasks/HC-PROV-301.md",
+      "evidence": "reports/evidence/HC-PROV-301/manifest.json"
+    }
+  ],
+  "gates": [
+    {
+      "id": "source-baseline",
+      "status": "passed",
+      "evidence": "6ed9ed666bb817f8d1e863c76b0bf61b31c7b52d"
+    },
+    {
+      "id": "automated-baseline",
+      "status": "passed",
+      "evidence": "reports/evidence/baseline/manifest.json"
+    },
+    {
+      "id": "electron-responsive-e2e",
+      "status": "passed",
+      "owner": "HC-QA-101",
+      "evidence": "reports/evidence/HC-QA-101/manifest.json"
+    },
+    {
+      "id": "runtime-event-sink",
+      "status": "passed",
+      "owner": "HC-RUN-201",
+      "evidence": "reports/evidence/HC-RUN-201/manifest.json"
+    },
+    {
+      "id": "runtime-store-replay",
+      "status": "passed",
+      "owner": "HC-RUN-202",
+      "evidence": "reports/evidence/HC-RUN-202/manifest.json"
+    },
+    {
+      "id": "runtime-turn-recovery",
+      "status": "passed",
+      "owner": "HC-RUN-203",
+      "evidence": "reports/evidence/HC-RUN-203/manifest.json"
+    },
+    {
+      "id": "electron-supported-line",
+      "status": "passed",
+      "owner": "HC-PLAT-110",
+      "evidence": "reports/evidence/HC-PLAT-110/manifest.json"
+    },
+    {
+      "id": "alpha-7-release-candidate",
+      "status": "passed",
+      "owner": "HC-REL-ALPHA-7",
+      "evidence": "reports/evidence/HC-REL-ALPHA-7/manifest.json"
+    },
+    {
+      "id": "alpha-8-release-candidate",
+      "status": "passed",
+      "owner": "HC-REL-ALPHA-8",
+      "evidence": "reports/evidence/HC-REL-ALPHA-8/manifest.json"
+    },
+    {
+      "id": "model-provider-v2",
+      "status": "passed",
+      "owner": "HC-PROV-210",
+      "evidence": "reports/evidence/HC-PROV-210/manifest.json"
+    },
+    {
+      "id": "openai-responses-adapter",
+      "status": "passed",
+      "owner": "HC-PROV-211",
+      "evidence": "reports/evidence/HC-PROV-211/manifest.json"
+    },
+    {
+      "id": "anthropic-ollama-adapters",
+      "status": "passed",
+      "owner": "HC-PROV-212",
+      "verifiedAt": "2026-07-11T04:18:59Z",
+      "evidence": "reports/evidence/HC-PROV-212/manifest.json"
+    },
+    {
+      "id": "attachment-command-registry",
+      "status": "passed",
+      "owner": "HC-RUN-220",
+      "verifiedAt": "2026-07-11T07:00:39Z",
+      "evidence": "reports/evidence/HC-RUN-220/manifest.json"
+    },
+    {
+      "id": "react-app-shell",
+      "status": "passed",
+      "owner": "HC-UI-301",
+      "verifiedAt": "2026-07-11T09:47:05Z",
+      "evidence": "reports/evidence/HC-UI-301/manifest.json"
+    },
+    {
+      "id": "react-session-workbench",
+      "status": "passed",
+      "owner": "HC-UI-302",
+      "verifiedAt": "2026-07-11T12:31:58Z",
+      "evidence": "reports/evidence/HC-UI-302/manifest.json"
+    },
+    {
+      "id": "integrated-editor-review-loop",
+      "status": "passed",
+      "owner": "HC-UI-310",
+      "verifiedAt": "2026-07-11T16:02:52Z",
+      "evidence": "reports/evidence/HC-UI-310/manifest.json"
+    },
+    {
+      "id": "integrated-terminal-policy",
+      "status": "passed",
+      "owner": "HC-UI-311",
+      "verifiedAt": "2026-07-11T20:35:56Z",
+      "evidence": "reports/evidence/HC-UI-311/manifest.json",
+      "ciEvidence": "reports/evidence/HC-UI-311/ci-matrix.json"
+    },
+    {
+      "id": "secure-app-preview",
+      "status": "passed",
+      "owner": "HC-UI-312",
+      "verifiedAt": "2026-07-12T05:41:01Z",
+      "evidence": "reports/evidence/HC-UI-312/manifest.json",
+      "ciEvidence": "reports/evidence/HC-UI-312/ci-matrix.json"
+    },
+    {
+      "id": "authoritative-coding-git-delivery",
+      "status": "passed",
+      "owner": "HC-GIT-320",
+      "verifiedAt": "2026-07-12T10:47:48Z",
+      "evidence": "reports/evidence/HC-GIT-320/manifest.json",
+      "ciEvidence": "reports/evidence/HC-GIT-320/ci-matrix.json"
+    },
+    {
+      "id": "keychain-secret-references",
+      "status": "passed",
+      "owner": "HC-SEC-401",
+      "verifiedAt": "2026-07-12T14:37:48Z",
+      "evidence": "reports/evidence/HC-SEC-401/manifest.json",
+      "ciEvidence": "reports/evidence/HC-SEC-401/ci-matrix.json"
+    },
+    {
+      "id": "cross-platform-execution-policy",
+      "status": "passed",
+      "owner": "HC-SEC-402",
+      "verifiedAt": "2026-07-13T03:32:56Z",
+      "evidence": "reports/evidence/HC-SEC-402/manifest.json",
+      "ciEvidence": "reports/evidence/HC-SEC-402/ci-matrix.json"
+    },
+    {
+      "id": "controlled-release-pipeline",
+      "status": "passed",
+      "owner": "HC-REL-420",
+      "verifiedAt": "2026-07-13T09:49:20Z",
+      "evidence": "reports/evidence/HC-REL-420/manifest.json",
+      "ciEvidence": "reports/evidence/HC-REL-420/ci-matrix.json"
+    },
+    {
+      "id": "mcp-streamable-http-oauth",
+      "status": "passed",
+      "owner": "HC-MCP-410",
+      "verifiedAt": "2026-07-13T16:58:48Z",
+      "evidence": "reports/evidence/HC-MCP-410/manifest.json"
+    },
+    {
+      "id": "provider-production-hardening",
+      "status": "passed",
+      "owner": "HC-PROV-301",
+      "verifiedAt": "2026-07-14T03:33:00Z",
+      "evidence": "reports/evidence/HC-PROV-301/manifest.json"
+    },
+    {
+      "id": "stable-release-promotion",
+      "status": "blocked",
+      "owner": "HC-REL-STABLE-GATE",
+      "verifiedAt": "2026-07-14T04:30:52Z",
+      "evidence": "reports/evidence/HC-REL-STABLE-GATE/gate-result.json",
+      "report": "reports/releases/0.6.0-stable/gate-report.md",
+      "blockers": ["RISK-REL-001"]
+    },
+    {
+      "id": "stable-internal-acceptance",
+      "status": "passed",
+      "owner": "HC-REL-STABLE-GATE",
+      "verifiedAt": "2026-07-14T04:30:52Z",
+      "evidence": "reports/evidence/HC-REL-STABLE-GATE/gate-result.json",
+      "result": "PASS_INTERNAL_ONLY"
+    }
+  ],
+  "nextReleaseSlices": [
+    {
+      "release": "0.6.0-alpha.9",
+      "focus": "Provider adapters and durable isolated execution parity"
+    },
+    {
+      "release": "0.6.0-beta.1",
+      "focus": "Gradual typed renderer shell and session workflow migration"
+    },
+    {
+      "release": "0.6.0-beta.2",
+      "focus": "Policy-bound PTY terminal, secure app preview, and Git/PR/CI coding loop"
+    }
+  ]
+}

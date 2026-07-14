@@ -269,9 +269,14 @@ try {
     emptyError = error?.message || String(error);
   });
   const emptyDone = emptyResponseEvents.find((event) => event.type === "turn:done");
+  const emptyAssistant = emptyResponseEvents.find((event) => event.type === "assistant:completed");
   check(
     "runtime treats empty model response as visible error",
-    emptyError.includes("返回了空内容") && emptyDone?.status === "error" && emptyDone.summary.includes("返回了空内容"),
+    emptyError.includes("返回了空内容") &&
+      emptyDone?.status === "error" &&
+      emptyDone.summary.includes("返回了空内容") &&
+      emptyAssistant?.status === "error" &&
+      emptyAssistant.payload?.finishReason === "error",
     JSON.stringify({ emptyError, emptyResponseEvents }),
   );
 } finally {

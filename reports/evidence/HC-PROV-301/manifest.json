@@ -1,0 +1,472 @@
+{
+  "schemaVersion": 1,
+  "evidenceType": "provider-production-hardening-acceptance",
+  "taskId": "HC-PROV-301",
+  "source": {
+    "version": "0.6.0-alpha.8",
+    "parentCommit": "bc208d111b1d73704be63cfe28087b4f935f14b3",
+    "branch": "codex/runtime-engine/hc-prov-301"
+  },
+  "capture": {
+    "startedAt": "2026-07-14T04:03:29.917Z",
+    "completedAt": "2026-07-14T04:05:22.159Z",
+    "workingTreeClean": false,
+    "dirtyPaths": [
+      "docs/adr/README.md",
+      "docs/agent-providers.md",
+      "docs/engineering-baseline.md",
+      "docs/main-process-services.md",
+      "docs/program/ARCHITECTURE.md",
+      "electron/main.mjs",
+      "electron/preload.cjs",
+      "electron/services/provider-service.mjs",
+      "package.json",
+      "planning/backlog.json",
+      "planning/release-board.json",
+      "renderer/api/hicode-api.js",
+      "renderer/app/bootstrap.js",
+      "renderer/components/patch-arena-panel.js",
+      "renderer/index.html",
+      "renderer/style.css",
+      "reports/program/risks.json",
+      "reports/program/status.md",
+      "scripts/capture-task-evidence.mjs",
+      "scripts/verify.mjs",
+      "src/agent-provider.ts",
+      "src/agent.ts",
+      "src/execution-runner.ts",
+      "test/main-process-services-tests.mjs",
+      "test/program-control-tests.mjs",
+      "docs/adr/ADR-0020-unified-provider-control-plane.md",
+      "electron/services/external-agent-provider-service.mjs",
+      "renderer/components/provider-settings-panel.js",
+      "reports/evidence/HC-PROV-301/",
+      "reports/tasks/HC-PROV-301.md",
+      "src/external-agent-provider.ts",
+      "src/provider-control-plane.ts",
+      "src/provider-usage-store.ts",
+      "test/provider-hardening-tests.mjs"
+    ],
+    "note": "Task evidence is captured before the task commit; artifact hashes bind the tested implementation and reviewed screenshots."
+  },
+  "environment": {
+    "platform": "darwin",
+    "architecture": "arm64",
+    "osRelease": "25.5.0",
+    "node": "v22.22.3"
+  },
+  "artifacts": [
+    {
+      "path": "docs/adr/ADR-0020-unified-provider-control-plane.md",
+      "bytes": 5815,
+      "sha256": "7a2081e04edba7f4998036750cc443a4339db9854c9b15fd6a0c4ac479902750"
+    },
+    {
+      "path": "docs/adr/README.md",
+      "bytes": 4605,
+      "sha256": "e15fe54e1f7311c2f5b22c5ce6184d5aba1db26c6d55c1336365c835e4323404"
+    },
+    {
+      "path": "docs/agent-providers.md",
+      "bytes": 7986,
+      "sha256": "90c56cf2d040a1f584a00a8b816f2b21c331babf7ebfc3514b14d5dfcf9aa1cf"
+    },
+    {
+      "path": "docs/engineering-baseline.md",
+      "bytes": 10060,
+      "sha256": "1d1a2e6788f293f1a302804d88af6d1a4f9e86f52de77ec035e531e2a71db4d9"
+    },
+    {
+      "path": "docs/main-process-services.md",
+      "bytes": 19333,
+      "sha256": "6b280fb686ca25a794387ad677e54b78e3083cd3cf4c71819b61c5046302b893"
+    },
+    {
+      "path": "docs/program/ARCHITECTURE.md",
+      "bytes": 18583,
+      "sha256": "5499cb3c6e7ccd1eb9dea3943e51837b10c7135418d18ac65fbb249151f7596c"
+    },
+    {
+      "path": "electron/main.mjs",
+      "bytes": 111376,
+      "sha256": "098caadf80e3aeeb9d52f454a7384fc418d73b06abb6e1d57469122c54b26938"
+    },
+    {
+      "path": "electron/preload.cjs",
+      "bytes": 32212,
+      "sha256": "0b70ada88bbfa69f4c67366894d31f6715ab9d8b0611d1c523c6c647d8fbd21d"
+    },
+    {
+      "path": "electron/services/external-agent-provider-service.mjs",
+      "bytes": 21050,
+      "sha256": "c53bcb5b5146bc4618b742162fd20c15b427e25432be05da9a6666c8cb83ded8"
+    },
+    {
+      "path": "electron/services/provider-service.mjs",
+      "bytes": 48348,
+      "sha256": "d319ea46ff0cbc0334405ed800f9be872c4efd5f5007a785636a320f5b6f5988"
+    },
+    {
+      "path": "package.json",
+      "bytes": 11500,
+      "sha256": "9e09c1be63d4f304b33a1e80fdd82142186cb5c1073d300a96fcd6a8fc401599"
+    },
+    {
+      "path": "planning/backlog.json",
+      "bytes": 21110,
+      "sha256": "7d14dc7de02d35e563b4b5f8695d01a6d15f685f30789bb3f1b3c39f6bb165ee"
+    },
+    {
+      "path": "planning/release-board.json",
+      "bytes": 22318,
+      "sha256": "e1d2b934df2242dd13b4c1e1f6d00fed3978cf2c2f05a6b5730bac3669a2efb8"
+    },
+    {
+      "path": "renderer/api/hicode-api.js",
+      "bytes": 16513,
+      "sha256": "d5304adbcaddcdf6c7220b79683aea50265dda4b1fa135994748f4433da1aaf8"
+    },
+    {
+      "path": "renderer/app/bootstrap.js",
+      "bytes": 238372,
+      "sha256": "645b610425a0bdb6bd91a6fcb68d687baca9512d5cec25076541660b07f86269"
+    },
+    {
+      "path": "renderer/components/patch-arena-panel.js",
+      "bytes": 15851,
+      "sha256": "7bdc9ce0fde9d3832117efb76bd3fd21d195e9a6db7a2f26584be4d18eb368f8"
+    },
+    {
+      "path": "renderer/components/provider-settings-panel.js",
+      "bytes": 12636,
+      "sha256": "e530ba0c4ad2718222750d2f8c71e1a832804498a11bd15a00a0523d2c52b0ad"
+    },
+    {
+      "path": "renderer/index.html",
+      "bytes": 50953,
+      "sha256": "9884d8be81c6da7798c33edf55592448d0d083576ca702614576d07a4929a47b"
+    },
+    {
+      "path": "renderer/style.css",
+      "bytes": 150158,
+      "sha256": "f6b82f24fa454cd6bf5aab0e4777887c5f1b3bbd52b979fee91a089a34232533"
+    },
+    {
+      "path": "reports/program/risks.json",
+      "bytes": 24665,
+      "sha256": "3ede94c283478a89d92792881ef969064402ed67c13420d5e6da79c990efe004"
+    },
+    {
+      "path": "reports/program/status.md",
+      "bytes": 23405,
+      "sha256": "f1a5014418fadca0b7cd07d76a63c5a2a5acaa3e67d1e58d9521aa24a7ae6305"
+    },
+    {
+      "path": "reports/tasks/HC-PROV-301.md",
+      "bytes": 7718,
+      "sha256": "8f240b266151a4d9035e15eaadd81b00c6c819c5cd9b8318eaa741b044ac64f5"
+    },
+    {
+      "path": "scripts/capture-task-evidence.mjs",
+      "bytes": 65886,
+      "sha256": "311f99d4d24a7ab6230580ff9d8abb9b539528d5901fe7a0dd0249d686b479ab"
+    },
+    {
+      "path": "scripts/verify.mjs",
+      "bytes": 4592,
+      "sha256": "96699eac3334c2b2c60376952be6ddf2f47fbaf4f1e80b0cd247acccbd3e1436"
+    },
+    {
+      "path": "src/agent-provider.ts",
+      "bytes": 16486,
+      "sha256": "0525460448c8ecd7bd4b9f1b795fb7c778fe974612d9bd87a5264644b02350b2"
+    },
+    {
+      "path": "src/agent.ts",
+      "bytes": 15170,
+      "sha256": "106c7f097c637faf5464fee331b4cdb0a37c1d330bde01af521c489d001547cb"
+    },
+    {
+      "path": "src/execution-runner.ts",
+      "bytes": 8529,
+      "sha256": "e4196fac87a9582981e24675af3ac4ec64e418fa9506598a35c4fb679fab28eb"
+    },
+    {
+      "path": "src/external-agent-provider.ts",
+      "bytes": 6108,
+      "sha256": "b91c8fab22ff2ca281138e66c75ff966b2fc5bf6a68ba7834b00dbeca6dc9b47"
+    },
+    {
+      "path": "src/provider-control-plane.ts",
+      "bytes": 20186,
+      "sha256": "3fa100b5bd7bf20b2be4b64ee663964cbb99d72a4c4d6dddf39c03695a77f3bd"
+    },
+    {
+      "path": "src/provider-usage-store.ts",
+      "bytes": 8024,
+      "sha256": "d1baa96d6790b2c9f6d9c68786d3eff3f741e7cf4d43a3b89441b901de6fb399"
+    },
+    {
+      "path": "test/main-process-services-tests.mjs",
+      "bytes": 40133,
+      "sha256": "e3418de83b01999649b1d96e672fdd64d6f87aa1b5efc5c50548f1dac4ed4776"
+    },
+    {
+      "path": "test/program-control-tests.mjs",
+      "bytes": 89942,
+      "sha256": "5c6bcaf87372e0e306c681233e83dd26f96452539731c43d618a7706a87b0539"
+    },
+    {
+      "path": "test/provider-hardening-tests.mjs",
+      "bytes": 18355,
+      "sha256": "5e2dcf967fdc1da43f672db211aa52b8ab4d9c7b8dcec7e9d5eafc857d4caa78"
+    },
+    {
+      "path": "test/provider-tests.mjs",
+      "bytes": 11296,
+      "sha256": "1f8621ec16cb43335d1b1146e615588ff0acb7de2e0e675402f599e5b8bac3fd"
+    },
+    {
+      "path": "test/security-baseline.mjs",
+      "bytes": 59072,
+      "sha256": "e11d59031a2abf512924e27b4ac747012c62951114a72c763fe87ec6e5497f38"
+    },
+    {
+      "path": "tests/electron-e2e/run.mjs",
+      "bytes": 58643,
+      "sha256": "0b56f07a51f8a00168917ee9ec9a4bb2bd5ea1bebf9ae92a2d9e8956a6ddab16"
+    }
+  ],
+  "commands": [
+    {
+      "id": "build",
+      "command": "npm run build",
+      "startedAt": "2026-07-14T04:03:29.932Z",
+      "endedAt": "2026-07-14T04:03:32.722Z",
+      "durationMs": 2789,
+      "exitCode": 0,
+      "expectedExitCodes": [
+        0
+      ],
+      "status": "passed",
+      "logPath": "reports/evidence/HC-PROV-301/logs/build.log",
+      "logSha256": "bc22ef40f5b11e4bc4f00bd3d5eeb531b2cd43e872860edfca17495179797fc6"
+    },
+    {
+      "id": "provider-hardening-tests",
+      "command": "npm run test:provider-hardening",
+      "startedAt": "2026-07-14T04:03:32.723Z",
+      "endedAt": "2026-07-14T04:03:32.906Z",
+      "durationMs": 183,
+      "exitCode": 0,
+      "expectedExitCodes": [
+        0
+      ],
+      "status": "passed",
+      "logPath": "reports/evidence/HC-PROV-301/logs/provider-hardening-tests.log",
+      "logSha256": "b7ff95ed0d9a18ac3e9bddc3dd584d4bed911609c2b308a1448b09b174c6b36f"
+    },
+    {
+      "id": "provider-tests",
+      "command": "npm run test:providers",
+      "startedAt": "2026-07-14T04:03:32.906Z",
+      "endedAt": "2026-07-14T04:03:33.083Z",
+      "durationMs": 177,
+      "exitCode": 0,
+      "expectedExitCodes": [
+        0
+      ],
+      "status": "passed",
+      "logPath": "reports/evidence/HC-PROV-301/logs/provider-tests.log",
+      "logSha256": "aa8bed3909946179c7cec8cd9d180862fe37864f624ef8e45d1ccef5d7fdb04f"
+    },
+    {
+      "id": "model-provider-tests",
+      "command": "npm run test:model-providers",
+      "startedAt": "2026-07-14T04:03:33.084Z",
+      "endedAt": "2026-07-14T04:03:33.266Z",
+      "durationMs": 182,
+      "exitCode": 0,
+      "expectedExitCodes": [
+        0
+      ],
+      "status": "passed",
+      "logPath": "reports/evidence/HC-PROV-301/logs/model-provider-tests.log",
+      "logSha256": "41dcb98f479a81674ac60369f7f74e76f689e9e144e1456541a8069e11e3f5bf"
+    },
+    {
+      "id": "service-tests",
+      "command": "npm run test:services",
+      "startedAt": "2026-07-14T04:03:33.266Z",
+      "endedAt": "2026-07-14T04:03:37.773Z",
+      "durationMs": 4507,
+      "exitCode": 0,
+      "expectedExitCodes": [
+        0
+      ],
+      "status": "passed",
+      "logPath": "reports/evidence/HC-PROV-301/logs/service-tests.log",
+      "logSha256": "818a4d5688f3d726a3f4bd73e6cd4ff51886be23b3f2189d8dac9972750f9ceb"
+    },
+    {
+      "id": "renderer-tests",
+      "command": "npm run test:renderer",
+      "startedAt": "2026-07-14T04:03:37.774Z",
+      "endedAt": "2026-07-14T04:03:37.924Z",
+      "durationMs": 150,
+      "exitCode": 0,
+      "expectedExitCodes": [
+        0
+      ],
+      "status": "passed",
+      "logPath": "reports/evidence/HC-PROV-301/logs/renderer-tests.log",
+      "logSha256": "8cd45239566fbba03a5c48008edc6b80a891290416636fb218d8739ec5cca7e0"
+    },
+    {
+      "id": "security-tests",
+      "command": "npm run test:security",
+      "startedAt": "2026-07-14T04:03:37.924Z",
+      "endedAt": "2026-07-14T04:03:38.025Z",
+      "durationMs": 101,
+      "exitCode": 0,
+      "expectedExitCodes": [
+        0
+      ],
+      "status": "passed",
+      "logPath": "reports/evidence/HC-PROV-301/logs/security-tests.log",
+      "logSha256": "bfa5bbfcbf27b54e36ea2ca114e706154a33ec7fca0d7e3c6fd01ed480833542"
+    },
+    {
+      "id": "verify",
+      "command": "npm run verify",
+      "startedAt": "2026-07-14T04:03:38.026Z",
+      "endedAt": "2026-07-14T04:04:15.167Z",
+      "durationMs": 37141,
+      "exitCode": 0,
+      "expectedExitCodes": [
+        0
+      ],
+      "status": "passed",
+      "logPath": "reports/evidence/HC-PROV-301/logs/verify.log",
+      "logSha256": "890563999c5fe352795308fae33df8b31a9858844abd9a6d82ecae723f802342"
+    },
+    {
+      "id": "release-check",
+      "command": "npm run release:check",
+      "startedAt": "2026-07-14T04:04:15.168Z",
+      "endedAt": "2026-07-14T04:04:52.152Z",
+      "durationMs": 36984,
+      "exitCode": 0,
+      "expectedExitCodes": [
+        0
+      ],
+      "status": "passed",
+      "logPath": "reports/evidence/HC-PROV-301/logs/release-check.log",
+      "logSha256": "cb8d977feb70b29fbb58d0bc8311d3402705322adf74afd80642304ba4a1df9f"
+    },
+    {
+      "id": "feature-tests",
+      "command": "/Applications/QClaw.app/Contents/Resources/node/node test/feature-tests.mjs",
+      "startedAt": "2026-07-14T04:04:52.153Z",
+      "endedAt": "2026-07-14T04:04:54.527Z",
+      "durationMs": 2374,
+      "exitCode": 0,
+      "expectedExitCodes": [
+        0
+      ],
+      "status": "passed",
+      "logPath": "reports/evidence/HC-PROV-301/logs/feature-tests.log",
+      "logSha256": "534392df37db2b86175f799134782b59da7e9cc1cb02dd93a54b660ee384f930"
+    },
+    {
+      "id": "dod-tests",
+      "command": "npm run test:dod",
+      "startedAt": "2026-07-14T04:04:54.528Z",
+      "endedAt": "2026-07-14T04:04:54.858Z",
+      "durationMs": 330,
+      "exitCode": 0,
+      "expectedExitCodes": [
+        0
+      ],
+      "status": "passed",
+      "logPath": "reports/evidence/HC-PROV-301/logs/dod-tests.log",
+      "logSha256": "f8b3096032e626f999dd376ae91b433d713bc544686c172eeb7bcc40c2e3154e"
+    },
+    {
+      "id": "dod-scan",
+      "command": "npm run scan:dod",
+      "startedAt": "2026-07-14T04:04:54.858Z",
+      "endedAt": "2026-07-14T04:04:55.187Z",
+      "durationMs": 329,
+      "exitCode": 0,
+      "expectedExitCodes": [
+        0
+      ],
+      "status": "passed",
+      "logPath": "reports/evidence/HC-PROV-301/logs/dod-scan.log",
+      "logSha256": "ffa051e98b7b11a1e05ded7f08c1a019351845ca1b5785e3acccb20f392b3bb8"
+    },
+    {
+      "id": "production-audit",
+      "command": "npm run audit:prod",
+      "startedAt": "2026-07-14T04:04:55.187Z",
+      "endedAt": "2026-07-14T04:04:56.382Z",
+      "durationMs": 1195,
+      "exitCode": 0,
+      "expectedExitCodes": [
+        0
+      ],
+      "status": "passed",
+      "logPath": "reports/evidence/HC-PROV-301/logs/production-audit.log",
+      "logSha256": "9f7c507d9af3253a1010988af30c28077e02547298ce7818fd3b1d736442f8b2"
+    },
+    {
+      "id": "electron-e2e",
+      "command": "npm run test:electron-e2e",
+      "startedAt": "2026-07-14T04:04:56.382Z",
+      "endedAt": "2026-07-14T04:05:21.931Z",
+      "durationMs": 25549,
+      "exitCode": 0,
+      "expectedExitCodes": [
+        0
+      ],
+      "status": "passed",
+      "logPath": "reports/evidence/HC-PROV-301/logs/electron-e2e.log",
+      "logSha256": "df2a5b46a79d543c5bff318030dc790bd55fd26e14433e998a27c671cc72aa8c"
+    },
+    {
+      "id": "program-control",
+      "command": "npm run test:program",
+      "startedAt": "2026-07-14T04:05:21.931Z",
+      "endedAt": "2026-07-14T04:05:22.118Z",
+      "durationMs": 186,
+      "exitCode": 0,
+      "expectedExitCodes": [
+        0
+      ],
+      "status": "passed",
+      "logPath": "reports/evidence/HC-PROV-301/logs/program-control.log",
+      "logSha256": "22757b7979ac05588d32b9dabaea27ba6668168f6f3ba721ded872f23e7639fd"
+    },
+    {
+      "id": "git-diff-check",
+      "command": "git diff --check",
+      "startedAt": "2026-07-14T04:05:22.118Z",
+      "endedAt": "2026-07-14T04:05:22.142Z",
+      "durationMs": 24,
+      "exitCode": 0,
+      "expectedExitCodes": [
+        0
+      ],
+      "status": "passed",
+      "logPath": "reports/evidence/HC-PROV-301/logs/git-diff-check.log",
+      "logSha256": "3d4d50cd32af92c6d4df37c1df74a96622fca8cfb5643a155c91f034a42f2068"
+    }
+  ],
+  "summary": {
+    "total": 16,
+    "passed": 16,
+    "failed": 0,
+    "allPassed": true
+  }
+}

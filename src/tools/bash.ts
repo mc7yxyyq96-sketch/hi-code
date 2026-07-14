@@ -1,87 +1,36 @@
-import { spawn, spawnSync } from "node:child_process";
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
+import { spawn } from "node:child_process";
+import {
+  createExecutionLaunchPlan,
+  detectExecutionCapabilities,
+  evaluateExecutionPolicy,
+  terminateExecutionProcessTree,
+  type ExecutionCapabilities,
+  type ExecutionPolicyAudit,
+} from "../execution-policy.js";
+import { buildSafeChildEnv } from "../process-env.js";
 import { resolveWorkspacePath, type ToolContext } from "./fs.js";
 
 export interface BashResult {
   output: string;
   exitCode: number;
+  executionPolicy?: {
+    strength: string;
+    backend: string;
+    warnings: string[];
+    audit: ExecutionPolicyAudit;
+  };
 }
 
 export type BashOutputStream = "stdout" | "stderr";
 export type BashOutputCallback = (chunk: string, stream: BashOutputStream) => void;
 
-let sandboxExecPath: string | null | undefined; // undefined = not probed yet
-
-/** Whether macOS sandbox-exec is available (probed once). */
-function sandboxAvailable(): boolean {
-  if (sandboxExecPath === undefined) {
-    if (process.platform !== "darwin") {
-      sandboxExecPath = null;
-    } else {
-      const r = spawnSync("/bin/sh", ["-c", "command -v sandbox-exec"], { encoding: "utf8" });
-      sandboxExecPath = r.status === 0 ? "sandbox-exec" : null;
-    }
-  }
-  return sandboxExecPath !== null;
-}
-
-/**
- * Build the spawn argv. With sandbox enabled on macOS, wrap bash in
- * sandbox-exec with an SBPL profile: reads allowed everywhere, but writes
- * confined to the workspace, temp dirs, and the usual devices.
- */
-function buildInvocation(ctx: ToolContext, command: string): { cmd: string; argv: string[]; cleanup?: () => void } {
-  const readOnly = ctx.bashMode === "read-only";
-  if (readOnly && !sandboxAvailable()) {
-    return {
-      cmd: "bash",
-      argv: ["-lc", "echo 'read-only bash is unavailable because sandbox-exec is not available' >&2; exit 126"],
-    };
-  }
-  if (!readOnly && (!ctx.sandbox || !sandboxAvailable())) {
-    return { cmd: "bash", argv: ["-lc", command] };
-  }
-  const profile = readOnly ? readOnlyProfile() : workspaceWriteProfile(ctx.cwd);
-  const profilePath = path.join(os.tmpdir(), `vibe-sandbox-${process.pid}-${Date.now()}.sb`);
-  fs.writeFileSync(profilePath, profile);
-  return {
-    cmd: "sandbox-exec",
-    argv: ["-f", profilePath, "bash", "-lc", command],
-    cleanup: () => {
-      try {
-        fs.unlinkSync(profilePath);
-      } catch {
-        /* ignore */
-      }
-    },
-  };
-}
-
-function readOnlyProfile(): string {
-  return [
-    "(version 1)",
-    "(allow default)",
-    "(deny file-write*)",
-    `(allow file-write* (literal "/dev/null") (literal "/dev/stdout") (literal "/dev/stderr"))`,
-  ].join("\n");
-}
-
-function workspaceWriteProfile(cwd: string): string {
-  return [
-    "(version 1)",
-    "(allow default)",
-    "(deny file-write*)",
-    `(allow file-write* (subpath ${q(cwd)}) (subpath "/tmp") (subpath "/private/tmp") (subpath ${q(os.tmpdir())}) (literal "/dev/null") (literal "/dev/stdout") (literal "/dev/stderr") (subpath "/private/var/folders"))`,
-  ].join("\n");
-}
-
-function q(p: string): string {
-  return '"' + p.replace(/"/g, '\\"') + '"';
-}
-
 const BASE_BASH_ENV_ALLOWLIST = new Set(["PATH", "HOME", "SHELL", "TMPDIR", "LANG", "LC_ALL"]);
+let cachedExecutionCapabilities: ExecutionCapabilities | null = null;
+
+export function bashExecutionCapabilities(): ExecutionCapabilities {
+  cachedExecutionCapabilities ||= detectExecutionCapabilities();
+  return cachedExecutionCapabilities;
+}
 
 export function filterEnv(
   source: NodeJS.ProcessEnv = process.env,
@@ -91,12 +40,10 @@ export function filterEnv(
     .split(",")
     .map((name) => name.trim())
     .filter(Boolean);
-  const allowed = new Set([...BASE_BASH_ENV_ALLOWLIST, ...configured, ...extraAllowlist]);
-  const env: NodeJS.ProcessEnv = {};
-  for (const key of allowed) {
-    if (/^[A-Z_][A-Z0-9_]*$/i.test(key) && source[key] !== undefined) env[key] = source[key];
-  }
-  return env;
+  return buildSafeChildEnv({
+    source,
+    allowlist: [...BASE_BASH_ENV_ALLOWLIST, ...configured, ...extraAllowlist],
+  });
 }
 
 export function runBash(
@@ -105,19 +52,49 @@ export function runBash(
   signal?: AbortSignal,
   onOutput?: BashOutputCallback,
 ): Promise<BashResult> {
-  const timeoutMs = Math.min(args.timeout ?? 120000, 600000);
+  const timeoutMs = Math.max(100, Math.min(args.timeout ?? 120000, 600000));
+  const capabilities = bashExecutionCapabilities();
+  const readOnly = ctx.bashMode === "read-only";
+  const policyDecision = evaluateExecutionPolicy({
+    id: readOnly ? "reviewer-bash" : "runtime-bash",
+    surface: readOnly ? "reviewer-bash" : "runtime-bash",
+    executable: "bash",
+    args: ["-lc", args.command],
+    cwd: ctx.cwd,
+    allowedRoots: [ctx.cwd],
+    filesystem: readOnly ? "read-only" : ctx.sandbox ? "workspace-write" : "unrestricted",
+    network: ctx.networkPolicy === "deny" ? "deny" : "allow",
+    environment: { source: process.env, allowlist: ctx.envAllowlist },
+    limits: { timeoutMs, outputBytes: 100_000 },
+    approval: { required: true, granted: true },
+    processTree: { required: true },
+    enforcementMode: "strict",
+  }, capabilities);
+  if (!policyDecision.ok) {
+    return Promise.resolve({
+      output: `execution policy denied: ${policyDecision.error || policyDecision.code}`,
+      exitCode: 126,
+    });
+  }
+  const plan = createExecutionLaunchPlan(policyDecision, capabilities);
+  const executionPolicy = {
+    strength: plan.strength,
+    backend: plan.audit.backend,
+    warnings: [...plan.warnings],
+    audit: plan.audit,
+  };
   return new Promise((resolve) => {
     if (signal?.aborted) {
-      resolve({ output: "interrupted", exitCode: 130 });
+      resolve({ output: "interrupted", exitCode: 130, executionPolicy });
       return;
     }
 
-    const inv = buildInvocation(ctx, args.command);
-    const detached = process.platform !== "win32";
-    const child = spawn(inv.cmd, inv.argv, {
-      cwd: ctx.cwd,
-      env: filterEnv(process.env, ctx.envAllowlist),
-      detached,
+    const child = spawn(plan.command, plan.args, {
+      cwd: plan.cwd,
+      env: plan.env,
+      detached: plan.detached,
+      shell: false,
+      windowsHide: true,
     });
 
     let out = "";
@@ -125,7 +102,7 @@ export function runBash(
     let aborted = false;
     let settled = false;
     let forceKillTimer: ReturnType<typeof setTimeout> | undefined;
-    const cap = 100_000; // cap captured output to keep context lean
+    const cap = plan.outputBytes;
 
     const onData = (stream: BashOutputStream) => (d: Buffer) => {
       const chunk = d.toString();
@@ -136,16 +113,8 @@ export function runBash(
     child.stderr.on("data", onData("stderr"));
 
     const killChild = (killSignal: NodeJS.Signals) => {
-      try {
-        if (detached && child.pid) process.kill(-child.pid, killSignal);
-        else child.kill(killSignal);
-      } catch {
-        try {
-          child.kill(killSignal);
-        } catch {
-          /* process already exited */
-        }
-      }
+      if (!child.pid) return;
+      terminateExecutionProcessTree({ pid: child.pid, signal: killSignal });
     };
 
     const terminate = (reason: "timeout" | "abort") => {
@@ -169,8 +138,7 @@ export function runBash(
       clearTimeout(timer);
       if (forceKillTimer) clearTimeout(forceKillTimer);
       signal?.removeEventListener("abort", onAbort);
-      inv.cleanup?.();
-      resolve(result);
+      resolve({ ...result, executionPolicy });
     };
 
     child.on("close", (code) => {
@@ -220,7 +188,11 @@ function shellQuote(s: string): string {
 
 function commandExists(cmd: string): Promise<boolean> {
   return new Promise((resolve) => {
-    const c = spawn("bash", ["-lc", `command -v ${cmd}`]);
+    const c = spawn("bash", ["-lc", `command -v ${cmd}`], {
+      env: buildSafeChildEnv(),
+      shell: false,
+      windowsHide: true,
+    });
     c.on("close", (code) => resolve(code === 0));
     c.on("error", () => resolve(false));
   });

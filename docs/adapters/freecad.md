@@ -79,6 +79,8 @@ Validation rejects:
 
 ## Real Execution
 
+Every real process is launched by the shared execution-policy runner after fresh main-process approval. It receives a minimized environment, workspace-confined write roots, bounded output and timeout, managed descendant cleanup, and `network: deny`. Result metadata records the truthful platform backend and isolation strength; unsupported operating-system controls remain visibly weak.
+
 Real execution requires:
 
 - FreeCAD installed and detected

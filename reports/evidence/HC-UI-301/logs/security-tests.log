@@ -1,0 +1,181 @@
+$ npm run test:security
+
+[security] runtime baseline
+  ✓ contextIsolation remains enabled
+  ✓ nodeIntegration remains disabled
+  ✓ renderer sandbox enabled
+  ✓ renderer-created windows are denied
+  ✓ untrusted renderer navigation is blocked
+  ✓ renderer CSP exists
+  ✓ CSP blocks remote script by default
+  ✓ desktop runtime disables slash-command process exit
+  ✓ native app launcher only intercepts known app aliases
+  ✓ desktop bridge filters terminal tool chrome from chat output
+  ✓ complete model context stays out of legacy timeline logs
+  ✓ runtime emits versioned protocol envelopes
+  ✓ runtime protocol events are append-only persisted
+  ✓ approval decisions are durably correlated
+  ✓ turn recovery blocks unknown side effects
+  ✓ turn recovery never reuses prior approval
+  ✓ Responses remote endpoints require HTTPS
+  ✓ Responses requests disable provider-side storage
+  ✓ Responses credentials stay out of descriptors and persisted events
+  ✓ Responses tool streams reject unannounced items
+  ✓ native provider endpoints require HTTPS or loopback HTTP
+  ✓ native provider response readers are bounded
+  ✓ Anthropic credentials stay in request headers only
+  ✓ Anthropic tool streams require announced content blocks
+  ✓ Ollama raw thinking is disabled and never emitted
+  ✓ Ollama placeholder key is not sent as authorization
+  ✓ app version is synced from package metadata
+  ✓ preload does not expose ipcRenderer
+  ✓ preload does not expose generic invoke
+  ✓ preload validates string parameters
+  ✓ preload normalizes object parameters
+  ✓ preload exposes bounded typed attachment API
+  ✓ preload exposes Industrial Project API
+  ✓ preload normalizes Industrial Project payloads
+  ✓ preload exposes Domain Pack API
+  ✓ preload validates Domain Pack packId arguments
+  ✓ preload exposes Agent Team API
+  ✓ preload validates Agent Team id arguments
+  ✓ preload exposes Industrial Toolchain API
+  ✓ preload validates Industrial Toolchain adapter ids
+  ✓ preload exposes Quality Gate API
+  ✓ preload normalizes Quality Gate payloads
+  ✓ preload exposes Release Builder API
+  ✓ preload normalizes Release Builder payloads
+  ✓ preload exposes Sample Project API
+  ✓ IPC handlers use normalized wrapper
+  ✓ main process delegates IPC registration
+  ✓ attachments use app-data content addressing without source paths
+  ✓ attachment store enforces owner permissions and integrity
+  ✓ attachment capability checks happen before transport
+  ✓ command registry fails closed on alias and route conflicts
+  ✓ workspace image compatibility path still restricts data URL formats and size
+  ✓ model image rejection returns actionable guidance
+  ✓ model provider descriptors exclude credentials
+  ✓ model provider errors redact authorization and secret fields
+  ✓ model capability negotiation happens before adapter execution
+  ✓ production orchestration uses the model provider facade
+  ✓ main process wires Release Builder service
+  ✓ main process wires Sample Project service
+  ✓ no direct IPC handle registrations in main
+  ✓ bash tool filters inherited env
+  ✓ safe child env service denies inherited secrets by default
+  ✓ MCP server process uses safe child env
+  ✓ FreeCAD execution uses safe child env
+  ✓ Electron E2E isolates HOME and USERPROFILE
+  ✓ Electron E2E rejects inherited secret variables
+  ✓ Electron E2E enters chat through a local command
+  ✓ Store rejects remote local paths
+  ✓ Store rejects remote sourceRoot paths
+  ✓ Store rejects remote sourcePath paths
+  ✓ remote downloads require HTTPS
+  ✓ Store download filename is sanitized
+  ✓ Store download retries fallback mirrors
+  ✓ Store uninstall is restricted to store dir
+  ✓ disabled Store capabilities remain manageable
+  ✓ Store schema reserves sha256
+  ✓ Store schema reserves signature
+  ✓ unverified download requires confirmation
+  ✓ preload exposes managed Store actions
+  ✓ Domain Packs reject automatic scripts
+  ✓ Domain Packs require HTTPS for remote installs
+  ✓ Domain Packs reserve hash or signature
+  ✓ Domain Packs reject remote local paths
+  ✓ Domain Packs restrict install paths to safe root
+  ✓ Agent Team store restricts paths to safe root
+  ✓ Agent Team marks industrial tools as dry-run only
+  ✓ Industrial Tool adapters restrict artifact paths
+  ✓ Industrial Tool adapters require approval for execution
+  ✓ Industrial Tool adapters mark dry-run artifacts simulated
+  ✓ Industrial Tool adapters keep generic real execution blocked
+  ✓ Industrial Tool adapters include FreeCAD execution path
+  ✓ FreeCAD adapter writes dry-run plan artifacts
+  ✓ Industrial Tool adapters include KiCad execution path
+  ✓ KiCad adapter writes dry-run plan artifacts
+  ✓ KiCad adapter confines outputs to project artifacts
+  ✓ KiCad adapter records simulated dry-run gates
+  ✓ Industrial Tool adapters include OpenPLC execution path
+  ✓ OpenPLC adapter writes required engineering artifacts
+  ✓ OpenPLC adapter writes compile dry-run artifacts
+  ✓ OpenPLC adapter confines outputs to project artifacts
+  ✓ OpenPLC adapter requires approval and forbids device/network access
+  ✓ OpenPLC adapter keeps missing compiler gate not_run
+  ✓ Industrial Tool adapters include IfcOpenShell execution path
+  ✓ IfcOpenShell adapter writes BIM dry-run artifacts
+  ✓ IfcOpenShell adapter writes inspection report and summary
+  ✓ IfcOpenShell adapter confines outputs and IFC paths
+  ✓ IfcOpenShell adapter forbids code compliance conclusions
+  ✓ IfcOpenShell dry-run gates are simulated
+  ✓ Industrial Tool adapters include SolidWorks bridge path
+  ✓ SolidWorks bridge detects unsupported platforms
+  ✓ SolidWorks bridge writes required dry-run artifacts
+  ✓ SolidWorks bridge marks external artifacts explicitly
+  ✓ SolidWorks bridge confines outputs to project artifacts
+  ✓ SolidWorks bridge requires commercial authorization
+  ✓ SolidWorks bridge does not execute COM automatically
+  ✓ Industrial Tool adapters include AVEVA bridge path
+  ✓ AVEVA bridge rejects plaintext credentials
+  ✓ AVEVA bridge writes required dry-run templates
+  ✓ AVEVA bridge marks enterprise outputs explicitly
+  ✓ AVEVA bridge confines outputs to project artifacts
+  ✓ AVEVA bridge blocks real connector execution
+  ✓ AVEVA bridge checks HTTPS endpoint and allowed operations
+  ✓ Quality Gate Runner defines required gate types
+  ✓ Quality Gate Runner defines release gate statuses
+  ✓ Quality Gate command execution avoids shell syntax
+  ✓ Quality Gate Runner confines artifact paths
+  ✓ Quality Gate simulated adapter is not passed
+  ✓ Release Builder confines release and artifact paths
+  ✓ Release Builder writes required package files
+  ✓ Release Builder blocks failed and approval gates
+  ✓ Release Builder marks simulated without passing
+  ✓ Definition of Done detects skeleton delivery risks
+  ✓ Definition of Done writes durable evidence
+  ✓ Release Builder runs Definition of Done and blocks release
+  ✓ Patch Arena runs skeleton detector for candidates
+  ✓ Renderer exposes DoD, skeleton risk, and artifact completeness
+  ✓ Release Builder records Job-facing release package artifact path
+  ✓ Industrial Control Box sample confines paths to workspace
+  ✓ Industrial Control Box sample uses real adapters and Release Builder
+  ✓ Industrial Control Box sample writes required real artifacts
+  ✓ Industrial Control Box sample marks dry-run and not_run evidence
+  ✓ Sample Project service records Job Center artifact and gate evidence
+  ✓ release:check uses package-manager independent verifier
+  ✓ production audit uses package-lock and HTTPS registry
+  ✓ package version is on v0.6 alpha development line
+  ✓ verify script includes version sync
+  ✓ verify script includes build
+  ✓ verify script includes syntax check
+  ✓ verify script includes feature tests
+  ✓ verify script includes runtime protocol tests
+  ✓ verify script includes typed runtime store tests
+  ✓ verify script includes runtime store integration tests
+  ✓ verify script includes turn recovery tests
+  ✓ verify script includes Electron compatibility tests
+  ✓ verify script includes service tests
+  ✓ verify script includes job center tests
+  ✓ verify script includes provider tests
+  ✓ verify script includes model provider tests
+  ✓ verify script includes OpenAI Responses conformance tests
+  ✓ verify script includes Anthropic and Ollama conformance tests
+  ✓ verify script includes attachment and command contracts
+  ✓ verify script includes worktree tests
+  ✓ verify script includes patch arena tests
+  ✓ verify script includes industrial project tests
+  ✓ verify script includes domain pack tests
+  ✓ verify script includes agent team tests
+  ✓ verify script includes industrial tool tests
+  ✓ verify script includes quality gate tests
+  ✓ verify script includes release builder tests
+  ✓ verify script includes sample project tests
+  ✓ verify script includes Definition of Done tests
+  ✓ verify script includes typed App Shell tests
+  ✓ verify script includes program control tests
+  ✓ verify script includes usage persistence tests
+
+=== 174 passed, 0 failed ===
+
+$ node test/security-baseline.mjs

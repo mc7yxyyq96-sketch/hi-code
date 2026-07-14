@@ -4,8 +4,10 @@ import path from "node:path";
 
 import { AgentProviderRegistry, createPlaceholderProvider } from "../dist/agent-provider.js";
 import { JobStore } from "../dist/job-center.js";
+import { providerSecretRef } from "../dist/secret-references.js";
 import { WorktreeRunner } from "../dist/worktree-runner.js";
 import { createProviderService } from "../electron/services/provider-service.mjs";
+import { createElectronSecretStore } from "../electron/services/secret-store-service.mjs";
 
 let pass = 0;
 let fail = 0;
@@ -28,6 +30,20 @@ async function rejects(name, fn, pattern) {
     const message = error?.message || String(error);
     check(name, pattern ? pattern.test(message) : true, message);
   }
+}
+
+function fakeSafeStorage() {
+  return {
+    isEncryptionAvailable: () => true,
+    encryptString(value) {
+      return Buffer.from(`encrypted:${value}`, "utf8");
+    },
+    decryptString(value) {
+      const text = Buffer.from(value).toString("utf8");
+      if (!text.startsWith("encrypted:")) throw new Error("invalid ciphertext");
+      return text.slice("encrypted:".length);
+    },
+  };
 }
 
 console.log("\n[providers] registry");
@@ -77,6 +93,13 @@ const jobStore = new JobStore({
   idPrefix: "provider-job",
 });
 const worktreeRunner = new WorktreeRunner({ safeRoot: path.join(tmp, "worktrees"), idPrefix: "provider-test" });
+const providerConfigPath = path.join(tmp, "providers.json");
+const secretStore = createElectronSecretStore({
+  safeStorage: fakeSafeStorage(),
+  rootDir: path.join(tmp, "secrets"),
+  configPath: path.join(tmp, "config.json"),
+  platform: "darwin",
+});
 
 let enqueued = null;
 const service = createProviderService({
@@ -94,13 +117,78 @@ const service = createProviderService({
     },
   },
   getCwd: () => workspace,
-  configPath: path.join(tmp, "providers.json"),
+  configPath: providerConfigPath,
   runArtifactDir,
+  secretStore,
 });
 
 const providers = service.listProviders().providers;
 check("service lists internal provider", providers.some((provider) => provider.id === "hicode-internal" && provider.status === "enabled"));
 check("service lists reserved codex provider as not_configured", providers.some((provider) => provider.id === "codex-cli" && provider.status === "not_configured"));
+
+console.log("\n[providers] credential persistence");
+const providerCredential = "provider-plaintext-secret";
+const providerRef = providerSecretRef("local-model", "apiKey");
+const configuredLocal = service.configureProvider("local-model", {
+  config: { endpoint: "http://127.0.0.1:11434", apiKey: providerCredential },
+});
+const persistedProviderText = fs.readFileSync(providerConfigPath, "utf8");
+const persistedProviderState = JSON.parse(persistedProviderText);
+check("provider credential config succeeds", configuredLocal.ok === true);
+check("provider state does not persist plaintext credential", !persistedProviderText.includes(providerCredential));
+check(
+  "provider state persists an opaque secret reference",
+  persistedProviderState.providers?.["local-model"]?.config?.apiKey?.secretRef === providerRef,
+);
+check("provider credential resolves only through secure store", secretStore.resolve(providerRef) === providerCredential);
+check("provider descriptor does not expose credential config", !JSON.stringify(configuredLocal.provider).includes(providerCredential));
+const retainedLocal = service.configureProvider("local-model", {
+  config: { endpoint: "http://127.0.0.1:11435", apiKey: "" },
+});
+const retainedState = JSON.parse(fs.readFileSync(providerConfigPath, "utf8"));
+check(
+  "blank provider credential preserves the existing reference",
+  retainedLocal.ok === true && retainedState.providers?.["local-model"]?.config?.apiKey?.secretRef === providerRef,
+);
+check("blank provider credential does not erase the secure value", secretStore.resolve(providerRef) === providerCredential);
+const omittedLocal = service.configureProvider("local-model", {
+  config: { endpoint: "http://127.0.0.1:11436" },
+});
+const omittedState = JSON.parse(fs.readFileSync(providerConfigPath, "utf8"));
+check(
+  "omitted provider credential preserves the existing reference",
+  omittedLocal.ok === true && omittedState.providers?.["local-model"]?.config?.apiKey?.secretRef === providerRef,
+);
+
+const legacyProviderPath = path.join(tmp, "legacy-providers.json");
+const legacyCredential = "legacy-provider-secret";
+fs.writeFileSync(legacyProviderPath, JSON.stringify({
+  schemaVersion: 1,
+  providers: {
+    "local-model": {
+      enabled: true,
+      config: { endpoint: "http://127.0.0.1:11434", apiKey: legacyCredential },
+    },
+  },
+}, null, 2));
+const legacySecretStore = createElectronSecretStore({
+  safeStorage: fakeSafeStorage(),
+  rootDir: path.join(tmp, "legacy-secrets"),
+  configPath: path.join(tmp, "legacy-config.json"),
+  platform: "darwin",
+});
+createProviderService({
+  inputQueue: { enqueue() { throw new Error("not expected"); } },
+  jobStore,
+  worktreeRunner,
+  getCwd: () => workspace,
+  configPath: legacyProviderPath,
+  runArtifactDir,
+  secretStore: legacySecretStore,
+});
+const migratedProviderText = fs.readFileSync(legacyProviderPath, "utf8");
+check("legacy provider credential is removed from persisted state", !migratedProviderText.includes(legacyCredential));
+check("legacy provider credential migrates into secure storage", legacySecretStore.resolve(providerRef) === legacyCredential);
 
 const disabled = service.configureProvider("hicode-internal", { enabled: false });
 check("service can disable provider", disabled.ok && disabled.provider.status === "disabled");
@@ -138,6 +226,7 @@ const failingService = createProviderService({
   getCwd: () => workspace,
   configPath: path.join(tmp, "failing-providers.json"),
   runArtifactDir: path.join(tmp, "failing-provider-runs"),
+  secretStore,
 });
 const failedRun = await failingService.runProvider("hicode-internal", { prompt: "this should fail", actor: "tester" });
 const failedJob = failingStore.getJob(failedRun.result?.jobId || "");

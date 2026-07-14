@@ -1,0 +1,6 @@
+$ npm run release:package-smoke -- --platform=darwin
+
+> hi-code@0.6.0-alpha.8 release:package-smoke
+> node scripts/package-smoke.mjs --platform=darwin
+
+[package-smoke] darwin 0.6.0-alpha.8: Hi-Code-0.6.0-alpha.8-mac-arm64.dmg, Hi-Code-0.6.0-alpha.8-mac-arm64.zip; lifecycle=passed

@@ -1,0 +1,59 @@
+$ npm run test:provider-hardening
+
+> hi-code@0.6.0-alpha.8 test:provider-hardening
+> node test/provider-hardening-tests.mjs
+
+
+[provider-hardening] unified control registry
+  ✓ registry distinguishes Model Provider from External Agent Provider
+  ✓ registry discovers providers by capability
+  ✓ registry exposes bounded capability metadata
+  ✓ registry reports schema and revision version
+  ✓ registry runs provider health checks
+  ✓ registry disables providers
+  ✓ registry enables providers
+  ✓ privacy boundary rejects remote provider marked local-only
+
+[provider-hardening] credential and failure policy
+  ✓ expired credentials are explicit
+  ✓ soon-expiring credentials are explicit
+  ✓ failures normalize timeout/quota/auth/network/unavailable
+  ✓ failure messages redact credential-shaped data
+  ✓ retry and fallback select a healthy provider
+
+[provider-hardening] local usage ledger
+  ✓ usage persists tokens, latency, cost and failure rate
+  ✓ usage records provider and model aggregation
+  ✓ usage ledger excludes prompts and credentials
+  ✓ usage ledger is private on POSIX
+
+[provider-hardening] external Agent command boundary
+  ✓ custom worker validates absolute executable and bounded args
+  ✓ relative executable is rejected
+  ✓ command plan uses argv without shell text
+  ✓ external Agent logs redact secrets
+
+[provider-hardening] managed isolated external Agent run
+  ✓ external Agent health probe reports real executable version
+  ✓ external Agent run succeeds in isolated workspace
+  ✓ managed execution enforces approval, workspace root and no inherited env
+  ✓ external Agent run writes Job lifecycle evidence
+  ✓ external Agent output and artifact redact secrets
+  ✓ external Agent usage is recorded
+  ✓ denied external Agent never reaches process execution
+  ✓ denied external Agent writes failed Job and Gate evidence
+  ✓ dry-run is explicitly simulated and does not execute the Agent
+
+[provider-hardening] Provider Service discovery and UI contract
+  ✓ service discovers all production Model Provider adapters
+  ✓ service discovers internal and external Agent Provider adapters
+  ✓ service registry version covers unified providers
+  ✓ service exposes model capability and privacy metadata
+  ✓ Model Provider cannot be run as External Agent Provider
+  ✓ Provider Settings enable/disable persists
+  ✓ provider registry state never persists runtime API keys
+  ✓ Provider Settings has a real mounted panel
+  ✓ Provider Settings exposes health, credential, privacy and enable controls
+  ✓ Patch Arena only offers Agent Providers
+
+=== 40 passed, 0 failed ===

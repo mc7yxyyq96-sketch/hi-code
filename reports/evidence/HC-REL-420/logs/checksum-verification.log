@@ -1,0 +1,6 @@
+$ npm run release:verify-checksums
+
+> hi-code@0.6.0-alpha.8 release:verify-checksums
+> node scripts/checksum-release.mjs --verify
+
+[checksums] verified 7 artifacts from release/SHA256SUMS-v0.6.0-alpha.8.txt

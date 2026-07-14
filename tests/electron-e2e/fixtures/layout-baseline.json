@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "height": 820,
+  "widths": [720, 1024, 1440, 1920],
+  "brand": {
+    "text": "Hi Code",
+    "minimumVisibleWidth": 42
+  },
+  "navigation": [
+    { "button": "#jobsBtn", "view": "#jobView", "name": "Job Center" },
+    { "button": "#arenaBtn", "view": "#arenaView", "name": "Patch Arena" },
+    { "button": "#industrialBtn", "view": "#industrialView", "name": "Industrial Project" },
+    { "button": "#terminalBtn", "view": "#terminalView", "name": "Integrated terminal" },
+    { "button": "#previewBtn", "view": "#previewView", "name": "Secure app preview" },
+    { "button": "#gitBtn", "view": "#gitView", "name": "Git and diffs" },
+    { "button": "#storeBtn", "view": "#capabilityView", "name": "Store" }
+  ],
+  "responsivePanels": {
+    "timelineDrawerMaximumWidth": 1180,
+    "diffDrawerMaximumWidth": 900
+  }
+}

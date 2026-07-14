@@ -1,0 +1,25 @@
+$ npm run test:runtime-stores
+
+[runtime-stores] complete session snapshot
+  ✓ snapshot sync succeeds
+  ✓ repeated snapshot sync is idempotent
+  ✓ session rebuild preserves complete model context
+  ✓ thread metadata preserves usage
+
+[runtime-stores] event idempotency and diagnostics
+  ✓ first event append succeeds
+  ✓ same event append is a duplicate no-op
+  ✓ different event at the same sequence is rejected
+  ✓ valid events survive a corrupt neighboring line
+  ✓ corrupt line produces a bounded diagnostic
+
+[runtime-stores] security and lifecycle
+  ✓ thread record uses current schema
+  ✓ thread file is owner-only
+  ✓ message file is owner-only
+  ✓ unsafe session id is rejected
+  ✓ delete removes typed thread data
+
+=== 14 passed, 0 failed ===
+
+$ node test/runtime-store-tests.mjs

@@ -1,0 +1,45 @@
+$ npm run test:runtime-protocol
+
+[runtime-protocol] schema helpers
+  ✓ protocol event validates
+  ✓ protocol event keeps stable version
+  ✓ turn start maps to turn.started
+  ✓ validation rejects malformed event
+  ✓ kind mapper distinguishes failed turns
+  ✓ type guard accepts valid protocol event
+  ✓ normalized message event is hidden and valid
+  ✓ message event validation rejects missing model context
+  ✓ approval resolution maps and validates with request correlation
+  ✓ approval resolution rejects an unknown decision
+
+[runtime-protocol] runtime integration
+
+  ⚠ permission required
+  bash: touch should-not-run.txt
+Denied by user.
+  ✓ runtime emits protocol envelope on every event
+  ✓ runtime protocol sequence is monotonic
+  ✓ runtime protocol carries active session id
+  ✓ runtime protocol validates emitted events
+  ✓ permission request maps to approval kind
+  ✓ runtime persists paired approval request and decision
+  ✓ denied turn maps to turn.denied
+  ✓ runtime protocol events are appended to durable store
+  ✓ runtime replay keeps event order
+  ✓ runtime store reads valid protocol events
+  ✓ event-only runtime session appears in recent sessions
+  ✓ event-only runtime session replays user input
+  ✓ event-only runtime session explains replay-only recovery
+
+  ⚠ permission required
+  bash: touch resumed-should-not-run.txt
+Denied by user.
+  ✓ resumed runtime appends protocol events after prior sequence
+  ✓ resumed runtime did not execute denied command
+  ✓ CLI slash resume opens event-only sessions as read-only replay
+  ✓ runtime event store rejects path escape ids
+  ✓ runtime did not execute denied command
+
+=== 28 passed, 0 failed ===
+
+$ node test/runtime-protocol-tests.mjs

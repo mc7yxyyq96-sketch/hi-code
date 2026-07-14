@@ -1,0 +1,330 @@
+{
+  "schemaVersion": 1,
+  "program": "Hi Code Product-Grade Desktop and Industrial Workbench",
+  "updatedAt": "2026-07-14T04:30:52Z",
+  "risks": [
+    {
+      "id": "RISK-RUN-001",
+      "severity": "high",
+      "status": "mitigated",
+      "owner": "runtime-engine",
+      "title": "Assistant output is not yet fully protocol-native",
+      "evidence": ["src/runtime.ts", "src/runtime-event-sink.ts", "src/runtime-client-adapters.ts", "test/runtime-concurrency-tests.mjs", "reports/evidence/HC-RUN-201/manifest.json"],
+      "impact": "Concurrent desktop sessions can remain coupled to compatibility output capture, limiting reliable replay and SDK parity.",
+      "mitigation": "RuntimeEventSink, assistant delta/completed events, Electron/CLI/TUI adapters, concurrency isolation, and stdout-disabled real Electron acceptance are implemented in HC-RUN-201.",
+      "trigger": "Any output mixing, blank response, or transcript mismatch blocks release promotion."
+    },
+    {
+      "id": "RISK-RUN-002",
+      "severity": "high",
+      "status": "mitigated",
+      "owner": "runtime-engine",
+      "title": "Full model context depended on legacy session JSON",
+      "evidence": ["src/runtime-stores.ts", "src/runtime-event-store.ts", "src/session-store.ts", "test/runtime-store-integration-tests.mjs", "reports/evidence/HC-RUN-202/manifest.json"],
+      "impact": "A missing or stale legacy session snapshot could make a durable conversation read-only or silently lose assistant and tool context after a crash.",
+      "mitigation": "HC-RUN-202 persists exact hidden system/user/assistant/tool messages, reconstructs complete context from typed records or protocol JSONL, preserves legacy files, and verifies stale-snapshot crash recovery and idempotent import.",
+      "trigger": "Any resumable thread that loses tool-call semantics, duplicates records, or prefers a stale snapshot reopens this risk."
+    },
+    {
+      "id": "RISK-RUN-003",
+      "severity": "high",
+      "status": "mitigated",
+      "owner": "runtime-engine",
+      "title": "Interrupted turns require side-effect-aware recovery",
+      "evidence": ["src/turn-state-machine.ts", "src/recovery.ts", "test/turn-recovery-tests.mjs", "test/runtime-store-integration-tests.mjs", "reports/evidence/HC-RUN-203/manifest.json"],
+      "impact": "A blind retry can duplicate a tool side effect, reuse stale approval, or overwrite a complete assistant answer.",
+      "mitigation": "HC-RUN-203 records approval decisions, preserves bounded partial output, restores the source session before safe retries, and blocks replay when a side-effecting tool is complete or has unknown state.",
+      "trigger": "Any automatic retry after unknown or completed mutating work, reused approval, or interrupted turn presented as completed reopens this risk."
+    },
+    {
+      "id": "RISK-QA-001",
+      "severity": "high",
+      "status": "mitigated",
+      "owner": "desktop-ux",
+      "title": "No real Electron responsive E2E baseline",
+      "evidence": ["tests/electron-e2e/run.mjs", "tests/electron-e2e/fixtures", "reports/evidence/HC-QA-101/manifest.json"],
+      "impact": "Unit and renderer smoke tests can miss clipping, unreachable controls, window lifecycle, and preload integration regressions.",
+      "mitigation": "Playwright now launches the production Electron entrypoint at 720/1024/1440 widths locally and under Linux/Xvfb CI, with real navigation, drawer, overflow, and page-error assertions.",
+      "trigger": "A core action hidden without an alternative or a failed real Electron launch blocks release."
+    },
+    {
+      "id": "RISK-UI-002",
+      "severity": "high",
+      "status": "mitigated",
+      "owner": "desktop-ux",
+      "title": "React App Shell and legacy panels can diverge during gradual migration",
+      "evidence": [
+        "renderer/index.html",
+        "renderer/app/bootstrap.js",
+        "renderer/app-shell/",
+        "tests/electron-e2e/run.mjs",
+        "docs/app-shell.md",
+        "reports/evidence/HC-UI-301/manifest.json"
+      ],
+      "impact": "Duplicate route state or hidden legacy controls could make an existing panel unreachable even though unit tests pass.",
+      "mitigation": "One typed route registry and Legacy Panel Adapter now own shell route visibility, every existing production panel is validated before mount, and real Electron navigation passed at 720, 1024, 1440, and 1920 widths. Remaining panel-by-panel migration stays behind this compatibility boundary.",
+      "trigger": "Any route with two state owners, any legacy view without a reachable route, or any 720-1920 clipping failure blocks HC-UI-301 completion."
+    },
+    {
+      "id": "RISK-UI-003",
+      "severity": "high",
+      "status": "mitigated",
+      "owner": "desktop-ux",
+      "title": "React workbench migration can duplicate live conversation state or degrade long sessions",
+      "evidence": [
+        "renderer/app/bootstrap.js",
+        "renderer/app-shell/workspace/",
+        "test/workspace-shell-tests.ts",
+        "tests/electron-e2e/run.mjs",
+        "reports/evidence/HC-UI-302/manifest.json"
+      ],
+      "impact": "A second transcript owner can lose streaming output, open the wrong session, hide approval/diff actions, or render thousands of messages synchronously.",
+      "mitigation": "HC-UI-302 now uses one typed workspace store and the existing production handlers as its only callbacks. Conversation rendering is bounded to 160 mounted rows, saved/live session switching preserves the source snapshot, unavailable actions fail closed, and real Electron verifies long transcripts plus keyboard-complete drawers.",
+      "trigger": "Any duplicated persistence path, unbounded long-session DOM, hidden action without an alternative, lost live output, or keyboard trap blocks HC-UI-302 completion."
+    },
+    {
+      "id": "RISK-UI-004",
+      "severity": "high",
+      "status": "mitigated",
+      "owner": "desktop-ux",
+      "title": "Integrated editor can overwrite external changes or create a fake review loop",
+      "evidence": [
+        "electron/services/editor-service.mjs",
+        "renderer/components/file-tree.js",
+        "renderer/app-shell/workspace/Inspector.tsx",
+        "test/editor-workbench-tests.ts",
+        "tests/electron-e2e/run.mjs",
+        "reports/evidence/HC-UI-310/manifest.json"
+      ],
+      "impact": "A stale editor save can destroy disk changes, while a comment button without a persisted Runtime request can mislead users into believing an Agent revision was requested.",
+      "mitigation": "HC-UI-310 uses workspace-confined SHA-256 revisions, bounded UTF-8 snapshots, double conflict comparison, atomic sibling replacement, sticky explicit conflict resolution, a lazy local CodeMirror surface, and typed line comments that enter the existing Runtime/session path. Real Electron verifies refusal to overwrite external changes and a model-backed revision request.",
+      "trigger": "Any save without revision comparison, hidden force overwrite, unsafe path, unbounded/binary load, or review action that does not enter the Runtime blocks HC-UI-310 completion."
+    },
+    {
+      "id": "RISK-UI-005",
+      "severity": "high",
+      "status": "mitigated",
+      "owner": "desktop-ux",
+      "title": "An integrated PTY can bypass policy or outlive its terminal",
+      "evidence": [
+        "reports/tasks/HC-UI-311.md",
+        "electron/services/terminal-service.mjs",
+        "renderer/app-shell/terminal/TerminalPortal.tsx",
+        "test/terminal-service-tests.mjs",
+        "test/terminal-workbench-tests.ts",
+        "tests/electron-e2e/run.mjs",
+        "reports/evidence/HC-UI-311/manifest.json",
+        "reports/evidence/HC-UI-311/ci-matrix.json"
+      ],
+      "impact": "An unrestricted PTY can inherit credentials, execute without explicit policy, retain hidden child processes, or continue producing output after the UI closes.",
+      "mitigation": "HC-UI-311 uses a centralized owner-scoped PTY service, explicit Runtime-policy authorization, trusted profile-free shells, minimal child environments, bounded non-persisted output, resize validation, stale-start cancellation, and verified descendant/process-group termination. Local real Electron and packaged macOS checks passed; GitHub Actions run 29167924876 also passed real Electron smoke on Ubuntu, macOS, and Windows.",
+      "trigger": "Any PTY spawn without policy approval, inherited secret, unbounded transcript, cross-workspace session, or surviving process tree blocks HC-UI-311 completion."
+    },
+    {
+      "id": "RISK-UI-006",
+      "severity": "high",
+      "status": "mitigated",
+      "owner": "desktop-ux",
+      "title": "Previewed applications can escape their origin or inherit trusted renderer capabilities",
+      "evidence": [
+        "reports/tasks/HC-UI-312.md",
+        "docs/adr/ADR-0014-isolated-loopback-app-preview.md",
+        "electron/services/preview-service.mjs",
+        "renderer/app-shell/preview/PreviewPortal.tsx",
+        "test/preview-service-tests.mjs",
+        "test/preview-workbench-tests.ts",
+        "tests/electron-e2e/run.mjs",
+        "reports/evidence/HC-UI-312/manifest.json",
+        "reports/evidence/HC-UI-312/ci-matrix.json"
+      ],
+      "impact": "Untrusted local web content could navigate to a remote origin, open new windows, request privileged permissions, outlive its owner, or be mistaken for verified output.",
+      "mitigation": "HC-UI-312 isolates every loopback-only preview in a unique non-persistent sandboxed BrowserWindow with no preload, Node integration, DevTools, permissions, downloads, popups, webviews, external navigation, or cross-origin resources. Owner/workspace/app cleanup, bounded owner-only PNG/DOM evidence, failed-check preservation, local Electron acceptance, and Linux/macOS/Windows CI are committed as evidence.",
+      "trigger": "Any preview with a preload bridge, Node integration, non-loopback origin, unbounded evidence, external navigation, stale owner, or false verification result blocks HC-UI-312 completion."
+    },
+    {
+      "id": "RISK-GIT-001",
+      "severity": "high",
+      "status": "mitigated",
+      "owner": "runtime-engine",
+      "title": "Queue and Git collaboration actions can overwrite work or report false delivery state",
+      "evidence": [
+        "reports/tasks/HC-GIT-320.md",
+        "renderer/app/bootstrap.js",
+        "electron/services/runtime-service.mjs",
+        "electron/services/git-service.mjs",
+        "src/job-queue.ts",
+        "src/git.ts",
+        "src/git-collaboration.ts",
+        "test/runtime-control-tests.mjs",
+        "test/git-collaboration-tests.mjs",
+        "tests/electron-e2e/run.mjs",
+        "reports/evidence/HC-GIT-320/manifest.json",
+        "reports/evidence/HC-GIT-320/ci-matrix.json"
+      ],
+      "impact": "A renderer-owned follow-up queue can lose prompts, while unsafe branch changes, implicit PR mutations, leaked credentials, or flattened CI results can overwrite user work or claim delivery that did not occur.",
+      "mitigation": "HC-GIT-320 makes the main Runtime queue authoritative, models Steer as a persisted cancellation and priority follow-up, protects dirty worktrees, requires fresh PR confirmation, uses minimal child environments, and preserves failed or pending CI states. Fifteen local evidence gates and GitHub Actions run 29189513590 passed, including real Electron smoke on Ubuntu, macOS, and Windows.",
+      "trigger": "Any hidden renderer queue, branch switch over dirty work, unconfirmed PR mutation, credential exposure, or failed CI displayed as successful blocks HC-GIT-320 completion."
+    },
+    {
+      "id": "RISK-SEC-001",
+      "severity": "critical",
+      "status": "mitigated",
+      "owner": "security-release",
+      "title": "Model and MCP credentials can be persisted as plaintext config fields",
+      "evidence": [
+        "reports/tasks/HC-SEC-401.md",
+        "reports/evidence/HC-SEC-401/manifest.json",
+        "reports/evidence/HC-SEC-401/ci-matrix.json",
+        "electron/services/secret-store-service.mjs",
+        "src/config.ts",
+        "electron/services/workspace-service.mjs",
+        "renderer/app/bootstrap.js"
+      ],
+      "impact": "A local config disclosure, support bundle, backup, or accidental repository copy can expose reusable model or MCP credentials.",
+      "mitigation": "HC-SEC-401 now persists validated references, encrypts desktop values through Electron safeStorage, rejects unavailable or Linux basic_text storage, keeps CLI fallback environment-only, migrates atomically with encrypted exact rollback, and exposes status rather than values. Sixteen local gates plus Linux, macOS, and Windows Electron CI passed.",
+      "trigger": "Any successful config save or migration that leaves a plaintext model API key or sensitive MCP environment value blocks HC-SEC-401 and the rc.1 release line."
+    },
+    {
+      "id": "RISK-SEC-002",
+      "severity": "critical",
+      "status": "mitigated",
+      "owner": "security-release",
+      "title": "Execution isolation differs by platform and is not represented by one truthful policy contract",
+      "evidence": [
+        "reports/tasks/HC-SEC-402.md",
+        "reports/evidence/HC-SEC-402/manifest.json",
+        "reports/evidence/HC-SEC-402/ci-matrix.json",
+        "docs/execution-policy.md",
+        "src/execution-policy.ts",
+        "src/tools/bash.ts",
+        "electron/services/terminal-service.mjs",
+        "src/quality-gates.ts",
+        "src/worktree-runner.ts"
+      ],
+      "impact": "A user can interpret approval, workspace path validation, or process cleanup as an operating-system sandbox even when filesystem or network access remains available to the child process.",
+      "mitigation": "HC-SEC-402 centralizes command, path, environment, network, limit, approval, audit, and process-tree decisions in one versioned contract. Unsupported strict controls fail closed, report-only launches remain visibly weak, Renderer approval cannot be forged, child environments are minimized, and Linux/macOS/Windows capabilities are reported without inventing unavailable isolation. Nineteen local gates and GitHub Actions run 29221844706 passed, including real Electron smoke on all three platforms.",
+      "trigger": "Any execution path that reports sandboxed/strong while its requested filesystem, environment, network, limit, approval, audit, or process-tree control is not enforced blocks HC-SEC-402 and rc.1."
+    },
+    {
+      "id": "RISK-PLAT-001",
+      "severity": "high",
+      "status": "mitigated",
+      "owner": "security-release",
+      "title": "Electron compatibility line needs an isolated supported-version upgrade",
+      "evidence": ["package.json", "docs/adr/ADR-0005-supported-electron-line.md", "reports/evidence/HC-PLAT-110/manifest.json", "reports/evidence/HC-PLAT-110/ci-matrix.json"],
+      "impact": "Runtime support and Chromium security maintenance can age before stable release.",
+      "mitigation": "HC-PLAT-110 pins Electron 43.1.0, validates the Chromium 150 / Node 24 embedded runtime and security flags, confirms no native production add-on, generates the macOS alpha DMG, and records passing Linux/macOS/Windows startup smoke from GitHub Actions run 29116173672.",
+      "trigger": "Unsupported Electron status or a high production/runtime advisory blocks release."
+    },
+    {
+      "id": "RISK-REL-001",
+      "severity": "medium",
+      "status": "open",
+      "owner": "security-release",
+      "title": "Desktop installers are not commercially signed",
+      "evidence": ["package.json", "docs/release-pipeline.md", "reports/tasks/HC-REL-420.md", "reports/releases/0.6.0-alpha.8/known-limitations.md", "reports/evidence/HC-REL-ALPHA-8/manifest.json", "reports/evidence/HC-REL-420/manifest.json", "reports/evidence/HC-REL-420/ci-matrix.json", "reports/evidence/HC-REL-STABLE-GATE/gate-result.json"],
+      "impact": "macOS Gatekeeper or Windows SmartScreen can warn users and weaken installation trust.",
+      "mitigation": "HC-REL-420 now fails closed for approved release mode without a clean source tree and platform credentials, rejects builder trust overrides, keeps CI/development artifacts explicitly unsigned and update-disabled, and verifies native package signatures, SBOM, provenance, updater metadata, and checksums. Commercial certificates and target reputation remain external prerequisites for stable promotion.",
+      "trigger": "Stable release or automatic update enablement requires valid signing and platform smoke evidence."
+    },
+    {
+      "id": "RISK-MCP-001",
+      "severity": "high",
+      "status": "mitigated",
+      "owner": "runtime-engine",
+      "title": "Remote MCP sessions and credentials lacked a transport-neutral lifecycle",
+      "evidence": ["src/mcp.ts", "src/mcp-transport.ts", "src/mcp-auth.ts", "src/mcp-protocol.ts", "test/mcp-connection-tests.mjs", "reports/evidence/HC-MCP-410/manifest.json"],
+      "impact": "Adding remote MCP without bounded sessions, cancellation, OAuth expiry, secret references, and redaction could leak credentials or leave Desktop, CLI, and TUI with divergent tool behavior.",
+      "mitigation": "HC-MCP-410 preserves managed stdio and adds HTTPS Streamable HTTP, negotiated protocol/session state, reconnect, timeout, cancellation, graceful shutdown, OAuth discovery/PKCE/refresh/rotation, atomic credential-and-expiry persistence, secret references, bounded parsing, and sensitive audit redaction behind the existing manager API.",
+      "trigger": "Any plaintext remote token, insecure non-loopback endpoint, unbounded response, false connected state, or stdio compatibility regression reopens this risk."
+    },
+    {
+      "id": "RISK-PROV-001",
+      "severity": "high",
+      "status": "closed",
+      "owner": "runtime-engine",
+      "title": "Provider control, credentials, failure policy, and external Agent execution lacked one production contract",
+      "evidence": [
+        "reports/tasks/HC-PROV-301.md",
+        "reports/evidence/HC-PROV-301/manifest.json",
+        "reports/evidence/HC-REL-STABLE-GATE/gate-result.json",
+        "docs/adr/ADR-0020-unified-provider-control-plane.md",
+        "src/provider-control-plane.ts",
+        "src/provider-usage-store.ts",
+        "electron/services/provider-service.mjs",
+        "electron/services/external-agent-provider-service.mjs",
+        "renderer/components/provider-settings-panel.js",
+        "test/provider-hardening-tests.mjs"
+      ],
+      "impact": "Without a typed distinction between model transports and autonomous Agents, Hi Code could misreport availability, expose incomplete credential or privacy state, lose stable failure semantics, or run external CLIs without a production isolation and evidence boundary.",
+      "mitigation": "HC-PROV-301 adds a versioned Model/Agent control plane, honest discovery and health, complete capability/privacy descriptors, OS-backed secret references with rotation and expiry, recursive redaction, bounded retry/fallback, private aggregate usage, and real Codex CLI, Claude Code CLI, and custom worker adapters behind explicit configuration, authorization, managed argv execution, Worktree Runner isolation, Job events, gates, patch artifacts, timeout, and cancellation. Sixteen machine-captured gates pass with zero DoD findings.",
+      "trigger": "Any model presented as an executable Agent, plaintext Provider credential, unapproved or direct-by-default external run, secret-bearing log/artifact, false healthy/success state, silent capability downgrade, or failed Provider evidence gate reopens this risk."
+    },
+    {
+      "id": "RISK-PROV-002",
+      "severity": "high",
+      "status": "mitigated",
+      "owner": "runtime-engine",
+      "title": "Responses and Chat Completions semantics can diverge during migration",
+      "evidence": ["src/openai-responses-provider.ts", "src/model-provider.ts", "test/openai-responses-provider-tests.mjs", "reports/evidence/HC-PROV-211/manifest.json"],
+      "impact": "Incorrect event mapping can duplicate tool calls, lose image inputs or usage, report an interrupted request as complete, or silently move existing compatible endpoints to an unsupported protocol.",
+      "mitigation": "HC-PROV-211 keeps Chat Completions as the compatibility default, makes Responses selection explicit, and verifies both transports with real local HTTP streams and shared Runtime tool-loop tests.",
+      "trigger": "Any implicit protocol migration, duplicate or incomplete tool lifecycle, lost usage, image mismatch, or false terminal state blocks HC-PROV-211 completion."
+    },
+    {
+      "id": "RISK-PROV-003",
+      "severity": "high",
+      "status": "mitigated",
+      "owner": "runtime-engine",
+      "title": "Anthropic and Ollama wire semantics can be silently flattened",
+      "evidence": ["src/anthropic-messages-provider.ts", "src/ollama-chat-provider.ts", "src/provider-http-transport.ts", "test/anthropic-ollama-provider-tests.mjs", "reports/evidence/HC-PROV-212/manifest.json"],
+      "impact": "Tool identities, image encoding, stop reasons, usage, interruption, or provider-specific reasoning metadata could be lost or misreported when mapped into the shared runtime.",
+      "mitigation": "HC-PROV-212 implements dedicated adapters with explicit profile protocols, bounded real loopback stream fixtures, capability preflight, strict event ordering, unchanged legacy defaults, and a reviewed boundary that discards raw thinking instead of relabeling it.",
+      "trigger": "Any implicit protocol switch, untyped provider field, duplicate tool completion, false terminal state, or unsupported capability sent over the network blocks HC-PROV-212 completion."
+    },
+    {
+      "id": "RISK-RUN-004",
+      "severity": "high",
+      "status": "mitigated",
+      "owner": "runtime-engine",
+      "title": "Attachments and command intents can be lost or routed inconsistently",
+      "evidence": ["src/attachment-store.ts", "src/attachment-materializer.ts", "src/command-registry.ts", "test/attachment-command-registry-tests.mjs", "reports/evidence/HC-RUN-220/manifest.json"],
+      "impact": "Workspace-relative image files can disappear across restart, unsupported PDF or binary input can fail after a paid network request, and slash/native/agent routing can silently invoke the wrong behavior.",
+      "mitigation": "HC-RUN-220 stores content-addressed attachments in app data, verifies metadata and hashes on every read, materializes supported image/text content only after provider capability checks, rejects unsupported PDF/file transport before network I/O, and routes Runtime/Electron input through one conflict-detecting Command Registry.",
+      "trigger": "Any missing attachment that fails silently, unsupported input sent to a provider, duplicate command alias, or native action selected over an equally valid command reopens this risk."
+    },
+    {
+      "id": "RISK-IND-001",
+      "severity": "medium",
+      "status": "open",
+      "owner": "industrial-platform",
+      "title": "Industrial bridge capabilities can be overstated",
+      "evidence": ["src/solidworks-bridge-adapter.ts", "src/aveva-bridge-adapter.ts"],
+      "impact": "Users could mistake plans or templates for licensed commercial-tool execution.",
+      "mitigation": "Preserve simulated, not_run, external_required, and manual approval evidence through UI, gates, and releases.",
+      "trigger": "Any bridge or dry-run result displayed as real/passed is a release blocker."
+    },
+    {
+      "id": "RISK-ENV-001",
+      "severity": "low",
+      "status": "open",
+      "owner": "developer-environment",
+      "title": "User shell profile references a removed ComfyUI environment",
+      "evidence": ["feature test bash output: /Users/jack/.profile line 2"],
+      "impact": "Bash test and user-command output contains a benign startup warning that can obscure relevant diagnostics.",
+      "mitigation": "Repair or guard the external profile entry outside the repository; do not change project tests to hide it.",
+      "trigger": "If the warning changes command exit status or masks tool output, treat it as a developer-environment blocker."
+    },
+    {
+      "id": "RISK-PROG-001",
+      "severity": "medium",
+      "status": "mitigated",
+      "owner": "program-director",
+      "title": "Program evidence was previously ignored or historical",
+      "evidence": [".gitignore", "reports/audit/README.md", "ADR-0001"],
+      "impact": "Old issue counts or untracked pass claims could be mistaken for current release evidence.",
+      "mitigation": "Track program/task/evidence paths, mark old audits historical, and capture hashed command logs.",
+      "trigger": "A release claim without source-linked committed evidence reopens this risk."
+    }
+  ]
+}

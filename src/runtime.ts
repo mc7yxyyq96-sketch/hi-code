@@ -13,9 +13,28 @@ import { handleCommand, type CommandEnv } from "./commands.js";
 import { saveSession, loadSession, newSessionId, type StoredSession } from "./session-store.js";
 import { shutdownMcp } from "./mcp.js";
 import { gitInfo } from "./git.js";
-import type { RuntimeEventDraft, ToolEventStatus } from "./events.js";
+import {
+  newEventId,
+  type RuntimeEventDraft,
+  type RuntimeEventEnvelope,
+  type RuntimeEventSink,
+  type RuntimeMessageAppendedPayload,
+  type ToolEventStatus,
+} from "./events.js";
 import { createRuntimeProtocolEvent } from "./runtime-protocol.js";
 import { appendRuntimeProtocolEvent, readRuntimeProtocolEvents } from "./runtime-event-store.js";
+import {
+  attachmentReference,
+  type AttachmentReader,
+  type AttachmentRecord,
+} from "./attachment-store.js";
+import {
+  createDefaultCommandRegistry,
+  type CommandRegistry,
+  type CommandResolution,
+  type CommandSurface,
+} from "./command-registry.js";
+import { materializeAttachmentMessages } from "./attachment-materializer.js";
 
 /** System prompt for the agent, including project notes and git status. */
 export function buildSystemPrompt(cwd: string, model?: string, reasoningLevel: VibeConfig["reasoningLevel"] = "medium"): string {
@@ -67,10 +86,36 @@ export interface RuntimeOpts {
   systemPrompt: string;
   ask: AskFn;
   restored?: StoredSession;
+  /** Primary structured event destination for desktop, CLI, TUI, and SDK clients. */
+  eventSink?: RuntimeEventSink;
+  /** @deprecated Compatibility callback; migrate clients to eventSink. */
   emitEvent?: (event: RuntimeEventDraft & { sessionId: string; turnId: string }) => string | void;
+  /** Keep direct terminal assistant rendering while clients migrate to eventSink. */
+  legacyAssistantOutput?: boolean;
   allowProcessExit?: boolean;
   persistRuntimeEvents?: boolean;
+  attachmentStore?: AttachmentReader;
+  commandRegistry?: CommandRegistry;
+  commandSurface?: CommandSurface;
+  /** CLI/TUI own the process-wide MCP manager; embedded runtimes leave it to their host. */
+  ownsMcpLifecycle?: boolean;
 }
+
+export interface RuntimeInputOptions {
+  attachmentIds?: string[];
+  /** `plan` exposes only read-only inspection tools for this turn. */
+  executionMode?: "default" | "plan";
+  /** Host-precomputed resolution from the same registry, used for native fallback without re-matching. */
+  resolvedCommand?: CommandResolution;
+}
+
+export interface RuntimeDisplayMessage {
+  role: string;
+  text: string;
+  attachments?: AttachmentReferencePartDisplay[];
+}
+
+export type AttachmentReferencePartDisplay = ReturnType<typeof attachmentReference>["attachment"];
 
 export interface Runtime {
   cfg: VibeConfig;
@@ -79,17 +124,17 @@ export interface Runtime {
   cmdEnv: CommandEnv;
   sessionId: string;
   /** Run one line of input: `!shell`, `/command`, or a model turn. */
-  handleInput: (input: string) => Promise<void>;
+  handleInput: (input: string, options?: RuntimeInputOptions) => Promise<void>;
   /** Cancel an in-flight turn. Returns true if something was aborted. */
   abort: () => boolean;
   isBusy: () => boolean;
   /** Apply a new model config without discarding the active conversation. */
   updateConfig: (cfg: VibeConfig, systemPrompt: string) => void;
-  shutdown: () => void;
+  shutdown: () => Promise<void>;
   /** Start a fresh empty conversation without reusing the previous session id. */
   startNewSession: () => { sessionId: string };
   /** Load a saved session into the runtime (no output) and return its messages for display. */
-  resume: (id: string) => { role: string; text: string }[];
+  resume: (id: string) => RuntimeDisplayMessage[];
 }
 
 /** Build the shared session runtime used by both the readline and Ink frontends. */
@@ -98,6 +143,8 @@ export function createRuntime(opts: RuntimeOpts): Runtime {
 
   const session = newSession(systemPrompt);
   const perms = newPermissionState(mode);
+  const commandRegistry = opts.commandRegistry ?? createDefaultCommandRegistry();
+  const commandSurface = opts.commandSurface ?? "runtime";
   let sessionId = restored?.id ?? newSessionId();
   if (restored) {
     session.messages = restored.messages;
@@ -135,15 +182,20 @@ export function createRuntime(opts: RuntimeOpts): Runtime {
       const stored = appendRuntimeProtocolEvent(runtimeProtocol);
       if (!stored.ok && process.env.VIBE_DEBUG) console.error(`[hicode] runtime event persistence failed: ${stored.error}`);
     }
-    return opts.emitEvent?.({
+    const envelope: RuntimeEventEnvelope = {
       ...event,
+      id: runtimeProtocol.id,
+      createdAt: runtimeProtocol.createdAt,
       payload: {
         ...(event.payload || {}),
         runtimeProtocol,
       },
       sessionId,
       turnId,
-    });
+    };
+    safelyDispatchRuntimeEvent(() => opts.eventSink?.emit(envelope));
+    safelyDispatchRuntimeEvent(() => opts.emitEvent?.(envelope));
+    return envelope.id;
   };
 
   const execEnv: ExecEnv = {
@@ -154,6 +206,9 @@ export function createRuntime(opts: RuntimeOpts): Runtime {
     depth: 0,
     sessionId,
     turnId: currentTurnId,
+    legacyAssistantOutput: opts.legacyAssistantOutput !== false,
+    executionMode: "default",
+    attachmentStore: opts.attachmentStore,
     emitEvent: emitRuntimeEvent,
     recordChange: (file, before, diffId) => turnChanges.push({ file, before, diffId }),
   };
@@ -218,6 +273,8 @@ export function createRuntime(opts: RuntimeOpts): Runtime {
     execEnv,
     sessionId,
     allowProcessExit: opts.allowProcessExit !== false,
+    commandRegistry,
+    commandSurface,
     resumeStoredSession: loadStoredSessionIntoRuntime,
     undo,
   };
@@ -246,9 +303,10 @@ export function createRuntime(opts: RuntimeOpts): Runtime {
     cmdEnv.sessionId = sessionId;
   }
 
-  function turnTitle(input: string): string {
-    if (input.startsWith("!")) return "Shell command";
-    if (input.startsWith("/")) return "Command";
+  function turnTitle(resolution: CommandResolution): string {
+    if (resolution.ok && resolution.route === "shell") return "Shell command";
+    if (resolution.ok && resolution.route === "slash") return "Command";
+    if (resolution.ok && resolution.route === "native") return "Native command";
     return "Agent turn";
   }
 
@@ -288,24 +346,59 @@ export function createRuntime(opts: RuntimeOpts): Runtime {
     return text.length > 120 ? text.slice(0, 117) + "..." : text;
   }
 
-  async function handleInput(input: string): Promise<void> {
+  async function handleInput(input: string, inputOptions: RuntimeInputOptions = {}): Promise<void> {
+    const executionMode = inputOptions.executionMode === "plan" ? "plan" : "default";
+    const resolution = inputOptions.resolvedCommand ?? commandRegistry.resolve(input, { surface: commandSurface });
     beginTurn();
+    execEnv.executionMode = executionMode;
     turnChanges = [];
+    let attachments: AttachmentRecord[] = [];
+    const requestedAttachmentIds = Array.isArray(inputOptions.attachmentIds)
+      ? inputOptions.attachmentIds.filter((id): id is string => typeof id === "string").slice(0, 8)
+      : [];
     const turnStartedAt = Date.now();
+    if (protocolSequence === 0) {
+      const payload: RuntimeMessageAppendedPayload = {
+        messageId: `msg-system-${sessionId}`,
+        message: session.system,
+      };
+      emitRuntimeEvent({
+        type: "message:appended",
+        tool: "runtime",
+        title: "system message persisted",
+        status: "done",
+        payload,
+      });
+    }
     const turnStartId = emitRuntimeEvent({
       type: "turn:start",
       tool: "agent",
-      title: turnTitle(input),
+      title: turnTitle(resolution),
       summary: summarizeInput(input),
       status: "running",
-      payload: { input: summarizeInput(input), retryInput: retryInput(input), startedAt: turnStartedAt },
+      payload: {
+        input: summarizeInput(input),
+        retryInput: retryInput(input),
+        executionMode,
+        attachmentIds: requestedAttachmentIds,
+        startedAt: turnStartedAt,
+      },
     });
     let finalStatus: ToolEventStatus = "done";
     let finalSummary = "done";
 
     try {
-      if (input.startsWith("!")) {
-        const command = input.slice(1);
+      attachments = resolveInputAttachments(inputOptions.attachmentIds);
+      if (attachments.length && (!resolution.ok || resolution.route !== "agent")) {
+        throw new Error("Attachments can only be sent to an agent request, not a shell, slash, or native command.");
+      }
+      if (!resolution.ok) throw new Error(resolution.message);
+      if (executionMode === "plan" && resolution.route !== "agent") {
+        throw new Error("Plan mode only accepts agent requests and cannot run shell, slash, or native commands.");
+      }
+
+      if (resolution.route === "shell") {
+        const command = resolution.args;
         const title = `Run ${command.slice(0, 80) || "bash"}`;
         const startId = emitRuntimeEvent({
           type: "tool:start",
@@ -315,19 +408,28 @@ export function createRuntime(opts: RuntimeOpts): Runtime {
           status: "running",
           payload: { command, startedAt: Date.now() },
         });
-        emitRuntimeEvent({
+        const approvalId = newEventId("approval");
+        const approvalEventId = emitRuntimeEvent({
           type: "permission:requested",
           tool: "bash",
           title: "Permission required",
           summary: `bash: ${command}`,
           status: "waiting",
-          payload: { action: `bash: ${command}` },
+          payload: { approvalId, action: `bash: ${command}` },
         });
         const decision = await requestPermission(
           perms,
           { tool: "bash", action: `bash: ${command}`, mutating: true },
           ask,
         );
+        emitRuntimeEvent({
+          type: "permission:resolved",
+          tool: "bash",
+          title: decision === "deny" ? "Permission denied" : "Permission granted",
+          summary: `bash: ${command}`,
+          status: decision === "deny" ? "denied" : "done",
+          payload: { requestId: approvalId, parentId: approvalEventId || approvalId, decision, action: `bash: ${command}` },
+        });
         if (decision === "deny") {
           finalStatus = "denied";
           finalSummary = "permission denied";
@@ -373,13 +475,17 @@ export function createRuntime(opts: RuntimeOpts): Runtime {
         return;
       }
 
-      const handled = await handleCommand(input, cmdEnv);
+      const handled = await handleCommand(input, cmdEnv, resolution);
       if (handled) {
         finalSummary = "command handled";
         return;
       }
 
-      const content = buildUserContent(input, cwd);
+      if (resolution.route === "native") throw new Error("Native command must be handled by the desktop host.");
+      const content = buildUserContent(input, cwd, attachments);
+      if (attachments.length && opts.attachmentStore) {
+        materializeAttachmentMessages([{ role: "user", content }], opts.attachmentStore, defaultProfile(cfg));
+      }
       const controller = startAbortableWork();
       try {
         await runTurn(cfg, session, execEnv, content, controller.signal, persist);
@@ -409,9 +515,28 @@ export function createRuntime(opts: RuntimeOpts): Runtime {
           parentId: turnStartId,
           durationMs: Date.now() - turnStartedAt,
           changeCount: turnChanges.length,
+          executionMode,
         },
       });
+      execEnv.executionMode = "default";
     }
+  }
+
+  function resolveInputAttachments(ids: string[] | undefined): AttachmentRecord[] {
+    if (ids === undefined) return [];
+    if (!Array.isArray(ids) || ids.length > 8 || ids.some((id) => typeof id !== "string")) {
+      throw new Error("Attachment ids must be an array containing at most 8 ids.");
+    }
+    const unique = Array.from(new Set(ids));
+    if (unique.length !== ids.length) throw new Error("Attachment ids must be unique.");
+    if (!unique.length) return [];
+    if (!opts.attachmentStore) throw new Error("Attachment storage is unavailable for this runtime.");
+    return unique.map((id) => {
+      const record = opts.attachmentStore?.get(id);
+      if (!record) throw new Error(`Attachment no longer exists: ${id}`);
+      if (record.sessionId !== sessionId) throw new Error(`Attachment ${record.name} belongs to a different conversation.`);
+      return record;
+    });
   }
 
   return {
@@ -442,7 +567,7 @@ export function createRuntime(opts: RuntimeOpts): Runtime {
       cmdEnv.cfg = cfg;
       cmdEnv.systemPrompt = nextSystemPrompt;
     },
-    shutdown: shutdownMcp,
+    shutdown: opts.ownsMcpLifecycle === false ? async () => {} : shutdownMcp,
     startNewSession: () => {
       const fresh = newSession(cmdEnv.systemPrompt);
       session.messages = fresh.messages;
@@ -462,10 +587,20 @@ export function createRuntime(opts: RuntimeOpts): Runtime {
       if (!stored) return [];
       return stored.messages
         .filter((m) => m.role === "user" || m.role === "assistant")
-        .map((m) => ({ role: m.role, text: contentText(m.content).trim() }))
+        .map((m) => formatRuntimeDisplayMessage(m.role, m.content))
         .filter((m) => m.text.length > 0 && !m.text.startsWith("[Earlier conversation summary]"));
     },
   };
+}
+
+function safelyDispatchRuntimeEvent(deliver: () => string | void | undefined): string | void {
+  try {
+    return deliver();
+  } catch (error) {
+    if (process.env.VIBE_DEBUG) {
+      console.error(`[hicode] runtime event delivery failed: ${(error as Error).message}`);
+    }
+  }
 }
 
 function lastProtocolSequenceForSession(sessionId: string): number {
@@ -490,7 +625,7 @@ const IMAGE_EXT: Record<string, string> = {
  * multimodal image parts (for vision-capable models). Returns a plain string
  * when there are no images, or a content-part array when there are.
  */
-export function buildUserContent(input: string, cwd: string): string | ContentPart[] {
+export function buildUserContent(input: string, cwd: string, attachments: AttachmentRecord[] = []): string | ContentPart[] {
   const images: ContentPart[] = [];
   const refs = input.match(/(?:^|\s)@([^\s]+)/g) ?? [];
   for (const raw of refs) {
@@ -512,8 +647,20 @@ export function buildUserContent(input: string, cwd: string): string | ContentPa
   }
 
   const text = expandFileRefs(input, cwd); // text @files still get inlined
-  if (!images.length) return text;
-  return [{ type: "text", text }, ...images];
+  const references = attachments.map(attachmentReference);
+  if (!images.length && !references.length) return text;
+  return [{ type: "text", text }, ...images, ...references];
+}
+
+function formatRuntimeDisplayMessage(role: string, content: import("./llm.js").ChatMessage["content"]): RuntimeDisplayMessage {
+  if (!Array.isArray(content)) return { role, text: contentText(content).trim() };
+  const attachments = content.filter((part) => part.type === "attachment_ref").map((part) => ({ ...part.attachment }));
+  const text = content
+    .filter((part) => part.type !== "attachment_ref")
+    .map((part) => part.type === "text" ? part.text : "[image]")
+    .join(" ")
+    .trim();
+  return { role, text, ...(attachments.length ? { attachments } : {}) };
 }
 
 /** Inline the contents of any @path references found in the input. */

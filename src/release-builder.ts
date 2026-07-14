@@ -12,6 +12,7 @@ import {
 } from "./industrial-project.js";
 import { runDefinitionOfDone, type DefinitionOfDoneResult } from "./definition-of-done.js";
 import type { ApprovalRecord, GateResult, GateStatus, Job } from "./job-center.js";
+import { buildSafeChildEnv } from "./process-env.js";
 
 export const RELEASE_BUILDER_SCHEMA_VERSION = 1;
 export const RELEASE_GATE_BLOCKING_STATUSES = ["failed", "requires_approval"] as const;
@@ -967,6 +968,7 @@ function readSourceCommit(workspace: string): string | null {
   try {
     const result = spawnSync("git", ["rev-parse", "HEAD"], {
       cwd: workspace,
+      env: buildSafeChildEnv(),
       shell: false,
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"],

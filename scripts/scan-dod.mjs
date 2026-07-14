@@ -13,8 +13,13 @@ const { detectSkeleton } = await import(`file://${detectorPath}`);
 
 const includeRoots = ["package.json", "electron", "renderer", "src", "docs", "reports", "scripts", "test"];
 const skipDirs = new Set(["node_modules", "dist", ".git", "release", "releases", "coverage", ".next", ".turbo"]);
+// Vite's ignored output contains bundled third-party code. First-party renderer
+// sources remain in scope; build/package gates validate the derived bundle.
+const derivedRoots = new Set(["renderer/generated"]);
 
 function walk(relative) {
+  const normalized = relative.split(path.sep).join("/");
+  if ([...derivedRoots].some((root) => normalized === root || normalized.startsWith(`${root}/`))) return [];
   const absolute = path.join(root, relative);
   if (!fs.existsSync(absolute)) return [];
   const stat = fs.statSync(absolute);

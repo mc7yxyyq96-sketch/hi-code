@@ -1,0 +1,177 @@
+$ npm run test:renderer
+
+[renderer] entrypoints
+  ✓ renderer.js is a thin module entry
+  ✓ index.html loads renderer as ES module
+  ✓ bootstrap uses API wrapper
+  ✓ bootstrap imports panel modules
+  ✓ settings opens usage tab by default
+  ✓ settings nav groups personal and coding sections
+  ✓ bootstrap applies shared user profile to sidebar and usage page
+  ✓ usage panel component renders profile dashboard
+  ✓ settings usage layout is responsive and locally scrollable
+  ✓ modal and settings content guard against small-window clipping
+  ✓ MCP config button opens MCP settings mode
+  ✓ busy session switch previews without resuming runtime
+  ✓ running conversation remains reachable after leaving chat
+  ✓ recent session click restores the active conversation instead of no-op
+  ✓ recent event-log sessions open as replay instead of fake resume
+  ✓ recovery actions restore the source session before retry
+  ✓ unsafe recovery states never run automatically
+  ✓ recovery UI distinguishes retry approval review and inspection
+  ✓ MCP settings validates mcpServers JSON
+  ✓ command sidebar opens visible command center
+  ✓ command center exposes real actions
+  ✓ Agent sidebar opens installed agent capability list
+  ✓ sidebar removes standalone conversation nav and keeps new chat
+  ✓ new chat creates a real runtime session instead of slash clear
+  ✓ sidebar menu collapse keeps only pinned navigation
+  ✓ sidebar collapsed hides project recent and account chrome
+  ✓ sidebar reserves macOS traffic-light safe area
+  ✓ sidebar brand keeps Hi Code visible with prerelease versions
+  ✓ about dialog shows full prerelease version instead of sidebar truncation
+  ✓ sidebar menu area scrolls vertically
+  ✓ sidebar scroll resets on init and collapse toggle
+  ✓ sidebar project row explains workspace switching
+  ✓ sidebar recent sessions use compact product list
+  ✓ workspace header keeps its brand and visible actions unclipped
+  ✓ responsive workbench exposes existing timeline and diff panels
+  ✓ responsive workbench drawer controls have real behavior
+  ✓ responsive drawer CSS preserves desktop panels and adds compact alternatives
+  ✓ real Electron E2E covers supported widths and interactions
+  ✓ CI runs the real Electron smoke under Xvfb
+  ✓ Git panel avoids clipped commit column on medium windows
+  ✓ Git commit controls remain visible in responsive layout
+  ✓ industrial workbench panels stack before they clip
+  ✓ capability pages expose Store-managed disable and uninstall actions
+  ✓ capability Store lookup is silent for missing local-only items
+  ✓ store detail exposes uninstall and local translation affordance
+  ✓ store detail re-translates mixed backend summaries
+  ✓ toast controller deduplicates and limits repeated errors
+  ✓ demo browser shim uses neutral paths
+  ✓ composer exposes real image attachment tray
+  ✓ composer attach button uses image attachment API
+  ✓ composer sends image attachments through workspace-relative refs
+  ✓ composer supports pasted and dropped images
+  ✓ run status keeps runtime output errors visible
+  ✓ model connection test surfaces vision capability hint
+  ✓ agent chat bubble never stays blank on empty model output
+
+[renderer] state
+  ✓ state get/set works
+  ✓ state subscribe works
+
+[renderer] api wrapper
+  ✓ api wrapper preserves successful result
+  ✓ api wrapper detects missing methods
+  ✓ api wrapper returns failed API result
+  ✓ api wrapper returns standardized missing-method error
+  ✓ api wrapper exposes image attachment bridge
+  ✓ api wrapper exposes new session bridge
+  ✓ industrial project API does not fake success when preload is missing
+  ✓ job center API list is callable
+  ✓ job center API get is callable
+  ✓ provider API list is callable
+  ✓ provider API run is callable
+  ✓ worktree API create is callable
+  ✓ worktree API collect is callable
+  ✓ patch arena API list is callable
+  ✓ patch arena API create is callable
+  ✓ industrial project API get is callable
+  ✓ industrial project API save is callable
+  ✓ requirement builder API draft is callable
+  ✓ requirement builder API add is callable
+  ✓ spec builder API package is callable
+  ✓ requirement approval API is callable
+  ✓ domain pack API list is callable
+  ✓ domain pack API install is callable
+  ✓ domain pack API enable is callable
+  ✓ agent team API profiles is callable
+  ✓ agent team API plan is callable
+  ✓ agent team API job is callable
+  ✓ toolchain API list is callable
+  ✓ toolchain API detect accepts manual executable path
+  ✓ toolchain API accepts KiCad manual executable path
+  ✓ toolchain API accepts OpenPLC manual executable path
+  ✓ toolchain API accepts IfcOpenShell manual executable path
+  ✓ toolchain API accepts SolidWorks manual executable path payload
+  ✓ toolchain API accepts AVEVA connector path payload
+  ✓ toolchain API dry-run is callable
+  ✓ quality gate API list is callable
+  ✓ quality gate API run is callable
+  ✓ quality gate API approval is callable
+  ✓ release readiness API is callable
+  ✓ release build API is callable
+  ✓ release open API is callable
+  ✓ sample project API is callable
+  ✓ store API list is callable
+  ✓ store API detail is callable
+  ✓ store API disable is callable
+  ✓ store API enable is callable
+  ✓ store API uninstall is callable
+  ✓ silent Store lookup returns failure without user toast
+  ✓ api wrapper preserves array fallback on error
+  ✓ api wrapper reports user-facing errors
+
+[renderer] components
+  ✓ diff renderer escapes HTML
+  ✓ diff status text reflects already-applied semantics
+  ✓ diff panel uses archive and rollback labels
+  ✓ store query options trim search
+  ✓ store Chinese summary translates English descriptions
+  ✓ store Chinese summary translates mixed Chinese-English descriptions
+  ✓ store Chinese summary truly translates Figma detail
+  ✓ store Chinese summary handles mixed English Chinese connectors
+  ✓ store install action shows disable for enabled item
+  ✓ store install action shows enable for disabled item
+  ✓ Agent capability metadata renders real agent entries
+  ✓ capability lifecycle exposes disable and uninstall for Store-managed items
+  ✓ capability lifecycle exposes enable for disabled Store-managed items
+  ✓ capability lifecycle marks unmanaged capabilities read-only
+  ✓ job center empty list renders
+  ✓ failed job renders readable error
+  ✓ failed job exposes retry action
+  ✓ artifact job renders artifact actions
+  ✓ job summary counts artifacts and failures
+  ✓ patch arena empty list renders
+  ✓ patch arena renders artifact actions
+  ✓ patch arena renders skeleton risk
+  ✓ patch arena summary counts candidates
+  ✓ industrial project empty state renders
+  ✓ industrial project renders requirements artifacts and gates
+  ✓ industrial project renders artifact completeness
+  ✓ industrial project summary counts traceability
+  ✓ domain pack list renders recommended pack
+  ✓ domain pack detail renders templates checklists and tools
+  ✓ domain pack summary counts enabled and templates
+  ✓ agent profile list renders roles
+  ✓ agent plan list renders selected plan
+  ✓ agent plan detail renders tasks reviews and tool plan
+  ✓ agent plan summary counts approvals
+  ✓ toolchain list renders installed state
+  ✓ toolchain detail renders KiCad action, inputs, and artifacts
+  ✓ toolchain summary counts missing tools and capabilities
+  ✓ quality gate list renders gates
+  ✓ quality gate detail renders evidence and approval actions
+  ✓ quality gate summary counts approvals
+  ✓ release center renders blocked readiness risks and package
+  ✓ release center renders Definition of Done checklist
+  ✓ release center summary counts gates artifacts approvals and DoD
+  ✓ sample project panel renders result summary
+  ✓ FreeCAD detail renders manual path and demo action
+  ✓ FreeCAD detail renders dry-run artifact and diagnostics
+  ✓ OpenPLC detail renders PLC controls and safety actions
+  ✓ OpenPLC detail renders ST FAT/SAT artifacts and diagnostics
+  ✓ IfcOpenShell detail renders BIM controls and inspection action
+  ✓ IfcOpenShell detail renders BIM dry-run artifacts and diagnostics
+  ✓ SolidWorks detail renders bridge controls and generation action
+  ✓ SolidWorks detail renders bridge artifacts and authorization boundary
+  ✓ AVEVA detail renders profile controls and dry-run action
+  ✓ AVEVA detail renders templates and risk checklist
+  ✓ router sets main class
+  ✓ router hides inactive views
+  ✓ router updates active nav
+
+=== 164 passed, 0 failed ===
+
+$ node test/renderer-architecture-tests.mjs

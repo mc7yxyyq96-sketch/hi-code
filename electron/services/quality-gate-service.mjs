@@ -5,9 +5,10 @@ import { QualityGateRunner } from "../../dist/quality-gates.js";
 import { IndustrialProjectStore } from "../../dist/industrial-project.js";
 import { ipcObject, ipcString } from "../ipc/ipc-utils.mjs";
 
-export function createQualityGateService({ getCwd, jobStore }) {
+export function createQualityGateService({ getCwd, jobStore, authorize }) {
   if (typeof getCwd !== "function") throw new Error("quality-gate-service requires getCwd");
   if (!jobStore) throw new Error("quality-gate-service requires jobStore");
+  if (typeof authorize !== "function") throw new Error("quality-gate-service requires authorize");
 
   return {
     listGates() {
@@ -23,8 +24,19 @@ export function createQualityGateService({ getCwd, jobStore }) {
       const input = ipcObject(payload);
       try {
         const cwd = path.resolve(getCwd());
-        const runner = new QualityGateRunner({ cwd });
         const gate = input.gate && typeof input.gate === "object" ? input.gate : ipcString(input.gateId || input.id);
+        const inspectionRunner = new QualityGateRunner({ cwd });
+        const resolvedGate = inspectionRunner.getGate(gate);
+        let approvalGranted = true;
+        if (resolvedGate.type === "command_gate") {
+          approvalGranted = normalizeDecision(await authorize({
+            tool: "quality_gate",
+            label: `运行质量门禁 ${resolvedGate.id}`,
+            mutating: true,
+          })) === "allow";
+          if (!approvalGranted) return { ok: false, denied: true, error: "质量门禁命令已拒绝" };
+        }
+        const runner = new QualityGateRunner({ cwd, approvalGranted });
         const actor = ipcString(input.actor, "user");
         const job = input.jobId ? jobStore.getJob(ipcString(input.jobId)) : createGateJob({ jobStore, cwd, gateId: typeof gate === "string" ? gate : gate.id, actor });
         if (!job) return { ok: false, error: "job not found" };
@@ -179,4 +191,8 @@ function jobStatusForGate(status) {
 
 function errorMessage(error) {
   return error?.message ? String(error.message) : String(error || "quality gate operation failed");
+}
+
+function normalizeDecision(value) {
+  return value === "allow" || value === "always" || value === "y" || value === "a" ? "allow" : "deny";
 }

@@ -1,0 +1,363 @@
+{
+  "schemaVersion": 1,
+  "evidenceType": "authoritative-coding-git-delivery-acceptance",
+  "taskId": "HC-GIT-320",
+  "source": {
+    "version": "0.6.0-alpha.8",
+    "parentCommit": "9fad4bfbc47e6c0597fc1fa7bf3e8b9518caf1e5",
+    "branch": "codex/runtime-engine/hc-git-320"
+  },
+  "capture": {
+    "startedAt": "2026-07-12T10:31:42.603Z",
+    "completedAt": "2026-07-12T10:33:12.279Z",
+    "workingTreeClean": true,
+    "dirtyPaths": [],
+    "note": "Task evidence is captured before the task commit; artifact hashes bind the tested implementation and reviewed screenshots."
+  },
+  "environment": {
+    "platform": "darwin",
+    "architecture": "arm64",
+    "osRelease": "25.5.0",
+    "node": "v22.22.3"
+  },
+  "artifacts": [
+    {
+      "path": "docs/adr/ADR-0015-authoritative-coding-and-git-delivery-loop.md",
+      "bytes": 5405,
+      "sha256": "bd832ace0987bb40c82acbbf97f133613801d6cac983fdab5442b87dc777cc1e"
+    },
+    {
+      "path": "docs/adr/README.md",
+      "bytes": 3706,
+      "sha256": "b171d4eec6389eea7fc9f501b915babcde64b5b648d311f4361d84242a984378"
+    },
+    {
+      "path": "docs/engineering-baseline.md",
+      "bytes": 6279,
+      "sha256": "8c2cb0ef1ab7caa9c8b2b00e0eada701cbdc3b7a7c49fc1d252935584223dd59"
+    },
+    {
+      "path": "docs/git-delivery-loop.md",
+      "bytes": 5030,
+      "sha256": "4f05de63b9f255a7118629e52cf41067c2cb4541c2b5d4633f52a3c7d66a988f"
+    },
+    {
+      "path": "docs/main-process-services.md",
+      "bytes": 14868,
+      "sha256": "0d3d533207197156bbf943daaead73031ef6c317dd7c89069dcae1a600e27016"
+    },
+    {
+      "path": "docs/program/ARCHITECTURE.md",
+      "bytes": 14944,
+      "sha256": "b660002c484422435a9c101719b3cef922e241cd44f2f91cc693335a8d0fe3d6"
+    },
+    {
+      "path": "docs/renderer-architecture.md",
+      "bytes": 10225,
+      "sha256": "8e515a81dc342be5de6e79c5fd656c2d9d707c07bbab43fb8468f5960c6ba2f6"
+    },
+    {
+      "path": "electron/main.mjs",
+      "bytes": 105626,
+      "sha256": "66b208fdc86268e6be037e39d2704aa55e65e0872ada8670689c15ece8706481"
+    },
+    {
+      "path": "electron/preload.cjs",
+      "bytes": 29368,
+      "sha256": "3d85c8891feccdebb7a8e0316c5785d39da665fb3e0621c50fd499f231a932d4"
+    },
+    {
+      "path": "electron/services/git-service.mjs",
+      "bytes": 4428,
+      "sha256": "62a08cc412240f4ab3a7b5004ca34a65b10a7853bde2082d2e30757941228022"
+    },
+    {
+      "path": "electron/services/runtime-service.mjs",
+      "bytes": 7325,
+      "sha256": "0b656543d03d71875df97ccc18ed8a4ae9fb7a35094aedabf6583f41d32e4c35"
+    },
+    {
+      "path": "package.json",
+      "bytes": 8660,
+      "sha256": "7fc01f30904da595c7e455d9c1eff2a814a8181abd97eccb50dc46255ae5d12a"
+    },
+    {
+      "path": "planning/backlog.json",
+      "bytes": 18698,
+      "sha256": "b0ba44b6332797df605d1f2185a7e482aced487d6d805a419e14417ded66ba95"
+    },
+    {
+      "path": "planning/release-board.json",
+      "bytes": 15893,
+      "sha256": "236417faa325352ac6ebcb6df94cb2033aeed1ffbb791d9ec699b29f31c70504"
+    },
+    {
+      "path": "renderer/api/hicode-api.js",
+      "bytes": 14645,
+      "sha256": "88213ab7deaf731a4f4e1d087f1dd5cf7e2030be76a86aa1f3b899a5c95d63fb"
+    },
+    {
+      "path": "renderer/app/bootstrap.js",
+      "bytes": 221529,
+      "sha256": "c3d2b54ef7a90c65b191e97d27c8345d174f91b0e047d72583a0fcc2b10b94dc"
+    },
+    {
+      "path": "renderer/index.html",
+      "bytes": 48664,
+      "sha256": "89c65eb95e39128c51c01f4a60fc4748d7387c6671cc7788163d18e8de80a9ed"
+    },
+    {
+      "path": "renderer/style.css",
+      "bytes": 143031,
+      "sha256": "9dfead98d1425c8858c07079ec5cccc54661bb74b1e671c3bae55fa40c8e458f"
+    },
+    {
+      "path": "reports/program/risks.json",
+      "bytes": 18999,
+      "sha256": "69172348c3f7f379f625924227caa7908e305fc1d2decde1365e3f08c3184d05"
+    },
+    {
+      "path": "reports/program/status.md",
+      "bytes": 15538,
+      "sha256": "dd842be71f44865a2767ac4839b2fd81d8e41f8449bf9be96bd20f966b0a25d5"
+    },
+    {
+      "path": "reports/tasks/HC-GIT-320.md",
+      "bytes": 5137,
+      "sha256": "9c99b5988bf44e294e2da6446175c6e5f5c2e5cb14f4099631fd4050281152fd"
+    },
+    {
+      "path": "scripts/capture-task-evidence.mjs",
+      "bytes": 48210,
+      "sha256": "18969f3466f8a4b28a25cb7fae4e4b60c205b216b38d185926878e56f180130a"
+    },
+    {
+      "path": "scripts/verify.mjs",
+      "bytes": 4228,
+      "sha256": "d5280f854c83bd338f4b6095cba2778107f17263b003aa75dd6eabfd4f1a475d"
+    },
+    {
+      "path": "src/git-collaboration.ts",
+      "bytes": 16453,
+      "sha256": "1552a78cc2c3f39e07bb9f6cd2bbb5718c7f1605210ee1d56a2aee52995d52f0"
+    },
+    {
+      "path": "src/git.ts",
+      "bytes": 9592,
+      "sha256": "6b46e38ea9351a519b5059b27ef8e5dfa541c374e4195b19f77d3d7627f3ab20"
+    },
+    {
+      "path": "src/job-queue.ts",
+      "bytes": 6154,
+      "sha256": "70e5d8697d55fa0072a3f186b5b7725394f8ece0cdc653cf571a3866dd41ed39"
+    },
+    {
+      "path": "test/git-collaboration-tests.mjs",
+      "bytes": 7039,
+      "sha256": "afe787f86cad351396df8d64997d0ffaf629572ea811af071edddf58c26f1b13"
+    },
+    {
+      "path": "test/main-process-services-tests.mjs",
+      "bytes": 33697,
+      "sha256": "afe8b8d0636979da036b23c0973477238e6ab6a703344a71d1a8f8030f26f7dd"
+    },
+    {
+      "path": "test/program-control-tests.mjs",
+      "bytes": 56414,
+      "sha256": "c43581a23c0c9c89a0140377ab2fa8dabe02a8cf70ec6a4b1f183cad01ad9fbb"
+    },
+    {
+      "path": "test/renderer-architecture-tests.mjs",
+      "bytes": 66895,
+      "sha256": "9d951a1ee510543ec97673a5fa29c1d1baf30c65e5af47abf4b492873cbf7bac"
+    },
+    {
+      "path": "test/runtime-control-tests.mjs",
+      "bytes": 6959,
+      "sha256": "bce17b1f3df89a901fc0d14501bdf943ca3c620274b9504e49be23955d58d6ee"
+    },
+    {
+      "path": "test/security-baseline.mjs",
+      "bytes": 48208,
+      "sha256": "ddd057cde1c0eb62bb8e1c897b440989aaf9a408d3fdd30566583a2ff6f7f66f"
+    },
+    {
+      "path": "tests/electron-e2e/run.mjs",
+      "bytes": 50446,
+      "sha256": "98b81adc2cb0bce21184f004fb2e1bc372a63ab8ca00af3b638e123451fa4773"
+    }
+  ],
+  "commands": [
+    {
+      "id": "build",
+      "command": "npm run build",
+      "startedAt": "2026-07-12T10:31:42.616Z",
+      "endedAt": "2026-07-12T10:31:45.412Z",
+      "durationMs": 2796,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-GIT-320/logs/build.log",
+      "logSha256": "2dcb9af575898f15d21b36ea086c56ff2ad4b629616f3130bf5a40be75488c16"
+    },
+    {
+      "id": "runtime-control",
+      "command": "npm run test:runtime-control",
+      "startedAt": "2026-07-12T10:31:45.413Z",
+      "endedAt": "2026-07-12T10:31:48.249Z",
+      "durationMs": 2836,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-GIT-320/logs/runtime-control.log",
+      "logSha256": "797735eda6a268287eddd9348d19ad48554aa2431bb4e91d4b6195a0db01f02b"
+    },
+    {
+      "id": "git-collaboration",
+      "command": "npm run test:git-collaboration",
+      "startedAt": "2026-07-12T10:31:48.249Z",
+      "endedAt": "2026-07-12T10:31:51.404Z",
+      "durationMs": 3155,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-GIT-320/logs/git-collaboration.log",
+      "logSha256": "bc79eef17a07c0d377738c8e12938e00061fcadc50e79fa89399b8a4ba452afa"
+    },
+    {
+      "id": "service-tests",
+      "command": "npm run test:services",
+      "startedAt": "2026-07-12T10:31:51.404Z",
+      "endedAt": "2026-07-12T10:31:54.449Z",
+      "durationMs": 3045,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-GIT-320/logs/service-tests.log",
+      "logSha256": "4c078c6583c6644dbb1e95c38c102e66154e1e94c7da1a0b7b79c2023577c3c8"
+    },
+    {
+      "id": "renderer-tests",
+      "command": "npm run test:renderer",
+      "startedAt": "2026-07-12T10:31:54.451Z",
+      "endedAt": "2026-07-12T10:31:54.601Z",
+      "durationMs": 150,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-GIT-320/logs/renderer-tests.log",
+      "logSha256": "9a722585f7a44e8841d1dc504da11d345160f9a3d7fee8ec031282b9485a62e3"
+    },
+    {
+      "id": "security-tests",
+      "command": "npm run test:security",
+      "startedAt": "2026-07-12T10:31:54.601Z",
+      "endedAt": "2026-07-12T10:31:54.701Z",
+      "durationMs": 100,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-GIT-320/logs/security-tests.log",
+      "logSha256": "ae9c016eff47f7e955e878236f66d1d33c26a556b0850608a9244df071a46738"
+    },
+    {
+      "id": "verify",
+      "command": "npm run verify",
+      "startedAt": "2026-07-12T10:31:54.702Z",
+      "endedAt": "2026-07-12T10:32:18.148Z",
+      "durationMs": 23447,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-GIT-320/logs/verify.log",
+      "logSha256": "1238b575862bc6b5f1fdf6ed9833fcb5809b14f4116537450891c6f588f4678c"
+    },
+    {
+      "id": "release-check",
+      "command": "npm run release:check",
+      "startedAt": "2026-07-12T10:32:18.149Z",
+      "endedAt": "2026-07-12T10:32:41.847Z",
+      "durationMs": 23698,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-GIT-320/logs/release-check.log",
+      "logSha256": "fff9ad7163cfe8f33fe97325886f4757a7266904db67cb1e91b307dca4e2cb51"
+    },
+    {
+      "id": "feature-tests",
+      "command": "/Applications/QClaw.app/Contents/Resources/node/node test/feature-tests.mjs",
+      "startedAt": "2026-07-12T10:32:41.848Z",
+      "endedAt": "2026-07-12T10:32:44.228Z",
+      "durationMs": 2380,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-GIT-320/logs/feature-tests.log",
+      "logSha256": "534392df37db2b86175f799134782b59da7e9cc1cb02dd93a54b660ee384f930"
+    },
+    {
+      "id": "dod-tests",
+      "command": "npm run test:dod",
+      "startedAt": "2026-07-12T10:32:44.228Z",
+      "endedAt": "2026-07-12T10:32:44.489Z",
+      "durationMs": 261,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-GIT-320/logs/dod-tests.log",
+      "logSha256": "f8b3096032e626f999dd376ae91b433d713bc544686c172eeb7bcc40c2e3154e"
+    },
+    {
+      "id": "dod-scan",
+      "command": "npm run scan:dod",
+      "startedAt": "2026-07-12T10:32:44.490Z",
+      "endedAt": "2026-07-12T10:32:44.766Z",
+      "durationMs": 276,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-GIT-320/logs/dod-scan.log",
+      "logSha256": "4387a83aa0a0872ad5b94775f555a02dfa51e9a9f55b6e09cdd082de96db88f7"
+    },
+    {
+      "id": "production-audit",
+      "command": "npm run audit:prod",
+      "startedAt": "2026-07-12T10:32:44.766Z",
+      "endedAt": "2026-07-12T10:32:45.911Z",
+      "durationMs": 1145,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-GIT-320/logs/production-audit.log",
+      "logSha256": "391684e9c344c6559a3bfb2f15f086473d44002aac29f69f60eea2f8832b4aae"
+    },
+    {
+      "id": "electron-e2e",
+      "command": "npm run test:electron-e2e",
+      "startedAt": "2026-07-12T10:32:45.911Z",
+      "endedAt": "2026-07-12T10:33:12.080Z",
+      "durationMs": 26168,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-GIT-320/logs/electron-e2e.log",
+      "logSha256": "eb5037d59cc7f30f17a0084e5ed16e2107b23dcad93ddceb733dc0865fa4feec"
+    },
+    {
+      "id": "program-control",
+      "command": "npm run test:program",
+      "startedAt": "2026-07-12T10:33:12.080Z",
+      "endedAt": "2026-07-12T10:33:12.250Z",
+      "durationMs": 170,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-GIT-320/logs/program-control.log",
+      "logSha256": "b67a6826839b780aefe45bf99a9ebff1aa337241e7a565bfa633c73e6f242b2e"
+    },
+    {
+      "id": "git-diff-check",
+      "command": "git diff --check",
+      "startedAt": "2026-07-12T10:33:12.250Z",
+      "endedAt": "2026-07-12T10:33:12.260Z",
+      "durationMs": 10,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-GIT-320/logs/git-diff-check.log",
+      "logSha256": "3d4d50cd32af92c6d4df37c1df74a96622fca8cfb5643a155c91f034a42f2068"
+    }
+  ],
+  "summary": {
+    "total": 15,
+    "passed": 15,
+    "failed": 0,
+    "allPassed": true
+  }
+}

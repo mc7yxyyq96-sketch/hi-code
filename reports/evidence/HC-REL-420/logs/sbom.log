@@ -1,0 +1,6 @@
+$ npm run release:sbom
+
+> hi-code@0.6.0-alpha.8 release:sbom
+> node scripts/generate-sbom.mjs
+
+[sbom] wrote release/sbom-v0.6.0-alpha.8.cdx.json (88 production components, complete)

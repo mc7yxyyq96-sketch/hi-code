@@ -6,12 +6,16 @@ import { createIpcRegistrar } from "../electron/ipc/ipc-utils.mjs";
 import { registerIpcHandlers } from "../electron/ipc/register-ipc-handlers.mjs";
 import { createRuntimeService } from "../electron/services/runtime-service.mjs";
 import { createQueueService } from "../electron/services/queue-service.mjs";
+import { createMcpService, sanitizeMcpAuditPayload } from "../electron/services/mcp-service.mjs";
 import { createGitService } from "../electron/services/git-service.mjs";
 import { parseOpenAppRequest } from "../electron/services/native-open-service.mjs";
 import { createPathGuard, redactSensitive } from "../electron/services/security-service.mjs";
-import { createWorkspaceService, modelCapabilityHint, modelTestError, modelTestNetworkError } from "../electron/services/workspace-service.mjs";
+import { createWorkspaceService, modelCapabilityHint, modelTestError, modelTestNetworkError, validateModelProtocolConfig } from "../electron/services/workspace-service.mjs";
 import { createAppInfoService, compareVersions } from "../electron/services/app-info-service.mjs";
 import { createUsageService } from "../electron/services/usage-service.mjs";
+import { createElectronSecretStore } from "../electron/services/secret-store-service.mjs";
+import { FileAttachmentStore } from "../dist/attachment-store.js";
+import { modelSecretRef } from "../dist/secret-references.js";
 
 let pass = 0;
 let fail = 0;
@@ -23,6 +27,15 @@ function check(name, cond, detail = "") {
   } else {
     console.log(`  ✗ ${name}  ${detail}`);
     fail++;
+  }
+}
+
+async function rejects(fn, pattern) {
+  try {
+    await fn();
+    return false;
+  } catch (error) {
+    return pattern.test(error?.message || String(error));
   }
 }
 
@@ -39,6 +52,15 @@ function fakeIpcMain() {
       events.set(channel, fn);
     },
   };
+}
+
+function createTestSecretStore(root, configPath = path.join(root, "config.json")) {
+  const safeStorage = {
+    isEncryptionAvailable: () => true,
+    encryptString: (value) => Buffer.from([...Buffer.from(value)].map((byte) => byte ^ 0xa7)),
+    decryptString: (value) => Buffer.from([...Buffer.from(value)].map((byte) => byte ^ 0xa7)).toString("utf8"),
+  };
+  return createElectronSecretStore({ safeStorage, rootDir: path.join(root, "secrets"), configPath, platform: "darwin" });
 }
 
 console.log("\n[services] ipc utils");
@@ -75,7 +97,76 @@ const queue = createQueueService({
 });
 check("queue service clears runtime queue", queue.clearRuntimeQueue().count === 2 && cleared);
 
+const mcpServiceEvents = [];
+let persistedMcpConfig = null;
+const persistedMcpConfigFixture = {
+  mcpServers: {
+    remote: {
+      transport: "streamable-http",
+      url: "https://mcp.example.com",
+      auth: {
+        type: "oauth",
+        clientId: "hicode-desktop",
+        accessTokenRef: "hicode-secret:v1:mcp:cmVtb3Rl:YXV0aC1hY2Nlc3NUb2tlbg",
+        refreshTokenRef: "hicode-secret:v1:mcp:cmVtb3Rl:YXV0aC1yZWZyZXNoVG9rZW4",
+        expiresAt: "2026-01-01T00:00:00.000Z",
+      },
+    },
+  },
+};
+const mcpLifecycleFixture = [{ server: "remote", transport: "streamable-http", state: "ready", tools: ["echo"], activeCalls: [] }];
+const mcpService = createMcpService({
+  initMcp: async (_servers, options) => {
+    await options.persistOAuthUpdate("remote", {
+      accessToken: "rotated-secret",
+      refreshToken: "rotated-refresh-secret",
+      expiresAt: "2027-01-01T00:00:00.000Z",
+    });
+    return [{ server: "remote", ok: true }];
+  },
+  mcpLifecycleStatus: () => mcpLifecycleFixture,
+  connectMcpServer: async (server) => ({ server, ok: true }),
+  reconnectMcpServer: async (server) => ({ server, ok: true }),
+  disconnectMcpServer: async (server) => ({ server, ok: true }),
+  cancelMcpRequest: (server, callId) => ({ server, callId, ok: true, cancelled: 1 }),
+  loadConfig: () => ({ mcpServers: { remote: { transport: "streamable-http", url: "https://mcp.example.com" } } }),
+  listLocalPlugins: () => [],
+  listLocalSkills: () => [],
+  listConfiguredMcpServers: () => [{ name: "remote", transport: "streamable-http" }],
+  secretStore: {
+    persistSecretWrites: () => ({ commit() {} }),
+    readConfigForRenderer: () => JSON.stringify(persistedMcpConfigFixture),
+    persistConfig: (config) => {
+      persistedMcpConfig = structuredClone(config);
+      return { ok: true };
+    },
+  },
+  logger: (event, payload) => mcpServiceEvents.push({ event, payload }),
+});
+check("mcp service exposes lifecycle state", mcpService.listLifecycle().servers[0].state === "ready");
+check("mcp service rejects malformed server names", await rejects(() => mcpService.connect("../../outside"), /server name is invalid/));
+check("mcp service rejects malformed cancellation ids", await rejects(() => mcpService.cancel({ server: "remote", callId: "bad call id" }), /call id is invalid/));
+const mcpReload = await mcpService.reload();
+check("mcp service atomically persists OAuth token rotation and expiry metadata", mcpReload.ok === true
+  && persistedMcpConfig?.mcpServers?.remote?.auth?.accessToken === "rotated-secret"
+  && persistedMcpConfig?.mcpServers?.remote?.auth?.refreshToken === "rotated-refresh-secret"
+  && persistedMcpConfig?.mcpServers?.remote?.auth?.expiresAt === "2027-01-01T00:00:00.000Z");
+check("mcp lifecycle audit log excludes rotated token values", !JSON.stringify(mcpServiceEvents).includes("rotated-secret"), JSON.stringify(mcpServiceEvents));
+const sanitizedMcpAudit = sanitizeMcpAuditPayload({
+  authorization: "Bearer exposed-token",
+  message: "GITHUB_TOKEN=github_pat_exposed and client_secret=plain-secret",
+  nested: { accessToken: "oauth-access-token", visible: "ok" },
+});
+check("mcp lifecycle audit log redacts structured and inline secrets", JSON.stringify(sanitizedMcpAudit) === JSON.stringify({
+  authorization: "[REDACTED]",
+  message: "GITHUB_TOKEN=[REDACTED] and client_secret=[REDACTED]",
+  nested: { accessToken: "[REDACTED]", visible: "ok" },
+}), JSON.stringify(sanitizedMcpAudit));
+
 let gitCwd = "";
+let pullRequestDecision = "deny";
+let pullRequestCalls = 0;
+const gitAuditEvents = [];
 const git = createGitService({
   getCwd: () => "/tmp/project",
   gitWorkflowStatus: (cwd) => ({ ok: true, cwd }),
@@ -87,9 +178,29 @@ const git = createGitService({
     return { ok: true, message: "msg" };
   },
   gitCommit: (cwd, message) => ({ cwd, message }),
+  collaboration: {
+    listBranches: (cwd) => ({ ok: true, root: cwd, current: "main", branches: [{ name: "main", current: true }] }),
+    createBranch: (cwd, name) => ({ ok: true, root: cwd, branch: name }),
+    switchBranch: (cwd, name) => ({ ok: true, root: cwd, branch: name }),
+    getCollaborationStatus: () => ({ ok: true, available: true, pullRequest: null, checks: [], ci: { status: "unknown", total: 0 } }),
+    createPullRequest: (cwd, request) => {
+      pullRequestCalls++;
+      return { ok: true, cwd, ...request, url: "https://github.com/example/project/pull/1" };
+    },
+  },
+  authorizePullRequest: async () => pullRequestDecision,
+  logger: (event, payload) => gitAuditEvents.push({ event, payload }),
 });
 check("git service preserves cwd boundary", git.commitMessage().message === "msg" && gitCwd === "/tmp/project");
 check("git service validates path arrays", git.stage(["a.js", 1, "b.js"]).files.join(",") === "a.js,b.js");
+check("git service exposes branch state through the current workspace", git.branches().root === "/tmp/project" && git.branches().current === "main");
+check("git service creates validated branches through collaboration core", git.createBranch({ name: "feature/runtime" }).branch === "feature/runtime");
+const deniedPullRequest = await git.createPullRequest({ title: "Secure delivery", body: "private body", base: "main", draft: true });
+check("git service requires fresh Pull Request confirmation", deniedPullRequest.denied === true && pullRequestCalls === 0);
+pullRequestDecision = "allow";
+const createdPullRequest = await git.createPullRequest({ title: "Secure delivery", body: "private body", base: "main", draft: true });
+check("git service creates Pull Request only after confirmation", createdPullRequest.ok === true && pullRequestCalls === 1 && createdPullRequest.draft === true);
+check("git service audit logs omit Pull Request body", gitAuditEvents.every((entry) => !JSON.stringify(entry.payload).includes("private body")));
 
 let runtimeMetadata = null;
 const runtimeService = createRuntimeService({
@@ -117,6 +228,12 @@ const runtimeService = createRuntimeService({
 });
 const runtimeEnqueue = runtimeService.enqueueInput("run tests");
 check("runtime service links Runtime Queue to Job Center", runtimeEnqueue.ok && runtimeEnqueue.jobCenterId === "center-job-1" && runtimeMetadata?.jobCenterId === "center-job-1");
+const runtimeAttachment = runtimeService.enqueueInput({
+  text: "inspect attachment",
+  attachmentIds: ["att-00000000-0000-4000-8000-000000000001"],
+});
+check("runtime service keeps bounded attachment ids in queue metadata", runtimeAttachment.ok && runtimeMetadata?.attachmentIds?.[0] === "att-00000000-0000-4000-8000-000000000001", JSON.stringify(runtimeMetadata));
+check("runtime service rejects malformed attachment ids", runtimeService.enqueueInput({ text: "inspect", attachmentIds: ["../escape"] }).ok === false);
 
 const ipc2 = fakeIpcMain();
 registerIpcHandlers({
@@ -124,6 +241,7 @@ registerIpcHandlers({
   services: {
     runtime: {
       enqueueInput: () => ({ ok: true }),
+      steerInput: () => ({ ok: true }),
       answerAsk: () => ({ ok: true }),
       interrupt: () => ({ ok: true }),
     },
@@ -133,6 +251,9 @@ registerIpcHandlers({
       register: () => ({ ok: true }),
       login: () => ({ ok: true }),
       logout: () => ({ ok: true }),
+    },
+    executionPolicy: {
+      capabilities: () => ({ ok: true, capabilities: { schemaVersion: 1, platform: "linux", strength: "weak" } }),
     },
     mcp: { listCapabilities: () => ({ plugins: [], skills: [], mcp: [] }) },
     store: {
@@ -251,9 +372,34 @@ registerIpcHandlers({
       clearArchivedDiffs: () => ({ ok: true }),
     },
     git,
+    editor: {
+      openFile: () => ({ ok: true, file: { path: "/tmp/project/a.txt", content: "", revision: `sha256:${"0".repeat(64)}` } }),
+      saveFile: () => ({ ok: true, file: { path: "/tmp/project/a.txt", content: "saved", revision: `sha256:${"1".repeat(64)}` } }),
+    },
+    terminal: {
+      capabilities: () => ({ ok: true, available: true }),
+      create: () => ({ ok: true, session: { id: "terminal-00000000-0000-4000-8000-000000000001" } }),
+      status: () => ({ ok: true, active: false, session: null, snapshot: "" }),
+      write: () => ({ ok: true }),
+      resize: () => ({ ok: true }),
+      close: () => ({ ok: true }),
+    },
+    preview: {
+      capabilities: () => ({ ok: true, available: true }),
+      open: () => ({ ok: true, preview: { id: "preview-00000000-0000-4000-8000-000000000001" } }),
+      list: () => ({ ok: true, previews: [] }),
+      reopen: () => ({ ok: true }),
+      reload: () => ({ ok: true }),
+      verify: () => ({ ok: true, verification: { status: "passed" } }),
+      close: () => ({ ok: true }),
+      remove: () => ({ ok: true }),
+    },
     workspace: {
       pickFolder: () => "/tmp/project",
-      attachImage: () => ({ ok: true, relativePath: ".hicode/attachments/test.png" }),
+      attachFile: () => ({ ok: true, id: "att-00000000-0000-4000-8000-000000000001" }),
+      attachImage: () => ({ ok: true, id: "att-00000000-0000-4000-8000-000000000002" }),
+      listAttachments: () => [],
+      removeAttachment: () => ({ ok: true }),
       getCwd: () => "/tmp/project",
       listDir: () => [],
       readFile: () => ({ content: "" }),
@@ -263,6 +409,7 @@ registerIpcHandlers({
       deleteSession: () => true,
       readSession: () => [],
       getConfig: () => "",
+      getCredentialStatus: () => ({ ok: true, references: [] }),
       saveConfig: () => ({ ok: true }),
       testModel: () => ({ ok: true }),
     },
@@ -278,7 +425,13 @@ registerIpcHandlers({
     },
   },
 });
-for (const channel of ["runtime-queue:clear", "auth-status", "list-store", "store:item", "store:enable", "store:disable", "store:uninstall", "job:create", "job:list", "job:get", "job:cancel", "job:retry", "job:pause", "job:resume", "job:events", "job:artifacts", "job:artifact:preview", "job:artifact:open", "provider:list", "provider:get", "provider:configure", "provider:run", "provider:cancel", "worktree:create", "worktree:run", "worktree:collectChanges", "worktree:cleanup", "arena:list", "arena:get", "arena:create", "arena:acceptCandidate", "arena:rejectCandidate", "arena:mergeCandidate", "arena:artifact:preview", "arena:artifact:open", "industrial-project:schema", "industrial-project:get", "industrial-project:validate", "industrial-project:save", "industrial-requirement:draft", "industrial-requirement:add", "industrial-requirement:criteria:update", "industrial-requirement:artifact-plan", "industrial-requirement:test-plan", "industrial-requirement:spec-package", "industrial-requirement:approve", "industrial-project:artifact:add", "industrial-project:traceability:add", "industrial-project:gate:add", "domain-pack:list", "domain-pack:get", "domain-pack:validate", "domain-pack:install", "domain-pack:update", "domain-pack:enable", "domain-pack:disable", "domain-pack:uninstall", "domain-pack:recommend", "agent-team:profiles", "agent-team:profile:get", "agent-team:plan:create", "agent-team:plan:list", "agent-team:plan:get", "agent-team:job:create", "toolchain:list", "toolchain:detect", "toolchain:capabilities", "toolchain:validate-adapter", "toolchain:run", "quality-gate:list", "quality-gate:run", "quality-gate:approve", "release:readiness", "release:build", "release:open", "sample:industrial-control-box:create", "diffs:list", "git:status", "attach-image", "read-file", "read-session", "new-session", "app:info", "app:open-data-dir", "app:reveal-config", "app:open-page", "app:check-updates", "usage:stats"]) {
+for (const channel of ["runtime:enqueue", "runtime:steer", "runtime-queue:clear", "auth-status", "execution-policy:capabilities", "list-store", "store:item", "store:enable", "store:disable", "store:uninstall", "job:create", "job:list", "job:get", "job:cancel", "job:retry", "job:pause", "job:resume", "job:events", "job:artifacts", "job:artifact:preview", "job:artifact:open", "provider:list", "provider:get", "provider:configure", "provider:run", "provider:cancel", "worktree:create", "worktree:run", "worktree:collectChanges", "worktree:cleanup", "arena:list", "arena:get", "arena:create", "arena:acceptCandidate", "arena:rejectCandidate", "arena:mergeCandidate", "arena:artifact:preview", "arena:artifact:open", "industrial-project:schema", "industrial-project:get", "industrial-project:validate", "industrial-project:save", "industrial-requirement:draft", "industrial-requirement:add", "industrial-requirement:criteria:update", "industrial-requirement:artifact-plan", "industrial-requirement:test-plan", "industrial-requirement:spec-package", "industrial-requirement:approve", "industrial-project:artifact:add", "industrial-project:traceability:add", "industrial-project:gate:add", "domain-pack:list", "domain-pack:get", "domain-pack:validate", "domain-pack:install", "domain-pack:update", "domain-pack:enable", "domain-pack:disable", "domain-pack:uninstall", "domain-pack:recommend", "agent-team:profiles", "agent-team:profile:get", "agent-team:plan:create", "agent-team:plan:list", "agent-team:plan:get", "agent-team:job:create", "toolchain:list", "toolchain:detect", "toolchain:capabilities", "toolchain:validate-adapter", "toolchain:run", "quality-gate:list", "quality-gate:run", "quality-gate:approve", "release:readiness", "release:build", "release:open", "sample:industrial-control-box:create", "diffs:list", "git:status", "git:branches", "git:branch:create", "git:branch:switch", "git:collaboration", "git:pr:create", "editor:file:open", "editor:file:save", "terminal:capabilities", "terminal:create", "terminal:status", "terminal:write", "terminal:resize", "terminal:close", "preview:capabilities", "preview:open", "preview:list", "preview:reopen", "preview:reload", "preview:verify", "preview:close", "preview:remove", "attach-file", "attach-image", "attachments:list", "attachment:remove", "read-file", "read-session", "new-session", "get-config", "config:credential-status", "app:info", "app:open-data-dir", "app:reveal-config", "app:open-page", "app:check-updates", "app:update-status", "app:update-channel", "app:update-download", "app:update-install", "usage:stats"]) {
+  check(`register-ipc-handlers exposes ${channel}`, ipc2.handles.has(channel));
+}
+for (const channel of ["provider:discover", "provider:capabilities", "provider:health", "provider:registry-version", "provider:usage", "provider:credential:rotate"]) {
+  check(`register-ipc-handlers exposes hardened ${channel}`, ipc2.handles.has(channel));
+}
+for (const channel of ["mcp:lifecycle", "mcp:reload", "mcp:connect", "mcp:reconnect", "mcp:disconnect", "mcp:cancel"]) {
   check(`register-ipc-handlers exposes ${channel}`, ipc2.handles.has(channel));
 }
 for (const channel of ["input", "ask-response", "interrupt"]) {
@@ -301,6 +454,8 @@ fs.rmSync(outside, { force: true });
 
 console.log("\n[services] workspace attachments");
 const attachTmp = fs.mkdtempSync(path.join(os.tmpdir(), "hicode-attach-test-"));
+const attachmentRoot = path.join(attachTmp, "app-data-attachments");
+const attachmentStore = new FileAttachmentStore(attachmentRoot);
 const workspaceAttachments = createWorkspaceService({
   dialog: { showOpenDialog: async () => ({ canceled: true, filePaths: [] }) },
   getWindow: () => null,
@@ -318,32 +473,183 @@ const workspaceAttachments = createWorkspaceService({
   listSessions: () => [],
   deleteSession: () => false,
   loadSession: () => [],
-  getRuntime: () => null,
+  getRuntime: () => ({ sessionId: "session-attachment-test" }),
   configPath: path.join(attachTmp, "config.json"),
   loadConfig: () => ({}),
   defaultProfile: () => ({}),
   buildSystemPrompt: () => "",
   send: () => {},
+  attachmentStore,
+  secretStore: createTestSecretStore(attachTmp),
 });
 const onePixelPng = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=";
 const attachedImage = await workspaceAttachments.attachImage({ dataUrl: onePixelPng, name: "pasted image.png" });
 check(
-  "workspace service stores pasted image attachments inside workspace",
-  attachedImage.ok === true && attachedImage.relativePath.startsWith(".hicode/attachments/") && fs.existsSync(attachedImage.path),
+  "workspace service stores pasted images as opaque app-data attachments",
+  attachedImage.ok === true && /^att-/.test(attachedImage.id) && attachmentStore.read(attachedImage.id).data.length > 0 && !("path" in attachedImage),
   JSON.stringify(attachedImage),
 );
 check(
-  "workspace service sanitizes attachment names",
-  attachedImage.ok === true && !path.basename(attachedImage.relativePath).includes(" "),
-  attachedImage.relativePath || "",
+  "workspace service preserves display name without persisting source path",
+  attachedImage.ok === true && attachedImage.name === "pasted image.png" && !("sourcePath" in attachmentStore.get(attachedImage.id)),
+  JSON.stringify(attachmentStore.get(attachedImage.id)),
 );
 const rejectedAttachment = await workspaceAttachments.attachImage({ dataUrl: "data:text/plain;base64,aGVsbG8=", name: "note.txt" });
 check("workspace service rejects non-image data URLs", rejectedAttachment.ok === false && /图片/.test(rejectedAttachment.error || ""), JSON.stringify(rejectedAttachment));
 fs.rmSync(attachTmp, { recursive: true, force: true });
 
+console.log("\n[services] model protocol routing");
+const modelTmp = fs.mkdtempSync(path.join(os.tmpdir(), "hicode-model-protocol-"));
+const modelConfigPath = path.join(modelTmp, "config.json");
+const modelRequests = [];
+const modelSecretStore = createTestSecretStore(modelTmp, modelConfigPath);
+const workspaceModels = createWorkspaceService({
+  dialog: { showOpenDialog: async () => ({ canceled: true, filePaths: [] }) },
+  getWindow: () => null,
+  getCwd: () => modelTmp,
+  setCwd: () => {},
+  buildRuntime: () => {},
+  resolveInCwd: () => null,
+  listSessions: () => [],
+  deleteSession: () => false,
+  loadSession: () => [],
+  getRuntime: () => null,
+  configPath: modelConfigPath,
+  loadConfig: () => ({
+    profiles: { default: { name: "default", baseURL: "https://api.openai.com/v1", apiKey: "secret", model: "gpt-4.1", contextWindow: 128000, temperature: 0.2 } },
+    defaultProfile: "default",
+  }),
+  defaultProfile: (config) => config.profiles.default,
+  buildSystemPrompt: () => "",
+  attachmentStore: new FileAttachmentStore(path.join(modelTmp, "attachment-store")),
+  secretStore: modelSecretStore,
+  send: () => {},
+  fetchImpl: async (url, init) => {
+    modelRequests.push({ url, body: JSON.parse(init.body), headers: init.headers });
+    return {
+      ok: true,
+      status: 200,
+      text: async () => {
+        if (url.endsWith("/responses")) return JSON.stringify({ id: "resp-test", status: "completed", output: [] });
+        if (url.endsWith("/messages")) return JSON.stringify({ id: "msg-test", type: "message", role: "assistant", content: [{ type: "text", text: "ok" }] });
+        if (url.endsWith("/api/chat")) return JSON.stringify({ model: "qwen", message: { role: "assistant", content: "ok" }, done: true, done_reason: "stop" });
+        return JSON.stringify({ choices: [{ message: { content: "ok" } }] });
+      },
+    };
+  },
+});
+const responsesConnection = await workspaceModels.testModel({
+  baseURL: "https://api.openai.com/v1",
+  apiKey: "sk-test-only",
+  model: "gpt-4.1",
+  protocol: "responses",
+});
+check(
+  "workspace model test routes explicit Responses profiles to /responses",
+  responsesConnection.ok === true && modelRequests[0]?.url === "https://api.openai.com/v1/responses" && modelRequests[0]?.body.store === false && modelRequests[0]?.body.input?.[0]?.content?.[0]?.type === "input_text",
+  JSON.stringify(modelRequests[0]),
+);
+const legacyConnection = await workspaceModels.testModel({
+  baseURL: "https://api.openai.com/v1",
+  apiKey: "sk-test-only",
+  model: "gpt-4.1",
+});
+check(
+  "workspace model test keeps omitted protocol on /chat/completions",
+  legacyConnection.ok === true && modelRequests[1]?.url === "https://api.openai.com/v1/chat/completions",
+  JSON.stringify(modelRequests[1]),
+);
+const anthropicConnection = await workspaceModels.testModel({
+  baseURL: "https://api.anthropic.com/v1",
+  apiKey: "sk-ant-test-only",
+  model: "claude-sonnet-5",
+  protocol: "anthropic_messages",
+});
+check(
+  "workspace model test uses Anthropic Messages headers and body",
+  anthropicConnection.ok === true
+    && modelRequests[2]?.url === "https://api.anthropic.com/v1/messages"
+    && modelRequests[2]?.headers?.["x-api-key"] === "sk-ant-test-only"
+    && modelRequests[2]?.headers?.["anthropic-version"] === "2023-06-01"
+    && modelRequests[2]?.body.max_tokens === 8
+    && modelRequests[2]?.body.temperature === undefined,
+  JSON.stringify(modelRequests[2]),
+);
+const ollamaConnection = await workspaceModels.testModel({
+  baseURL: "http://127.0.0.1:11434",
+  apiKey: "",
+  model: "qwen3",
+  protocol: "ollama_chat",
+});
+check(
+  "workspace model test uses Ollama native chat without placeholder auth",
+  ollamaConnection.ok === true
+    && modelRequests[3]?.url === "http://127.0.0.1:11434/api/chat"
+    && modelRequests[3]?.headers?.authorization === undefined
+    && modelRequests[3]?.body.think === false,
+  JSON.stringify(modelRequests[3]),
+);
+const persistedModel = modelSecretStore.persistConfig({
+  defaultProfile: "default",
+  profiles: {
+    default: {
+      baseURL: "https://api.openai.com/v1",
+      apiKey: "sk-reference-test-only",
+      model: "gpt-4.1",
+      protocol: "responses",
+    },
+  },
+});
+const referencedConnection = await workspaceModels.testModel({
+  baseURL: "https://api.openai.com/v1",
+  apiKey: "",
+  secretRef: JSON.parse(persistedModel.text).profiles.default.secretRef,
+  model: "gpt-4.1",
+  protocol: "responses",
+});
+check(
+  "workspace model test resolves an existing secretRef without returning its value",
+  referencedConnection.ok === true
+    && modelRequests[4]?.headers?.authorization === "Bearer sk-reference-test-only"
+    && !JSON.stringify(referencedConnection).includes("sk-reference-test-only")
+    && modelSecretStore.resolve(modelSecretRef("default")) === "sk-reference-test-only",
+  JSON.stringify({ referencedConnection, request: modelRequests[4] }),
+);
+const requestsBeforeInsecure = modelRequests.length;
+const insecureAnthropicConnection = await workspaceModels.testModel({
+  baseURL: "http://api.anthropic.example/v1",
+  apiKey: "sk-ant-test-only",
+  model: "claude-sonnet-5",
+  protocol: "anthropic_messages",
+});
+check(
+  "workspace model test rejects insecure remote native endpoints before fetch",
+  insecureAnthropicConnection.ok === false && /HTTPS/.test(insecureAnthropicConnection.error || "") && modelRequests.length === requestsBeforeInsecure,
+  JSON.stringify(insecureAnthropicConnection),
+);
+fs.writeFileSync(modelConfigPath, "{\"profiles\":{}}\n");
+const invalidConfigSave = workspaceModels.saveConfig(JSON.stringify({
+  profiles: {
+    default: {
+      baseURL: "https://api.openai.com/v1",
+      apiKey: "sk-test-only",
+      model: "gpt-4.1",
+      protocol: "unreviewed",
+    },
+  },
+}));
+check(
+  "invalid model protocol is rejected before config write",
+  invalidConfigSave.ok === false && fs.readFileSync(modelConfigPath, "utf8") === "{\"profiles\":{}}\n",
+  JSON.stringify(invalidConfigSave),
+);
+check("model protocol validator accepts all supported values", validateModelProtocolConfig({ profiles: { a: { protocol: "responses" }, b: { protocol: "chat_completions" }, c: { protocol: "anthropic_messages" }, d: { protocol: "ollama_chat" } } }) === true);
+fs.rmSync(modelTmp, { recursive: true, force: true });
+
 console.log("\n[services] app info");
 check("compareVersions orders patch releases", compareVersions("0.5.0", "0.5.1") < 0 && compareVersions("0.5.1", "0.5.0") > 0 && compareVersions("0.5.1", "0.5.1") === 0);
 check("compareVersions handles v prefix and length", compareVersions("v0.5.1", "0.6") < 0 && compareVersions("1.0", "0.9.9") > 0);
+check("compareVersions handles prerelease precedence", compareVersions("0.6.0-alpha.8", "0.6.0-beta.1") < 0 && compareVersions("0.6.0-rc.1", "0.6.0") < 0);
 
 const appInfoTmp = fs.mkdtempSync(path.join(os.tmpdir(), "hicode-appinfo-test-"));
 const openedUrls = [];

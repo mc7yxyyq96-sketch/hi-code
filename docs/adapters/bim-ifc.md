@@ -28,6 +28,8 @@ Detection checks:
 - common IfcOpenShell and IfcConvert CLI paths
 - Python version and module import probe
 
+Automatic detection probes one highest-priority Python interpreter: an explicit `IFCOPENSHELL_PYTHON` executable, then `python3`/`python` on `PATH`, then the first executable common-path candidate. The remaining candidates stay visible as detection evidence but are not launched serially. A user-configured executable path always overrides this bounded automatic probe and is checked directly.
+
 Manual configuration example:
 
 ```json
@@ -67,6 +69,8 @@ Tool runs accept `bimRequest`:
 All paths must resolve inside the workspace. `outputDir` must stay under `.hicode/artifacts`.
 
 ## IFC Inspection
+
+Python/CLI probes and real inspection are launched through the shared execution-policy runner. Child environments are minimized, network access is denied, output and runtime are bounded, and descendants are terminated as one managed process tree. On Electron, the internal sync supervisor runs explicitly in Node mode so detection cannot stall by launching another desktop process.
 
 Real execution requires:
 

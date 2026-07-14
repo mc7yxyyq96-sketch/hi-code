@@ -1,0 +1,354 @@
+{
+  "schemaVersion": 1,
+  "evidenceType": "typed-runtime-store-replay-acceptance",
+  "taskId": "HC-RUN-202",
+  "source": {
+    "version": "0.6.0-alpha.7",
+    "parentCommit": "1d50d21397764f343ca0dddd2ae5b0950b4023ff",
+    "branch": "codex/runtime-engine/hc-run-202"
+  },
+  "capture": {
+    "startedAt": "2026-07-10T15:52:36.830Z",
+    "completedAt": "2026-07-10T15:53:22.552Z",
+    "workingTreeClean": false,
+    "dirtyPaths": [
+      "package.json",
+      "planning/backlog.json",
+      "planning/release-board.json",
+      "reports/program/risks.json",
+      "reports/program/status.md",
+      "reports/tasks/HC-RUN-202.md",
+      "scripts/capture-task-evidence.mjs",
+      "test/program-control-tests.mjs",
+      "reports/evidence/HC-RUN-202/"
+    ],
+    "note": "Task evidence is captured before the task commit; artifact hashes bind the tested implementation and reviewed screenshots."
+  },
+  "environment": {
+    "platform": "darwin",
+    "architecture": "arm64",
+    "osRelease": "25.5.0",
+    "node": "v22.16.0"
+  },
+  "artifacts": [
+    {
+      "path": "docs/adr/ADR-0003-typed-runtime-stores-and-idempotent-replay.md",
+      "bytes": 4195,
+      "sha256": "da970eebb8b5b1985725ee633d5e2d95abd5056078b8e3ddda000fe967ceded9"
+    },
+    {
+      "path": "docs/program/ARCHITECTURE.md",
+      "bytes": 10580,
+      "sha256": "b97a469f7ddaec5ae39963e85d8fac702d28e1d505cae563a99baf506ea2307c"
+    },
+    {
+      "path": "docs/runtime-protocol.md",
+      "bytes": 8372,
+      "sha256": "bd2f4b606d6bab95949b9b0b288b84b633ebf32857046cae24396219ccd780bb"
+    },
+    {
+      "path": "docs/runtime-stores.md",
+      "bytes": 4487,
+      "sha256": "c3466ddd9707f48df46b7809021478d50bb91808bba94005ca4a430d1c8bb571"
+    },
+    {
+      "path": "electron/main.mjs",
+      "bytes": 98900,
+      "sha256": "7a4a74c66a7bd7fd8a37e222789cea67af5126e039453d2cdda24e7e14642ca0"
+    },
+    {
+      "path": "package.json",
+      "bytes": 5045,
+      "sha256": "96c9fc84dd33ec48f7f55a0d3f5d80ae5976c47c4d78e2f503c9bdf984af746c"
+    },
+    {
+      "path": "planning/backlog.json",
+      "bytes": 14497,
+      "sha256": "1c0a01d2353cbb225b535792099d8982d70ffd09c862f769a6c24af08f092321"
+    },
+    {
+      "path": "planning/release-board.json",
+      "bytes": 5084,
+      "sha256": "afa9b1ce806a9387882c5b039a788fff4871e02ebfa524fe88fadb928cb50ef4"
+    },
+    {
+      "path": "reports/program/risks.json",
+      "bytes": 6517,
+      "sha256": "841328a00282ce05884a8c7d875eac6acd2e3bd29f7bc8dc14c0bb791760ff03"
+    },
+    {
+      "path": "reports/program/status.md",
+      "bytes": 5135,
+      "sha256": "4453a0000fffebf89d6d2e1cd7bf759c1576c9a798ffbc8b90174cfb078b1e3f"
+    },
+    {
+      "path": "reports/tasks/HC-RUN-202.md",
+      "bytes": 4842,
+      "sha256": "be95de67409d44ed431545bfa533d502458e672744881437c5366b6227cd46ff"
+    },
+    {
+      "path": "scripts/capture-task-evidence.mjs",
+      "bytes": 14020,
+      "sha256": "36dfe0ce523ac0504205f01f3baa440405b9c18b852128c2a8e805e72c3c683c"
+    },
+    {
+      "path": "scripts/verify.mjs",
+      "bytes": 2881,
+      "sha256": "d7eea388708cb89e5c7d15ea642d3c98ef5c7949c8987a4579bcb025ad7d6e10"
+    },
+    {
+      "path": "src/agent.ts",
+      "bytes": 10438,
+      "sha256": "38d66d2496d60833a6640c0da042a3fd07993b60187ea07eba6a3f2e9c2b1c42"
+    },
+    {
+      "path": "src/events.ts",
+      "bytes": 2277,
+      "sha256": "29802f6db700cfe2e8ccfafe2ab4914107feb63cbb07474055bbd4bfdd3ef5b2"
+    },
+    {
+      "path": "src/recovery.ts",
+      "bytes": 8830,
+      "sha256": "ad657b139c25ee3cf090fd33b19a2b228518904eec5f1017c52b15a38edce154"
+    },
+    {
+      "path": "src/runtime-event-store.ts",
+      "bytes": 5869,
+      "sha256": "7aff4e270a9309035992496ce2023cc42d9db143df9120c3bcaca5e9cbd80bed"
+    },
+    {
+      "path": "src/runtime-protocol.ts",
+      "bytes": 8956,
+      "sha256": "c4117dbd86b7930c1b24a12ac9b4b9e61e7a52c72cec50fcc4468287aadab2b5"
+    },
+    {
+      "path": "src/runtime-stores.ts",
+      "bytes": 31337,
+      "sha256": "dadda6ec5fe28b636d1d92a54618ce52dc95b2b200b3dc32dcf2236e7cd9dbb7"
+    },
+    {
+      "path": "src/runtime.ts",
+      "bytes": 20764,
+      "sha256": "4cec535aa8f5db6189ef14855911558c6429c5a522b27e9bcb7729764047fd01"
+    },
+    {
+      "path": "src/session-store.ts",
+      "bytes": 12193,
+      "sha256": "1d7b1058728929ee6de06269a96ea540a5818e00c0c39ff9fd8c4e3cbe473e52"
+    },
+    {
+      "path": "test/program-control-tests.mjs",
+      "bytes": 13256,
+      "sha256": "f350ecfeecca13f22a8e3d8d01070b6fce92f0622658e35ef15ef52d3091d58e"
+    },
+    {
+      "path": "test/runtime-protocol-tests.mjs",
+      "bytes": 8124,
+      "sha256": "9909303e960751075abb534506c2c0a74c6f029e2fba0ade8e345c1990175fd4"
+    },
+    {
+      "path": "test/runtime-store-integration-tests.mjs",
+      "bytes": 11724,
+      "sha256": "3d0d35cf4411f7d388cf222a6d3c9f22cd5032ab8a38003d63f50871c8f2d6c5"
+    },
+    {
+      "path": "test/runtime-store-tests.mjs",
+      "bytes": 5151,
+      "sha256": "afc8b44f4d330853a43c654177d30cb0d4bd0adaed13a9acdda91ed4c784145a"
+    },
+    {
+      "path": "test/security-baseline.mjs",
+      "bytes": 32090,
+      "sha256": "092e2b4088a1f3f1fc88d3053707061307c1260fec33d7ee6c9c15ed7ba279b8"
+    },
+    {
+      "path": "tests/electron-e2e/run.mjs",
+      "bytes": 14195,
+      "sha256": "7c6d12018a50c49775e5ce36620874481fd3ad32fd4e22da8cc5d3d3bbd4c7cb"
+    }
+  ],
+  "commands": [
+    {
+      "id": "build",
+      "command": "npm run build",
+      "startedAt": "2026-07-10T15:52:36.844Z",
+      "endedAt": "2026-07-10T15:52:38.019Z",
+      "durationMs": 1174,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-RUN-202/logs/build.log",
+      "logSha256": "17e6624484486c543e9a3e4f9007c750423ba27af0634a3bf3474f0a0ce9d36c"
+    },
+    {
+      "id": "verify",
+      "command": "npm run verify",
+      "startedAt": "2026-07-10T15:52:38.020Z",
+      "endedAt": "2026-07-10T15:52:52.770Z",
+      "durationMs": 14749,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-RUN-202/logs/verify.log",
+      "logSha256": "5c24e15f1490409227cbbd7a5ee274b6ca1077086cc851e9e4b407bd307d0ac9"
+    },
+    {
+      "id": "release-check",
+      "command": "npm run release:check",
+      "startedAt": "2026-07-10T15:52:52.771Z",
+      "endedAt": "2026-07-10T15:53:05.944Z",
+      "durationMs": 13174,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-RUN-202/logs/release-check.log",
+      "logSha256": "b18fbc72688a2627f47600fb0a4c2cff0af00ee49f033042e0e2119e411f9640"
+    },
+    {
+      "id": "feature-tests",
+      "command": "/Applications/QClaw.app/Contents/Resources/node/node test/feature-tests.mjs",
+      "startedAt": "2026-07-10T15:53:05.945Z",
+      "endedAt": "2026-07-10T15:53:08.173Z",
+      "durationMs": 2228,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-RUN-202/logs/feature-tests.log",
+      "logSha256": "534392df37db2b86175f799134782b59da7e9cc1cb02dd93a54b660ee384f930"
+    },
+    {
+      "id": "runtime-protocol",
+      "command": "npm run test:runtime-protocol",
+      "startedAt": "2026-07-10T15:53:08.173Z",
+      "endedAt": "2026-07-10T15:53:11.080Z",
+      "durationMs": 2907,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-RUN-202/logs/runtime-protocol.log",
+      "logSha256": "886d25d5e31777142e61371f2b9f3dd76c11ce605ac1c7aea3d276db488162a1"
+    },
+    {
+      "id": "runtime-stores",
+      "command": "npm run test:runtime-stores",
+      "startedAt": "2026-07-10T15:53:11.080Z",
+      "endedAt": "2026-07-10T15:53:11.345Z",
+      "durationMs": 264,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-RUN-202/logs/runtime-stores.log",
+      "logSha256": "eb2c6459dee4e70458734a735c9bc54f9c0920b36599d324cb6a04a98888aad9"
+    },
+    {
+      "id": "runtime-store-integration",
+      "command": "npm run test:runtime-store-integration",
+      "startedAt": "2026-07-10T15:53:11.345Z",
+      "endedAt": "2026-07-10T15:53:12.241Z",
+      "durationMs": 896,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-RUN-202/logs/runtime-store-integration.log",
+      "logSha256": "e2845504e58b930782fd4ba40a6bf0ebef8a69cab7c72fa624d68a007ff5a6ca"
+    },
+    {
+      "id": "runtime-events",
+      "command": "npm run test:runtime-events",
+      "startedAt": "2026-07-10T15:53:12.241Z",
+      "endedAt": "2026-07-10T15:53:12.462Z",
+      "durationMs": 221,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-RUN-202/logs/runtime-events.log",
+      "logSha256": "f21ac469939ec4a93ef493e9d78c9187f9e97257f8a7078af3f4edff7e280814"
+    },
+    {
+      "id": "runtime-concurrency",
+      "command": "npm run test:runtime-concurrency",
+      "startedAt": "2026-07-10T15:53:12.463Z",
+      "endedAt": "2026-07-10T15:53:13.036Z",
+      "durationMs": 573,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-RUN-202/logs/runtime-concurrency.log",
+      "logSha256": "af178ed69d0017e96570e411ebfe1ffae304b9528388b0f10fa1bdb5806f704f"
+    },
+    {
+      "id": "runtime-clients",
+      "command": "npm run test:runtime-clients",
+      "startedAt": "2026-07-10T15:53:13.036Z",
+      "endedAt": "2026-07-10T15:53:13.253Z",
+      "durationMs": 216,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-RUN-202/logs/runtime-clients.log",
+      "logSha256": "f498e11ae28a27a3831a20a129eaea03d5d68e85bdfcca595c373588d9f3018c"
+    },
+    {
+      "id": "security-tests",
+      "command": "npm run test:security",
+      "startedAt": "2026-07-10T15:53:13.253Z",
+      "endedAt": "2026-07-10T15:53:13.466Z",
+      "durationMs": 213,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-RUN-202/logs/security-tests.log",
+      "logSha256": "751cfd921bae023a6f9ba6a6fa0378dae8f0c474581e183cb9f9792e2a928bb1"
+    },
+    {
+      "id": "dod-tests",
+      "command": "npm run test:dod",
+      "startedAt": "2026-07-10T15:53:13.467Z",
+      "endedAt": "2026-07-10T15:53:13.835Z",
+      "durationMs": 368,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-RUN-202/logs/dod-tests.log",
+      "logSha256": "7b930c4c653e5308cdf9d7214d261a7f56c846fe9e4b5abc8ddc1ea52d5e1de0"
+    },
+    {
+      "id": "dod-scan",
+      "command": "npm run scan:dod",
+      "startedAt": "2026-07-10T15:53:13.835Z",
+      "endedAt": "2026-07-10T15:53:14.142Z",
+      "durationMs": 307,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-RUN-202/logs/dod-scan.log",
+      "logSha256": "2491f303679498c1b2af8273788b3fae33998da84274dbfd4bdac876bde74040"
+    },
+    {
+      "id": "production-audit",
+      "command": "npm run audit:prod",
+      "startedAt": "2026-07-10T15:53:14.142Z",
+      "endedAt": "2026-07-10T15:53:15.691Z",
+      "durationMs": 1549,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-RUN-202/logs/production-audit.log",
+      "logSha256": "906907c650e2e56216501e3c86b5a1793c95580e8f99bb271a8a3f2abba3349e"
+    },
+    {
+      "id": "electron-e2e",
+      "command": "npm run test:electron-e2e",
+      "startedAt": "2026-07-10T15:53:15.692Z",
+      "endedAt": "2026-07-10T15:53:22.511Z",
+      "durationMs": 6820,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-RUN-202/logs/electron-e2e.log",
+      "logSha256": "5358e1e2b0b9218a3d8a2c09a273edb34516028cc99e1c43c1b51efc89a2eeb9"
+    },
+    {
+      "id": "git-diff-check",
+      "command": "git diff --check",
+      "startedAt": "2026-07-10T15:53:22.512Z",
+      "endedAt": "2026-07-10T15:53:22.531Z",
+      "durationMs": 19,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-RUN-202/logs/git-diff-check.log",
+      "logSha256": "3d4d50cd32af92c6d4df37c1df74a96622fca8cfb5643a155c91f034a42f2068"
+    }
+  ],
+  "summary": {
+    "total": 16,
+    "passed": 16,
+    "failed": 0,
+    "allPassed": true
+  }
+}

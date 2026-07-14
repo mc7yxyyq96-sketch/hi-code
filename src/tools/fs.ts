@@ -5,6 +5,8 @@ export interface ToolContext {
   cwd: string;
   /** Confine bash file-writes to the workspace via macOS sandbox-exec. */
   sandbox?: boolean;
+  /** Deny child-process network access when the platform backend can enforce it. */
+  networkPolicy?: "allow" | "deny";
   /** Run bash without filesystem writes. Used by read-only reviewer agents. */
   bashMode?: "normal" | "read-only";
   /** Extra environment variable names allowed through to bash tools. */

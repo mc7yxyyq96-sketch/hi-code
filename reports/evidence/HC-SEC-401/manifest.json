@@ -1,0 +1,354 @@
+{
+  "schemaVersion": 1,
+  "evidenceType": "keychain-secret-reference-acceptance",
+  "taskId": "HC-SEC-401",
+  "source": {
+    "version": "0.6.0-alpha.8",
+    "parentCommit": "c107121c32ee7bafc4dc76cd718ff9e73f2640f1",
+    "branch": "codex/security-release/hc-sec-401"
+  },
+  "capture": {
+    "startedAt": "2026-07-12T14:20:45.540Z",
+    "completedAt": "2026-07-12T14:22:16.195Z",
+    "workingTreeClean": true,
+    "dirtyPaths": [],
+    "note": "Task evidence is captured before the task commit; artifact hashes bind the tested implementation and reviewed screenshots."
+  },
+  "environment": {
+    "platform": "darwin",
+    "architecture": "arm64",
+    "osRelease": "25.5.0",
+    "node": "v22.22.3"
+  },
+  "artifacts": [
+    {
+      "path": "docs/adr/ADR-0016-keychain-backed-secret-references.md",
+      "bytes": 4448,
+      "sha256": "3394662a91654218480618efd132cbbfcc911b7449c276a1ced54e61f3328a12"
+    },
+    {
+      "path": "docs/adr/README.md",
+      "bytes": 3896,
+      "sha256": "5cbdfad56131f1cafe65876248398aaaf16335dcaa6b1a69ebfeb6251444b68c"
+    },
+    {
+      "path": "docs/credential-storage.md",
+      "bytes": 5935,
+      "sha256": "696a6c9a76005bb107740ab7edc39ad037691adc2b377004b498c5f904e08114"
+    },
+    {
+      "path": "docs/engineering-baseline.md",
+      "bytes": 7193,
+      "sha256": "a46783ccc69df33ce3cadc641863a392ed047a6f7cca487bc0486a8c50b7b9d6"
+    },
+    {
+      "path": "docs/main-process-services.md",
+      "bytes": 15362,
+      "sha256": "6254a9ed9ee434c69f8f2d1a389d17df4f004b43d6786bc55d7ee1bb771768d3"
+    },
+    {
+      "path": "docs/program/ARCHITECTURE.md",
+      "bytes": 15791,
+      "sha256": "2319a9357efe9eb845b31fc67523d685dc618df0dc12770b009f2cec4b1f23c0"
+    },
+    {
+      "path": "electron/main.mjs",
+      "bytes": 107209,
+      "sha256": "2c4daa9c2098a920b6bc9155c84275b836f622ba5a8f7cb2da8908a63d25a77f"
+    },
+    {
+      "path": "electron/preload.cjs",
+      "bytes": 29437,
+      "sha256": "b4edf6cca46fdb84d93f56c320352c854b9dbb9ddd0fc8fbae2d30e44d1635f2"
+    },
+    {
+      "path": "electron/services/provider-service.mjs",
+      "bytes": 23373,
+      "sha256": "6cbad6f5b4d3f88f229cf41c085f42c9f3605b0a0772e07b904f77712b9747e3"
+    },
+    {
+      "path": "electron/services/secret-store-service.mjs",
+      "bytes": 19129,
+      "sha256": "dd55bd57c3add97b3d6488554cfb096df000dde6a9ce36ac44b1071de9749b6c"
+    },
+    {
+      "path": "electron/services/workspace-service.mjs",
+      "bytes": 24323,
+      "sha256": "8f02da0b60b557216dd740026fc6420a0528dffb4d5dafadd6956bbbac5e0f99"
+    },
+    {
+      "path": "package.json",
+      "bytes": 8915,
+      "sha256": "314315a94e5787a6f04037036cd681876a938939ef9d95cb1cb0e880237ca873"
+    },
+    {
+      "path": "planning/backlog.json",
+      "bytes": 19031,
+      "sha256": "f8179388c633304e4098242f39a0d261d0ae15bf6596dba2eaf52323834baa27"
+    },
+    {
+      "path": "planning/release-board.json",
+      "bytes": 16673,
+      "sha256": "353c93446aed8eadfd28ef3e59403eda1584dd0bc149bea9f571faccc00ad743"
+    },
+    {
+      "path": "renderer/app/bootstrap.js",
+      "bytes": 223345,
+      "sha256": "4fa8a771db8a9eb3943f9cc6592412b50bf434093ddcc7ab269fd9b86acbe88e"
+    },
+    {
+      "path": "reports/program/risks.json",
+      "bytes": 20317,
+      "sha256": "bfc345a44a95744c0958e6f28a8dccd54076d755abf88210da55878d06a86084"
+    },
+    {
+      "path": "reports/program/status.md",
+      "bytes": 16600,
+      "sha256": "fca3decdfefd11ae633a0b39e5ec857c99874316506883537b342e6f8bda5028"
+    },
+    {
+      "path": "reports/tasks/HC-SEC-401.md",
+      "bytes": 7520,
+      "sha256": "71b649dda2a222220a2bc21c4506ad668e6748697b42eca63cdb96acf76f1a04"
+    },
+    {
+      "path": "scripts/capture-task-evidence.mjs",
+      "bytes": 50631,
+      "sha256": "26cecbb6257edeaf1b8e623cdc67b3725ba402c36beaed7868284d8331072f21"
+    },
+    {
+      "path": "scripts/verify.mjs",
+      "bytes": 4347,
+      "sha256": "65e0840870fb1a4f146eebcc3df93ec212ab5d69c5c41aef2fb86b1f843c357c"
+    },
+    {
+      "path": "src/config.ts",
+      "bytes": 13735,
+      "sha256": "395e64d71f98c20f67d744339450f04ce1897b50c01c4a444d7af19dc428e24b"
+    },
+    {
+      "path": "src/secret-references.ts",
+      "bytes": 11513,
+      "sha256": "3f35f1ecc579f5c98ae138c53efeaa4a33d25bc073294a460c3f932dc192aa2e"
+    },
+    {
+      "path": "test/main-process-services-tests.mjs",
+      "bytes": 35559,
+      "sha256": "bfc87cba11ac63026f8ee5ea8d9d9cf19d5749260b67419309018cc678925e71"
+    },
+    {
+      "path": "test/provider-tests.mjs",
+      "bytes": 11296,
+      "sha256": "1f8621ec16cb43335d1b1146e615588ff0acb7de2e0e675402f599e5b8bac3fd"
+    },
+    {
+      "path": "test/renderer-architecture-tests.mjs",
+      "bytes": 68170,
+      "sha256": "460e6415a598af1a91d5125fde80f05758e18e00e116bb1cf0b9eef339e4b1ed"
+    },
+    {
+      "path": "test/secret-reference-tests.mjs",
+      "bytes": 8868,
+      "sha256": "88ef3cbe47adaddccff4e677cf5a64c6fd42311c8b377085886128b18e9ec090"
+    },
+    {
+      "path": "test/secret-store-service-tests.mjs",
+      "bytes": 10266,
+      "sha256": "0b098fc6649022920afc199a7798b4c5e97f6cda30bda0e489613f333875f3dc"
+    },
+    {
+      "path": "test/security-baseline.mjs",
+      "bytes": 50886,
+      "sha256": "e515cbc93c4a48e04eb78e9ffe1846ab4d39404d43c6a7fc9852a65b8e4c51f0"
+    },
+    {
+      "path": "tests/electron-e2e/run.mjs",
+      "bytes": 53224,
+      "sha256": "1a0462a6671d2f6b37883d97fd7e314c176265b0f6eeb4cd69038e99d801f6a8"
+    }
+  ],
+  "commands": [
+    {
+      "id": "build",
+      "command": "npm run build",
+      "startedAt": "2026-07-12T14:20:45.555Z",
+      "endedAt": "2026-07-12T14:20:48.417Z",
+      "durationMs": 2863,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-SEC-401/logs/build.log",
+      "logSha256": "c7772e4d3366e9af69a9fc59ecafa43f5e1b0edf0aef1a7987d1d7fb2d0f51c1"
+    },
+    {
+      "id": "secret-references",
+      "command": "npm run test:secrets",
+      "startedAt": "2026-07-12T14:20:48.419Z",
+      "endedAt": "2026-07-12T14:20:51.158Z",
+      "durationMs": 2739,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-SEC-401/logs/secret-references.log",
+      "logSha256": "6de01a2d22eb7ed2eb934a493c3009a9c3eda45b9f0fe07d0538b046b97466a0"
+    },
+    {
+      "id": "secret-store",
+      "command": "npm run test:secret-store",
+      "startedAt": "2026-07-12T14:20:51.158Z",
+      "endedAt": "2026-07-12T14:20:53.964Z",
+      "durationMs": 2806,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-SEC-401/logs/secret-store.log",
+      "logSha256": "23c804392f19b3576fcdedcd491a5f50119e69315e03ea66305c5988a219818b"
+    },
+    {
+      "id": "provider-tests",
+      "command": "npm run test:providers",
+      "startedAt": "2026-07-12T14:20:53.965Z",
+      "endedAt": "2026-07-12T14:20:54.104Z",
+      "durationMs": 139,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-SEC-401/logs/provider-tests.log",
+      "logSha256": "aa8bed3909946179c7cec8cd9d180862fe37864f624ef8e45d1ccef5d7fdb04f"
+    },
+    {
+      "id": "service-tests",
+      "command": "npm run test:services",
+      "startedAt": "2026-07-12T14:20:54.104Z",
+      "endedAt": "2026-07-12T14:20:57.379Z",
+      "durationMs": 3275,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-SEC-401/logs/service-tests.log",
+      "logSha256": "54924b14b72d885af7c968216dcfec6bdc8f75064bbd5bb56740a4a6efd2dbc6"
+    },
+    {
+      "id": "renderer-tests",
+      "command": "npm run test:renderer",
+      "startedAt": "2026-07-12T14:20:57.381Z",
+      "endedAt": "2026-07-12T14:20:57.544Z",
+      "durationMs": 164,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-SEC-401/logs/renderer-tests.log",
+      "logSha256": "6fd7616bc10753c6853ec572ef1457376d1b6fa73d311cb5105a633a722cd08d"
+    },
+    {
+      "id": "security-tests",
+      "command": "npm run test:security",
+      "startedAt": "2026-07-12T14:20:57.545Z",
+      "endedAt": "2026-07-12T14:20:57.647Z",
+      "durationMs": 102,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-SEC-401/logs/security-tests.log",
+      "logSha256": "00d61b9405956450b0359d36abd387ea730a923bc139018ffb216720f8c491e4"
+    },
+    {
+      "id": "verify",
+      "command": "npm run verify",
+      "startedAt": "2026-07-12T14:20:57.647Z",
+      "endedAt": "2026-07-12T14:21:22.386Z",
+      "durationMs": 24739,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-SEC-401/logs/verify.log",
+      "logSha256": "359205dc96cce7206f005ad05eb0de5271cf72f00c5f5bac27291c1b52895230"
+    },
+    {
+      "id": "release-check",
+      "command": "npm run release:check",
+      "startedAt": "2026-07-12T14:21:22.388Z",
+      "endedAt": "2026-07-12T14:21:46.248Z",
+      "durationMs": 23861,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-SEC-401/logs/release-check.log",
+      "logSha256": "815bd04117cf573aae3a1e3f922cadc893dfb8973c9ed8c9a705d6770a2cf3eb"
+    },
+    {
+      "id": "feature-tests",
+      "command": "/Applications/QClaw.app/Contents/Resources/node/node test/feature-tests.mjs",
+      "startedAt": "2026-07-12T14:21:46.250Z",
+      "endedAt": "2026-07-12T14:21:48.629Z",
+      "durationMs": 2379,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-SEC-401/logs/feature-tests.log",
+      "logSha256": "534392df37db2b86175f799134782b59da7e9cc1cb02dd93a54b660ee384f930"
+    },
+    {
+      "id": "dod-tests",
+      "command": "npm run test:dod",
+      "startedAt": "2026-07-12T14:21:48.629Z",
+      "endedAt": "2026-07-12T14:21:48.896Z",
+      "durationMs": 267,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-SEC-401/logs/dod-tests.log",
+      "logSha256": "f8b3096032e626f999dd376ae91b433d713bc544686c172eeb7bcc40c2e3154e"
+    },
+    {
+      "id": "dod-scan",
+      "command": "npm run scan:dod",
+      "startedAt": "2026-07-12T14:21:48.896Z",
+      "endedAt": "2026-07-12T14:21:49.191Z",
+      "durationMs": 294,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-SEC-401/logs/dod-scan.log",
+      "logSha256": "f0ac8f45cf5ab131dffc291e318cfa119821885b13cd8bb3707a6b2d10fae130"
+    },
+    {
+      "id": "production-audit",
+      "command": "npm run audit:prod",
+      "startedAt": "2026-07-12T14:21:49.191Z",
+      "endedAt": "2026-07-12T14:21:50.491Z",
+      "durationMs": 1300,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-SEC-401/logs/production-audit.log",
+      "logSha256": "391684e9c344c6559a3bfb2f15f086473d44002aac29f69f60eea2f8832b4aae"
+    },
+    {
+      "id": "electron-e2e",
+      "command": "npm run test:electron-e2e",
+      "startedAt": "2026-07-12T14:21:50.491Z",
+      "endedAt": "2026-07-12T14:22:15.997Z",
+      "durationMs": 25506,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-SEC-401/logs/electron-e2e.log",
+      "logSha256": "d7b18a64a65b3f8280d8ab4a146243a2e4ab50c251c0f565263a7e312c0f8241"
+    },
+    {
+      "id": "program-control",
+      "command": "npm run test:program",
+      "startedAt": "2026-07-12T14:22:15.998Z",
+      "endedAt": "2026-07-12T14:22:16.165Z",
+      "durationMs": 167,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-SEC-401/logs/program-control.log",
+      "logSha256": "f1d68cb52d0b45f0c93927786fb660e538685272fa9e9c65a185f73fdce570d1"
+    },
+    {
+      "id": "git-diff-check",
+      "command": "git diff --check",
+      "startedAt": "2026-07-12T14:22:16.165Z",
+      "endedAt": "2026-07-12T14:22:16.175Z",
+      "durationMs": 10,
+      "exitCode": 0,
+      "status": "passed",
+      "logPath": "reports/evidence/HC-SEC-401/logs/git-diff-check.log",
+      "logSha256": "3d4d50cd32af92c6d4df37c1df74a96622fca8cfb5643a155c91f034a42f2068"
+    }
+  ],
+  "summary": {
+    "total": 16,
+    "passed": 16,
+    "failed": 0,
+    "allPassed": true
+  }
+}

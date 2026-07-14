@@ -1,0 +1,19 @@
+继续 Hi Code Program Director 工作，不要重新规划整个项目。
+
+请先读取：
+- AGENTS.md
+- planning/backlog.json
+- planning/release-board.json
+- reports/program/status.md
+- reports/program/risks.json
+- 最近的 reports/tasks/*.md
+- 当前 git status 和最近 commits
+
+然后：
+1. 确认最后一个已完成且通过审查的任务。
+2. 检查是否存在失败测试、未提交改动、未合并 worktree 或 open blocker。
+3. 有 blocker 先修复；没有 blocker 就执行下一个依赖已满足的 backlog 任务。
+4. 继续遵守独立 worktree、测试、证据、commit、安全和禁止骨架规则。
+5. 不开发 backlog 外的新功能，不重复已完成任务。
+
+先输出恢复点和下一任务，然后直接继续实施。

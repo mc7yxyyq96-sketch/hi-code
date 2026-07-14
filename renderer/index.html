@@ -69,6 +69,8 @@
             <button class="nav-row nav-optional" id="skillsBtn" title="技能"><span class="i-spark"></span><span class="nav-label">技能</span></button>
             <button class="nav-row nav-optional" id="agentsBtn" title="智能体"><span class="i-users"></span><span class="nav-label">智能体</span></button>
             <button class="nav-row nav-optional" id="mcpBtn" title="MCP"><span class="i-network"></span><span class="nav-label">MCP</span></button>
+            <button class="nav-row nav-optional" id="terminalBtn" title="终端"><span class="i-command"></span><span class="nav-label">终端</span></button>
+            <button class="nav-row nav-optional" id="previewBtn" title="应用预览"><span class="i-preview"></span><span class="nav-label">应用预览</span></button>
             <button class="nav-row nav-optional" id="cmdBtn" title="命令"><span class="i-command"></span><span class="nav-label">命令</span></button>
           </nav>
 
@@ -128,6 +130,7 @@
         </section>
 
         <section id="chatview" class="hidden">
+          <div id="workbenchControlsMount"></div>
           <div class="workbench-grid">
             <aside id="timelinePanel" class="timeline-panel">
               <div class="panel-head">
@@ -136,14 +139,7 @@
                   <div class="panel-sub">工具调用</div>
                 </div>
               </div>
-              <div id="recoveryPanel" class="recovery-panel hidden">
-                <div class="recovery-head">
-                  <span>可恢复任务</span>
-                  <button id="recoveryRefresh" class="timeline-action" title="重新读取失败任务">刷新</button>
-                </div>
-                <div id="recoveryList" class="recovery-list"></div>
-              </div>
-              <div id="timelineList" class="timeline-list"></div>
+              <div id="timelineWorkspaceMount" class="timeline-workspace-mount"></div>
             </aside>
 
             <div class="chat-column">
@@ -169,24 +165,7 @@
             </div>
 
             <aside id="diffPanel" class="diff-panel">
-              <div class="panel-head">
-                <div>
-                  <div class="panel-title">改动</div>
-                  <div class="panel-sub" id="diffSummary">0 个可回滚</div>
-                </div>
-                <div class="panel-actions diff-head-actions">
-                  <button id="diffHistory" class="mini-btn">历史</button>
-                  <button id="diffClear" class="mini-btn">清空</button>
-                </div>
-              </div>
-              <div id="diffList" class="diff-list"></div>
-              <pre id="diffView" class="diff-view">还没有文件改动。</pre>
-              <div class="diff-actions">
-                <button id="diffAccept" class="primary">归档</button>
-                <button id="diffReject" class="ghost">回滚</button>
-                <button id="diffAcceptAll" class="ghost">全部归档</button>
-                <button id="diffRejectAll" class="ghost">全部回滚</button>
-              </div>
+              <div id="inspectorWorkspaceMount" class="inspector-workspace-mount"></div>
             </aside>
           </div>
         </section>
@@ -225,6 +204,14 @@
               <div id="commandComposerSlot"></div>
             </section>
           </div>
+        </section>
+
+        <section id="terminalView" class="hidden">
+          <div id="terminalReactMount" class="terminal-react-mount"></div>
+        </section>
+
+        <section id="previewView" class="hidden">
+          <div id="previewReactMount" class="preview-react-mount"></div>
         </section>
 
         <section id="gitView" class="hidden">
@@ -270,6 +257,30 @@
                 <div class="git-commit-actions">
                   <button id="gitGenerateMessage" class="ghost">生成提交说明</button>
                   <button id="gitCommitBtn" class="primary">提交已暂存</button>
+                </div>
+                <div class="git-delivery-section">
+                  <div class="git-panel-title">分支</div>
+                  <select id="gitBranchSelect" aria-label="本地分支"></select>
+                  <input id="gitBranchName" type="text" maxlength="160" spellcheck="false" placeholder="新分支，例如 codex/fix-login" />
+                  <div class="git-delivery-actions">
+                    <button id="gitSwitchBranch" class="ghost">切换</button>
+                    <button id="gitCreateBranch" class="ghost">创建并切换</button>
+                  </div>
+                  <p class="git-safety-hint">工作区有未提交改动时，分支切换会被阻止。</p>
+                </div>
+                <div class="git-delivery-section">
+                  <div class="git-panel-title">
+                    <span>Pull Request 与 CI</span>
+                    <button id="gitCollaborationRefresh" class="mini-btn">刷新</button>
+                  </div>
+                  <div id="gitCollaborationStatus" class="git-collaboration-status">正在读取 PR/CI 状态…</div>
+                  <div id="gitChecks" class="git-checks"></div>
+                  <input id="gitPrTitle" type="text" maxlength="200" placeholder="PR 标题" />
+                  <input id="gitPrBase" type="text" maxlength="160" value="main" placeholder="目标分支" />
+                  <textarea id="gitPrBody" spellcheck="false" maxlength="20000" placeholder="PR 说明"></textarea>
+                  <label class="git-draft-toggle"><input id="gitPrDraft" type="checkbox" checked /> 创建 Draft PR</label>
+                  <button id="gitCreatePr" class="primary">确认并创建 PR</button>
+                  <p class="git-safety-hint">创建前会再次确认；不会自动合并或强制推送。</p>
                 </div>
               </aside>
             </div>
@@ -557,6 +568,7 @@
           </div>
         </section>
       </main>
+      <div id="appShellMount" class="app-shell-mount" aria-live="polite"></div>
     </div>
 
     <template id="composer-tpl">
@@ -573,11 +585,13 @@
         <textarea id="input" rows="1" placeholder="随心向 Hi Code 提问…  (Enter 发送 · Shift+Enter 换行 · / 命令)"></textarea>
         <div class="composer-bar">
           <div class="cb-left">
-            <button id="attach" class="cb-icon" title="添加图片附件"><span class="i-plus"></span></button>
+            <button id="attach" class="cb-icon" title="添加附件"><span class="i-plus"></span></button>
+            <button id="planMode" class="cb-pill" title="计划模式只允许读取和分析，不会修改文件或运行命令"><span class="i-plan"></span> <span id="planModeLabel">执行</span></button>
             <button id="access" class="cb-pill" title="访问权限"><span class="dot"></span> <span id="accessLabel">需确认</span></button>
           </div>
           <div class="cb-right">
             <button id="modelPill" class="cb-pill" title="模型设置"><span class="i-cpu"></span> <span id="modelName">…</span></button>
+            <button id="steer" class="cb-pill steer hidden" title="中断当前任务并把输入作为下一条调整指令">调整方向</button>
             <button id="send" class="cb-send" title="发送"><span class="i-up"></span></button>
             <button id="stop" class="cb-send stop hidden" title="停止"><span class="i-stop"></span></button>
           </div>
@@ -602,6 +616,7 @@
             <button type="button" class="settings-tab" data-settings-tab="data">数据与存储</button>
             <div class="settings-nav-group">编码</div>
             <button type="button" class="settings-tab" data-settings-tab="model">模型 API</button>
+            <button type="button" class="settings-tab" data-settings-tab="providers">Provider 管理</button>
             <button type="button" class="settings-tab" data-settings-tab="chat">对话与推理</button>
             <button type="button" class="settings-tab" data-settings-tab="safety">权限与安全</button>
             <button type="button" class="settings-tab" data-settings-tab="mcp">MCP 服务器</button>
@@ -618,7 +633,7 @@
               <div class="setup-steps" id="settingsSteps">
                 <span><b>1</b> 选服务商</span>
                 <span><b>2</b> 粘贴 API Key</span>
-                <span><b>3</b> 保存即用</span>
+                <span><b>3</b> 安全保存</span>
               </div>
 
               <div class="provider-grid" id="providerGrid">
@@ -633,6 +648,7 @@
                 <button class="provider" data-provider="gemini"><span>Gemini</span><small>Google AI</small></button>
                 <button class="provider" data-provider="openrouter"><span>OpenRouter</span><small>模型聚合</small></button>
                 <button class="provider" data-provider="openai"><span>OpenAI</span><small>官方 API</small></button>
+                <button class="provider" data-provider="anthropic"><span>Anthropic</span><small>Messages API</small></button>
                 <button class="provider" data-provider="ollama"><span>Ollama</span><small>本地 / 局域网</small></button>
                 <button class="provider" data-provider="custom"><span>自定义</span><small>OpenAI 兼容</small></button>
               </div>
@@ -641,8 +657,9 @@
                 <div id="providerHint" class="provider-hint"></div>
                 <label class="api-key-label">
                   <span>API Key</span>
-                  <input id="quickApiKey" type="password" spellcheck="false" autocomplete="off" placeholder="sk-..." />
+                  <input id="quickApiKey" type="password" spellcheck="false" autocomplete="off" placeholder="sk-..." aria-describedby="modelCredentialHint" />
                 </label>
+                <div class="settings-hint" id="modelCredentialHint">API Key 不写入 config.json。桌面端使用系统安全存储；CLI 可使用 HICODE_API_KEY 或 profile 专用环境变量。</div>
                 <label class="advanced-provider-field">
                   <span>Base URL</span>
                   <input id="quickBaseURL" spellcheck="false" autocomplete="off" />
@@ -671,6 +688,10 @@
               </div>
             </section>
 
+            <section id="settingsProviderSection" class="settings-section hidden">
+              <div id="providerSettingsRoot" class="provider-settings-root" aria-live="polite"></div>
+            </section>
+
             <section id="settingsChatSection" class="settings-section hidden">
               <div class="settings-group-title">推理等级</div>
               <div class="settings-hint">控制系统提示词里的推理深度偏好，保存后立即对下一轮对话生效。</div>
@@ -690,21 +711,34 @@
             </section>
 
             <section id="settingsSafetySection" class="settings-section hidden">
-              <div class="settings-group-title">命令执行沙箱</div>
+              <div class="settings-group-title">当前平台执行边界</div>
               <div class="settings-row">
-                <div class="settings-row-label"><b>bash 写入沙箱</b><p id="sandboxHint">macOS 上通过 sandbox-exec 把 bash 的写入限制在当前工作区内，读取不受限。</p></div>
+                <div class="settings-row-label"><b id="executionPolicyStatus">正在检测…</b><p id="executionPolicyBackend">读取操作系统隔离后端与进程控制能力。</p></div>
+              </div>
+              <div id="executionPolicyControlRows"></div>
+              <div class="settings-hint" id="executionPolicyWarnings"></div>
+              <div class="settings-group-title">命令执行隔离</div>
+              <div class="settings-row">
+                <div class="settings-row-label"><b>工作区写入隔离</b><p id="sandboxHint">启用后只在当前平台后端能够执行写入隔离时运行；后端缺失会拒绝命令，不会静默降级。</p></div>
                 <input type="checkbox" id="sandboxToggle" class="settings-toggle" />
               </div>
               <div class="settings-group-title">始终生效的保护</div>
               <div class="settings-hint">
                 以下安全边界不可关闭：写文件 / 改文件 / 执行命令前逐项询问；文件访问限制在工作区内（符号链接逃逸会被拦截）；
                 子进程环境变量默认剥离 API Key 等敏感项；日志与错误信息自动脱敏。
+                “弱隔离”表示仍使用当前用户的操作系统权限，不能等同于容器或虚拟机。
               </div>
             </section>
 
             <section id="settingsMcpSection" class="settings-section hidden">
-              <div class="settings-group-title">MCP 服务器（stdio）</div>
-              <div class="settings-hint">编辑 <span class="mono">config.json</span> 里的 <span class="mono">mcpServers</span> 字段，保存后重连生效。也可以从商店一键安装。</div>
+              <div class="settings-group-title">MCP 连接</div>
+              <div class="settings-hint">支持本地 stdio 与远程 Streamable HTTP。远程连接必须使用 HTTPS；认证令牌会转存到系统安全存储，不保留在明文配置中。</div>
+              <div class="settings-actions mcp-toolbar">
+                <button id="mcp-reload" class="ghost">重载全部连接</button>
+              </div>
+              <div id="mcpLifecycleList" class="mcp-lifecycle-list" aria-live="polite"></div>
+              <div class="settings-group-title">连接配置</div>
+              <div class="settings-hint">编辑 <span class="mono">config.json</span> 里的 <span class="mono">mcpServers</span> 字段。保存后会校验配置并重载连接；商店安装的 stdio 服务仍保持兼容。</div>
               <div class="advanced-config">
                 <textarea id="mcpCfg" spellcheck="false"></textarea>
                 <div class="modal-foot">
@@ -742,7 +776,16 @@
               <div class="settings-row"><div class="settings-row-label"><b>开源许可</b><p>MIT License</p></div></div>
               <div class="settings-row">
                 <div class="settings-row-label"><b>版本更新</b><p id="updateStatus">从 GitHub Releases 获取最新版本信息。</p></div>
-                <button id="checkUpdatesBtn" class="ghost">检查更新</button>
+                <div class="update-controls">
+                  <select id="updateChannelSelect" class="settings-select" aria-label="更新通道">
+                    <option value="stable">稳定版</option>
+                    <option value="beta">测试版</option>
+                    <option value="nightly">每夜版</option>
+                  </select>
+                  <button id="checkUpdatesBtn" class="ghost">检查更新</button>
+                  <button id="downloadUpdateBtn" class="ghost hidden">下载</button>
+                  <button id="installUpdateBtn" class="primary hidden">安装并重启</button>
+                </div>
               </div>
               <div class="settings-actions about-actions">
                 <button id="aboutRepoBtn" class="ghost">GitHub 仓库</button>
@@ -768,7 +811,18 @@
         </div>
         <div class="file-body">
           <div id="fileList" class="file-list"></div>
-          <pre id="filePreview" class="file-preview">选择一个文件预览内容。</pre>
+          <section class="file-editor-pane" aria-label="文件编辑器">
+            <div class="file-editor-toolbar">
+              <div id="fileEditorStatus" class="file-editor-status" role="status">选择一个 UTF-8 文本文件开始编辑。最大 2MB。</div>
+              <div class="file-editor-actions">
+                <button id="fileReload" class="ghost" type="button" disabled>重新加载</button>
+                <button id="fileForceSave" class="ghost danger hidden" type="button">强制覆盖</button>
+                <button id="fileSave" class="primary" type="button" disabled>保存</button>
+              </div>
+            </div>
+            <div id="fileEditorEmpty" class="file-editor-empty">选择左侧文件后，可在这里编辑并保存。磁盘内容变化时 Hi Code 会停止覆盖并要求确认。</div>
+            <div id="fileEditorMount" class="file-editor-mount hidden"></div>
+          </section>
         </div>
       </div>
     </div>

@@ -1,0 +1,201 @@
+$ npm run test:services
+
+> hi-code@0.6.0-alpha.8 test:services
+> node test/main-process-services-tests.mjs
+
+
+[services] ipc utils
+  ✓ ipc-utils registers success handler
+  ✓ ipc-utils normalizes failed handler
+  ✓ ipc-utils logs redacted errors
+
+[services] smoke
+  ✓ native open app parses explicit app alias
+  ✓ native open app parses Chinese app alias
+  ✓ native open app does not intercept run tests
+  ✓ native open app does not intercept npm commands
+  ✓ native open app does not intercept file inspection
+  ✓ queue service clears runtime queue
+  ✓ git service preserves cwd boundary
+  ✓ git service validates path arrays
+  ✓ git service exposes branch state through the current workspace
+  ✓ git service creates validated branches through collaboration core
+  ✓ git service requires fresh Pull Request confirmation
+  ✓ git service creates Pull Request only after confirmation
+  ✓ git service audit logs omit Pull Request body
+  ✓ runtime service links Runtime Queue to Job Center
+  ✓ runtime service keeps bounded attachment ids in queue metadata
+  ✓ runtime service rejects malformed attachment ids
+  ✓ register-ipc-handlers exposes runtime:enqueue
+  ✓ register-ipc-handlers exposes runtime:steer
+  ✓ register-ipc-handlers exposes runtime-queue:clear
+  ✓ register-ipc-handlers exposes auth-status
+  ✓ register-ipc-handlers exposes list-store
+  ✓ register-ipc-handlers exposes store:item
+  ✓ register-ipc-handlers exposes store:enable
+  ✓ register-ipc-handlers exposes store:disable
+  ✓ register-ipc-handlers exposes store:uninstall
+  ✓ register-ipc-handlers exposes job:create
+  ✓ register-ipc-handlers exposes job:list
+  ✓ register-ipc-handlers exposes job:get
+  ✓ register-ipc-handlers exposes job:cancel
+  ✓ register-ipc-handlers exposes job:retry
+  ✓ register-ipc-handlers exposes job:pause
+  ✓ register-ipc-handlers exposes job:resume
+  ✓ register-ipc-handlers exposes job:events
+  ✓ register-ipc-handlers exposes job:artifacts
+  ✓ register-ipc-handlers exposes job:artifact:preview
+  ✓ register-ipc-handlers exposes job:artifact:open
+  ✓ register-ipc-handlers exposes provider:list
+  ✓ register-ipc-handlers exposes provider:get
+  ✓ register-ipc-handlers exposes provider:configure
+  ✓ register-ipc-handlers exposes provider:run
+  ✓ register-ipc-handlers exposes provider:cancel
+  ✓ register-ipc-handlers exposes worktree:create
+  ✓ register-ipc-handlers exposes worktree:run
+  ✓ register-ipc-handlers exposes worktree:collectChanges
+  ✓ register-ipc-handlers exposes worktree:cleanup
+  ✓ register-ipc-handlers exposes arena:list
+  ✓ register-ipc-handlers exposes arena:get
+  ✓ register-ipc-handlers exposes arena:create
+  ✓ register-ipc-handlers exposes arena:acceptCandidate
+  ✓ register-ipc-handlers exposes arena:rejectCandidate
+  ✓ register-ipc-handlers exposes arena:mergeCandidate
+  ✓ register-ipc-handlers exposes arena:artifact:preview
+  ✓ register-ipc-handlers exposes arena:artifact:open
+  ✓ register-ipc-handlers exposes industrial-project:schema
+  ✓ register-ipc-handlers exposes industrial-project:get
+  ✓ register-ipc-handlers exposes industrial-project:validate
+  ✓ register-ipc-handlers exposes industrial-project:save
+  ✓ register-ipc-handlers exposes industrial-requirement:draft
+  ✓ register-ipc-handlers exposes industrial-requirement:add
+  ✓ register-ipc-handlers exposes industrial-requirement:criteria:update
+  ✓ register-ipc-handlers exposes industrial-requirement:artifact-plan
+  ✓ register-ipc-handlers exposes industrial-requirement:test-plan
+  ✓ register-ipc-handlers exposes industrial-requirement:spec-package
+  ✓ register-ipc-handlers exposes industrial-requirement:approve
+  ✓ register-ipc-handlers exposes industrial-project:artifact:add
+  ✓ register-ipc-handlers exposes industrial-project:traceability:add
+  ✓ register-ipc-handlers exposes industrial-project:gate:add
+  ✓ register-ipc-handlers exposes domain-pack:list
+  ✓ register-ipc-handlers exposes domain-pack:get
+  ✓ register-ipc-handlers exposes domain-pack:validate
+  ✓ register-ipc-handlers exposes domain-pack:install
+  ✓ register-ipc-handlers exposes domain-pack:update
+  ✓ register-ipc-handlers exposes domain-pack:enable
+  ✓ register-ipc-handlers exposes domain-pack:disable
+  ✓ register-ipc-handlers exposes domain-pack:uninstall
+  ✓ register-ipc-handlers exposes domain-pack:recommend
+  ✓ register-ipc-handlers exposes agent-team:profiles
+  ✓ register-ipc-handlers exposes agent-team:profile:get
+  ✓ register-ipc-handlers exposes agent-team:plan:create
+  ✓ register-ipc-handlers exposes agent-team:plan:list
+  ✓ register-ipc-handlers exposes agent-team:plan:get
+  ✓ register-ipc-handlers exposes agent-team:job:create
+  ✓ register-ipc-handlers exposes toolchain:list
+  ✓ register-ipc-handlers exposes toolchain:detect
+  ✓ register-ipc-handlers exposes toolchain:capabilities
+  ✓ register-ipc-handlers exposes toolchain:validate-adapter
+  ✓ register-ipc-handlers exposes toolchain:run
+  ✓ register-ipc-handlers exposes quality-gate:list
+  ✓ register-ipc-handlers exposes quality-gate:run
+  ✓ register-ipc-handlers exposes quality-gate:approve
+  ✓ register-ipc-handlers exposes release:readiness
+  ✓ register-ipc-handlers exposes release:build
+  ✓ register-ipc-handlers exposes release:open
+  ✓ register-ipc-handlers exposes sample:industrial-control-box:create
+  ✓ register-ipc-handlers exposes diffs:list
+  ✓ register-ipc-handlers exposes git:status
+  ✓ register-ipc-handlers exposes git:branches
+  ✓ register-ipc-handlers exposes git:branch:create
+  ✓ register-ipc-handlers exposes git:branch:switch
+  ✓ register-ipc-handlers exposes git:collaboration
+  ✓ register-ipc-handlers exposes git:pr:create
+  ✓ register-ipc-handlers exposes editor:file:open
+  ✓ register-ipc-handlers exposes editor:file:save
+  ✓ register-ipc-handlers exposes terminal:capabilities
+  ✓ register-ipc-handlers exposes terminal:create
+  ✓ register-ipc-handlers exposes terminal:status
+  ✓ register-ipc-handlers exposes terminal:write
+  ✓ register-ipc-handlers exposes terminal:resize
+  ✓ register-ipc-handlers exposes terminal:close
+  ✓ register-ipc-handlers exposes preview:capabilities
+  ✓ register-ipc-handlers exposes preview:open
+  ✓ register-ipc-handlers exposes preview:list
+  ✓ register-ipc-handlers exposes preview:reopen
+  ✓ register-ipc-handlers exposes preview:reload
+  ✓ register-ipc-handlers exposes preview:verify
+  ✓ register-ipc-handlers exposes preview:close
+  ✓ register-ipc-handlers exposes preview:remove
+  ✓ register-ipc-handlers exposes attach-file
+  ✓ register-ipc-handlers exposes attach-image
+  ✓ register-ipc-handlers exposes attachments:list
+  ✓ register-ipc-handlers exposes attachment:remove
+  ✓ register-ipc-handlers exposes read-file
+  ✓ register-ipc-handlers exposes read-session
+  ✓ register-ipc-handlers exposes new-session
+  ✓ register-ipc-handlers exposes get-config
+  ✓ register-ipc-handlers exposes config:credential-status
+  ✓ register-ipc-handlers exposes app:info
+  ✓ register-ipc-handlers exposes app:open-data-dir
+  ✓ register-ipc-handlers exposes app:reveal-config
+  ✓ register-ipc-handlers exposes app:open-page
+  ✓ register-ipc-handlers exposes app:check-updates
+  ✓ register-ipc-handlers exposes usage:stats
+  ✓ register-ipc-handlers preserves input event
+  ✓ register-ipc-handlers preserves ask-response event
+  ✓ register-ipc-handlers preserves interrupt event
+
+[services] security
+  ✓ security-service allows paths inside roots
+  ✓ security-service rejects paths outside roots
+  ✓ security-service redacts sensitive fields
+
+[services] workspace attachments
+  ✓ workspace service stores pasted images as opaque app-data attachments
+  ✓ workspace service preserves display name without persisting source path
+  ✓ workspace service rejects non-image data URLs
+
+[services] model protocol routing
+  ✓ workspace model test routes explicit Responses profiles to /responses
+  ✓ workspace model test keeps omitted protocol on /chat/completions
+  ✓ workspace model test uses Anthropic Messages headers and body
+  ✓ workspace model test uses Ollama native chat without placeholder auth
+  ✓ workspace model test resolves an existing secretRef without returning its value
+  ✓ workspace model test rejects insecure remote native endpoints before fetch
+  ✓ invalid model protocol is rejected before config write
+  ✓ model protocol validator accepts all supported values
+
+[services] app info
+  ✓ compareVersions orders patch releases
+  ✓ compareVersions handles v prefix and length
+  ✓ app info exposes version and data dir
+  ✓ app info exposes runtime versions
+  ✓ open data dir uses shell.openPath
+  ✓ open page rejects unknown targets
+  ✓ open page opens whitelisted repo url
+  ✓ check updates detects newer release
+  ✓ check updates reports up to date
+  ✓ check updates degrades gracefully offline
+  ✓ check updates maps rate limit to guidance
+
+[services] model test error copy
+  ✓ 401 maps to API key guidance
+  ✓ 403 maps to model access guidance
+  ✓ 404 maps to base URL / model name guidance
+  ✓ 429 maps to rate limit guidance
+  ✓ 5xx maps to upstream guidance
+  ✓ error copy keeps raw error for debugging
+  ✓ timeout maps to actionable copy
+  ✓ local ECONNREFUSED suggests starting local service
+  ✓ remote ECONNREFUSED suggests checking host/port
+  ✓ ENOTFOUND suggests checking spelling
+  ✓ generic fetch failed maps to network guidance
+  ✓ model capability marks vision-capable model names
+  ✓ model capability warns for text-only code models
+  ✓ model capability stays unknown for custom models
+
+[services] usage
+  ✓ usage service aggregates top tools from event logs
+
+=== 178 passed, 0 failed ===

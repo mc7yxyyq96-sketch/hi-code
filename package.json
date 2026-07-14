@@ -1,6 +1,6 @@
 {
   "name": "hi-code",
-  "version": "0.6.0-alpha.6",
+  "version": "0.6.0-alpha.8",
   "description": "Hi Code — a desktop coding agent for any OpenAI-compatible model.",
   "author": "Hi Code contributors",
   "license": "MIT",
@@ -19,14 +19,33 @@
   },
   "scripts": {
     "dev": "tsx src/index.ts",
-    "build": "tsc -p tsconfig.json && chmod +x dist/index.js",
+    "build": "tsc -p renderer/tsconfig.json --noEmit && vite build --config vite.renderer.config.ts && tsc -p tsconfig.json && chmod +x dist/index.js",
+    "build:renderer": "vite build --config vite.renderer.config.ts",
+    "check:renderer-types": "tsc -p renderer/tsconfig.json --noEmit",
     "start": "node dist/index.js",
     "test": "node test/feature-tests.mjs",
     "test:feature": "node test/feature-tests.mjs",
+    "test:mcp": "npm run build && node test/mcp-connection-tests.mjs",
     "test:runtime-protocol": "node test/runtime-protocol-tests.mjs",
+    "test:runtime-events": "node test/runtime-event-sink-tests.mjs",
+    "test:runtime-concurrency": "node test/runtime-concurrency-tests.mjs",
+    "test:runtime-clients": "node test/runtime-client-adapter-tests.mjs",
+    "test:runtime-control": "npm run build && node test/runtime-control-tests.mjs",
+    "test:git-collaboration": "npm run build && node test/git-collaboration-tests.mjs",
+    "test:secrets": "npm run build && node test/secret-reference-tests.mjs",
+    "test:secret-store": "npm run build && node test/secret-store-service-tests.mjs",
+    "test:execution-policy": "npm run build && node test/execution-policy-tests.mjs",
+    "test:runtime-stores": "node test/runtime-store-tests.mjs",
+    "test:runtime-store-integration": "node test/runtime-store-integration-tests.mjs",
+    "test:turn-recovery": "node test/turn-recovery-tests.mjs",
     "test:services": "node test/main-process-services-tests.mjs",
     "test:jobs": "node test/job-center-tests.mjs",
     "test:providers": "node test/provider-tests.mjs",
+    "test:provider-hardening": "node test/provider-hardening-tests.mjs",
+    "test:model-providers": "node test/model-provider-tests.mjs",
+    "test:openai-responses": "node test/openai-responses-provider-tests.mjs",
+    "test:anthropic-ollama": "node test/anthropic-ollama-provider-tests.mjs",
+    "test:attachment-command": "node test/attachment-command-registry-tests.mjs",
     "test:worktrees": "node test/worktree-runner-tests.mjs",
     "test:arena": "node test/patch-arena-tests.mjs",
     "test:industrial": "node test/industrial-project-tests.mjs",
@@ -38,43 +57,128 @@
     "test:samples": "node test/industrial-control-box-sample-tests.mjs",
     "test:dod": "node test/definition-of-done-tests.mjs",
     "test:renderer": "node test/renderer-architecture-tests.mjs",
+    "test:app-shell": "vite build --config vite.renderer.config.ts && tsx test/app-shell-tests.ts",
+    "test:workspace-shell": "vite build --config vite.renderer.config.ts && tsx test/workspace-shell-tests.ts",
+    "test:editor-workbench": "tsx test/editor-workbench-tests.ts",
+    "test:terminal:service": "node test/terminal-service-tests.mjs",
+    "test:terminal:renderer": "tsx test/terminal-workbench-tests.ts",
+    "test:terminal": "node test/terminal-service-tests.mjs && tsx test/terminal-workbench-tests.ts",
+    "test:terminal-package": "node test/terminal-package-tests.mjs",
+    "test:preview:service": "node test/preview-service-tests.mjs",
+    "test:preview:renderer": "tsx test/preview-workbench-tests.ts",
+    "test:preview": "node test/preview-service-tests.mjs && tsx test/preview-workbench-tests.ts",
     "test:entrypoints": "node test/entrypoint-tests.mjs",
     "test:security": "node test/security-baseline.mjs",
     "test:usage": "node test/usage-store-tests.mjs",
+    "test:program": "node test/program-control-tests.mjs",
+    "test:electron-e2e": "node tests/electron-e2e/run.mjs",
+    "test:electron-e2e:update": "node tests/electron-e2e/run.mjs --update-fixtures",
+    "test:electron-compatibility": "node test/electron-compatibility-tests.mjs",
+    "test:release-pipeline": "node test/release-pipeline-tests.mjs",
+    "test:stable-gate": "node test/stable-release-gate-tests.mjs",
     "sync:version": "node scripts/sync-version.mjs",
     "scan:dod": "node scripts/scan-dod.mjs",
+    "program:baseline": "node scripts/capture-program-baseline.mjs",
+    "program:evidence:qa": "node scripts/capture-task-evidence.mjs --task=HC-QA-101",
+    "program:evidence:runtime": "node scripts/capture-task-evidence.mjs --task=HC-RUN-201",
+    "program:evidence:runtime-store": "node scripts/capture-task-evidence.mjs --task=HC-RUN-202",
+    "program:evidence:turn-recovery": "node scripts/capture-task-evidence.mjs --task=HC-RUN-203",
+    "program:evidence:electron": "node scripts/capture-task-evidence.mjs --task=HC-PLAT-110",
+    "program:evidence:model-provider": "node scripts/capture-task-evidence.mjs --task=HC-PROV-210",
+    "program:evidence:openai-responses": "node scripts/capture-task-evidence.mjs --task=HC-PROV-211",
+    "program:evidence:anthropic-ollama": "node scripts/capture-task-evidence.mjs --task=HC-PROV-212",
+    "program:evidence:attachment-command": "node scripts/capture-task-evidence.mjs --task=HC-RUN-220",
+    "program:evidence:app-shell": "node scripts/capture-task-evidence.mjs --task=HC-UI-301",
+    "program:evidence:session-workbench": "node scripts/capture-task-evidence.mjs --task=HC-UI-302",
+    "program:evidence:editor-workbench": "node scripts/capture-task-evidence.mjs --task=HC-UI-310",
+    "program:evidence:terminal": "node scripts/capture-task-evidence.mjs --task=HC-UI-311",
+    "program:evidence:preview": "node scripts/capture-task-evidence.mjs --task=HC-UI-312",
+    "program:evidence:git-loop": "node scripts/capture-task-evidence.mjs --task=HC-GIT-320",
+    "program:evidence:secrets": "node scripts/capture-task-evidence.mjs --task=HC-SEC-401",
+    "program:evidence:execution-policy": "node scripts/capture-task-evidence.mjs --task=HC-SEC-402",
+    "program:evidence:release-pipeline": "node scripts/capture-task-evidence.mjs --task=HC-REL-420",
+    "program:evidence:mcp": "node scripts/capture-task-evidence.mjs --task=HC-MCP-410",
+    "program:evidence:provider-hardening": "node scripts/capture-task-evidence.mjs --task=HC-PROV-301",
+    "program:evidence:stable-gate": "node scripts/capture-task-evidence.mjs --task=HC-REL-STABLE-GATE",
+    "program:evidence:alpha7": "node scripts/capture-task-evidence.mjs --task=HC-REL-ALPHA-7",
+    "program:evidence:alpha8": "node scripts/capture-task-evidence.mjs --task=HC-REL-ALPHA-8",
     "store:export": "node scripts/export-store-catalog.mjs",
     "check:syntax": "node --check electron/main.mjs && node --check electron/preload.cjs && node --check renderer/renderer.js",
     "check:js": "node --check electron/main.mjs && node --check electron/preload.cjs && node --check renderer/renderer.js",
     "verify": "node scripts/verify.mjs",
-    "audit:prod": "npm audit --omit=dev --audit-level=high",
+    "audit:prod": "node scripts/audit-production.mjs --audit-level=high",
     "audit:high": "npm audit --audit-level=high",
     "release:check": "node scripts/verify.mjs --release",
+    "release:stable-gate:assess": "node scripts/stable-release-gate.mjs",
+    "release:stable-gate": "node scripts/stable-release-gate.mjs --require-ready",
+    "release:preflight": "node scripts/release-preflight.mjs",
+    "release:sbom": "node scripts/generate-sbom.mjs",
+    "release:provenance": "node scripts/generate-provenance.mjs",
     "release:checksums": "node scripts/checksum-release.mjs",
+    "release:verify-checksums": "node scripts/checksum-release.mjs --verify",
+    "release:package-smoke": "node scripts/package-smoke.mjs",
     "app": "npm run build && electron .",
-    "dist:mac": "npm run build && electron-builder --mac dmg",
-    "dist:win": "npm run build && electron-builder --win --x64",
-    "dist:all": "npm run build && electron-builder --mac dmg --win --x64"
+    "dist:mac": "npm run build && node scripts/run-electron-builder.mjs --mac dmg zip",
+    "dist:win": "npm run build && node scripts/run-electron-builder.mjs --win nsis zip --x64",
+    "dist:linux": "npm run build && node scripts/run-electron-builder.mjs --linux AppImage deb --x64",
+    "dist:all": "npm run build && node scripts/run-electron-builder.mjs --mac dmg zip && node scripts/run-electron-builder.mjs --win nsis zip --x64 && node scripts/run-electron-builder.mjs --linux AppImage deb --x64"
   },
   "dependencies": {
+    "@codemirror/commands": "^6.10.4",
+    "@codemirror/lang-css": "^6.3.1",
+    "@codemirror/lang-html": "^6.4.11",
+    "@codemirror/lang-javascript": "^6.2.5",
+    "@codemirror/lang-json": "^6.0.2",
+    "@codemirror/lang-markdown": "^6.5.0",
+    "@codemirror/language": "^6.12.4",
+    "@codemirror/state": "^6.7.1",
+    "@codemirror/view": "^6.43.6",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/xterm": "^6.0.0",
     "chalk": "^5.3.0",
     "diff": "^5.2.0",
+    "electron-updater": "6.8.9",
     "ink": "^5.0.1",
     "ink-spinner": "^5.0.0",
-    "react": "^18.3.1"
+    "node-pty": "1.2.0-beta.12",
+    "react": "^18.3.1",
+    "react-dom": "18.3.1"
   },
   "devDependencies": {
     "@types/diff": "^5.2.1",
     "@types/node": "^22.7.0",
     "@types/react": "^18.3.5",
-    "electron": "^31.7.7",
-    "electron-builder": "^24.13.3",
+    "@types/react-dom": "18.3.7",
+    "electron": "43.1.0",
+    "electron-builder": "26.15.3",
+    "npm": "11.9.0",
+    "playwright": "^1.61.1",
     "tsx": "^4.19.0",
-    "typescript": "^5.6.0"
+    "typescript": "^5.6.0",
+    "vite": "6.2.6"
   },
   "build": {
     "appId": "com.hicode.desktop",
     "productName": "Hi Code",
+    "asarUnpack": [
+      "node_modules/node-pty/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "build/generated/release-channel.json",
+        "to": "release-channel.json"
+      }
+    ],
+    "generateUpdatesFilesForAllChannels": true,
+    "electronUpdaterCompatibility": ">=2.16",
+    "publish": {
+      "provider": "github",
+      "owner": "mc7yxyyq96-sketch",
+      "repo": "hi-code",
+      "protocol": "https",
+      "releaseType": "draft",
+      "channel": "latest"
+    },
     "files": [
       "dist/**/*",
       "electron/**/*",
@@ -86,10 +190,13 @@
       "buildResources": "build"
     },
     "mac": {
-      "target": "dmg",
+      "target": [
+        "dmg",
+        "zip"
+      ],
       "category": "public.app-category.developer-tools",
       "icon": "build/icon.icns",
-      "identity": null
+      "artifactName": "Hi-Code-${version}-mac-${arch}.${ext}"
     },
     "dmg": {
       "title": "Hi Code"
@@ -99,15 +206,28 @@
         "nsis",
         "zip"
       ],
-      "icon": "build/icon.png"
+      "icon": "build/icon.png",
+      "artifactName": "Hi-Code-${version}-win-${arch}.${ext}"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "artifactName": "${productName}-Setup-${version}-win-${arch}.${ext}"
+      "runAfterFinish": false,
+      "artifactName": "Hi-Code-Setup-${version}-win-${arch}.${ext}"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Development",
+      "synopsis": "Local-first AI engineering workbench",
+      "description": "Hi Code is a local-first desktop coding and industrial engineering agent.",
+      "maintainer": "Hi Code contributors",
+      "artifactName": "Hi-Code-${version}-linux-${arch}.${ext}"
     }
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=22.12.0"
   }
 }

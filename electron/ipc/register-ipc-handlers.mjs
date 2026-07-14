@@ -17,7 +17,11 @@ import { registerSampleProjectIpc } from "../services/sample-project-service.mjs
 import { registerGitIpc } from "../services/git-service.mjs";
 import { registerDiffIpc } from "../services/diff-service.mjs";
 import { registerWorkspaceIpc } from "../services/workspace-service.mjs";
+import { registerEditorIpc } from "../services/editor-service.mjs";
+import { registerTerminalIpc } from "../services/terminal-service.mjs";
+import { registerPreviewIpc } from "../services/preview-service.mjs";
 import { registerSecurityIpc } from "../services/security-service.mjs";
+import { registerExecutionPolicyIpc } from "../services/execution-policy-service.mjs";
 import { registerAppInfoIpc } from "../services/app-info-service.mjs";
 import { registerUsageIpc } from "../services/usage-service.mjs";
 
@@ -26,9 +30,10 @@ export function registerIpcHandlers({ services, ipcMain, dialog, shell, logger =
   if (!ipcMain) throw new Error("registerIpcHandlers requires ipcMain");
   const register = createIpcRegistrar(ipcMain, { logger });
 
-  registerRuntimeIpcEvents({ ipcMain, runtime: services.runtime });
+  registerRuntimeIpcEvents({ ipcMain, register, runtime: services.runtime });
   registerQueueIpc({ register, queue: services.queue });
   registerSecurityIpc({ register, security: services.security });
+  registerExecutionPolicyIpc({ register, executionPolicy: services.executionPolicy });
   registerMcpIpc({ register, mcp: services.mcp });
   registerStoreIpc({ register, store: services.store });
   registerJobIpc({ register, job: services.job });
@@ -44,6 +49,9 @@ export function registerIpcHandlers({ services, ipcMain, dialog, shell, logger =
   registerSampleProjectIpc({ register, sampleProject: services.sampleProject });
   registerDiffIpc({ register, diff: services.diff });
   registerGitIpc({ register, git: services.git });
+  registerEditorIpc({ register, editor: services.editor });
+  registerTerminalIpc({ register, terminal: services.terminal });
+  registerPreviewIpc({ register, preview: services.preview });
   registerWorkspaceIpc({ register, workspace: services.workspace, dialog, shell });
   registerAppInfoIpc({ register, appInfo: services.appInfo });
   registerUsageIpc({ register, usage: services.usage });

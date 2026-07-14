@@ -35,19 +35,21 @@ export function createHiCodeApi(rawApi = window.hicode, { onError = null } = {})
 
   const listen = (name, handler) => {
     const fn = api[name];
-    if (typeof fn !== "function" || typeof handler !== "function") return;
-    fn((payload) => {
+    if (typeof fn !== "function" || typeof handler !== "function") return () => {};
+    const unsubscribe = fn((payload) => {
       try {
         handler(payload);
       } catch (error) {
         notifyError(error, `${name} 事件处理失败`);
       }
     });
+    return typeof unsubscribe === "function" ? unsubscribe : () => {};
   };
 
   return {
     has: (name) => typeof api[name] === "function",
     send: (text) => call("send", [text], { ok: false }),
+    steer: (text) => call("steer", [text], { ok: false }),
     answer: (id, value) => call("answer", [id, value], { ok: false }),
     interrupt: () => call("interrupt", [], { ok: false }),
     clearRuntimeQueue: () => call("clearRuntimeQueue", [], { ok: false, count: 0 }),
@@ -65,17 +67,35 @@ export function createHiCodeApi(rawApi = window.hicode, { onError = null } = {})
     gitUnstage: (paths) => call("gitUnstage", [paths]),
     gitCommitMessage: () => call("gitCommitMessage", []),
     gitCommit: (message) => call("gitCommit", [message]),
+    gitBranches: () => call("gitBranches", [], { ok: false, branches: [], error: "分支读取失败" }),
+    gitCreateBranch: (payload) => call("gitCreateBranch", [payload]),
+    gitSwitchBranch: (payload) => call("gitSwitchBranch", [payload]),
+    gitCollaboration: () => call("gitCollaboration", [], { ok: false, checks: [], error: "PR/CI 状态读取失败" }),
+    gitCreatePullRequest: (payload) => call("gitCreatePullRequest", [payload]),
     pickFolder: () => call("pickFolder", [], ""),
+    attachFile: (payload) => call("attachFile", [payload], { ok: false, error: "附件添加失败" }),
     attachImage: (payload) => call("attachImage", [payload], { ok: false, error: "图片附件失败" }),
+    listAttachments: (sessionId) => call("listAttachments", [sessionId], []),
+    removeAttachment: (id) => call("removeAttachment", [id], { ok: false, error: "附件移除失败" }),
     getCwd: () => call("getCwd", [], ""),
     listDir: (dir) => call("listDir", [dir], []),
     readFile: (filePath) => call("readFile", [filePath], { error: "读取文件失败", content: "" }),
+    openEditorFile: (payload) => call("openEditorFile", [payload], { ok: false, error: "文件打开失败" }),
+    saveEditorFile: (payload) => call("saveEditorFile", [payload], { ok: false, error: "文件保存失败" }),
+    getTerminalCapabilities: () => call("getTerminalCapabilities", [], { ok: true, available: false, reason: "当前环境不支持集成终端" }, { silent: true }),
+    createTerminal: (payload) => call("createTerminal", [payload], { ok: false, error: "终端启动失败" }, { silent: true }),
+    getTerminalStatus: () => call("getTerminalStatus", [], { ok: true, active: false, session: null, snapshot: "" }, { silent: true }),
+    writeTerminal: (sessionId, input) => call("writeTerminal", [sessionId, input], { ok: false, error: "终端输入失败" }, { silent: true }),
+    resizeTerminal: (sessionId, payload) => call("resizeTerminal", [sessionId, payload], { ok: false, error: "终端尺寸更新失败" }, { silent: true }),
+    closeTerminal: (sessionId, reason) => call("closeTerminal", [sessionId, reason], { ok: false, error: "终端关闭失败" }, { silent: true }),
     listSessions: () => call("listSessions", [], []),
     resumeSession: (id) => call("resumeSession", [id], []),
     newSession: () => call("newSession", [], { ok: false, error: "新对话创建失败" }),
     readSession: (id) => call("readSession", [id], []),
     deleteSession: (id) => call("deleteSession", [id], false),
     getConfig: () => call("getConfig", [], ""),
+    getCredentialStatus: () => call("getCredentialStatus", [], { ok: false, references: [], error: "凭据状态不可用" }, { silent: true }),
+    getExecutionPolicyCapabilities: () => call("getExecutionPolicyCapabilities", [], { ok: false, capabilities: null, error: "执行策略状态不可用" }, { silent: true }),
     saveConfig: (text) => call("saveConfig", [text]),
     testModel: (profile) => call("testModel", [profile]),
     getAppInfo: () => call("getAppInfo", [], { ok: false, error: "应用信息不可用" }),
@@ -84,6 +104,10 @@ export function createHiCodeApi(rawApi = window.hicode, { onError = null } = {})
     revealConfigFile: () => call("revealConfigFile", []),
     openAppPage: (target) => call("openAppPage", [target]),
     checkUpdates: () => call("checkUpdates", [], { ok: false, error: "检查更新不可用" }, { silent: true }),
+    getUpdateStatus: () => call("getUpdateStatus", [], { ok: false, error: "更新状态不可用" }, { silent: true }),
+    setUpdateChannel: (channel) => call("setUpdateChannel", [channel], { ok: false, error: "更新通道设置不可用" }),
+    downloadUpdate: () => call("downloadUpdate", [], { ok: false, error: "更新下载不可用" }),
+    installUpdate: () => call("installUpdate", [], { ok: false, error: "更新安装不可用" }),
     createJob: (payload) => call("createJob", [payload]),
     listJobs: (options) => call("listJobs", [options], { ok: true, jobs: [] }),
     getJob: (jobId) => call("getJob", [jobId]),
@@ -100,7 +124,13 @@ export function createHiCodeApi(rawApi = window.hicode, { onError = null } = {})
     previewJobArtifact: (jobId, artifactId) => call("previewJobArtifact", [jobId, artifactId]),
     openJobArtifact: (jobId, artifactId) => call("openJobArtifact", [jobId, artifactId]),
     listProviders: () => call("listProviders", [], { ok: true, providers: [] }),
+    discoverProviders: (payload) => call("discoverProviders", [payload], { ok: true, providers: [] }),
     getProvider: (providerId) => call("getProvider", [providerId]),
+    getProviderCapabilities: (providerId) => call("getProviderCapabilities", [providerId]),
+    healthCheckProvider: (providerId) => call("healthCheckProvider", [providerId]),
+    getProviderRegistryVersion: () => call("getProviderRegistryVersion", []),
+    getProviderUsage: (providerId) => call("getProviderUsage", [providerId], { ok: true, usage: [] }),
+    rotateProviderCredential: (providerId, payload) => call("rotateProviderCredential", [providerId, payload]),
     configureProvider: (providerId, payload) => call("configureProvider", [providerId, payload]),
     runProvider: (providerId, payload) => call("runProvider", [providerId, payload]),
     cancelProvider: (providerId, payload) => call("cancelProvider", [providerId, payload]),
@@ -162,6 +192,12 @@ export function createHiCodeApi(rawApi = window.hicode, { onError = null } = {})
     login: (payload) => call("login", [payload]),
     logout: () => call("logout", []),
     listCapabilities: () => call("listCapabilities", [], { plugins: [], skills: [], mcp: [], agents: [] }),
+    listMcpLifecycle: () => call("listMcpLifecycle", [], { ok: false, servers: [], error: "MCP 生命周期不可用" }),
+    reloadMcpServers: () => call("reloadMcpServers", [], { ok: false, results: [], servers: [], error: "MCP 重载失败" }),
+    connectMcpServer: (name) => call("connectMcpServer", [name]),
+    reconnectMcpServer: (name) => call("reconnectMcpServer", [name]),
+    disconnectMcpServer: (name) => call("disconnectMcpServer", [name]),
+    cancelMcpRequest: (payload) => call("cancelMcpRequest", [payload]),
     listStore: (options) => call("listStore", [options], { items: [], sources: [] }),
     setStoreSource: (sourceId) => call("setStoreSource", [sourceId]),
     previewStoreItem: (id) => call("previewStoreItem", [id]),
@@ -178,6 +214,7 @@ export function createHiCodeApi(rawApi = window.hicode, { onError = null } = {})
     onToolEvent: (handler) => listen("onToolEvent", handler),
     onDiffsChanged: (handler) => listen("onDiffsChanged", handler),
     onRuntimeQueue: (handler) => listen("onRuntimeQueue", handler),
+    onTerminalEvent: (handler) => listen("onTerminalEvent", handler),
   };
 }
 

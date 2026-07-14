@@ -1,19 +1,29 @@
 // Hi Code — Electron main process. Reuses the compiled agent core (dist/) and
-// bridges its terminal-style output to the renderer over IPC.
+// projects typed runtime events to the renderer over the existing IPC surface.
 process.env.FORCE_COLOR = "1"; // make chalk emit ANSI even without a TTY
 
-import { app, BrowserWindow, ipcMain, dialog, shell } from "electron";
+import { app, BrowserWindow, ipcMain, dialog, shell, safeStorage } from "electron";
+import electronUpdater from "electron-updater";
 import path from "node:path";
 import os from "node:os";
 import fs from "node:fs";
 import crypto from "node:crypto";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
 
 import { loadConfig, defaultProfile, HICODE_DIR } from "../dist/config.js";
 import { createRuntime, buildSystemPrompt } from "../dist/runtime.js";
+import { requestPermission } from "../dist/permissions.js";
 import { setSpinnerEnabled } from "../dist/ui.js";
-import { initMcp } from "../dist/mcp.js";
+import {
+  initMcp,
+  mcpLifecycleStatus,
+  connectMcpServer,
+  reconnectMcpServer,
+  disconnectMcpServer,
+  cancelMcpRequest,
+  shutdownMcp,
+} from "../dist/mcp.js";
 import { listSessions, deleteSession, loadSession, replaySessionMessages } from "../dist/session-store.js";
 import { DiffService } from "../dist/diff-service.js";
 import { readRecoverableTasks, readRecoverableTasksFromLogs } from "../dist/recovery.js";
@@ -29,6 +39,7 @@ import {
   gitGenerateCommitMessage,
   gitCommit,
 } from "../dist/git.js";
+import { createGitCollaborationClient } from "../dist/git-collaboration.js";
 import { registerIpcHandlers } from "./ipc/register-ipc-handlers.mjs";
 import { createRuntimeService } from "./services/runtime-service.mjs";
 import { createQueueService } from "./services/queue-service.mjs";
@@ -48,10 +59,21 @@ import { createSampleProjectService } from "./services/sample-project-service.mj
 import { createGitService } from "./services/git-service.mjs";
 import { createDiffIpcService } from "./services/diff-service.mjs";
 import { createWorkspaceService, modelCapabilityHint } from "./services/workspace-service.mjs";
+import { createEditorService } from "./services/editor-service.mjs";
+import { createTerminalService } from "./services/terminal-service.mjs";
+import { createPreviewService } from "./services/preview-service.mjs";
 import { createSecurityService, redactSensitive } from "./services/security-service.mjs";
+import { createExecutionPolicyService } from "./services/execution-policy-service.mjs";
 import { createAppInfoService } from "./services/app-info-service.mjs";
+import { createUpdateService } from "./services/update-service.mjs";
 import { createUsageService } from "./services/usage-service.mjs";
+import { createElectronSecretStore } from "./services/secret-store-service.mjs";
 import { recordUsage } from "../dist/usage-store.js";
+import { RuntimeEventBus } from "../dist/runtime-event-sink.js";
+import { connectAssistantTextOutput } from "../dist/runtime-client-adapters.js";
+import { FileAttachmentStore } from "../dist/attachment-store.js";
+import { createDefaultCommandRegistry } from "../dist/command-registry.js";
+import { buildSafeChildEnv } from "../dist/process-env.js";
 import { openMacApp, parseOpenAppRequest } from "./services/native-open-service.mjs";
 import { BUILTIN_STORE_CATALOG } from "./store-catalog.mjs";
 
@@ -62,14 +84,19 @@ const AUTH_PATH = path.join(HICODE_DIR, "auth.json");
 const STORE_PATH = path.join(HICODE_DIR, "store.json");
 const STORE_DIR = path.join(HICODE_DIR, "store");
 const LOG_DIR = path.join(HICODE_DIR, "logs");
+const SECRET_DIR = path.join(HICODE_DIR, "secrets");
 const JOB_CENTER_PATH = path.join(HICODE_DIR, "jobs", "job-center.json");
 const PROVIDER_CONFIG_PATH = path.join(HICODE_DIR, "providers", "providers.json");
 const PROVIDER_RUN_DIR = path.join(HICODE_DIR, "providers", "runs");
+const PROVIDER_USAGE_PATH = path.join(HICODE_DIR, "providers", "usage.json");
 const WORKTREE_RUNNER_DIR = path.join(HICODE_DIR, "worktrees");
 const PATCH_ARENA_PATH = path.join(HICODE_DIR, "patch-arena", "arena-runs.json");
 const PATCH_ARENA_ARTIFACT_DIR = path.join(HICODE_DIR, "patch-arena", "artifacts");
 const DOMAIN_PACK_DIR = path.join(HICODE_DIR, "domain-packs");
 const AGENT_TEAM_DIR = path.join(HICODE_DIR, "agent-team");
+const ATTACHMENT_STORE_DIR = path.join(HICODE_DIR, "attachments-v2");
+const PREVIEW_EVIDENCE_DIR = path.join(HICODE_DIR, "preview-evidence");
+const UPDATE_SETTINGS_PATH = path.join(HICODE_DIR, "updates", "settings.json");
 const CODEX_DIR = path.join(os.homedir(), ".codex");
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -80,25 +107,93 @@ let cwd = os.homedir();
 let mainServices = null;
 const askResolvers = new Map();
 let askSeq = 0;
+let nativeCleanupQuitInProgress = false;
+let credentialStartupState = { ok: true, status: "pending" };
 const toolEvents = [];
 const diffService = new DiffService(() => cwd);
+const gitCollaboration = createGitCollaborationClient();
 const worktreeRunner = new WorktreeRunner({ safeRoot: WORKTREE_RUNNER_DIR });
 const patchArenaStore = new PatchArenaStore({ storePath: PATCH_ARENA_PATH });
 const domainPackManager = createDomainPackManager({ safeRoot: DOMAIN_PACK_DIR });
 const agentTeamStore = createAgentTeamStore({ safeRoot: AGENT_TEAM_DIR });
+const attachmentStore = new FileAttachmentStore(ATTACHMENT_STORE_DIR);
+const desktopCommandRegistry = createDefaultCommandRegistry({
+  nativeCommands: [{
+    id: "native.open-app",
+    surfaces: ["desktop"],
+    priority: 100,
+    match: (input) => parseOpenAppRequest(input),
+  }],
+});
 const industrialToolRegistry = createIndustrialToolRegistry();
 const jobStore = new JobStore({
   storePath: JOB_CENTER_PATH,
   allowedArtifactRoots: [HICODE_DIR, () => cwd],
 });
 const MAX_TOOL_EVENTS = 500;
+const legacyStdoutBridgeEnabled = process.env.HICODE_LEGACY_STDOUT_BRIDGE !== "0";
+const runtimeEventBus = new RuntimeEventBus({
+  onListenerError: (error, event) => appendRuntimeLog({
+    id: `runtime-listener-${Date.now()}`,
+    type: "runtime-listener:error",
+    title: "Runtime event listener failed",
+    summary: error?.message || String(error),
+    payload: { sourceEventId: event.id, sourceEventType: event.type },
+    createdAt: Date.now(),
+  }),
+});
+const desktopSecretStore = createElectronSecretStore({
+  safeStorage,
+  rootDir: SECRET_DIR,
+  configPath: CONFIG_PATH,
+  logger: (event, payload) => appendRuntimeLog({
+    id: `secret-${Date.now()}-${crypto.randomUUID()}`,
+    type: event,
+    title: event,
+    payload,
+    createdAt: Date.now(),
+  }),
+});
+
+function loadDesktopConfig() {
+  return loadConfig({
+    resolveSecret: (secretRef) => desktopSecretStore.resolve(secretRef),
+    allowLegacyPlaintext: false,
+    onSecretResolutionError: ({ secretRef, location, error }) => appendRuntimeLog({
+      id: `secret-resolution-${Date.now()}-${crypto.randomUUID()}`,
+      type: "secret.resolve.failed",
+      title: "secret.resolve.failed",
+      payload: { secretRef, location, error },
+      createdAt: Date.now(),
+    }),
+  });
+}
+
+function credentialStatusSnapshot() {
+  try {
+    return { ...desktopSecretStore.configCredentialStatus(), startup: credentialStartupState };
+  } catch (error) {
+    return { ok: false, error: error?.message || "凭据状态不可用", references: [], startup: credentialStartupState };
+  }
+}
+runtimeEventBus.subscribe(handleRuntimeEvent);
+connectAssistantTextOutput(runtimeEventBus, {
+  write: (text) => send("output", text),
+});
 const storeItemCache = new Map();
 const runtimeJobStatusMirror = new Map();
 let activeRuntimeJobCenterId = null;
 const inputQueue = new RuntimeJobQueue(
   async (job) => runRuntimeQueueJob(job),
   (state) => handleInputQueueState(state),
-  (err) => send("output", `error: ${err?.message ?? err}\n`),
+  (err, job) => appendRuntimeLog({
+    id: `runtime-queue-error-${Date.now()}-${crypto.randomUUID()}`,
+    type: "runtime-queue:error",
+    title: "Runtime queue job failed",
+    summary: err?.message || String(err),
+    payload: { runtimeJobId: job?.id || "" },
+    createdAt: Date.now(),
+  }),
   { storePath: path.join(HICODE_DIR, "jobs", "runtime-jobs.json"), historyLimit: 100 },
 );
 
@@ -233,8 +328,13 @@ function handleRuntimeEvent(event) {
     if (id && status && diffService.updateStatus(id, status).ok) diffChanged = true;
   }
 
-  rememberToolEvent(normalized);
-  recordRuntimeEventForActiveJob(normalized);
+  // Deltas and complete model context are already durable in the protocol
+  // store. Keeping either in legacy timeline/job logs would duplicate data and
+  // expose hidden replay context to surfaces that were designed for summaries.
+  if (normalized.type !== "assistant:delta" && normalized.type !== "message:appended") {
+    rememberToolEvent(normalized);
+    recordRuntimeEventForActiveJob(normalized);
+  }
   if (normalized.type === "turn:done") {
     try {
       recordUsage({
@@ -305,6 +405,9 @@ function publicJobState(job) {
     finishedAt: job.finishedAt,
     error: job.error,
     summary: summarizeQueuedInput(job.input),
+    source: job.metadata?.source === "steer" ? "steer" : "runtime_queue",
+    executionMode: job.metadata?.executionMode === "plan" ? "plan" : "default",
+    steeredFromRuntimeJobId: typeof job.metadata?.steeredFromRuntimeJobId === "string" ? job.metadata.steeredFromRuntimeJobId : undefined,
   };
 }
 
@@ -1312,9 +1415,7 @@ function installMcp(item, source) {
     args: withNpmMirrorArgs(Array.isArray(server.args) ? server.args : [], source),
     ...(server.env ? { env: server.env } : {}),
   };
-  fs.mkdirSync(path.dirname(CONFIG_PATH), { recursive: true, mode: 0o700 });
-  fs.writeFileSync(CONFIG_PATH, JSON.stringify(cfg, null, 2), { mode: 0o600 });
-  try { fs.chmodSync(CONFIG_PATH, 0o600); } catch {}
+  desktopSecretStore.persistConfig(cfg);
   buildRuntime();
   return { server: server.name, mcpConfig: cfg.mcpServers[server.name] };
 }
@@ -1373,7 +1474,14 @@ function extractDownloadedArchive(file, extractDir) {
   ];
   const errors = [];
   for (const attempt of attempts) {
-    const run = spawnSync(attempt.command, attempt.args, { encoding: "utf8", timeout: 30000, maxBuffer: 1024 * 1024 });
+    const run = spawnSync(attempt.command, attempt.args, {
+      encoding: "utf8",
+      timeout: 30000,
+      maxBuffer: 1024 * 1024,
+      env: buildSafeChildEnv(),
+      shell: false,
+      windowsHide: true,
+    });
     if (run.status === 0) {
       const escaped = walkStoreFiles(absExtractDir, (candidate) => !resolvedPathInside(absExtractDir, candidate), 5000);
       if (escaped.length) {
@@ -1768,9 +1876,7 @@ function removeConfiguredMcpServer(record) {
   const cfg = readJsonFile(CONFIG_PATH, {});
   if (!cfg.mcpServers?.[serverName]) return false;
   delete cfg.mcpServers[serverName];
-  fs.mkdirSync(path.dirname(CONFIG_PATH), { recursive: true, mode: 0o700 });
-  fs.writeFileSync(CONFIG_PATH, JSON.stringify(cfg, null, 2), { mode: 0o600 });
-  try { fs.chmodSync(CONFIG_PATH, 0o600); } catch {}
+  desktopSecretStore.persistConfig(cfg);
   buildRuntime();
   return true;
 }
@@ -1782,9 +1888,7 @@ function restoreConfiguredMcpServer(record) {
   const cfg = readJsonFile(CONFIG_PATH, {});
   if (!cfg.mcpServers || typeof cfg.mcpServers !== "object") cfg.mcpServers = {};
   cfg.mcpServers[serverName] = mcpConfig;
-  fs.mkdirSync(path.dirname(CONFIG_PATH), { recursive: true, mode: 0o700 });
-  fs.writeFileSync(CONFIG_PATH, JSON.stringify(cfg, null, 2), { mode: 0o600 });
-  try { fs.chmodSync(CONFIG_PATH, 0o600); } catch {}
+  desktopSecretStore.persistConfig(cfg);
   buildRuntime();
   return true;
 }
@@ -2113,12 +2217,15 @@ function pluginDescription(name) {
 }
 
 function listConfiguredMcpServers() {
-  const cfg = loadConfig();
+  const cfg = loadDesktopConfig();
   const servers = Object.entries(cfg.mcpServers || {}).map(([name, server]) => ({
     name,
-    command: server.command,
-    args: Array.isArray(server.args) ? server.args : [],
-    envCount: server.env ? Object.keys(server.env).length : 0,
+    transport: server.transport === "streamable-http" ? "streamable-http" : "stdio",
+    command: server.transport === "streamable-http" ? "" : server.command,
+    url: server.transport === "streamable-http" ? server.url : "",
+    args: server.transport === "streamable-http" ? [] : Array.isArray(server.args) ? server.args : [],
+    envCount: server.transport === "streamable-http" ? 0 : server.env ? Object.keys(server.env).length : 0,
+    authType: server.transport === "streamable-http" ? server.auth?.type || "none" : "none",
     status: "configured",
   }));
   for (const entry of storeCapabilityEntries("mcp")) {
@@ -2190,8 +2297,8 @@ function resolveInCwd(p = cwd) {
   return real;
 }
 
-async function handleNativeOpenApp(text) {
-  const request = parseOpenAppRequest(text);
+async function handleNativeOpenApp(requestOrText) {
+  const request = typeof requestOrText === "string" ? parseOpenAppRequest(requestOrText) : requestOrText;
   if (!request) return false;
   const title = `Open ${request.appName}`;
   const startId = handleRuntimeEvent({
@@ -2230,22 +2337,37 @@ async function runRuntimeQueueJob(job) {
 async function runRuntimeInput(text, metadata = {}) {
   if (!runtime) return;
   try {
+    const attachmentIds = Array.isArray(metadata.attachmentIds) ? metadata.attachmentIds : [];
+    const executionMode = metadata.executionMode === "plan" ? "plan" : "default";
     const executionCwd = typeof metadata.executionCwd === "string" ? metadata.executionCwd : "";
     if (executionCwd && path.resolve(executionCwd) !== path.resolve(cwd)) {
-      await runRuntimeInputInIsolatedCwd(text, executionCwd);
+      if (attachmentIds.length) throw new Error("Attachments cannot be forwarded into an isolated runtime workspace.");
+      await runRuntimeInputInIsolatedCwd(text, executionCwd, executionMode);
     } else {
-      const handledNative = await handleNativeOpenApp(text);
-      if (!handledNative) await runtime.handleInput(text);
+      const resolution = desktopCommandRegistry.resolve(text, { surface: "desktop" });
+      if (resolution.ok && resolution.route === "native") {
+        const handledNative = await handleNativeOpenApp(resolution.payload);
+        if (!handledNative) {
+          await runtime.handleInput(text, {
+            attachmentIds,
+            executionMode,
+            resolvedCommand: desktopCommandRegistry.resolveAgent(text, { surface: "desktop" }),
+          });
+        }
+      } else {
+        await runtime.handleInput(text, { attachmentIds, executionMode, resolvedCommand: resolution });
+      }
     }
   } catch (err) {
     send("output", `error: ${err?.message ?? err}\n`);
+    throw err;
   } finally {
     send("turn-done");
   }
 }
 
-async function runRuntimeInputInIsolatedCwd(text, executionCwd) {
-  const cfg = loadConfig();
+async function runRuntimeInputInIsolatedCwd(text, executionCwd, executionMode = "default") {
+  const cfg = loadDesktopConfig();
   const ask = makeRendererAsk();
   const p = defaultProfile(cfg);
   const isolatedRuntime = createRuntime({
@@ -2254,14 +2376,16 @@ async function runRuntimeInputInIsolatedCwd(text, executionCwd) {
     mode: "default",
     systemPrompt: buildSystemPrompt(executionCwd, p.model, cfg.reasoningLevel),
     ask,
-    emitEvent: handleRuntimeEvent,
+    eventSink: runtimeEventBus,
+    legacyAssistantOutput: false,
     allowProcessExit: false,
+    ownsMcpLifecycle: false,
   });
   send("output", `\n[isolated] ${executionCwd}\n`);
   try {
-    await isolatedRuntime.handleInput(text);
+    await isolatedRuntime.handleInput(text, { executionMode });
   } finally {
-    isolatedRuntime.shutdown();
+    await isolatedRuntime.shutdown();
   }
 }
 
@@ -2318,7 +2442,8 @@ function finalizeIsolatedRuntimeJob(job) {
   }
 }
 
-// Route the agent core's console/stdout output to the renderer.
+// Temporary compatibility path for slash commands and legacy tool framing.
+// Assistant model text always uses RuntimeEventBus, even when this is enabled.
 function installBridge() {
   setSpinnerEnabled(false);
   console.log = (...a) => forwardRuntimeOutput(a.map(String).join(" ") + "\n");
@@ -2376,7 +2501,7 @@ function shouldForwardRuntimeOutput(text) {
 }
 
 function buildRuntime() {
-  const cfg = loadConfig();
+  const cfg = loadDesktopConfig();
   const ask = makeRendererAsk();
   const p = defaultProfile(cfg);
   runtime = createRuntime({
@@ -2385,8 +2510,13 @@ function buildRuntime() {
     mode: "default",
     systemPrompt: buildSystemPrompt(cwd, p.model, cfg.reasoningLevel),
     ask,
-    emitEvent: handleRuntimeEvent,
+    eventSink: runtimeEventBus,
+    legacyAssistantOutput: false,
     allowProcessExit: false,
+    attachmentStore,
+    commandRegistry: desktopCommandRegistry,
+    commandSurface: "desktop",
+    ownsMcpLifecycle: false,
   });
   send("ready", {
     model: p.model,
@@ -2396,6 +2526,7 @@ function buildRuntime() {
     version: app.getVersion(),
     sessionId: runtime?.sessionId || "",
     capabilities: modelCapabilityHint(p),
+    credentialStatus: credentialStatusSnapshot(),
   });
   sendInputQueueState();
 }
@@ -2409,7 +2540,67 @@ function makeRendererAsk() {
     });
 }
 
+async function authorizeTerminal(request) {
+  const currentRuntime = runtime;
+  if (!currentRuntime?.execEnv?.perms) return "deny";
+  return requestPermission(currentRuntime.execEnv.perms, request, async (question) => {
+    if (!win || win.isDestroyed()) return "n";
+    const result = await dialog.showMessageBox(win, {
+      type: "warning",
+      title: "启动集成终端",
+      message: "允许 Hi Code 在当前工作区启动交互终端吗？",
+      detail: `终端启动后，本次会话中的输入将直接由本机 shell 执行，不会逐条再次确认。切换工作区、关闭终端或关闭窗口会结束该进程树。\n\n${stripAnsi(question).replace(/\[[yan]\][^›]*›/i, "").trim()}`,
+      buttons: ["允许一次", "本次运行始终允许", "拒绝"],
+      defaultId: 2,
+      cancelId: 2,
+      noLink: true,
+    });
+    return result.response === 0 ? "y" : result.response === 1 ? "a" : "n";
+  });
+}
+
+async function authorizeManagedExecution({ tool, label, mutating = true }) {
+  const currentRuntime = runtime;
+  if (!currentRuntime?.execEnv?.perms) return "deny";
+  const safeLabel = String(label || "执行本机命令").replace(/[\r\n\0]/g, " ").slice(0, 240);
+  return requestPermission(currentRuntime.execEnv.perms, {
+    tool: String(tool || "managed_execution").slice(0, 80),
+    action: safeLabel,
+    mutating: mutating === true,
+  }, async (question) => {
+    if (!win || win.isDestroyed()) return "n";
+    const result = await dialog.showMessageBox(win, {
+      type: "warning",
+      title: "允许受控本机执行",
+      message: `允许 Hi Code ${safeLabel}吗？`,
+      detail: `执行将使用最小环境变量、工作区边界、输出上限、超时和进程树清理。当前平台不能实施的操作系统级隔离会在执行证据中明确标记。\n\n${stripAnsi(question).replace(/\[[yan]\][^›]*›/i, "").trim()}`,
+      buttons: ["允许一次", "本次运行始终允许", "拒绝"],
+      defaultId: 2,
+      cancelId: 2,
+      noLink: true,
+    });
+    return result.response === 0 ? "y" : result.response === 1 ? "a" : "n";
+  });
+}
+
+async function authorizePullRequest({ title, base, draft }) {
+  if (!win || win.isDestroyed()) return "deny";
+  const result = await dialog.showMessageBox(win, {
+    type: "question",
+    title: "创建 Pull Request",
+    message: draft ? "确认发布分支并创建 Draft Pull Request？" : "确认发布分支并创建 Pull Request？",
+    detail: `标题：${String(title || "").slice(0, 200)}\n目标分支：${String(base || "main").slice(0, 160)}\n\n如果当前分支尚未发布，Hi Code 会执行非强制 git push --set-upstream origin HEAD。不会自动合并。`,
+    buttons: ["创建", "取消"],
+    defaultId: 1,
+    cancelId: 1,
+    noLink: true,
+  });
+  return result.response === 0 ? "allow" : "deny";
+}
+
 function createWindow() {
+  const rendererPath = path.join(__dirname, "..", "renderer", "index.html");
+  const rendererUrl = pathToFileURL(rendererPath).href;
   win = new BrowserWindow({
     width: 1040,
     height: 760,
@@ -2428,10 +2619,30 @@ function createWindow() {
   win.on("closed", () => {
     win = null;
   });
+  win.on("close", () => {
+    const ownerId = win?.webContents?.id;
+    if (ownerId) {
+      void mainServices?.terminal?.closeAllForOwner(ownerId, "window_closed");
+      void mainServices?.preview?.closeAllForOwner(ownerId, "window_closed");
+    }
+  });
   win.once("ready-to-show", () => {
     win?.show();
   });
-  win.loadFile(path.join(__dirname, "..", "renderer", "index.html"));
+  win.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+  win.webContents.on("will-navigate", (event, targetUrl) => {
+    try {
+      const target = new URL(targetUrl);
+      const trusted = new URL(rendererUrl);
+      target.hash = "";
+      trusted.hash = "";
+      if (target.href === trusted.href) return;
+    } catch {
+      // Invalid navigation targets are untrusted.
+    }
+    event.preventDefault();
+  });
+  win.loadFile(rendererPath);
   win.webContents.on("did-finish-load", async () => {
     buildRuntime();
     await mainServices?.mcp?.initializeConfiguredServers();
@@ -2441,28 +2652,41 @@ function createWindow() {
 }
 
 function ensureMainWindow() {
-  const existing = BrowserWindow.getAllWindows().find((window) => !window.isDestroyed());
-  if (!existing) {
-    return createWindow();
-  }
-  win = existing;
+  if (!win || win.isDestroyed()) return createWindow();
   if (win.isMinimized()) win.restore();
   if (!win.isVisible()) win.show();
   win.focus();
   return win;
 }
 
-mainServices = createMainServices();
-registerIpcHandlers({
-  services: mainServices,
-  ipcMain,
-  dialog,
-  shell,
-  logger: (event, payload) => appendRuntimeLog({ id: `ipc-${Date.now()}`, type: event, title: event, payload, createdAt: Date.now() }),
-});
-
 app.whenReady().then(() => {
-  installBridge();
+  try {
+    credentialStartupState = desktopSecretStore.migrateLegacyConfig();
+  } catch (error) {
+    credentialStartupState = {
+      ok: false,
+      status: "migration_blocked",
+      error: error?.message || "凭据迁移失败",
+      code: error?.code || "secret_migration_failed",
+    };
+    appendRuntimeLog({
+      id: `secret-startup-${Date.now()}-${crypto.randomUUID()}`,
+      type: "secret.migration.blocked",
+      title: "secret.migration.blocked",
+      payload: { code: credentialStartupState.code, error: credentialStartupState.error },
+      createdAt: Date.now(),
+    });
+  }
+  mainServices = createMainServices();
+  registerIpcHandlers({
+    services: mainServices,
+    ipcMain,
+    dialog,
+    shell,
+    logger: (event, payload) => appendRuntimeLog({ id: `ipc-${Date.now()}`, type: event, title: event, payload, createdAt: Date.now() }),
+  });
+  if (legacyStdoutBridgeEnabled) installBridge();
+  else setSpinnerEnabled(false);
   ensureMainWindow();
   app.on("activate", () => {
     ensureMainWindow();
@@ -2471,12 +2695,61 @@ app.whenReady().then(() => {
 });
 
 app.on("window-all-closed", () => {
-  if (runtime) runtime.shutdown();
+  if (runtime) void runtime.shutdown();
   if (process.platform !== "darwin") app.quit();
 });
 
+app.on("before-quit", (event) => {
+  const terminal = mainServices?.terminal;
+  const preview = mainServices?.preview;
+  if (nativeCleanupQuitInProgress) return;
+  const hasNativeResources = Boolean(terminal?.activeCount?.() || preview?.activeCount?.());
+  const hasMcpResources = mcpLifecycleStatus().some((server) => !["disconnected", "failed"].includes(server.state));
+  if (!hasNativeResources && !hasMcpResources) return;
+  event.preventDefault();
+  nativeCleanupQuitInProgress = true;
+  Promise.all([
+    Promise.resolve(terminal?.closeAll?.("app_quit")),
+    Promise.resolve(preview?.closeAll?.("app_quit")),
+    shutdownMcp(),
+  ]).finally(() => app.quit());
+});
+
 function createMainServices() {
+  const executionPolicy = createExecutionPolicyService({
+    logger: (event, payload) => appendRuntimeLog({
+      id: `execution-policy-${Date.now()}-${crypto.randomUUID()}`,
+      type: event,
+      title: event,
+      payload,
+      createdAt: Date.now(),
+    }),
+  });
+  const updateService = createUpdateService({
+    updater: electronUpdater.autoUpdater,
+    getVersion: () => app.getVersion(),
+    isPackaged: () => app.isPackaged,
+    resourcesPath: process.resourcesPath,
+    settingsPath: UPDATE_SETTINGS_PATH,
+    dialog,
+    beforeInstall: async () => {
+      nativeCleanupQuitInProgress = true;
+      await Promise.all([
+        Promise.resolve(mainServices?.terminal?.closeAll?.("app_update")),
+        Promise.resolve(mainServices?.preview?.closeAll?.("app_update")),
+      ]);
+    },
+    logger: (event, payload) => appendRuntimeLog({
+      id: `update-${Date.now()}-${crypto.randomUUID()}`,
+      type: event,
+      title: event,
+      payload,
+      createdAt: Date.now(),
+    }),
+  });
   const services = {
+    executionPolicy,
+    update: updateService,
     runtime: createRuntimeService({
       getRuntime: () => runtime,
       inputQueue,
@@ -2495,11 +2768,18 @@ function createMainServices() {
     }),
     mcp: createMcpService({
       initMcp,
-      loadConfig,
+      mcpLifecycleStatus,
+      connectMcpServer,
+      reconnectMcpServer,
+      disconnectMcpServer,
+      cancelMcpRequest,
+      loadConfig: loadDesktopConfig,
       listLocalPlugins,
       listLocalSkills,
       listConfiguredMcpServers,
       listLocalAgents,
+      secretStore: desktopSecretStore,
+      logger: (event, payload) => appendRuntimeLog({ id: `mcp-${Date.now()}-${crypto.randomUUID()}`, type: event, title: event, payload, createdAt: Date.now() }),
     }),
     store: createStoreService({
       listStoreCatalog,
@@ -2520,6 +2800,10 @@ function createMainServices() {
       getCwd: () => cwd,
       configPath: PROVIDER_CONFIG_PATH,
       runArtifactDir: PROVIDER_RUN_DIR,
+      usagePath: PROVIDER_USAGE_PATH,
+      secretStore: desktopSecretStore,
+      authorize: authorizeManagedExecution,
+      loadConfig: loadDesktopConfig,
       interruptRuntime: () => mainServices?.runtime?.interrupt(),
       logger: (event, payload) => appendRuntimeLog({ id: `provider-${Date.now()}`, type: event, title: event, payload, createdAt: Date.now() }),
     }),
@@ -2527,6 +2811,7 @@ function createMainServices() {
       runner: worktreeRunner,
       jobStore,
       getCwd: () => cwd,
+      authorize: authorizeManagedExecution,
     }),
     diff: createDiffIpcService({
       logDir: LOG_DIR,
@@ -2548,12 +2833,56 @@ function createMainServices() {
       gitUnstage,
       gitGenerateCommitMessage,
       gitCommit,
+      collaboration: gitCollaboration,
+      authorizePullRequest,
+      logger: (event, payload) => appendRuntimeLog({
+        id: `git-${Date.now()}-${crypto.randomUUID()}`,
+        type: event,
+        title: event,
+        payload,
+        createdAt: Date.now(),
+      }),
+    }),
+    editor: createEditorService({
+      getCwd: () => cwd,
+      resolveInCwd,
+    }),
+    terminal: createTerminalService({
+      getCwd: () => cwd,
+      authorize: authorizeTerminal,
+      executionPolicy,
+      logger: (event, payload) => appendRuntimeLog({
+        id: `terminal-${Date.now()}-${crypto.randomUUID()}`,
+        type: event,
+        title: event,
+        payload,
+        createdAt: Date.now(),
+      }),
+    }),
+    preview: createPreviewService({
+      getCwd: () => cwd,
+      evidenceRoot: PREVIEW_EVIDENCE_DIR,
+      windowFactory: (options) => new BrowserWindow(options),
+      getParentWindow: (owner) => BrowserWindow.fromWebContents(owner),
+      logger: (event, payload) => appendRuntimeLog({
+        id: `preview-${Date.now()}-${crypto.randomUUID()}`,
+        type: event,
+        title: event,
+        payload,
+        createdAt: Date.now(),
+      }),
     }),
     workspace: createWorkspaceService({
       dialog,
       getWindow: () => win,
       getCwd: () => cwd,
-      setCwd: (nextCwd) => { cwd = nextCwd; },
+      setCwd: async (nextCwd) => {
+        await Promise.all([
+          mainServices?.terminal?.closeAll("workspace_changed"),
+          mainServices?.preview?.closeAll("workspace_changed"),
+        ]);
+        cwd = nextCwd;
+      },
       buildRuntime,
       resolveInCwd,
       listSessions,
@@ -2562,16 +2891,19 @@ function createMainServices() {
       replaySessionMessages,
       getRuntime: () => runtime,
       configPath: CONFIG_PATH,
-      loadConfig,
+      loadConfig: loadDesktopConfig,
       defaultProfile,
       buildSystemPrompt,
       send,
+      attachmentStore,
+      secretStore: desktopSecretStore,
     }),
     appInfo: createAppInfoService({
       getVersion: () => app.getVersion(),
       shell,
       dataDir: HICODE_DIR,
       configPath: CONFIG_PATH,
+      updateService,
     }),
     usage: createUsageService({ logDir: LOG_DIR }),
   };
@@ -2604,10 +2936,12 @@ function createMainServices() {
     getCwd: () => cwd,
     jobStore,
     domainPackManager,
+    authorize: authorizeManagedExecution,
   });
   services.qualityGate = createQualityGateService({
     getCwd: () => cwd,
     jobStore,
+    authorize: authorizeManagedExecution,
   });
   services.release = createReleaseService({
     getCwd: () => cwd,

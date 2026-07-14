@@ -26,6 +26,196 @@ function checkedInvoke(channel, value, field = "value") {
   return checked.ok ? safeInvoke(channel, checked.value) : Promise.resolve(checked);
 }
 
+function runtimeInput(value) {
+  if (typeof value === "string") return value.trim() && value.length <= 200000 ? { ok: true, value } : { ok: false, error: "input must be a non-empty bounded string" };
+  if (!value || typeof value !== "object" || Array.isArray(value)) return { ok: false, error: "input must be a string or object" };
+  const text = typeof value.text === "string" ? value.text : "";
+  const attachmentIds = Array.isArray(value.attachmentIds) ? value.attachmentIds : [];
+  const executionMode = value.executionMode === undefined || value.executionMode === "default"
+    ? "default"
+    : value.executionMode === "plan"
+      ? "plan"
+      : "";
+  if (text.length > 200000 || attachmentIds.length > 8 || attachmentIds.some((id) => typeof id !== "string" || !/^att-[a-f0-9-]{36}$/.test(id))) {
+    return { ok: false, error: "runtime input is invalid" };
+  }
+  if (!text.trim() && !attachmentIds.length) return { ok: false, error: "input is empty" };
+  if (new Set(attachmentIds).size !== attachmentIds.length) return { ok: false, error: "attachment ids must be unique" };
+  if (!executionMode) return { ok: false, error: "runtime execution mode is invalid" };
+  return { ok: true, value: { text, attachmentIds: [...attachmentIds], executionMode } };
+}
+
+function editorOpenRequest(value) {
+  const data = optionalObject(value);
+  const checkedPath = requireString(data.path, "path");
+  if (!checkedPath.ok || !checkedPath.value.trim() || checkedPath.value.length > 4096 || checkedPath.value.includes("\0")) {
+    return { ok: false, error: "path must be a non-empty bounded string" };
+  }
+  return { ok: true, value: { path: checkedPath.value } };
+}
+
+function gitBranchRequest(value) {
+  const data = optionalObject(value);
+  const checked = requireString(data.name, "branch");
+  if (!checked.ok) return checked;
+  const name = checked.value.trim();
+  if (!name || name.length > 160 || name.startsWith("-") || /[\u0000-\u0020\u007f]/.test(name)) {
+    return { ok: false, error: "branch is invalid" };
+  }
+  return { ok: true, value: { name } };
+}
+
+function gitPullRequest(value) {
+  const data = optionalObject(value);
+  const title = typeof data.title === "string" ? data.title.trim() : "";
+  const body = typeof data.body === "string" ? data.body.trim() : "";
+  const base = typeof data.base === "string" ? data.base.trim() : "main";
+  if (!title || title.length > 200 || body.length > 20000 || !base || base.length > 160) {
+    return { ok: false, error: "pull request input is invalid" };
+  }
+  if ([title, body, base].some((item) => item.includes("\0"))) return { ok: false, error: "pull request input is invalid" };
+  return { ok: true, value: { title, body, base, draft: data.draft !== false } };
+}
+
+function editorSaveRequest(value) {
+  const opened = editorOpenRequest(value);
+  if (!opened.ok) return opened;
+  const data = optionalObject(value);
+  const content = requireString(data.content, "content");
+  if (!content.ok || content.value.length > 2 * 1024 * 1024 || content.value.includes("\0")) {
+    return { ok: false, error: "content must be bounded UTF-8 text" };
+  }
+  const revision = requireString(data.expectedRevision, "expectedRevision");
+  if (!revision.ok || !/^sha256:[a-f0-9]{64}$/.test(revision.value)) {
+    return { ok: false, error: "expectedRevision must be a valid SHA-256 revision" };
+  }
+  return {
+    ok: true,
+    value: {
+      path: opened.value.path,
+      content: content.value,
+      expectedRevision: revision.value,
+      force: data.force === true,
+    },
+  };
+}
+
+function terminalSessionId(value) {
+  const checked = requireString(value, "terminalSessionId");
+  if (!checked.ok || !/^terminal-[a-f0-9-]{36}$/.test(checked.value)) {
+    return { ok: false, error: "terminalSessionId is invalid" };
+  }
+  return checked;
+}
+
+function terminalSize(value) {
+  const data = optionalObject(value);
+  const cols = Number(data.cols);
+  const rows = Number(data.rows);
+  if (!Number.isFinite(cols) || !Number.isFinite(rows) || cols < 20 || cols > 400 || rows < 5 || rows > 200) {
+    return { ok: false, error: "terminal size is invalid" };
+  }
+  return { ok: true, value: { cols: Math.round(cols), rows: Math.round(rows) } };
+}
+
+function terminalInput(value) {
+  const checked = requireString(value, "terminalInput");
+  if (!checked.ok || !checked.value || utf8Length(checked.value) > 64 * 1024) {
+    return { ok: false, error: "terminal input is empty or too large" };
+  }
+  return checked;
+}
+
+function terminalEvent(value) {
+  const data = optionalObject(value);
+  if (!/^terminal-[a-f0-9-]{36}$/.test(String(data.sessionId || ""))) return null;
+  if (!Number.isInteger(data.sequence) || data.sequence < 1) return null;
+  if (data.type === "output") {
+    if (typeof data.data !== "string" || utf8Length(data.data) > 64 * 1024) return null;
+    return { type: "output", sessionId: data.sessionId, sequence: data.sequence, data: data.data };
+  }
+  if (data.type === "exit") {
+    return {
+      type: "exit",
+      sessionId: data.sessionId,
+      sequence: data.sequence,
+      reason: typeof data.reason === "string" ? data.reason.slice(0, 64) : "closed",
+      exitCode: Number.isInteger(data.exitCode) ? data.exitCode : null,
+      signal: Number.isInteger(data.signal) ? data.signal : null,
+    };
+  }
+  return null;
+}
+
+function previewId(value) {
+  const checked = requireString(value, "previewId");
+  if (!checked.ok || !/^preview-[a-f0-9-]{36}$/.test(checked.value)) {
+    return { ok: false, error: "previewId is invalid" };
+  }
+  return checked;
+}
+
+function previewSelectors(value) {
+  if (value === undefined || value === null) return { ok: true, value: [] };
+  if (!Array.isArray(value) || value.length > 12) return { ok: false, error: "preview selectors are invalid" };
+  const selectors = [];
+  for (const item of value) {
+    if (typeof item !== "string") return { ok: false, error: "preview selector must be a string" };
+    const selector = item.trim();
+    if (!selector || selector.length > 256 || /[\u0000-\u001f\u007f]/.test(selector)) return { ok: false, error: "preview selector is invalid" };
+    selectors.push(selector);
+  }
+  if (new Set(selectors).size !== selectors.length) return { ok: false, error: "preview selectors must be unique" };
+  return { ok: true, value: selectors };
+}
+
+function previewOpenRequest(value) {
+  const data = optionalObject(value);
+  const checkedUrl = requireString(data.url, "url");
+  if (!checkedUrl.ok || !checkedUrl.value.trim() || checkedUrl.value.length > 2048 || /[\u0000-\u001f\u007f]/.test(checkedUrl.value)) {
+    return { ok: false, error: "preview URL is invalid" };
+  }
+  const checkedLabel = data.label === undefined ? { ok: true, value: "" } : requireString(data.label, "label");
+  if (!checkedLabel.ok || checkedLabel.value.length > 120) return { ok: false, error: "preview label is invalid" };
+  const checkedSelectors = previewSelectors(data.selectors);
+  if (!checkedSelectors.ok) return checkedSelectors;
+  return { ok: true, value: { url: checkedUrl.value.trim(), label: checkedLabel.value.trim(), selectors: checkedSelectors.value } };
+}
+
+function previewVerificationRequest(value) {
+  const checked = previewSelectors(optionalObject(value).selectors);
+  return checked.ok ? { ok: true, value: { selectors: checked.value } } : checked;
+}
+
+function previewEvent(value) {
+  const data = optionalObject(value);
+  const preview = optionalObject(data.preview);
+  if (!["state", "navigation-blocked", "verification"].includes(data.type)) return null;
+  if (!/^preview-[a-f0-9-]{36}$/.test(String(preview.id || ""))) return null;
+  return { type: data.type, preview };
+}
+
+function mcpServerName(value) {
+  const checked = requireString(value, "server");
+  if (!checked.ok || !/^[A-Za-z0-9._:-]{1,128}$/.test(checked.value)) {
+    return { ok: false, error: "MCP server name is invalid" };
+  }
+  return checked;
+}
+
+function mcpCancelRequest(value) {
+  const data = optionalObject(value);
+  const server = mcpServerName(data.server);
+  if (!server.ok) return server;
+  const callId = data.callId === undefined ? "" : String(data.callId);
+  if (callId && !/^[A-Za-z0-9._:-]{1,256}$/.test(callId)) return { ok: false, error: "MCP call id is invalid" };
+  return { ok: true, value: { server: server.value, ...(callId ? { callId } : {}) } };
+}
+
+function utf8Length(value) {
+  return new TextEncoder().encode(String(value)).byteLength;
+}
+
 contextBridge.exposeInMainWorld("hicode", {
   onOutput: (cb) => typeof cb === "function" && ipcRenderer.on("output", (_e, s) => cb(String(s || ""))),
   onReady: (cb) => typeof cb === "function" && ipcRenderer.on("ready", (_e, d) => cb(optionalObject(d))),
@@ -34,8 +224,31 @@ contextBridge.exposeInMainWorld("hicode", {
   onToolEvent: (cb) => typeof cb === "function" && ipcRenderer.on("tool-event", (_e, d) => cb(optionalObject(d))),
   onDiffsChanged: (cb) => typeof cb === "function" && ipcRenderer.on("diffs-changed", (_e, d) => cb(Array.isArray(d) ? d : [])),
   onRuntimeQueue: (cb) => typeof cb === "function" && ipcRenderer.on("runtime-queue", (_e, d) => cb(optionalObject(d))),
-  send: (text) => {
-    if (typeof text === "string") ipcRenderer.send("input", text);
+  onTerminalEvent: (cb) => {
+    if (typeof cb !== "function") return () => {};
+    const handler = (_event, value) => {
+      const normalized = terminalEvent(value);
+      if (normalized) cb(normalized);
+    };
+    ipcRenderer.on("terminal:event", handler);
+    return () => ipcRenderer.removeListener("terminal:event", handler);
+  },
+  onPreviewEvent: (cb) => {
+    if (typeof cb !== "function") return () => {};
+    const handler = (_event, value) => {
+      const normalized = previewEvent(value);
+      if (normalized) cb(normalized);
+    };
+    ipcRenderer.on("preview:event", handler);
+    return () => ipcRenderer.removeListener("preview:event", handler);
+  },
+  send: (input) => {
+    const checked = runtimeInput(input);
+    return checked.ok ? safeInvoke("runtime:enqueue", checked.value) : Promise.resolve(checked);
+  },
+  steer: (input) => {
+    const checked = runtimeInput(input);
+    return checked.ok ? safeInvoke("runtime:steer", checked.value) : Promise.resolve(checked);
   },
   answer: (id, value) => {
     if ((typeof id === "number" || typeof id === "string") && typeof value === "string") {
@@ -49,6 +262,24 @@ contextBridge.exposeInMainWorld("hicode", {
   login: (payload) => safeInvoke("login", optionalObject(payload)),
   logout: () => safeInvoke("logout"),
   listCapabilities: () => safeInvoke("list-capabilities"),
+  listMcpLifecycle: () => safeInvoke("mcp:lifecycle"),
+  reloadMcpServers: () => safeInvoke("mcp:reload"),
+  connectMcpServer: (name) => {
+    const checked = mcpServerName(name);
+    return checked.ok ? safeInvoke("mcp:connect", checked.value) : Promise.resolve(checked);
+  },
+  reconnectMcpServer: (name) => {
+    const checked = mcpServerName(name);
+    return checked.ok ? safeInvoke("mcp:reconnect", checked.value) : Promise.resolve(checked);
+  },
+  disconnectMcpServer: (name) => {
+    const checked = mcpServerName(name);
+    return checked.ok ? safeInvoke("mcp:disconnect", checked.value) : Promise.resolve(checked);
+  },
+  cancelMcpRequest: (payload) => {
+    const checked = mcpCancelRequest(payload);
+    return checked.ok ? safeInvoke("mcp:cancel", checked.value) : Promise.resolve(checked);
+  },
   listStore: (options) => safeInvoke("list-store", optionalObject(options)),
   setStoreSource: (sourceId) => checkedInvoke("set-store-source", sourceId, "sourceId"),
   previewStoreItem: (itemId) => checkedInvoke("preview-store-item", itemId, "itemId"),
@@ -74,17 +305,100 @@ contextBridge.exposeInMainWorld("hicode", {
   gitUnstage: (paths) => safeInvoke("git:unstage", stringArray(paths)),
   gitCommitMessage: () => safeInvoke("git:commit-message"),
   gitCommit: (message) => checkedInvoke("git:commit", message, "message"),
+  gitBranches: () => safeInvoke("git:branches"),
+  gitCreateBranch: (payload) => {
+    const checked = gitBranchRequest(payload);
+    return checked.ok ? safeInvoke("git:branch:create", checked.value) : Promise.resolve(checked);
+  },
+  gitSwitchBranch: (payload) => {
+    const checked = gitBranchRequest(payload);
+    return checked.ok ? safeInvoke("git:branch:switch", checked.value) : Promise.resolve(checked);
+  },
+  gitCollaboration: () => safeInvoke("git:collaboration"),
+  gitCreatePullRequest: (payload) => {
+    const checked = gitPullRequest(payload);
+    return checked.ok ? safeInvoke("git:pr:create", checked.value) : Promise.resolve(checked);
+  },
   pickFolder: () => safeInvoke("pick-folder"),
+  attachFile: (payload) => safeInvoke("attach-file", optionalObject(payload)),
   attachImage: (payload) => safeInvoke("attach-image", optionalObject(payload)),
+  listAttachments: (sessionId) => sessionId === undefined ? safeInvoke("attachments:list") : checkedInvoke("attachments:list", sessionId, "sessionId"),
+  removeAttachment: (id) => checkedInvoke("attachment:remove", id, "attachmentId"),
   getCwd: () => safeInvoke("get-cwd"),
   listDir: (dir) => checkedInvoke("list-dir", dir, "dir"),
   readFile: (p) => checkedInvoke("read-file", p, "path"),
+  openEditorFile: (payload) => {
+    const checked = editorOpenRequest(payload);
+    return checked.ok ? safeInvoke("editor:file:open", checked.value) : Promise.resolve(checked);
+  },
+  saveEditorFile: (payload) => {
+    const checked = editorSaveRequest(payload);
+    return checked.ok ? safeInvoke("editor:file:save", checked.value) : Promise.resolve(checked);
+  },
+  getTerminalCapabilities: () => safeInvoke("terminal:capabilities"),
+  createTerminal: (payload) => {
+    const checked = terminalSize(payload);
+    return checked.ok ? safeInvoke("terminal:create", checked.value) : Promise.resolve(checked);
+  },
+  getTerminalStatus: () => safeInvoke("terminal:status"),
+  writeTerminal: (sessionId, input) => {
+    const checkedId = terminalSessionId(sessionId);
+    if (!checkedId.ok) return Promise.resolve(checkedId);
+    const checkedInput = terminalInput(input);
+    return checkedInput.ok ? safeInvoke("terminal:write", checkedId.value, checkedInput.value) : Promise.resolve(checkedInput);
+  },
+  resizeTerminal: (sessionId, payload) => {
+    const checkedId = terminalSessionId(sessionId);
+    if (!checkedId.ok) return Promise.resolve(checkedId);
+    const checkedSize = terminalSize(payload);
+    return checkedSize.ok ? safeInvoke("terminal:resize", checkedId.value, checkedSize.value) : Promise.resolve(checkedSize);
+  },
+  closeTerminal: (sessionId, reason = "user_closed") => {
+    const checkedId = terminalSessionId(sessionId);
+    if (!checkedId.ok) return Promise.resolve(checkedId);
+    const checkedReason = requireString(reason, "reason");
+    if (!checkedReason.ok || !/^[a-z0-9_-]{1,64}$/i.test(checkedReason.value)) return Promise.resolve({ ok: false, error: "terminal close reason is invalid" });
+    return safeInvoke("terminal:close", checkedId.value, checkedReason.value);
+  },
+  getPreviewCapabilities: () => safeInvoke("preview:capabilities"),
+  openPreview: (payload) => {
+    const checked = previewOpenRequest(payload);
+    return checked.ok ? safeInvoke("preview:open", checked.value) : Promise.resolve(checked);
+  },
+  listPreviews: () => safeInvoke("preview:list"),
+  reopenPreview: (id) => {
+    const checked = previewId(id);
+    return checked.ok ? safeInvoke("preview:reopen", checked.value) : Promise.resolve(checked);
+  },
+  reloadPreview: (id) => {
+    const checked = previewId(id);
+    return checked.ok ? safeInvoke("preview:reload", checked.value) : Promise.resolve(checked);
+  },
+  verifyPreview: (id, payload) => {
+    const checkedId = previewId(id);
+    if (!checkedId.ok) return Promise.resolve(checkedId);
+    const checkedPayload = previewVerificationRequest(payload);
+    return checkedPayload.ok ? safeInvoke("preview:verify", checkedId.value, checkedPayload.value) : Promise.resolve(checkedPayload);
+  },
+  closePreview: (id, reason = "user_closed") => {
+    const checkedId = previewId(id);
+    if (!checkedId.ok) return Promise.resolve(checkedId);
+    const checkedReason = requireString(reason, "reason");
+    if (!checkedReason.ok || !/^[a-z0-9_-]{1,64}$/i.test(checkedReason.value)) return Promise.resolve({ ok: false, error: "preview close reason is invalid" });
+    return safeInvoke("preview:close", checkedId.value, checkedReason.value);
+  },
+  removePreview: (id) => {
+    const checked = previewId(id);
+    return checked.ok ? safeInvoke("preview:remove", checked.value) : Promise.resolve(checked);
+  },
   listSessions: () => safeInvoke("list-sessions"),
   resumeSession: (id) => checkedInvoke("resume-session", id, "sessionId"),
   newSession: () => safeInvoke("new-session"),
   readSession: (id) => checkedInvoke("read-session", id, "sessionId"),
   deleteSession: (id) => checkedInvoke("delete-session", id, "sessionId"),
   getConfig: () => safeInvoke("get-config"),
+  getCredentialStatus: () => safeInvoke("config:credential-status"),
+  getExecutionPolicyCapabilities: () => safeInvoke("execution-policy:capabilities"),
   saveConfig: (text) => checkedInvoke("save-config", text, "configText"),
   testModel: (profile) => safeInvoke("test-model", optionalObject(profile)),
   getAppInfo: () => safeInvoke("app:info"),
@@ -93,6 +407,10 @@ contextBridge.exposeInMainWorld("hicode", {
   revealConfigFile: () => safeInvoke("app:reveal-config"),
   openAppPage: (target) => checkedInvoke("app:open-page", target, "target"),
   checkUpdates: () => safeInvoke("app:check-updates"),
+  getUpdateStatus: () => safeInvoke("app:update-status"),
+  setUpdateChannel: (channel) => checkedInvoke("app:update-channel", channel, "channel"),
+  downloadUpdate: () => safeInvoke("app:update-download"),
+  installUpdate: () => safeInvoke("app:update-install"),
   createJob: (payload) => safeInvoke("job:create", optionalObject(payload)),
   listJobs: (options) => safeInvoke("job:list", optionalObject(options)),
   getJob: (jobId) => checkedInvoke("job:get", jobId, "jobId"),
@@ -143,7 +461,20 @@ contextBridge.exposeInMainWorld("hicode", {
     return checkedArtifact.ok ? safeInvoke("job:artifact:open", checkedJob.value, checkedArtifact.value) : Promise.resolve(checkedArtifact);
   },
   listProviders: () => safeInvoke("provider:list"),
+  discoverProviders: (payload) => safeInvoke("provider:discover", optionalObject(payload)),
   getProvider: (providerId) => checkedInvoke("provider:get", providerId, "providerId"),
+  getProviderCapabilities: (providerId) => checkedInvoke("provider:capabilities", providerId, "providerId"),
+  healthCheckProvider: (providerId) => checkedInvoke("provider:health", providerId, "providerId"),
+  getProviderRegistryVersion: () => safeInvoke("provider:registry-version"),
+  getProviderUsage: (providerId) => {
+    if (providerId === undefined || providerId === null || providerId === "") return safeInvoke("provider:usage", "");
+    const checked = requireString(providerId, "providerId");
+    return checked.ok ? safeInvoke("provider:usage", checked.value) : Promise.resolve(checked);
+  },
+  rotateProviderCredential: (providerId, payload) => {
+    const checked = requireString(providerId, "providerId");
+    return checked.ok ? safeInvoke("provider:credential:rotate", checked.value, optionalObject(payload)) : Promise.resolve(checked);
+  },
   configureProvider: (providerId, payload) => {
     const checked = requireString(providerId, "providerId");
     return checked.ok ? safeInvoke("provider:configure", checked.value, optionalObject(payload)) : Promise.resolve(checked);

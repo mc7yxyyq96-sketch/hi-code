@@ -1,25 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
-import { contentText } from "../../dist/context.js";
 import { ipcObject, ipcString } from "../ipc/ipc-utils.mjs";
 
 const IGNORE_DIRS = new Set(["node_modules", ".git", "dist", "build", ".next", "release", "__pycache__"]);
-const ATTACHMENT_DIR = path.join(".hicode", "attachments");
 const MAX_ATTACHMENT_BYTES = 8 * 1024 * 1024;
-const IMAGE_MIME_EXT = new Map([
-  ["image/png", ".png"],
-  ["image/jpeg", ".jpg"],
-  ["image/jpg", ".jpg"],
-  ["image/gif", ".gif"],
-  ["image/webp", ".webp"],
-]);
-const IMAGE_EXT_MIME = new Map([
-  [".png", "image/png"],
-  [".jpg", "image/jpeg"],
-  [".jpeg", "image/jpeg"],
-  [".gif", "image/gif"],
-  [".webp", "image/webp"],
-]);
 
 export function createWorkspaceService({
   dialog,
@@ -38,58 +22,87 @@ export function createWorkspaceService({
   defaultProfile,
   buildSystemPrompt,
   send,
+  attachmentStore,
+  secretStore,
   fetchImpl = fetch,
 }) {
+  if (!attachmentStore?.putBuffer || !attachmentStore?.get) throw new Error("workspace-service requires attachmentStore");
+  if (!secretStore?.persistConfig || !secretStore?.readConfigForRenderer || !secretStore?.resolve) {
+    throw new Error("workspace-service requires secretStore");
+  }
+
+  const attachFile = async (payload = {}) => {
+    try {
+      const data = ipcObject(payload);
+      const runtime = getRuntime();
+      const sessionId = ipcString(runtime?.sessionId).trim();
+      if (!sessionId) return { ok: false, error: "当前会话尚未准备好，请稍后重试" };
+      let name;
+      let buffer;
+
+      if (typeof data.dataUrl === "string" && data.dataUrl.trim()) {
+        const parsed = parseImageDataUrl(data.dataUrl);
+        if (!parsed.ok) return { ok: false, error: parsed.error };
+        name = ipcString(data.name, "pasted-image.png");
+        buffer = parsed.buffer;
+      } else {
+        const imagesOnly = data.imagesOnly === true;
+        const result = await dialog.showOpenDialog(getWindow(), {
+          properties: ["openFile"],
+          filters: imagesOnly
+            ? [{ name: "Images", extensions: ["png", "jpg", "jpeg", "gif", "webp"] }]
+            : [
+                { name: "Supported attachments", extensions: ["png", "jpg", "jpeg", "gif", "webp", "pdf", "txt", "md", "json", "csv", "log"] },
+                { name: "All files", extensions: ["*"] },
+              ],
+        });
+        if (result.canceled || !result.filePaths?.[0]) return { ok: false, canceled: true, error: "已取消选择附件" };
+        const sourcePath = result.filePaths[0];
+        const stat = fs.statSync(sourcePath);
+        if (!stat.isFile()) return { ok: false, error: "请选择一个文件" };
+        name = path.basename(sourcePath);
+        buffer = fs.readFileSync(sourcePath);
+      }
+
+      const record = attachmentStore.putBuffer({ sessionId, name, data: buffer });
+      if (data.imagesOnly === true && record.kind !== "image") {
+        attachmentStore.remove(record.id);
+        return { ok: false, error: "请选择 PNG、JPG、GIF 或 WebP 图片" };
+      }
+      return attachmentResult(record);
+    } catch (error) {
+      return { ok: false, error: error?.message ?? "附件添加失败" };
+    }
+  };
+
   return {
     async pickFolder() {
       const result = await dialog.showOpenDialog(getWindow(), { properties: ["openDirectory"] });
       if (!result.canceled && result.filePaths[0]) {
-        setCwd(result.filePaths[0]);
+        await Promise.resolve(setCwd(result.filePaths[0]));
         buildRuntime();
       }
       return getCwd();
     },
 
-    async attachImage(payload = {}) {
-      try {
-        const data = ipcObject(payload);
-        if (typeof data.dataUrl === "string" && data.dataUrl.trim()) {
-          const parsed = parseImageDataUrl(data.dataUrl);
-          if (!parsed.ok) return { ok: false, error: parsed.error };
-          return writeAttachment({
-            cwd: getCwd(),
-            name: data.name,
-            ext: parsed.ext,
-            mime: parsed.mime,
-            buffer: parsed.buffer,
-          });
-        }
+    attachFile,
 
-        const result = await dialog.showOpenDialog(getWindow(), {
-          properties: ["openFile"],
-          filters: [{ name: "Images", extensions: ["png", "jpg", "jpeg", "gif", "webp"] }],
-        });
-        if (result.canceled || !result.filePaths?.[0]) {
-          return { ok: false, canceled: true, error: "已取消选择图片" };
-        }
+    attachImage(payload = {}) {
+      return attachFile({ ...ipcObject(payload), imagesOnly: true });
+    },
 
-        const sourcePath = result.filePaths[0];
-        const ext = path.extname(sourcePath).toLowerCase();
-        const mime = IMAGE_EXT_MIME.get(ext);
-        if (!mime) return { ok: false, error: "只支持 PNG、JPG、GIF、WebP 图片附件" };
-        const stat = fs.statSync(sourcePath);
-        if (!stat.isFile()) return { ok: false, error: "请选择一个图片文件" };
-        if (stat.size > MAX_ATTACHMENT_BYTES) return { ok: false, error: "图片超过 8MB，请压缩后再添加" };
-        return writeAttachment({
-          cwd: getCwd(),
-          name: path.basename(sourcePath),
-          ext,
-          mime,
-          buffer: fs.readFileSync(sourcePath),
-        });
-      } catch (error) {
-        return { ok: false, error: error?.message ?? "图片附件失败" };
-      }
+    listAttachments(id) {
+      const sessionId = ipcString(id, getRuntime()?.sessionId || "").trim();
+      if (!sessionId) return [];
+      return attachmentStore.list(sessionId).map(attachmentResult);
+    },
+
+    removeAttachment(id) {
+      const attachmentId = ipcString(id).trim();
+      const record = attachmentStore.get(attachmentId);
+      if (!record) return { ok: false, error: "附件不存在" };
+      if (record.sessionId !== getRuntime()?.sessionId) return { ok: false, error: "不能删除其他会话的附件" };
+      return { ok: attachmentStore.remove(attachmentId) };
     },
 
     getCwd,
@@ -163,7 +176,10 @@ export function createWorkspaceService({
 
     deleteSession(id) {
       try {
-        return deleteSession(ipcString(id));
+        const sessionId = ipcString(id);
+        const removed = deleteSession(sessionId);
+        if (removed) attachmentStore.removeSession(sessionId);
+        return removed;
       } catch {
         return false;
       }
@@ -181,19 +197,26 @@ export function createWorkspaceService({
 
     getConfig() {
       try {
-        return fs.existsSync(configPath) ? fs.readFileSync(configPath, "utf8") : "";
+        return secretStore.readConfigForRenderer();
       } catch {
         return "";
+      }
+    },
+
+    getCredentialStatus() {
+      try {
+        return secretStore.configCredentialStatus();
+      } catch (error) {
+        return { ok: false, error: error?.message ?? "凭据状态不可用", references: [] };
       }
     },
 
     saveConfig(text) {
       try {
         const configText = ipcString(text);
-        JSON.parse(configText);
-        fs.mkdirSync(path.dirname(configPath), { recursive: true, mode: 0o700 });
-        fs.writeFileSync(configPath, configText, { mode: 0o600 });
-        try { fs.chmodSync(configPath, 0o600); } catch {}
+        const parsed = JSON.parse(configText);
+        validateModelProtocolConfig(parsed);
+        const persisted = secretStore.persistConfig(parsed);
         const cfg = loadConfig();
         const profile = defaultProfile(cfg);
         const runtime = getRuntime();
@@ -210,7 +233,11 @@ export function createWorkspaceService({
         } else {
           buildRuntime();
         }
-        return { ok: true };
+        return {
+          ok: true,
+          configText: persisted.text,
+          credentials: secretStore.configCredentialStatus(),
+        };
       } catch (error) {
         return { ok: false, error: error?.message ?? "invalid JSON" };
       }
@@ -219,35 +246,40 @@ export function createWorkspaceService({
     async testModel(profile) {
       const data = ipcObject(profile);
       const baseURL = ipcString(data.baseURL).replace(/\/+$/, "");
-      const apiKey = ipcString(data.apiKey);
+      let apiKey = ipcString(data.apiKey);
+      const secretRef = ipcString(data.secretRef).trim();
+      if (!apiKey && secretRef) {
+        try {
+          apiKey = secretStore.resolve(secretRef) || "";
+        } catch (error) {
+          return { ok: false, error: error?.message ?? "无法读取已保存的 API Key" };
+        }
+      }
       const model = ipcString(data.model);
+      let protocol;
+      try {
+        protocol = normalizeModelProtocol(data.protocol);
+      } catch (error) {
+        return { ok: false, error: error?.message ?? "模型协议无效" };
+      }
       if (!baseURL) return { ok: false, error: "请填写 Base URL" };
       if (!model) return { ok: false, error: "请填写模型名" };
-      if (!apiKey) return { ok: false, error: "请填写 API Key；本地模型可填 sk-no-key-required" };
+      if (!apiKey && protocol !== "ollama_chat") return { ok: false, error: "请填写 API Key；本地 Ollama 原生协议可以留空" };
 
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 15000);
       try {
-        const body = {
-          model,
-          messages: [{ role: "user", content: "Reply with ok." }],
-          max_tokens: 8,
-          stream: false,
-        };
-        if (!shouldOmitTemperatureForBaseURL(baseURL)) body.temperature = 0;
-
-        const res = await fetchImpl(`${baseURL}/chat/completions`, {
+        const request = buildModelTestRequest({ baseURL, apiKey, model, protocol });
+        const res = await fetchImpl(request.url, {
           method: "POST",
           signal: controller.signal,
-          headers: {
-            "content-type": "application/json",
-            authorization: `Bearer ${apiKey}`,
-          },
-          body: JSON.stringify(body),
+          headers: request.headers,
+          body: JSON.stringify(request.body),
         });
         const text = await res.text();
         if (!res.ok) return { ok: false, error: modelTestError(res.status, text, baseURL) };
-        return { ok: true, message: "连接成功", capabilities: modelCapabilityHint({ baseURL, model }) };
+        validateModelTestResponse(protocol, text);
+        return { ok: true, message: "连接成功", capabilities: modelCapabilityHint({ baseURL, model, protocol }) };
       } catch (error) {
         return { ok: false, error: modelTestNetworkError(error, baseURL) };
       } finally {
@@ -257,12 +289,40 @@ export function createWorkspaceService({
   };
 }
 
+export function validateModelProtocolConfig(config) {
+  if (!config || typeof config !== "object" || Array.isArray(config)) throw new Error("配置必须是 JSON 对象");
+  normalizeModelProtocol(config.protocol);
+  if (config.profiles !== undefined) {
+    if (!config.profiles || typeof config.profiles !== "object" || Array.isArray(config.profiles)) {
+      throw new Error("profiles 必须是对象");
+    }
+    for (const [name, profile] of Object.entries(config.profiles)) {
+      if (!profile || typeof profile !== "object" || Array.isArray(profile)) throw new Error(`模型配置 ${name} 必须是对象`);
+      try {
+        normalizeModelProtocol(profile.protocol);
+      } catch {
+        throw new Error(`模型配置 ${name} 的 protocol 只支持 chat_completions、responses、anthropic_messages 或 ollama_chat`);
+      }
+    }
+  }
+  return true;
+}
+
+function normalizeModelProtocol(value) {
+  if (value === undefined || value === null || value === "") return "chat_completions";
+  if (["chat_completions", "responses", "anthropic_messages", "ollama_chat"].includes(value)) return value;
+  throw new Error("protocol 只支持 chat_completions、responses、anthropic_messages 或 ollama_chat");
+}
+
 export function registerWorkspaceIpc({ register, workspace }) {
   if (!register) throw new Error("registerWorkspaceIpc requires register");
   if (!workspace) throw new Error("registerWorkspaceIpc requires workspace service");
 
   register.handle("pick-folder", () => workspace.pickFolder());
+  register.handle("attach-file", (_event, payload) => workspace.attachFile(payload));
   register.handle("attach-image", (_event, payload) => workspace.attachImage(payload));
+  register.handle("attachments:list", (_event, sessionId) => workspace.listAttachments(sessionId));
+  register.handle("attachment:remove", (_event, id) => workspace.removeAttachment(id));
   register.handle("get-cwd", () => workspace.getCwd());
   register.handle("list-dir", (_event, dir) => workspace.listDir(dir));
   register.handle("read-file", (_event, filePath) => workspace.readFile(filePath));
@@ -272,89 +332,145 @@ export function registerWorkspaceIpc({ register, workspace }) {
   register.handle("delete-session", (_event, id) => workspace.deleteSession(id));
   register.handle("read-session", (_event, id) => workspace.readSession(id));
   register.handle("get-config", () => workspace.getConfig());
+  register.handle("config:credential-status", () => workspace.getCredentialStatus());
   register.handle("save-config", (_event, text) => workspace.saveConfig(text));
   register.handle("test-model", (_event, profile) => workspace.testModel(profile));
 }
 
 function parseImageDataUrl(dataUrl) {
+  if (String(dataUrl || "").length > Math.ceil(MAX_ATTACHMENT_BYTES * 1.5)) return { ok: false, error: "图片超过 8MB，请压缩后再添加" };
   const match = /^data:(image\/(?:png|jpe?g|gif|webp));base64,([a-z0-9+/=\s]+)$/i.exec(String(dataUrl || ""));
   if (!match) return { ok: false, error: "粘贴内容不是支持的图片格式" };
   const mime = match[1].toLowerCase().replace("image/jpg", "image/jpeg");
-  const ext = IMAGE_MIME_EXT.get(mime);
-  if (!ext) return { ok: false, error: "只支持 PNG、JPG、GIF、WebP 图片附件" };
   const buffer = Buffer.from(match[2].replace(/\s/g, ""), "base64");
   if (!buffer.length) return { ok: false, error: "图片内容为空" };
   if (buffer.length > MAX_ATTACHMENT_BYTES) return { ok: false, error: "图片超过 8MB，请压缩后再添加" };
-  return { ok: true, mime, ext, buffer };
+  return { ok: true, mime, buffer };
 }
 
-function writeAttachment({ cwd, name, ext, mime, buffer }) {
-  const safeName = safeAttachmentName(name, ext);
-  const relativePath = path.posix.join(...ATTACHMENT_DIR.split(path.sep), safeName);
-  const target = safeNewWorkspacePath(cwd, relativePath);
-  if (!target) return { ok: false, error: "图片附件路径超出当前工作区" };
-  fs.mkdirSync(path.dirname(target), { recursive: true, mode: 0o700 });
-  fs.writeFileSync(target, buffer, { mode: 0o600 });
-  try { fs.chmodSync(target, 0o600); } catch {}
-  const verified = safeExistingWorkspacePath(cwd, target);
-  if (!verified) {
-    try { fs.rmSync(target, { force: true }); } catch {}
-    return { ok: false, error: "图片附件写入后路径校验失败" };
-  }
+function attachmentResult(record) {
   return {
     ok: true,
-    name: safeName,
-    path: verified,
-    relativePath,
-    mime,
-    size: buffer.length,
+    id: record.id,
+    name: record.name,
+    kind: record.kind,
+    mimeType: record.mimeType,
+    mime: record.mimeType,
+    size: record.size,
+    sha256: record.sha256,
   };
-}
-
-function safeAttachmentName(name, ext) {
-  const base = path.basename(String(name || "image")).replace(/\.[^.]+$/, "");
-  const cleaned = base
-    .normalize("NFKD")
-    .replace(/[^\w.-]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 64) || "image";
-  const nonce = Math.random().toString(36).slice(2, 8);
-  return `${Date.now()}-${nonce}-${cleaned}${ext}`;
-}
-
-function safeExistingWorkspacePath(cwd, filePath) {
-  const cwdReal = fs.realpathSync.native(cwd);
-  const real = fs.realpathSync.native(filePath);
-  return isPathInside(cwdReal, real) ? real : null;
-}
-
-function safeNewWorkspacePath(cwd, relativePath) {
-  const cwdReal = fs.realpathSync.native(cwd);
-  const normalized = String(relativePath || "").replace(/\\/g, "/");
-  if (!normalized || normalized.includes("\0") || path.isAbsolute(normalized)) return null;
-  const target = path.resolve(cwd, normalized);
-  const workspaceAbs = path.resolve(cwd);
-  if (!isPathInside(workspaceAbs, target)) return null;
-
-  let nearest = path.dirname(target);
-  while (!fs.existsSync(nearest)) {
-    const next = path.dirname(nearest);
-    if (next === nearest) return null;
-    nearest = next;
-  }
-  const nearestReal = fs.realpathSync.native(nearest);
-  if (!isPathInside(cwdReal, nearestReal)) return null;
-  return target;
-}
-
-function isPathInside(root, candidate) {
-  const rel = path.relative(root, candidate);
-  return !rel || (!rel.startsWith("..") && !path.isAbsolute(rel));
 }
 
 function shouldOmitTemperatureForBaseURL(baseURL) {
   const value = String(baseURL || "").toLowerCase();
   return value.includes("moonshot.") || value.includes("api.kimi.com");
+}
+
+export function buildModelTestRequest({ baseURL, apiKey, model, protocol }) {
+  const normalizedProtocol = normalizeModelProtocol(protocol);
+  const headers = { "content-type": "application/json" };
+  let url;
+  let body;
+
+  if (normalizedProtocol === "responses") {
+    url = secureModelTestEndpoint(baseURL, "responses", "Responses");
+    headers.authorization = `Bearer ${apiKey}`;
+    body = {
+      model,
+      input: [{ role: "user", content: [{ type: "input_text", text: "Reply with ok." }] }],
+      max_output_tokens: 8,
+      stream: false,
+      store: false,
+    };
+  } else if (normalizedProtocol === "anthropic_messages") {
+    url = secureModelTestEndpoint(baseURL, "messages", "Anthropic Messages", { defaultPath: "/v1/messages" });
+    headers["x-api-key"] = apiKey;
+    headers["anthropic-version"] = "2023-06-01";
+    body = {
+      model,
+      max_tokens: 8,
+      messages: [{ role: "user", content: "Reply with ok." }],
+      stream: false,
+    };
+  } else if (normalizedProtocol === "ollama_chat") {
+    url = secureOllamaTestEndpoint(baseURL);
+    if (apiKey && apiKey !== "sk-no-key-required") headers.authorization = `Bearer ${apiKey}`;
+    body = {
+      model,
+      messages: [{ role: "user", content: "Reply with ok." }],
+      stream: false,
+      think: false,
+      options: { temperature: 0, num_predict: 8 },
+    };
+  } else {
+    url = `${baseURL.replace(/\/+$/, "")}/chat/completions`;
+    headers.authorization = `Bearer ${apiKey}`;
+    body = {
+      model,
+      messages: [{ role: "user", content: "Reply with ok." }],
+      max_tokens: 8,
+      stream: false,
+    };
+    if (!shouldOmitTemperatureForBaseURL(baseURL)) body.temperature = 0;
+  }
+
+  return { url, headers, body, protocol: normalizedProtocol };
+}
+
+export function validateModelTestResponse(protocol, text) {
+  const normalizedProtocol = normalizeModelProtocol(protocol);
+  if (normalizedProtocol === "chat_completions") return true;
+  let response;
+  try {
+    response = JSON.parse(text || "{}");
+  } catch {
+    throw new Error("模型连接返回了无效 JSON");
+  }
+  if (normalizedProtocol === "responses" && response.status !== "completed") {
+    throw new Error(`Responses 连接返回非完成状态：${String(response.status || "unknown")}`);
+  }
+  if (normalizedProtocol === "anthropic_messages" && (response.type !== "message" || response.role !== "assistant" || !Array.isArray(response.content))) {
+    throw new Error("Anthropic Messages 连接未返回有效 assistant message");
+  }
+  if (normalizedProtocol === "ollama_chat" && (response.done !== true || !response.message || response.message.role !== "assistant")) {
+    throw new Error("Ollama 原生连接未返回完成的 assistant message");
+  }
+  return true;
+}
+
+function secureModelTestEndpoint(baseURL, suffix, label, { defaultPath = "" } = {}) {
+  const url = secureModelTestBaseURL(baseURL, label);
+  const current = url.pathname.replace(/\/+$/, "");
+  if (current.endsWith(`/${suffix}`)) url.pathname = current;
+  else if (!current && defaultPath) url.pathname = defaultPath;
+  else url.pathname = `${current}/${suffix}`.replace(/^\/\//, "/");
+  return url.toString();
+}
+
+function secureOllamaTestEndpoint(baseURL) {
+  const url = secureModelTestBaseURL(baseURL, "Ollama");
+  const current = url.pathname.replace(/\/+$/, "");
+  if (current.endsWith("/api/chat")) url.pathname = current;
+  else if (current.endsWith("/api")) url.pathname = `${current}/chat`;
+  else url.pathname = `${current}/api/chat`.replace(/^\/\//, "/");
+  return url.toString();
+}
+
+function secureModelTestBaseURL(baseURL, label) {
+  let url;
+  try {
+    url = new URL(baseURL);
+  } catch {
+    throw new Error(`${label} Base URL 无效`);
+  }
+  const loopback = ["localhost", "127.0.0.1", "[::1]", "::1"].includes(url.hostname);
+  if (url.protocol !== "https:" && !(url.protocol === "http:" && loopback)) {
+    throw new Error(`${label} 远程连接必须使用 HTTPS；本机回环地址可以使用 HTTP`);
+  }
+  if (url.username || url.password || url.search || url.hash) {
+    throw new Error(`${label} Base URL 不能包含凭据、查询参数或片段`);
+  }
+  return url;
 }
 
 export function modelCapabilityHint(profile = {}) {
@@ -461,6 +577,19 @@ function formatSessionMessages(stored) {
   if (!stored?.messages) return [];
   return stored.messages
     .filter((m) => m.role === "user" || m.role === "assistant")
-    .map((m) => ({ role: m.role, text: contentText(m.content).trim() }))
-    .filter((m) => m.text.length > 0 && !m.text.startsWith("[Earlier conversation summary]"));
+    .map((m) => formatSessionMessage(m))
+    .filter((m) => (m.text.length > 0 || m.attachments?.length) && !m.text.startsWith("[Earlier conversation summary]"));
+}
+
+function formatSessionMessage(message) {
+  if (!Array.isArray(message.content)) return { role: message.role, text: String(message.content || "").trim() };
+  const attachments = message.content
+    .filter((part) => part?.type === "attachment_ref" && part.attachment)
+    .map((part) => ({ ...part.attachment }));
+  const text = message.content
+    .filter((part) => part?.type !== "attachment_ref")
+    .map((part) => part?.type === "text" ? part.text : "[image]")
+    .join(" ")
+    .trim();
+  return { role: message.role, text, ...(attachments.length ? { attachments } : {}) };
 }

@@ -16,6 +16,7 @@ import { renderDefinitionOfDoneChecklist, renderReleaseCenterMarkup, summarizeRe
 import { renderSampleProjectResultMarkup, summarizeSampleProjectResult } from "../renderer/components/sample-project-panel.js";
 import { capabilityActionLabel, capabilityDescription, capabilityLifecycleState, CAPABILITY_META } from "../renderer/components/mcp-panel.js";
 import { storeChineseSummary, storeInstallActionState, storeQueryOptions } from "../renderer/components/store-panel.js";
+import { validateQuickProfileFields } from "../renderer/utils/validation.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
@@ -37,12 +38,24 @@ const rendererEntry = fs.readFileSync(path.join(root, "renderer", "renderer.js")
 const bootstrap = fs.readFileSync(path.join(root, "renderer", "app", "bootstrap.js"), "utf8");
 const html = fs.readFileSync(path.join(root, "renderer", "index.html"), "utf8");
 const css = fs.readFileSync(path.join(root, "renderer", "style.css"), "utf8");
+const workspaceMain = fs.readFileSync(path.join(root, "renderer", "app-shell", "main.tsx"), "utf8");
+const workspacePortals = fs.readFileSync(path.join(root, "renderer", "app-shell", "workspace", "WorkspacePortals.tsx"), "utf8");
+const sessionSidebar = fs.readFileSync(path.join(root, "renderer", "app-shell", "workspace", "SessionSidebar.tsx"), "utf8");
+const conversationView = fs.readFileSync(path.join(root, "renderer", "app-shell", "workspace", "Conversation.tsx"), "utf8");
+const timelineView = fs.readFileSync(path.join(root, "renderer", "app-shell", "workspace", "Timeline.tsx"), "utf8");
+const inspectorView = fs.readFileSync(path.join(root, "renderer", "app-shell", "workspace", "Inspector.tsx"), "utf8");
+const reviewSource = fs.readFileSync(path.join(root, "renderer", "app-shell", "workspace", "review.ts"), "utf8");
+const codeEditorSource = fs.readFileSync(path.join(root, "renderer", "app-shell", "editor", "code-editor.ts"), "utf8");
+const fileTreeSource = fs.readFileSync(path.join(root, "renderer", "components", "file-tree.js"), "utf8");
 const toastSource = fs.readFileSync(path.join(root, "renderer", "components", "toast.js"), "utf8");
+const electronE2e = fs.readFileSync(path.join(root, "tests", "electron-e2e", "run.mjs"), "utf8");
+const electronE2eBaseline = JSON.parse(fs.readFileSync(path.join(root, "tests", "electron-e2e", "fixtures", "layout-baseline.json"), "utf8"));
+const ciWorkflow = fs.readFileSync(path.join(root, ".github", "workflows", "ci.yml"), "utf8");
+const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
 check("renderer.js is a thin module entry", rendererEntry.includes("bootstrapHiCode") && rendererEntry.split("\n").length <= 6);
 check("index.html loads renderer as ES module", html.includes('type="module" src="renderer.js"'));
 check("bootstrap uses API wrapper", bootstrap.includes("createHiCodeApi(window.hicode"));
-check("bootstrap imports panel modules", [
-  "components/diff-viewer.js",
+check("bootstrap imports legacy panel modules while App Shell owns migrated workbench surfaces", [
   "components/file-tree.js",
   "components/mcp-panel.js",
   "components/store-panel.js",
@@ -58,7 +71,9 @@ check("bootstrap imports panel modules", [
   "components/ai-team-panel.js",
   "components/settings-panel.js",
   "components/settings-usage-panel.js",
-].every((needle) => bootstrap.includes(needle)));
+].every((needle) => bootstrap.includes(needle))
+  && !bootstrap.includes("components/diff-viewer.js")
+  && workspaceMain.includes("WorkspacePortals"));
 check("settings opens usage tab by default", html.includes('data-settings-tab="usage"') && bootstrap.includes('openSettings(tab = "usage")') && bootstrap.includes("renderUsageSettings"));
 check("settings nav groups personal and coding sections", html.includes('class="settings-nav-group"') && html.includes("用量与统计") && html.includes("模型 API"));
 check("bootstrap applies shared user profile to sidebar and usage page", bootstrap.includes("applyUserProfile") && bootstrap.includes("cachedUserProfile") && bootstrap.includes("buildUserProfile"));
@@ -76,10 +91,17 @@ check("settings usage layout is responsive and locally scrollable", css.includes
 check("modal and settings content guard against small-window clipping", css.includes(".modal {\n  position: fixed;") && css.includes("overflow: auto") && css.includes("max-height: calc(100vh - 28px)") && css.includes("overflow-x: hidden") && css.includes("align-items: flex-start"));
 check("MCP config button opens MCP settings mode", bootstrap.includes("cfgBtn.onclick = openMcpSettings") && bootstrap.includes("return openSettings(\"mcp\")"));
 check("busy session switch previews without resuming runtime", bootstrap.includes("api.readSession(id)") && bootstrap.includes("saveLiveSessionSnapshot") && bootstrap.includes("restoreLiveSessionSnapshot"));
-check("running conversation remains reachable after leaving chat", bootstrap.includes("function makeRuntimeSessionFallback") && bootstrap.includes("list = source.filter((session) => sessionMatchesFilter(session, filter))") && bootstrap.includes("chatHasMessages()") && bootstrap.includes("if (id === currentSessionId)") && bootstrap.includes("api.readSession(id).catch") && css.includes(".sess-transient"));
+check("background turn completion finalizes its source snapshot instead of the visible session", bootstrap.includes("const completedInBackground") && bootstrap.includes("if (completedInBackground) finishLiveSessionSnapshot") && bootstrap.includes("function finishLiveSessionSnapshot"));
+check("running conversation remains reachable after leaving chat", bootstrap.includes("function makeRuntimeSessionFallback") && bootstrap.includes("workspace.setSessionFilter(filter)") && bootstrap.includes("workspace.setSessions(source.map") && bootstrap.includes("chatHasMessages()") && bootstrap.includes("if (id === currentSessionId)") && bootstrap.includes("api.readSession(id).catch") && sessionSidebar.includes("session.transient") && css.includes(".sess-transient"));
 check("recent session click restores the active conversation instead of no-op", bootstrap.includes("if (id === currentSessionId)") && bootstrap.includes("if (!chatHasMessages())") && bootstrap.includes("renderChatFromMessages(msgs)") && bootstrap.includes("这个会话还没有保存内容"));
-check("recent event-log sessions open as replay instead of fake resume", bootstrap.includes("s.replayOnly ? \"回放\"") && bootstrap.includes("s.replayOnly ? `${s.eventCount") && bootstrap.includes("if (meta?.replayOnly)") && bootstrap.includes("api.readSession(id).catch") && bootstrap.includes("renderChatFromMessages(msgs)"));
+check("recent event-log sessions open as replay instead of fake resume", sessionSidebar.includes('if (session.replayOnly) return "回放"') && sessionSidebar.includes("session.eventCount || session.messageCount") && bootstrap.includes("if (meta?.replayOnly)") && bootstrap.includes("api.readSession(id).catch") && bootstrap.includes("renderChatFromMessages(msgs)"));
+check("recovery actions restore the source session before retry", bootstrap.includes("async function handleRecoverableTask") && bootstrap.includes("await openSession(task.sessionId)") && bootstrap.includes("currentSessionId !== task.sessionId") && bootstrap.includes("return runLine(retryInput)"));
+check("unsafe recovery states never run automatically", bootstrap.includes('action === "retry_turn" || action === "retry_with_approval"') && bootstrap.includes("task.canRetry === true") && bootstrap.includes("该会话目前只能回放") && bootstrap.includes("请先检查未完成输出和工具副作用"));
+check("recovery UI distinguishes retry approval review and inspection", timelineView.includes('retry_with_approval: "重新确认"') && timelineView.includes('review_output: "查看输出"') && timelineView.includes('inspect_tool: "检查状态"') && timelineView.includes("保留 ${task.partialAssistantText.length} 字输出"));
 check("MCP settings validates mcpServers JSON", bootstrap.includes("function validateMcpServersConfig") && bootstrap.includes("MCP JSON 格式错误") && bootstrap.includes("mcpServers 必须是 JSON 对象"));
+check("MCP settings documents stdio and Streamable HTTP security", html.includes("本地 stdio") && html.includes("Streamable HTTP") && html.includes("远程连接必须使用 HTTPS") && html.includes("系统安全存储"));
+check("MCP lifecycle UI exposes real reload connect reconnect disconnect and cancel actions", html.includes('id="mcp-reload"') && html.includes('id="mcpLifecycleList"') && bootstrap.includes("function renderMcpLifecycle") && bootstrap.includes("api.reloadMcpServers()") && bootstrap.includes("api.connectMcpServer(server.server)") && bootstrap.includes("api.reconnectMcpServer(server.server)") && bootstrap.includes("api.disconnectMcpServer(server.server)") && bootstrap.includes("api.cancelMcpRequest({ server: server.server"));
+check("MCP lifecycle UI surfaces negotiated protocol tools auth and normalized errors", bootstrap.includes("server.protocolVersion") && bootstrap.includes("server.tools.length") && bootstrap.includes("server.auth?.type") && bootstrap.includes("server.lastError?.message") && css.includes(".mcp-lifecycle-row") && css.includes(".mcp-lifecycle-error"));
 check("command sidebar opens visible command center", html.includes('section id="commandView"') && bootstrap.includes('route: "commandView"') && bootstrap.includes('"cmdBtn").onclick = showCommandCenter'));
 check("command center exposes real actions", bootstrap.includes("function executeCommand") && bootstrap.includes('if (name === "/mcp") return showCapabilities("mcp")') && bootstrap.includes('if (name === "/diff") return showGit()'));
 check("Agent sidebar opens installed agent capability list", html.includes('id="agentsBtn"') && bootstrap.includes('$("agentsBtn").onclick = () => showCapabilities("agents")') && bootstrap.includes('activeNav: CAPABILITY_META[kind]?.nav'));
@@ -93,9 +115,21 @@ check("about dialog shows full prerelease version instead of sidebar truncation"
 check("sidebar menu area scrolls vertically", html.includes('class="side-scroll"') && css.includes(".side-scroll") && css.includes("overflow-y: auto") && css.includes("overscroll-behavior: contain") && css.includes(".side-foot { flex: none"));
 check("sidebar scroll resets on init and collapse toggle", bootstrap.includes("function resetSidebarScroll") && bootstrap.includes("function scheduleSidebarScrollReset") && bootstrap.includes('document.querySelector(".side-scroll")') && bootstrap.includes("sideScroll.scrollTop = 0") && bootstrap.includes("requestAnimationFrame(resetSidebarScroll)") && bootstrap.includes("window.setTimeout(resetSidebarScroll, 80)"));
 check("sidebar project row explains workspace switching", html.includes('class="proj-copy"') && html.includes('class="proj-hint"') && html.includes("当前工作区 · 点击切换") && css.includes(".proj-copy") && css.includes(".proj-hint"));
-check("sidebar recent sessions use compact product list", bootstrap.includes("function formatSessionAge") && bootstrap.includes("sessions-empty") && bootstrap.includes("sess-count") && bootstrap.includes("currentSessionId") && css.includes(".sess.active") && css.includes(".sess-count"));
+check("sidebar recent sessions use compact product list", sessionSidebar.includes("function formatSessionAge") && sessionSidebar.includes("sessions-empty") && sessionSidebar.includes("sess-count") && sessionSidebar.includes("state.activeSessionId") && css.includes(".sess.active") && css.includes(".sess-count"));
+check("workspace header keeps its brand and visible actions unclipped", css.includes(".crumb span:first-child") && css.includes("white-space: nowrap") && css.includes(".workspace-actions { flex: 0 1 auto; min-width: 0;") && css.includes(".workspace-actions { display: none; }"));
+check("responsive workbench exposes existing timeline and diff panels", html.includes('id="timelinePanel"') && html.includes('id="timelineWorkspaceMount"') && html.includes('id="diffPanel"') && html.includes('id="inspectorWorkspaceMount"') && workspacePortals.includes('id="timelineDrawerBtn"') && workspacePortals.includes('aria-controls="timelinePanel"') && workspacePortals.includes('id="diffDrawerBtn"') && workspacePortals.includes('aria-controls="diffPanel"') && workspacePortals.includes('id="workbenchDrawerBackdrop"'));
+check("responsive workbench drawer controls have real behavior", bootstrap.includes("function setWorkbenchDrawer") && bootstrap.includes("workspace.setDrawer") && workspacePortals.includes('event.key === "Escape"') && workspacePortals.includes('store.setDrawer("none")') && workspacePortals.includes('previousDrawer.current === "timeline"'));
+check("responsive drawer CSS preserves desktop panels and adds compact alternatives", css.includes("body.timeline-drawer-open .timeline-panel") && css.includes("body.diff-drawer-open .diff-panel") && css.includes("@media (min-width: 901px) and (max-width: 1180px)") && css.includes("@media (max-width: 900px)"));
+check("integrated editor lazy-loads bundled CodeMirror with real dirty save reload and conflict actions", workspaceMain.includes('import("./editor/code-editor.ts")') && codeEditorSource.includes("new EditorView") && codeEditorSource.includes('key: "Mod-s"') && fileTreeSource.includes("editorLoader.load()") && fileTreeSource.includes("openEditorFile") && fileTreeSource.includes("saveEditorFile") && fileTreeSource.includes('setState("conflict"') && html.includes('id="fileForceSave"'));
+check("diff review builds a bounded line-specific Runtime request", inspectorView.includes("requestDiffRevision") && reviewSource.includes("MAX_COMMENT_BYTES") && reviewSource.includes('type: "hicode.diff_review"') && reviewSource.includes("先读取当前磁盘文件并核对上下文") && bootstrap.includes("runLine(request.runtimeText"));
+check("real Electron E2E covers supported widths editor Runtime and Git delivery loops", pkg.scripts["test:electron-e2e"] === "node tests/electron-e2e/run.mjs" && electronE2e.includes("_electron as electron") && JSON.stringify(electronE2eBaseline.widths) === JSON.stringify([720, 1024, 1440, 1920]) && electronE2e.includes("baseline.widths") && electronE2e.includes("verifyNavigation") && electronE2e.includes("verifyTypedAppShell") && electronE2e.includes("verifyResponsivePanels") && electronE2e.includes("verifySessionKeyboardAndLongTranscript") && electronE2e.includes("verifyIntegratedEditor") && electronE2e.includes("verifyDiffCommentRevisionRequest") && electronE2e.includes("verifyPlanQueueAndSteer") && electronE2e.includes("verifyGitDeliveryLoop"));
+check("CI runs the real Electron smoke under Xvfb", ciWorkflow.includes("electron-smoke:") && ciWorkflow.includes("xvfb-run -a npm run test:electron-e2e") && ciWorkflow.includes("test-results/electron-e2e/"));
 check("Git panel avoids clipped commit column on medium windows", css.includes('grid-template-areas:') && css.includes('"files diff"') && css.includes('"commit commit"') && css.includes(".git-commit-panel { grid-area: commit; }") && css.includes("@media (min-width: 1280px)") && css.includes('grid-template-areas: "files diff commit"'));
 check("Git commit controls remain visible in responsive layout", html.includes('class="git-commit-actions"') && css.includes(".git-commit-actions") && css.includes("grid-template-columns: minmax(0, 1fr) minmax(0, 1fr)") && css.includes(".git-commit-status:empty") && css.includes("height: 32px") && css.includes("#gitCommitMessage") && css.includes("max-height: 110px"));
+check("Git delivery UI exposes protected branch and confirmed PR actions", html.includes('id="gitBranchSelect"') && html.includes('id="gitCreateBranch"') && html.includes('id="gitCreatePr"') && html.includes("不会自动合并") && bootstrap.includes("api.gitCreateBranch({ name })") && bootstrap.includes("api.gitCreatePullRequest({"));
+check("Git delivery UI keeps failed and pending CI visible", bootstrap.includes('failed: "失败"') && bootstrap.includes('pending: "运行中"') && bootstrap.includes("is-${ci.status") && css.includes(".git-collaboration-status.is-failed") && css.includes(".git-check.is-failed") && css.includes(".git-check.is-pending"));
+check("Git delivery disables Pull Request creation when GitHub CLI is unavailable", bootstrap.includes("gitCollaborationState?.available !== false") && bootstrap.includes("!githubCliAvailable"));
+check("Git header stacks before compact controls overflow", css.includes(".git-head { flex-direction: column; }") && css.includes(".git-head-actions { width: 100%; justify-content: flex-start; }"));
 check("industrial workbench panels stack before they clip", css.includes("@media (max-width: 1180px)") && css.includes(".job-grid,\n  .domain-pack-grid,\n  .agent-team-layout,\n  .toolchain-layout,\n  .quality-gate-layout") && css.includes("grid-template-columns: 1fr") && css.includes(".job-list-panel {\n    border-right: none;"));
 check("capability pages expose Store-managed disable and uninstall actions", bootstrap.includes("getCapabilityStoreItems") && bootstrap.includes("renderCapabilityActions") && bootstrap.includes("returnToCapability") && bootstrap.includes("capabilityLifecycleState"));
 check("capability Store lookup is silent for missing local-only items", bootstrap.includes("api.getStoreItemSilent") && bootstrap.includes("getCapabilityStoreItems"));
@@ -103,13 +137,21 @@ check("store detail exposes uninstall and local translation affordance", bootstr
 check("store detail re-translates mixed backend summaries", !bootstrap.includes("translatedCandidate && translatedCandidate !== originalSummary") && bootstrap.includes("translatedSummary: translatedCandidate || \"\""));
 check("toast controller deduplicates and limits repeated errors", toastSource.includes("maxVisible = 3") && toastSource.includes("active = new Map") && toastSource.includes("（${existing.count} 次）") && toastSource.includes("target.children.length > maxVisible"));
 check("demo browser shim uses neutral paths", !bootstrap.includes("/Users/liu") && bootstrap.includes("/demo/hicode-project") && bootstrap.includes("/demo/hicode-data"));
-check("composer exposes real image attachment tray", html.includes('id="attachmentTray"') && html.includes('title="添加图片附件"') && css.includes(".attachment-tray") && css.includes(".attachment-chip"));
-check("composer attach button uses image attachment API", bootstrap.includes("attachBtn.onclick = chooseImageAttachment") && bootstrap.includes("api.attachImage({})") && bootstrap.includes("pendingAttachments"));
-check("composer sends image attachments through workspace-relative refs", bootstrap.includes("inputTextWithAttachments") && bootstrap.includes("`@${attachment.relativePath}`") && bootstrap.includes("displayText"));
+check("composer exposes a real typed attachment tray", html.includes('id="attachmentTray"') && html.includes('title="添加附件"') && css.includes(".attachment-tray") && css.includes(".attachment-chip"));
+check("composer attach button uses durable attachment API", bootstrap.includes("attachBtn.onclick = chooseAttachment") && bootstrap.includes("api.attachFile({})") && bootstrap.includes("pendingAttachments"));
+check("session changes discard unsent attachment records before switching", bootstrap.includes("async function discardPendingAttachments()") && bootstrap.includes("await discardPendingAttachments();") && bootstrap.includes("api.removeAttachment(attachment.id)"));
+check("composer sends attachment ids and execution mode without workspace path injection", bootstrap.includes("attachmentIds") && bootstrap.includes("{ text, attachmentIds, executionMode: mode }") && !bootstrap.includes("inputTextWithAttachments"));
+check("main process is the only execution queue authority", !bootstrap.includes("queuedInputs.push(") && bootstrap.includes("queuedInputPresentations") && bootstrap.includes("runtimeQueueState.queued"));
+check("composer exposes real plan and steer controls", html.includes('id="planMode"') && html.includes('id="steer"') && bootstrap.includes("api.steer({ text: displayText") && bootstrap.includes('executionMode === "plan"'));
 check("composer supports pasted and dropped images", bootstrap.includes('input.addEventListener("paste"') && bootstrap.includes('composer.addEventListener("drop"') && bootstrap.includes("readImageFileAsDataUrl"));
 check("run status keeps runtime output errors visible", bootstrap.includes("function detectRuntimeOutputError") && bootstrap.includes("lastRunErrorDetail") && bootstrap.includes('label: "模型请求失败"') && bootstrap.includes('runState.status === "error" || lastRunErrorDetail'));
 check("model connection test surfaces vision capability hint", bootstrap.includes("function modelCapabilityHint") && bootstrap.includes("visionCapabilityNotice") && bootstrap.includes("图片输入：当前模型可能不支持") && bootstrap.includes("currentModel.capabilities"));
-check("agent chat bubble never stays blank on empty model output", bootstrap.includes("Hi Code 正在思考") && bootstrap.includes("function finishAgentMessageIfEmpty") && bootstrap.includes("这次模型没有返回可显示内容") && css.includes(".agent-body.agent-empty") && css.includes(".agent-body.agent-error"));
+check("settings preserve every explicit model transport protocol", bootstrap.includes("function configuredQuickProtocol") && bootstrap.includes('["responses", "chat_completions", "anthropic_messages", "ollama_chat"].includes(protocol)') && bootstrap.includes("...(protocol ? { protocol } : {})") && bootstrap.includes("protocol: config.protocol"));
+check("settings expose native Anthropic and Ollama routes", html.includes('data-provider="anthropic"') && bootstrap.includes('protocol: "anthropic_messages"') && bootstrap.includes('protocol: "ollama_chat"') && bootstrap.includes('baseURL: "http://127.0.0.1:11434"'));
+check("settings never repopulate saved API keys into the renderer", bootstrap.includes('quickApiKey.value = ""') && bootstrap.includes("r.configText || (await api.getConfig())") && bootstrap.includes("isConfiguredSecretRef") && html.includes("API Key 不写入 config.json"));
+check("settings preserve configured secret references without treating missing vault values as configured", bootstrap.includes("credentialStatusCache.references") && bootstrap.includes("entry.configured === true") && bootstrap.includes("已安全保存，留空保持不变"));
+check("model validation accepts a configured secretRef and still rejects an absent cloud credential", validateQuickProfileFields({ baseURL: "https://api.example.test", model: "x", secretRef: "hicode-secret:v1:model:ZGVmYXVsdA" }, { apiOnly: true }) === "" && /API Key/.test(validateQuickProfileFields({ baseURL: "https://api.example.test", model: "x" }, { apiOnly: true })));
+check("agent chat bubble never stays blank on empty model output", conversationView.includes("Hi Code 正在思考") && bootstrap.includes("function finishAgentMessageIfEmpty") && conversationView.includes("这次模型没有返回可显示内容") && css.includes(".agent-body.agent-empty") && css.includes(".agent-body.agent-error"));
 
 console.log("\n[renderer] state");
 resetState();
@@ -126,9 +168,24 @@ console.log("\n[renderer] api wrapper");
 const errors = [];
 const api = createHiCodeApi({
   testModel: async () => ({ ok: true, value: 1 }),
+  getCredentialStatus: async () => ({ ok: true, secureStorage: { available: true, backend: "keychain" }, references: [] }),
+  getExecutionPolicyCapabilities: async () => ({ ok: true, capabilities: { schemaVersion: 1, platform: "linux", strength: "weak", backend: { id: "none" }, controls: {} } }),
   saveConfig: async () => ({ ok: false, error: "bad request" }),
-  attachImage: async () => ({ ok: true, relativePath: ".hicode/attachments/test.png" }),
+  attachFile: async () => ({ ok: true, id: "att-00000000-0000-4000-8000-000000000001", kind: "text" }),
+  attachImage: async () => ({ ok: true, id: "att-00000000-0000-4000-8000-000000000002", kind: "image" }),
+  removeAttachment: async () => ({ ok: true }),
   newSession: async () => ({ ok: true, sessionId: "session-new" }),
+  listMcpLifecycle: async () => ({ ok: true, servers: [{ server: "remote", state: "ready", protocolVersion: "2025-11-25", tools: ["echo"], auth: { type: "oauth", state: "ready" } }] }),
+  reloadMcpServers: async () => ({ ok: true, results: [{ server: "remote", ok: true }], servers: [] }),
+  connectMcpServer: async (server) => ({ ok: true, server }),
+  reconnectMcpServer: async (server) => ({ ok: true, server, reconnected: true }),
+  disconnectMcpServer: async (server) => ({ ok: true, server, disconnected: true }),
+  cancelMcpRequest: async (payload) => ({ ok: true, server: payload.server, callId: payload.callId, cancelled: 1 }),
+  gitBranches: async () => ({ ok: true, current: "main", branches: [{ name: "main", current: true }] }),
+  gitCreateBranch: async (payload) => ({ ok: true, branch: payload.name }),
+  gitSwitchBranch: async (payload) => ({ ok: true, branch: payload.name }),
+  gitCollaboration: async () => ({ ok: true, available: true, pullRequest: null, checks: [], ci: { status: "unknown", total: 0 } }),
+  gitCreatePullRequest: async (payload) => ({ ok: true, url: "https://github.com/example/project/pull/1", draft: payload.draft }),
   listJobs: async () => ({ ok: true, jobs: [] }),
   getJob: async (id) => ({ ok: true, job: { id } }),
   listProviders: async () => ({ ok: true, providers: [{ id: "hicode-internal" }] }),
@@ -183,13 +240,22 @@ const api = createHiCodeApi({
 }, { onError: (message) => errors.push(message) });
 const okResult = await api.testModel({});
 check("api wrapper preserves successful result", okResult?.ok === true && okResult.value === 1);
+check("api wrapper exposes credential status without secret values", (await api.getCredentialStatus()).secureStorage.backend === "keychain");
+check("api wrapper exposes read-only execution capability diagnostics", (await api.getExecutionPolicyCapabilities()).capabilities.strength === "weak");
 check("api wrapper detects missing methods", api.has("missing") === false);
 const bad = await api.saveConfig("{}");
 check("api wrapper returns failed API result", bad?.ok === false && /bad request/.test(bad.error || ""));
 const missing = await api.gitStatus();
 check("api wrapper returns standardized missing-method error", missing?.ok === false && /gitStatus/.test(missing.error || ""));
-check("api wrapper exposes image attachment bridge", (await api.attachImage({})).relativePath === ".hicode/attachments/test.png");
+check("api wrapper exposes durable file attachment bridge", (await api.attachFile({})).id === "att-00000000-0000-4000-8000-000000000001");
+check("api wrapper preserves legacy image attachment bridge", (await api.attachImage({})).id === "att-00000000-0000-4000-8000-000000000002");
 check("api wrapper exposes new session bridge", (await api.newSession()).sessionId === "session-new");
+check("MCP lifecycle API is callable", (await api.listMcpLifecycle()).servers[0].protocolVersion === "2025-11-25");
+check("MCP reload API is callable", (await api.reloadMcpServers()).results[0].ok === true);
+check("MCP connect reconnect disconnect APIs are callable", (await api.connectMcpServer("remote")).server === "remote" && (await api.reconnectMcpServer("remote")).reconnected === true && (await api.disconnectMcpServer("remote")).disconnected === true);
+check("MCP cancel API preserves correlation id", (await api.cancelMcpRequest({ server: "remote", callId: "call-1" })).callId === "call-1");
+check("Git branch API is callable", (await api.gitBranches()).current === "main" && (await api.gitCreateBranch({ name: "feature/ui" })).branch === "feature/ui");
+check("Git Pull Request API preserves draft confirmation intent", (await api.gitCreatePullRequest({ title: "Delivery", base: "main", body: "", draft: true })).draft === true);
 const missingIndustrialApi = createHiCodeApi({}, { onError: (message) => errors.push(message) });
 check("industrial project API does not fake success when preload is missing", (await missingIndustrialApi.getIndustrialProject()).ok === false);
 check("job center API list is callable", (await api.listJobs()).ok === true);
@@ -244,7 +310,7 @@ check("api wrapper reports user-facing errors", errors.length >= 2);
 console.log("\n[renderer] components");
 check("diff renderer escapes HTML", renderUnifiedDiff({ path: "a.js", before: "<x>", after: "<y>", status: "pending" }).includes("&lt;y&gt;"));
 check("diff status text reflects already-applied semantics", diffStatusText("pending") === "已应用 · 可回滚" && diffStatusText("accepted") === "已归档" && diffStatusText("rejected") === "已回滚");
-check("diff panel uses archive and rollback labels", html.includes("全部归档") && html.includes("全部回滚") && bootstrap.includes("个可回滚") && bootstrap.includes("归档改动失败") && bootstrap.includes("回滚改动失败"));
+check("diff panel uses archive and rollback labels", inspectorView.includes("全部归档") && inspectorView.includes("全部回滚") && inspectorView.includes("个可回滚") && bootstrap.includes("归档改动失败") && bootstrap.includes("回滚改动失败"));
 check("store query options trim search", storeQueryOptions("  mcp  ").query === "mcp");
 check("store Chinese summary translates English descriptions", storeChineseSummary({ summary: "Plugin for exporting source code documents" }).includes("源代码"));
 check("store Chinese summary translates mixed Chinese-English descriptions", storeChineseSummary({ summary: "A runnable AI organization pack with roster and review gates — themed as 三省六部." }).includes("中文说明"));

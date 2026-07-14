@@ -1,0 +1,57 @@
+$ npm run test:execution-policy
+
+> hi-code@0.6.0-alpha.8 test:execution-policy
+> npm run build && node test/execution-policy-tests.mjs
+
+
+> hi-code@0.6.0-alpha.8 build
+> tsc -p renderer/tsconfig.json --noEmit && vite build --config vite.renderer.config.ts && tsc -p tsconfig.json && chmod +x dist/index.js
+
+vite v6.2.6 building for production...
+transforming...
+✓ 71 modules transformed.
+rendering chunks...
+computing gzip size...
+renderer/generated/hi-code.css                         5.24 kB │ gzip:   1.92 kB
+renderer/generated/app-shell.js                      288.98 kB │ gzip:  72.70 kB
+renderer/generated/chunks/xterm-runtime-DOnvTC-9.js  414.54 kB │ gzip:  92.86 kB
+renderer/generated/chunks/code-editor-oiW-xu-R.js    772.97 kB │ gzip: 232.99 kB
+✓ built in 699ms
+
+[execution-policy] platform capability truth
+  ✓ macOS reports sandbox-exec without claiming complete isolation
+  ✓ Linux reports verified bubblewrap controls
+  ✓ Linux without bubblewrap is explicitly weak
+  ✓ Windows does not invent restricted-token isolation
+  ✓ renderer projection is bounded and value-free
+
+[execution-policy] deterministic policy decisions
+  ✓ strict workspace isolation fails closed without a backend
+  ✓ report-only mode permits weak execution but records the missing control
+  ✓ network deny fails closed when unavailable
+  ✓ approval is required before launch
+  ✓ working directory escape is rejected
+  ✓ command deny policy is enforced before spawn
+  ✓ environment is minimized and audit metadata contains no values
+  ✓ invalid or excessive limits fail closed
+  ✓ malformed policy input fails closed instead of throwing
+  ✓ interactive execution remains weak and does not claim a timeout
+
+[execution-policy] backend launch plans
+  ✓ macOS plan confines writes and can deny network
+  ✓ Linux plan uses die-with-parent, workspace bind, and network namespace
+  ✓ weak report-only plan remains unwrapped and visibly weak
+
+[execution-policy] Electron service boundary
+  ✓ service exposes a value-free capability projection
+  ✓ IPC registers read-only capabilities only
+
+[execution-policy] process tree termination
+  ✓ managed async execution bounds output and preserves metadata-only audit
+  ✓ managed sync execution uses the supervisor and returns bounded output
+  ✓ Electron supervisor runs as Node without inheriting parent secrets
+  ✓ Windows termination uses a bounded taskkill tree call
+  ✓ POSIX termination ends the detached parent and descendant
+  ✓ sync supervisor timeout terminates the target descendant
+
+=== 26 passed, 0 failed ===

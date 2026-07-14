@@ -1,0 +1,35 @@
+$ npm run test:runtime-store-integration
+
+[runtime-store-integration] real runtime persistence
+
+⏺ read_file  package.json
+  │     1	{"name":"runtime-store-fixture","version":"1.0.0"}
+  ✓ runtime emits durable message.appended records
+  ✓ typed snapshot preserves assistant tool call and tool result
+
+[runtime-store-integration] event-only reconstruction
+  ✓ session rebuilds without legacy JSON or typed cache
+  ✓ repeated event import is idempotent
+  ✓ event-only session is resumable in recent sessions
+  ✓ tool approval and diff transcript survives legacy deletion
+
+[runtime-store-integration] continuation from reconstructed context
+  ✓ continued model request contains restored tool context
+
+[runtime-store-integration] crash-window precedence
+  ✓ new complete event context wins over a stale legacy snapshot
+
+[runtime-store-integration] conflicting migration fallback
+  ✓ failed typed import returns the complete legacy event source
+
+[runtime-store-integration] interrupted turn recovery
+  ✓ unterminated running turn becomes recoverable interrupted work
+  ✓ durable crash fixture appends rpe-running-only
+  ✓ durable crash fixture appends rpe-partial-output
+  ✓ durable stream crash preserves partial output and safe retry
+  ✓ durable approval crash requires a new decision
+  ✓ durable tool crash blocks automatic replay
+
+=== 15 passed, 0 failed ===
+
+$ node test/runtime-store-integration-tests.mjs

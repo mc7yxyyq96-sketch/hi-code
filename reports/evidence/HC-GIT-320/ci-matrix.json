@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "workflow": "CI",
+  "event": "pull_request",
+  "pullRequest": 17,
+  "runId": 29189513590,
+  "status": "completed",
+  "conclusion": "success",
+  "headSha": "1731dfa8d4844c698a7717f0024cddf32af615c9",
+  "createdAt": "2026-07-12T10:40:27Z",
+  "updatedAt": "2026-07-12T10:42:31Z",
+  "url": "https://github.com/mc7yxyyq96-sketch/hi-code/actions/runs/29189513590",
+  "jobs": [
+    {
+      "name": "test",
+      "platform": "ubuntu-latest",
+      "status": "completed",
+      "conclusion": "success",
+      "jobId": 86641619878,
+      "url": "https://github.com/mc7yxyyq96-sketch/hi-code/actions/runs/29189513590/job/86641619878",
+      "build": "success",
+      "testSuites": "success",
+      "dodScan": "success"
+    },
+    {
+      "name": "Electron smoke (ubuntu-latest)",
+      "platform": "ubuntu-latest",
+      "status": "completed",
+      "conclusion": "success",
+      "jobId": 86641619907,
+      "url": "https://github.com/mc7yxyyq96-sketch/hi-code/actions/runs/29189513590/job/86641619907",
+      "build": "success",
+      "electronSmoke": "success",
+      "artifactUpload": "success"
+    },
+    {
+      "name": "Electron smoke (macos-latest)",
+      "platform": "macos-latest",
+      "status": "completed",
+      "conclusion": "success",
+      "jobId": 86641619893,
+      "url": "https://github.com/mc7yxyyq96-sketch/hi-code/actions/runs/29189513590/job/86641619893",
+      "build": "success",
+      "electronSmoke": "success",
+      "artifactUpload": "success"
+    },
+    {
+      "name": "Electron smoke (windows-latest)",
+      "platform": "windows-latest",
+      "status": "completed",
+      "conclusion": "success",
+      "jobId": 86641619916,
+      "url": "https://github.com/mc7yxyyq96-sketch/hi-code/actions/runs/29189513590/job/86641619916",
+      "build": "success",
+      "electronSmoke": "success",
+      "artifactUpload": "success"
+    }
+  ]
+}

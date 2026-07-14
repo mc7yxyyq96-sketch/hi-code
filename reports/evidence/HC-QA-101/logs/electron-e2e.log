@@ -1,0 +1,15 @@
+$ npm run test:electron-e2e
+
+[electron-e2e] real Electron smoke
+  ✓ launches the real local Electron renderer
+  ✓ isolates user data and excludes parent-process secrets
+  ✓ 720px layout keeps the brand visible without horizontal overflow
+  ✓ 1024px layout keeps the brand visible without horizontal overflow
+  ✓ 1440px layout keeps the brand visible without horizontal overflow
+  ✓ 720px core navigation and settings remain reachable
+  ✓ 1024px core navigation and settings remain reachable
+  ✓ 1440px core navigation and settings remain reachable
+  ✓ responsive timeline and diff panels have real drawer access
+  ✓ renderer produced no uncaught page errors
+
+$ node tests/electron-e2e/run.mjs
