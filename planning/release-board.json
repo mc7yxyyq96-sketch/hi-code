@@ -470,9 +470,11 @@
       "id": "HC-UX-430",
       "owner": "desktop-ux",
       "priority": "P0",
-      "status": "planned",
+      "status": "in_review",
       "dependencies": ["HC-PROV-301", "HC-UI-302", "HC-QA-101"],
-      "plannedBranch": "codex/desktop-ux/hc-ux-430"
+      "branch": "codex/desktop-ux/hc-ux-430",
+      "startedAt": "2026-07-15T15:10:39Z",
+      "taskManifest": "reports/tasks/HC-UX-430.md"
     },
     {
       "id": "HC-ONB-431",

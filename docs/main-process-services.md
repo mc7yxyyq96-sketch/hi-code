@@ -25,6 +25,12 @@ Sprint 1A splits Electron main-process IPC registration into service modules wit
   - OAuth token rotation and expiry metadata through one desktop secret-store configuration transaction, with recursively redacted lifecycle audit events
 - `electron/services/store-service.mjs`
   - Existing Store / Plugin / Skill / MCP install preview and install channels
+- `electron/services/store-catalog-cache.mjs`
+  - Bounded private catalog metadata cache with TTL, owner permissions, atomic replacement, and stale-while-refresh support
+  - Installed-state authority remains in the Store registry and is rehydrated before cached results are returned
+- `electron/services/native-menu-service.mjs`
+  - Native File/Edit/View/Window menus with Electron editing roles and a closed allowlist of Hi Code navigation commands
+  - Renderer commands are sent only to the focused production window; no generic menu IPC is exposed
 - `electron/services/job-service.mjs`
   - Job Center create/list/get/control/event/artifact channels
   - Uses the persistent `JobStore` model from `src/job-center.ts`
@@ -148,6 +154,8 @@ The normalized error path redacts API keys, bearer tokens, password-like fields,
 - Attachment records and content-addressed blobs stay under app data, use owner permissions, and are revalidated on read. Attachment IDs are session-owned and bounded before Runtime queueing.
 - Store install validation continues to block remote `sourcePath` and `sourceRoot`.
 - Remote downloads continue to require HTTPS.
+- Store cache files contain bounded catalog metadata only, use owner permissions and atomic replacement, and never grant install or execution authority. Cold fallback results remain explicitly partial.
+- Native application menus use Electron roles or fixed commands validated again by preload. Menu labels cannot become arbitrary Renderer IPC.
 - Domain Pack installation is confined to `~/.vibe/domain-packs`, remote pack URLs require HTTPS, local path references are rejected for remote manifests, and pack manifests cannot define automatic scripts or executable commands.
 - Agent Team artifacts are written under the current workspace `.hicode/generated/agent-team/*`; industrial tool plans are dry-run-only metadata and do not execute external tools.
 - Industrial Tool Adapter artifacts are confined to the current workspace, external tool execution requires explicit user approval, and Sprint 6G only permits the FreeCAD, KiCad, OpenPLC/IEC, and IfcOpenShell/IFC adapters to run real local tooling. PLC/OpenPLC execution is limited to local syntax-check style commands and never performs device download. IfcOpenShell/IFC execution is limited to local IFC inspection evidence and never declares building-code compliance. SolidWorks bridge generation never launches commercial software and marks native CAD outputs as external-required. AVEVA bridge generation never connects to enterprise systems and rejects plaintext credentials.

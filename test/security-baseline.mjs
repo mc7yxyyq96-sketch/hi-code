@@ -17,6 +17,8 @@ function check(name, cond, detail = "") {
 const root = process.cwd();
 const main = fs.readFileSync(path.join(root, "electron", "main.mjs"), "utf8");
 const nativeOpenService = fs.readFileSync(path.join(root, "electron", "services", "native-open-service.mjs"), "utf8");
+const nativeMenuService = fs.readFileSync(path.join(root, "electron", "services", "native-menu-service.mjs"), "utf8");
+const storeCatalogCache = fs.readFileSync(path.join(root, "electron", "services", "store-catalog-cache.mjs"), "utf8");
 const preload = fs.readFileSync(path.join(root, "electron", "preload.cjs"), "utf8");
 const html = fs.readFileSync(path.join(root, "renderer", "index.html"), "utf8");
 const bash = fs.readFileSync(path.join(root, "src", "tools", "bash.ts"), "utf8");
@@ -91,6 +93,7 @@ const releasePackagingWorkflow = fs.readFileSync(path.join(root, ".github", "wor
 const attachmentStore = fs.readFileSync(path.join(root, "src", "attachment-store.ts"), "utf8");
 const attachmentMaterializer = fs.readFileSync(path.join(root, "src", "attachment-materializer.ts"), "utf8");
 const commandRegistry = fs.readFileSync(path.join(root, "src", "command-registry.ts"), "utf8");
+const permissions = fs.readFileSync(path.join(root, "src", "permissions.ts"), "utf8");
 const electronE2e = fs.readFileSync(path.join(root, "tests", "electron-e2e", "run.mjs"), "utf8");
 
 console.log("\n[security] runtime baseline");
@@ -103,6 +106,10 @@ check("renderer CSP exists", html.includes("Content-Security-Policy"));
 check("CSP blocks remote script by default", /script-src 'self'/.test(html));
 check("desktop runtime disables slash-command process exit", main.includes("allowProcessExit: false") && runtime.includes("allowProcessExit: opts.allowProcessExit !== false") && commands.includes("env.allowProcessExit === false"));
 check("native app launcher only intercepts known app aliases", nativeOpenService.includes("if (!alias) return null") && !nativeOpenService.includes("alias || rawName"));
+check("native menu commands are allowlisted before entering the renderer", nativeMenuService.includes("RENDERER_COMMANDS") && nativeMenuService.includes("normalizeNativeMenuCommand") && preload.includes("function nativeMenuCommand") && preload.includes('ipcRenderer.on("native-menu-command", handler)'));
+check("Store background refresh events are schema bounded", preload.includes("function storeCatalogUpdate") && preload.includes("data.query.length > 240") && preload.includes("data.category.length > 64") && preload.includes('ipcRenderer.on("store-catalog-updated", handler)'));
+check("Store cache is app-private and uses atomic sibling replacement", storeCatalogCache.includes("mode: 0o700") && storeCatalogCache.includes("mode: 0o600") && storeCatalogCache.includes("renameSync(tempPath, filePath)") && storeCatalogCache.includes("chmodSync(filePath, 0o600)"));
+check("permission memory uses hashed exact actions and stays process-session scoped", permissions.includes("permissionFingerprint") && permissions.includes('createHash("sha256")') && permissions.includes("approvedFingerprints") && permissions.includes("pendingFingerprints") && !permissions.includes("writeFileSync"));
 check("desktop bridge filters terminal tool chrome from chat output", main.includes("filterRuntimeOutput") && main.includes("shouldForwardRuntimeOutput") && main.includes("/^⏺\\s/") && main.includes("/^[┌│└]/") && main.includes("/^members:/i"));
 check("complete model context stays out of legacy timeline logs", main.includes('normalized.type !== "message:appended"') && main.includes("complete model context"));
 check("runtime emits versioned protocol envelopes", runtime.includes("createRuntimeProtocolEvent") && runtime.includes("runtimeProtocol") && runtimeProtocol.includes("RUNTIME_PROTOCOL_VERSION = 1") && runtimeProtocol.includes("validateRuntimeProtocolEvent"));
@@ -364,6 +371,7 @@ check("verify script includes version sync", verifyScript.includes('"sync:versio
 check("verify script includes build", verifyScript.includes('run("build"'));
 check("verify script includes syntax check", verifyScript.includes("runSyntaxCheck()") && verifyScript.includes("electron/main.mjs"));
 check("verify script includes feature tests", verifyScript.includes('"test:feature"') && verifyScript.includes("test/feature-tests.mjs"));
+check("verify script includes Desktop UX stabilization tests", verifyScript.includes('"test:desktop-ux"') && verifyScript.includes("test/desktop-ux-tests.mjs"));
 check("verify script includes MCP transport and OAuth tests", verifyScript.includes('"test:mcp"') && verifyScript.includes("test/mcp-connection-tests.mjs"));
 check("verify script includes runtime protocol tests", verifyScript.includes('"test:runtime-protocol"') && verifyScript.includes("test/runtime-protocol-tests.mjs"));
 check("verify script includes authoritative runtime control tests", verifyScript.includes('"test:runtime-control"') && verifyScript.includes("test/runtime-control-tests.mjs"));

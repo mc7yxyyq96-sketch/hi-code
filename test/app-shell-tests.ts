@@ -222,7 +222,7 @@ await check("the generated bundle exists after a production build", () => {
 
 await check("real Electron acceptance includes the full 720-1920 range", () => {
   const baseline = JSON.parse(fs.readFileSync(path.resolve("tests/electron-e2e/fixtures/layout-baseline.json"), "utf8"));
-  assert.deepEqual(baseline.widths, [720, 1024, 1440, 1920]);
+  assert.deepEqual(baseline.widths, [720, 800, 1100, 1440, 1920]);
 });
 
 console.log(`\n=== ${passed} passed, ${failed} failed ===`);

@@ -93,6 +93,7 @@ Use `dist:win`/`--platform=win32` on Windows and `dist:linux`/`--platform=linux`
 - New shell routes must use the typed registry and a real existing trigger. Missing panels, duplicate mappings, and non-actionable routes fail closed.
 - `renderer/index.html` must keep a CSP that blocks remote scripts by default.
 - Preload APIs must validate argument types before calling main-process IPC.
+- Native menu event names and Store refresh payloads must be allowlisted and bounded in preload; no generic menu or event forwarding is permitted.
 - Main-process IPC handlers must use normalized error returns instead of leaking thrown exceptions.
 - Model profiles must select non-default wire protocols explicitly. Omitted `protocol` remains `chat_completions`; only `protocol: "responses"` may route to `/responses`.
 - Desktop model, sensitive MCP, and Agent Provider credentials must persist as
@@ -126,9 +127,11 @@ Use `dist:win`/`--platform=win32` on Windows and `dist:linux`/`--platform=linux`
 - Terminal children use the same minimal child-environment policy. Input, output, full env maps, and transcript content must not enter persisted logs.
 - App Preview must remain loopback-HTTP-only and main-process-owned. Preview pages run in sandboxed child windows with no preload, no Node integration, no DevTools, no permissions, no downloads, and no external navigation. Failed checks must not be promoted to passed.
 - Store installs must write only into app data directories such as `~/.vibe/store`.
+- Store catalog cache writes must stay in app data, use owner permissions and atomic replacement, remain bounded, and contain no credential or execution authority.
 - Remote catalog entries must not read local `sourcePath` or `sourceRoot`.
 - Remote downloads must use HTTPS.
 - Download entries should provide `sha256`; `signature` and `signatureAlgorithm` fields are reserved for stronger verification.
+- Exact permission prompt deduplication may remember only approved fingerprints for the current process session. Fingerprints must include action semantics, omit plaintext action content, and never persist denials as approvals.
 
 Migration must run after Electron readiness and before Runtime/service startup.
 Config and encrypted vault writes are one atomic operation. A reversible,

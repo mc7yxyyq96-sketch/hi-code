@@ -14,6 +14,8 @@ The customer-feedback change is accepted without reopening completed Runtime, MC
 
 The intake baseline was rerun from clean `main` commit `d85216c9428ae8d7836714bc14bd15f3e6baa8fe`: build, verify, release check, 80/80 feature tests, 1408/1408 Program Control checks, and the full-tree DoD scan all passed; the DoD scan reported zero findings. The user npm shim required a CI-mode pnpm dependency refresh in the worktree, but no source change or relaxed gate was used.
 
+`HC-UX-430` is in review on `codex/desktop-ux/hc-ux-430`. The implementation now derives one effective Execution Profile Card, installs native Edit/View behavior, deduplicates exact approved permission requests for one process session, and uses a private bounded Store cache with background refresh and virtual rows. Real Electron E2E passes at 720/800/1100/1440/1920; final evidence capture and Program Control review remain required before closing `RISK-UX-007`.
+
 The next execution order is:
 
 1. `HC-UX-430`, `HC-ONB-431`, and `HC-DIAG-432` may run in parallel after this program-control commit.

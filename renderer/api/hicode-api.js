@@ -215,6 +215,8 @@ export function createHiCodeApi(rawApi = window.hicode, { onError = null } = {})
     onDiffsChanged: (handler) => listen("onDiffsChanged", handler),
     onRuntimeQueue: (handler) => listen("onRuntimeQueue", handler),
     onTerminalEvent: (handler) => listen("onTerminalEvent", handler),
+    onNativeMenuCommand: (handler) => listen("onNativeMenuCommand", handler),
+    onStoreCatalogUpdated: (handler) => listen("onStoreCatalogUpdated", handler),
   };
 }
 

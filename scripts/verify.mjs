@@ -44,6 +44,7 @@ const testFiles = [
   ["test:samples", "test/industrial-control-box-sample-tests.mjs"],
   ["test:dod", "test/definition-of-done-tests.mjs"],
   ["test:renderer", "test/renderer-architecture-tests.mjs"],
+  ["test:desktop-ux", "test/desktop-ux-tests.mjs"],
   ["test:app-shell", "test/app-shell-tests.ts", tsx],
   ["test:workspace-shell", "test/workspace-shell-tests.ts", tsx],
   ["test:editor-workbench", "test/editor-workbench-tests.ts", tsx],

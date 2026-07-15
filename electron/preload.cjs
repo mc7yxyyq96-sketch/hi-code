@@ -216,6 +216,29 @@ function utf8Length(value) {
   return new TextEncoder().encode(String(value)).byteLength;
 }
 
+function nativeMenuCommand(value) {
+  const command = typeof value === "string" ? value.trim() : "";
+  return ["new-chat", "search", "focus-composer", "toggle-sidebar", "open-settings"].includes(command)
+    ? command
+    : "";
+}
+
+function storeCatalogUpdate(value) {
+  const data = optionalObject(value);
+  if (typeof data.sourceId !== "string" || data.sourceId.length > 128) return null;
+  if (typeof data.query !== "string" || data.query.length > 240) return null;
+  if (typeof data.kind !== "string" || data.kind.length > 32) return null;
+  if (typeof data.category !== "string" || data.category.length > 64) return null;
+  if (!Number.isFinite(data.durationMs) || data.durationMs < 0) return null;
+  return {
+    sourceId: data.sourceId,
+    query: data.query,
+    kind: data.kind,
+    category: data.category,
+    durationMs: Math.round(data.durationMs),
+  };
+}
+
 contextBridge.exposeInMainWorld("hicode", {
   onOutput: (cb) => typeof cb === "function" && ipcRenderer.on("output", (_e, s) => cb(String(s || ""))),
   onReady: (cb) => typeof cb === "function" && ipcRenderer.on("ready", (_e, d) => cb(optionalObject(d))),
@@ -224,6 +247,24 @@ contextBridge.exposeInMainWorld("hicode", {
   onToolEvent: (cb) => typeof cb === "function" && ipcRenderer.on("tool-event", (_e, d) => cb(optionalObject(d))),
   onDiffsChanged: (cb) => typeof cb === "function" && ipcRenderer.on("diffs-changed", (_e, d) => cb(Array.isArray(d) ? d : [])),
   onRuntimeQueue: (cb) => typeof cb === "function" && ipcRenderer.on("runtime-queue", (_e, d) => cb(optionalObject(d))),
+  onNativeMenuCommand: (cb) => {
+    if (typeof cb !== "function") return () => {};
+    const handler = (_event, value) => {
+      const command = nativeMenuCommand(value);
+      if (command) cb(command);
+    };
+    ipcRenderer.on("native-menu-command", handler);
+    return () => ipcRenderer.removeListener("native-menu-command", handler);
+  },
+  onStoreCatalogUpdated: (cb) => {
+    if (typeof cb !== "function") return () => {};
+    const handler = (_event, value) => {
+      const update = storeCatalogUpdate(value);
+      if (update) cb(update);
+    };
+    ipcRenderer.on("store-catalog-updated", handler);
+    return () => ipcRenderer.removeListener("store-catalog-updated", handler);
+  },
   onTerminalEvent: (cb) => {
     if (typeof cb !== "function") return () => {};
     const handler = (_event, value) => {

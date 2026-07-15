@@ -1,4 +1,5 @@
 import { useEffect, useRef, useSyncExternalStore } from "react";
+import { HICODE_DESIGN_SYSTEM } from "./design-system.ts";
 import type { LegacyPanelAdapter } from "./legacy-panel-adapter.ts";
 import type { ShellStore } from "./store.ts";
 
@@ -35,7 +36,12 @@ export function AppShell({ adapter, store }: AppShellProps) {
   };
 
   return (
-    <div className="app-shell-compact" data-testid="react-app-shell">
+    <div
+      className="app-shell-compact"
+      data-testid="react-app-shell"
+      data-design-system={HICODE_DESIGN_SYSTEM.id}
+      data-density={HICODE_DESIGN_SYSTEM.density}
+    >
       <button
         ref={triggerRef}
         className="app-shell-nav-trigger"

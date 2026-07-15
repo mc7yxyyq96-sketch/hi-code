@@ -356,6 +356,114 @@ async function verifyUpdateTrustBoundary(page) {
   await page.locator("#cfg-cancel").click();
 }
 
+function percentile95(values) {
+  const ordered = [...values].sort((left, right) => left - right);
+  return ordered[Math.max(0, Math.ceil(ordered.length * 0.95) - 1)] || 0;
+}
+
+async function clickNativeMenu(id) {
+  await electronApp.evaluate(({ Menu }, itemId) => {
+    const item = Menu.getApplicationMenu()?.getMenuItemById(itemId);
+    if (!item) throw new Error(`Native menu item is missing: ${itemId}`);
+    item.click();
+  }, id);
+}
+
+async function verifyDesktopUxStabilization(page) {
+  await setContentSize(1100, baseline.height);
+  await returnHome(page);
+
+  const nativeEditRoles = await electronApp.evaluate(({ Menu }) => {
+    const edit = Menu.getApplicationMenu()?.items.find((item) => item.label === "编辑");
+    return edit?.submenu?.items.map((item) => item.role).filter(Boolean) || [];
+  });
+  const normalizedEditRoles = nativeEditRoles.map((role) => role.toLowerCase());
+  for (const role of ["undo", "redo", "cut", "copy", "paste", "selectall"]) {
+    assert.ok(normalizedEditRoles.includes(role), `Native Edit menu is missing the ${role} role`);
+  }
+
+  await clickNativeMenu("hicode.search");
+  await waitVisible(page, "#searchWrap");
+  assert.equal(await page.evaluate(() => document.activeElement?.id), "search", "Native Search did not focus the real search field");
+  await page.locator("#searchToggle").click();
+
+  await clickNativeMenu("hicode.focus-composer");
+  assert.equal(await page.evaluate(() => document.activeElement?.id), "input", "Native focus command did not focus the composer");
+
+  const sidebarWasCollapsed = await page.locator("body").evaluate((body) => body.classList.contains("sidebar-nav-collapsed"));
+  await clickNativeMenu("hicode.toggle-sidebar");
+  await page.waitForFunction((before) => document.body.classList.contains("sidebar-nav-collapsed") !== before, sidebarWasCollapsed);
+  await clickNativeMenu("hicode.toggle-sidebar");
+  await page.waitForFunction((before) => document.body.classList.contains("sidebar-nav-collapsed") === before, sidebarWasCollapsed);
+
+  await clickNativeMenu("hicode.settings");
+  await waitVisible(page, "#settings");
+  await page.locator("#cfg-cancel").click();
+
+  await page.locator("#modelPill").click();
+  await waitVisible(page, ".execution-profile-card");
+  const executionProfile = await page.evaluate(() => ({
+    labels: [...document.querySelectorAll(".execution-profile-grid span")].map((item) => item.textContent?.trim()),
+    values: [...document.querySelectorAll(".execution-profile-grid b")].map((item) => item.textContent?.trim()),
+    designSystem: document.querySelector("#appShellMount")?.dataset.designSystem,
+    supportedWidths: document.querySelector("#appShellMount")?.dataset.supportedWidths,
+    pickerBounds: (() => {
+      const rect = document.querySelector("#modelPicker")?.getBoundingClientRect();
+      return rect ? { top: rect.top, right: rect.right, bottom: rect.bottom, left: rect.left } : null;
+    })(),
+  }));
+  assert.deepEqual(executionProfile.labels, ["模型", "速度", "推理", "隐私", "预算"]);
+  assert.equal(executionProfile.values.every(Boolean), true, "Execution Profile contains an empty field");
+  assert.equal(executionProfile.designSystem, "hicode-industrial-v1");
+  assert.equal(executionProfile.supportedWidths, baseline.widths.join(","));
+  assert.ok(executionProfile.pickerBounds, "Execution Profile picker has no layout bounds");
+  assert.ok(executionProfile.pickerBounds.top >= 8, `Execution Profile picker is clipped above the viewport: ${JSON.stringify(executionProfile.pickerBounds)}`);
+  assert.ok(executionProfile.pickerBounds.bottom <= baseline.height - 8, `Execution Profile picker is clipped below the viewport: ${JSON.stringify(executionProfile.pickerBounds)}`);
+  await page.screenshot({ path: path.join(resultDir, "execution-profile-1100.png"), animations: "disabled" });
+  await page.locator("#modelPill").click();
+
+  const coldOpenStartedAt = Date.now();
+  await page.locator("#storeBtn").click();
+  await waitVisible(page, ".store-virtual-list");
+  const coldOpenMs = Date.now() - coldOpenStartedAt;
+  assert.ok(coldOpenMs <= 1_500, `Cold Store UI open exceeded 1.5s: ${coldOpenMs}ms`);
+
+  const source = page.locator(".store-source");
+  await source.selectOption("builtin-cn");
+  await page.waitForFunction(() => /内置源/.test(document.querySelector(".store-result-info")?.textContent || ""));
+  const performance = await page.evaluate(async () => {
+    const options = Array.from({ length: 20 }, (_, index) => ({
+      query: `desktop-ux-${index}`,
+      kind: "all",
+      category: "all",
+    }));
+    const measure = async (input) => {
+      const startedAt = performance.now();
+      await window.hicode.listStore(input);
+      return performance.now() - startedAt;
+    };
+    const cold = [];
+    for (const option of options) cold.push(await measure(option));
+    const cached = [];
+    for (const option of options) cached.push(await measure(option));
+    return { cold, cached };
+  });
+  const coldP95 = percentile95(performance.cold);
+  const cachedP95 = percentile95(performance.cached);
+  assert.ok(coldP95 <= 1_500, `Cold Store P95 exceeded 1.5s: ${coldP95.toFixed(1)}ms`);
+  assert.ok(cachedP95 <= 300, `Cached Store P95 exceeded 300ms: ${cachedP95.toFixed(1)}ms`);
+
+  const virtualState = await page.evaluate(() => ({
+    renderedRows: document.querySelectorAll(".store-virtual-window .store-item").length,
+    totalRows: Number(document.querySelector(".store-virtual-list")?.getAttribute("aria-label")?.match(/\d+/)?.[0] || 0),
+    result: document.querySelector(".store-result-info")?.textContent || "",
+  }));
+  assert.ok(virtualState.renderedRows <= 20, `Store virtual list rendered too many rows: ${virtualState.renderedRows}`);
+  assert.ok(virtualState.totalRows >= virtualState.renderedRows, "Store virtual list count is inconsistent");
+  await page.screenshot({ path: path.join(resultDir, "store-virtualized-1100.png"), animations: "disabled" });
+  return { coldOpenMs, coldP95, cachedP95, virtualState };
+}
+
 async function captureHome(page, width) {
   await setContentSize(width, baseline.height);
   await page.waitForTimeout(220);
@@ -1046,6 +1154,10 @@ async function main() {
 
   await check("Settings keeps unpackaged and unsigned updates fail-closed", async () => {
     await verifyUpdateTrustBoundary(page);
+  });
+
+  await check("Desktop UX uses native menus execution profiles and bounded Store performance", async () => {
+    observed.desktopUx = await verifyDesktopUxStabilization(page);
   });
 
   for (const width of baseline.widths) {

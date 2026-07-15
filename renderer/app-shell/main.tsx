@@ -11,6 +11,7 @@ import { createTerminalApi, type RawTerminalBridge } from "./terminal/api.ts";
 import { TerminalPortal } from "./terminal/TerminalPortal.tsx";
 import { createPreviewApi, type RawPreviewBridge } from "./preview/api.ts";
 import { PreviewPortal } from "./preview/PreviewPortal.tsx";
+import { HICODE_DESIGN_SYSTEM } from "./design-system.ts";
 
 export interface HiCodeAppShellBridge {
   readonly ownsNavigation: true;
@@ -76,6 +77,8 @@ export function mountHiCodeAppShell() {
   );
   adapter.applyLegacyRoute({ route: "home", mainClass: "home", activeNav: "newChat" });
   mount.dataset.appShell = "react-typescript-vite";
+  mount.dataset.designSystem = HICODE_DESIGN_SYSTEM.id;
+  mount.dataset.supportedWidths = HICODE_DESIGN_SYSTEM.supportedWidths.join(",");
 
   return Object.freeze({
     unmount() {

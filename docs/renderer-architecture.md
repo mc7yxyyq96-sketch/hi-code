@@ -10,6 +10,7 @@ The production Renderer uses a gradual compatibility architecture. `renderer/ren
 - `renderer/app-shell/store.ts`: immutable route, drawer, and compatibility-error store.
 - `renderer/app-shell/legacy-panel-adapter.ts`: required-DOM validation, panel visibility, active navigation, and real-trigger delegation.
 - `renderer/app-shell/AppShell.tsx`: compact responsive navigation and visible compatibility errors.
+- `renderer/app-shell/design-system.ts`: industrial workbench density, stable design-system identity, and the supported 720/800/1100/1440/1920 responsive tiers.
 - `renderer/app-shell/workspace/`: typed session, conversation, timeline, recovery, diff, action, windowing, and portal implementation.
 - `renderer/app-shell/editor/code-editor.ts`: lazy bundled CodeMirror factory for presentation, syntax mode, history, and keyboard behavior; it has no preload or filesystem access and is loaded only when Files opens.
 - `renderer/app-shell/terminal/`: typed terminal API, React portal, and lazy xterm runtime. It has no process authority; PTY creation and ownership remain in the main process.
@@ -33,6 +34,7 @@ The production Renderer uses a gradual compatibility architecture. `renderer/ren
 - `renderer/components/release-center-panel.js`: Release readiness, gate/artifact/risk/approval summary, build release package action, and open release folder action.
 - `renderer/components/mcp-panel.js`: Plugins, Skills, and MCP capability metadata and labels.
 - `renderer/components/store-panel.js`: Store labels, paging constants, query normalization, and icons.
+- `renderer/components/execution-profile-card.js`: pure effective model, speed, reasoning, privacy, and context-budget projection for the model picker.
 - `renderer/components/ai-team-panel.js`: AI Team quick-card command behavior.
 - `renderer/components/settings-panel.js`: model picker DOM helpers.
 - `renderer/components/toast.js`: user-facing notification controller.
@@ -62,6 +64,13 @@ Rules:
 - Do not expose raw `ipcRenderer` or generic invoke behavior to renderer modules.
 - For persisted project features, missing preload APIs must fail closed instead of returning successful empty data.
 - Attachment selection uses `attachFile`, renders typed pending chips, and sends only opaque attachment IDs. Unsent records are discarded before a conversation switch; resumed messages reconstruct chips from persisted references.
+- Native menu and Store refresh events use bounded wrapper subscriptions with explicit unsubscribe functions. The Renderer does not receive generic menu commands or arbitrary IPC payloads.
+
+Store navigation uses a main-process metadata cache and stale-while-refresh. A
+matching cache entry renders immediately, a background event invalidates only
+the matching query, and a cold remote fallback is visibly marked partial. The
+result list uses a fixed-height virtual window with overscan instead of adding
+one DOM row per catalog item.
 
 The demo fallback remains in `bootstrap.js` only for development without preload. Production behavior must not rely on mock data.
 

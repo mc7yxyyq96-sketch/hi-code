@@ -15,10 +15,11 @@ import { mountSampleProjectPanel } from "../components/sample-project-panel.js";
 import { capabilityDescription, capabilityLifecycleState, capabilityMeta, CAPABILITY_META } from "../components/mcp-panel.js";
 import { normalizeRuntimeQueue, summarizeRunText } from "../components/runtime-panel.js";
 import { modelPickerSection, pickerRow } from "../components/settings-panel.js";
+import { deriveExecutionProfile } from "../components/execution-profile-card.js";
 import { renderUsagePanel } from "../components/settings-usage-panel.js";
 import { mountProviderSettingsPanel } from "../components/provider-settings-panel.js";
 import { buildUserProfile } from "../utils/profile.js";
-import { STORE_ACTION_LABELS, STORE_CATEGORY_LABELS, STORE_KIND_LABELS, STORE_PAGE_SIZE, storeChineseSummary, storeIcon, storeInstallActionState, storeQueryOptions as buildStoreQueryOptions } from "../components/store-panel.js";
+import { STORE_ACTION_LABELS, STORE_CATEGORY_LABELS, STORE_KIND_LABELS, STORE_VIRTUAL_ROW_HEIGHT, storeChineseSummary, storeIcon, storeInstallActionState, storeQueryOptions as buildStoreQueryOptions, storeVirtualRange } from "../components/store-panel.js";
 import { createToastController } from "../components/toast.js";
 import { $ } from "../utils/dom.js";
 import { escapeHtml, formatDuration, shortPath } from "../utils/format.js";
@@ -1433,7 +1434,7 @@ let credentialStatusCache = { ok: true, references: [] };
 let authMode = "login", currentCapability = "";
 let capabilityCache = null;
 let storeCache = null, storeCacheKey = "", storeKind = "all", storeCategory = "all", storeQuery = "", storeMessage = "", storeSearchTimer = null, storeRequestSeq = 0;
-let storePage = 1;
+let storeScrollTop = 0;
 let pendingStoreInstall = null;
 let toolEvents = [], recoverableTasks = [], diffs = [], selectedDiffId = null, showArchivedDiffs = false;
 let runState = null, runTimer = null, runHideTimer = null, lastRunErrorDetail = "";
@@ -1462,7 +1463,7 @@ syncState({
   storeCategory,
   storeQuery,
   storeMessage,
-  storePage,
+  storeScrollTop,
   pendingStoreInstall,
   toolEvents,
   recoverableTasks,
@@ -2020,7 +2021,8 @@ async function showStore() {
   qualityGates.stop();
   releaseCenter.stop();
   inChat = false;
-  syncState({ inChat });
+  currentCapability = "store";
+  syncState({ inChat, currentCapability });
   showRoute({ main, views: routeViews, route: "capabilityView", mainClass: "capability", activeNav: "storeBtn", setActiveNav });
   await renderStore();
 }
@@ -3128,6 +3130,17 @@ api.onRuntimeQueue?.((state) => {
   }
   if (!busy && running.id && running.id !== activeRuntimeJobId) beginQueuedRuntimeJob(running);
 });
+api.onStoreCatalogUpdated?.((update) => {
+  if (
+    currentCapability !== "store" ||
+    update.query !== storeQuery.trim() ||
+    update.kind !== storeKind ||
+    update.category !== storeCategory
+  ) return;
+  storeCache = null;
+  syncState({ storeCache });
+  void renderStore(false);
+});
 api.onAsk(({ id, q }) => {
   askQ.textContent = q; askBox.classList.remove("hidden");
   askBox.querySelectorAll(".btn").forEach((b) => { b.onclick = () => { askBox.classList.add("hidden"); api.answer(id, b.dataset.v); }; });
@@ -3494,12 +3507,14 @@ function initSidebarCollapse() {
   scheduleSidebarScrollReset();
   const toggle = $("sidebarToggle");
   if (!toggle) return;
-  toggle.onclick = () => {
-    const collapsed = !document.body.classList.contains("sidebar-nav-collapsed");
-    writeSidebarCollapsed(collapsed);
-    setSidebarCollapsed(collapsed);
-    scheduleSidebarScrollReset();
-  };
+  toggle.onclick = toggleSidebarNavigation;
+}
+
+function toggleSidebarNavigation() {
+  const collapsed = !document.body.classList.contains("sidebar-nav-collapsed");
+  writeSidebarCollapsed(collapsed);
+  setSidebarCollapsed(collapsed);
+  scheduleSidebarScrollReset();
 }
 
 initSidebarCollapse();
@@ -3508,6 +3523,26 @@ $("searchToggle").onclick = () => {
   const w = $("searchWrap"); w.classList.toggle("hidden");
   if (!w.classList.contains("hidden")) searchInput.focus(); else { searchInput.value = ""; renderSessions(""); }
 };
+api.onNativeMenuCommand?.((command) => {
+  if (command === "new-chat") {
+    void startNewConversation();
+    return;
+  }
+  if (command === "search") {
+    $("searchWrap").classList.remove("hidden");
+    searchInput.focus();
+    return;
+  }
+  if (command === "focus-composer") {
+    input.focus();
+    return;
+  }
+  if (command === "toggle-sidebar") {
+    toggleSidebarNavigation();
+    return;
+  }
+  if (command === "open-settings") void openSettings("usage");
+});
 $("cmdBtn").onclick = showCommandCenter;
 $("terminalBtn").onclick = showTerminal;
 $("previewBtn").onclick = showPreview;
@@ -3866,7 +3901,7 @@ function storeQueryOptions() {
 async function getStore(refresh = false) {
   const key = JSON.stringify(storeQueryOptions());
   if (!storeCache || refresh || storeCacheKey !== key) {
-    storeCache = await api.listStore(storeQueryOptions());
+    storeCache = await api.listStore({ ...storeQueryOptions(), refresh });
     storeCacheKey = key;
     syncState({ storeCache, storeCacheKey });
   }
@@ -3876,13 +3911,13 @@ async function getStore(refresh = false) {
 function commitStoreSearch(value, immediate = false) {
   storeQuery = value;
   storeMessage = "";
-  storePage = 1;
-  syncState({ storeQuery, storeMessage, storePage });
+  storeScrollTop = 0;
+  syncState({ storeQuery, storeMessage, storeScrollTop });
   if (storeSearchTimer) clearTimeout(storeSearchTimer);
   const run = () => {
     storeCache = null;
     syncState({ storeCache });
-    renderStore(true);
+    renderStore(false);
   };
   if (immediate) run();
   else storeSearchTimer = setTimeout(run, 260);
@@ -3937,10 +3972,10 @@ async function renderStore(refresh = false) {
     clearBtn.onclick = () => {
       storeQuery = "";
       storeMessage = "";
-      storePage = 1;
+      storeScrollTop = 0;
       storeCache = null;
-      syncState({ storeQuery, storeMessage, storePage, storeCache });
-      renderStore(true);
+      syncState({ storeQuery, storeMessage, storeScrollTop, storeCache });
+      renderStore(false);
     };
     searchWrap.appendChild(clearBtn);
   }
@@ -3959,10 +3994,10 @@ async function renderStore(refresh = false) {
   sourceSelect.onchange = async () => {
     await api.setStoreSource(sourceSelect.value);
     storeCache = null;
-    storePage = 1;
+    storeScrollTop = 0;
     storeMessage = "来源已切换，已按当前搜索重新查询。";
-    syncState({ storeCache, storePage, storeMessage });
-    renderStore(true);
+    syncState({ storeCache, storeScrollTop, storeMessage });
+    renderStore(false);
   };
   capActions.appendChild(sourceSelect);
 
@@ -3992,27 +4027,23 @@ async function renderStore(refresh = false) {
     (storeKind === "all" || item.kind === storeKind) &&
     (storeCategory === "all" || (item.category || "other") === storeCategory)
   );
-  const totalPages = Math.max(1, Math.ceil(filtered.length / STORE_PAGE_SIZE));
-  storePage = Math.min(Math.max(1, storePage), totalPages);
-  const pageStart = (storePage - 1) * STORE_PAGE_SIZE;
-  const pageItems = filtered.slice(pageStart, pageStart + STORE_PAGE_SIZE);
   const resultInfo = document.createElement("div");
   resultInfo.className = "store-result-info";
   const totalItems = Number.isFinite(store.totalItems) ? store.totalItems : items.length;
   const sourceName = activeSource.name || "全部源";
-  const pageRange = filtered.length
-    ? ` · 第 ${storePage} / ${totalPages} 页 · ${pageStart + 1}-${Math.min(pageStart + STORE_PAGE_SIZE, filtered.length)}`
+  const performanceInfo = store.performance
+    ? ` · ${store.performance.source === "cache" ? "缓存" : store.performance.source === "fallback" ? "快速目录" : "在线"} ${store.performance.durationMs}ms`
     : "";
   resultInfo.textContent = storeQuery.trim()
-    ? `${sourceName} 搜索“${storeQuery.trim()}”：命中 ${filtered.length} / ${totalItems}${pageRange}`
-    : `${sourceName}：显示 ${filtered.length} / ${totalItems} 个条目${pageRange}`;
+    ? `${sourceName} 搜索“${storeQuery.trim()}”：命中 ${filtered.length} / ${totalItems}${performanceInfo}`
+    : `${sourceName}：显示 ${filtered.length} / ${totalItems} 个条目${performanceInfo}`;
   const kindBar = document.createElement("div");
   kindBar.className = "store-segment";
   for (const kind of ["all", ...kinds]) {
     const btn = document.createElement("button");
     btn.className = kind === storeKind ? "active" : "";
     btn.textContent = STORE_KIND_LABELS[kind];
-    btn.onclick = () => { storeKind = kind; storePage = 1; syncState({ storeKind, storePage }); renderStore(); };
+    btn.onclick = () => { storeKind = kind; storeScrollTop = 0; syncState({ storeKind, storeScrollTop }); renderStore(); };
     kindBar.appendChild(btn);
   }
   const categories = ["all", ...Array.from(new Set(items.map((x) => x.category || "other"))).sort()];
@@ -4023,11 +4054,17 @@ async function renderStore(refresh = false) {
     const btn = document.createElement("button");
     btn.className = cat === storeCategory ? "active" : "";
     btn.textContent = STORE_CATEGORY_LABELS[cat] || cat;
-    btn.onclick = () => { storeCategory = cat; storePage = 1; syncState({ storeCategory, storePage }); renderStore(); };
+    btn.onclick = () => { storeCategory = cat; storeScrollTop = 0; syncState({ storeCategory, storeScrollTop }); renderStore(); };
     catBar.appendChild(btn);
   }
   filters.append(resultInfo, kindBar, catBar);
   capList.appendChild(filters);
+  if (store.partial) {
+    const partialNotice = document.createElement("div");
+    partialNotice.className = "store-message info";
+    partialNotice.textContent = `${store.partialReason || "目录正在后台刷新"}。当前先显示可信的内置目录，刷新完成后会自动更新。`;
+    capList.appendChild(partialNotice);
+  }
 
   if (storeMessage) {
     const msg = document.createElement("div");
@@ -4047,11 +4084,42 @@ async function renderStore(refresh = false) {
     return;
   }
 
-  if (filtered.length > STORE_PAGE_SIZE) {
-    capList.appendChild(renderStorePager(filtered.length));
-  }
+  const viewport = document.createElement("div");
+  viewport.className = "store-virtual-list";
+  viewport.tabIndex = 0;
+  viewport.setAttribute("aria-label", `商店条目，共 ${filtered.length} 项`);
+  const spacer = document.createElement("div");
+  spacer.className = "store-virtual-spacer";
+  const windowEl = document.createElement("div");
+  windowEl.className = "store-virtual-window";
+  spacer.appendChild(windowEl);
+  viewport.appendChild(spacer);
+  capList.appendChild(viewport);
 
-  for (const item of pageItems) {
+  let paintFrame = 0;
+  const paintRows = () => {
+    paintFrame = 0;
+    const range = storeVirtualRange({
+      total: filtered.length,
+      scrollTop: viewport.scrollTop,
+      viewportHeight: viewport.clientHeight || 560,
+    });
+    spacer.style.height = `${range.totalHeight}px`;
+    windowEl.style.transform = `translateY(${range.offsetTop}px)`;
+    windowEl.replaceChildren(...filtered.slice(range.start, range.end).map((item) => createStoreItemRow(item, sourceName)));
+    viewport.dataset.start = String(range.start);
+    viewport.dataset.end = String(range.end);
+  };
+  viewport.onscroll = () => {
+    storeScrollTop = viewport.scrollTop;
+    if (!paintFrame) paintFrame = requestAnimationFrame(paintRows);
+  };
+  viewport.scrollTop = Math.min(storeScrollTop, Math.max(0, filtered.length * STORE_VIRTUAL_ROW_HEIGHT - 1));
+  paintRows();
+  if (keepSearchFocus) restoreStoreSearchFocus(searchInput);
+}
+
+function createStoreItemRow(item, sourceName) {
     const row = document.createElement("div");
     row.className = "cap-item store-item";
     row.tabIndex = 0;
@@ -4112,38 +4180,7 @@ async function renderStore(refresh = false) {
       install.onclick = () => openStoreInstallPreview(item.id);
       actions.appendChild(install);
     }
-    capList.appendChild(row);
-  }
-  if (filtered.length > STORE_PAGE_SIZE) {
-    capList.appendChild(renderStorePager(filtered.length));
-  }
-  if (keepSearchFocus) restoreStoreSearchFocus(searchInput);
-}
-
-function renderStorePager(total) {
-  const totalPages = Math.max(1, Math.ceil(total / STORE_PAGE_SIZE));
-  const pager = document.createElement("div");
-  pager.className = "store-pager";
-  const prev = document.createElement("button");
-  prev.type = "button";
-  prev.textContent = "上一页";
-  prev.disabled = storePage <= 1;
-  prev.onclick = () => {
-    storePage = Math.max(1, storePage - 1);
-    renderStore();
-  };
-  const label = document.createElement("span");
-  label.textContent = `第 ${storePage} / ${totalPages} 页`;
-  const next = document.createElement("button");
-  next.type = "button";
-  next.textContent = "下一页";
-  next.disabled = storePage >= totalPages;
-  next.onclick = () => {
-    storePage = Math.min(totalPages, storePage + 1);
-    renderStore();
-  };
-  pager.append(prev, label, next);
-  return pager;
+    return row;
 }
 
 function ensureStoreDetailModal() {
@@ -4839,8 +4876,28 @@ async function renderModelPicker() {
   const profiles = config.profiles || {};
   const profileKeys = Object.keys(profiles);
   const reasoning = config.reasoningLevel || "medium";
+  const executionProfile = deriveExecutionProfile(config);
 
   modelPicker.innerHTML = "";
+  const profileCard = document.createElement("section");
+  profileCard.className = "execution-profile-card";
+  const profileHeader = document.createElement("div");
+  profileHeader.className = "execution-profile-header";
+  profileHeader.innerHTML = `<div><strong>执行配置</strong><span>${escapeHtml(executionProfile.profileKey)}</span></div><span class="execution-profile-privacy ${executionProfile.remote ? "remote" : "local"}">${escapeHtml(executionProfile.privacy)}</span>`;
+  const profileGrid = document.createElement("div");
+  profileGrid.className = "execution-profile-grid";
+  profileGrid.innerHTML = [
+    ["模型", executionProfile.model],
+    ["速度", executionProfile.speed],
+    ["推理", executionProfile.reasoning],
+    ["隐私", executionProfile.privacy],
+    ["预算", executionProfile.budget],
+  ].map(([label, value]) => `<div><span>${escapeHtml(label)}</span><b title="${escapeHtml(value)}">${escapeHtml(value)}</b></div>`).join("");
+  const profileNotice = document.createElement("p");
+  profileNotice.className = "execution-profile-notice";
+  profileNotice.textContent = `${executionProfile.privacyDetail} · ${Math.round(executionProfile.compactThreshold * 100)}% 上下文阈值`;
+  profileCard.append(profileHeader, profileGrid, profileNotice);
+  modelPicker.appendChild(profileCard);
   modelPicker.appendChild(modelPickerSection("推理", REASONING_LEVELS.map(([key, label, desc]) => {
     const item = pickerRow(label, desc, key === reasoning);
     item.onclick = () => switchReasoningLevel(key);

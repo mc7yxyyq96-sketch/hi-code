@@ -79,6 +79,7 @@ const requiredFiles = [
   "reports/program/status.md",
   "reports/program/risks.json",
   "reports/program/voc-2026-07-14-integration-review.md",
+  "reports/program/hc-ux-430-integration-review.md",
   "reports/tasks/HC-PROG-100.md",
   "reports/tasks/HC-QA-101.md",
   "reports/tasks/HC-RUN-201.md",
@@ -101,6 +102,7 @@ const requiredFiles = [
   "reports/tasks/HC-REL-420.md",
   "reports/tasks/HC-MCP-410.md",
   "reports/tasks/HC-PROV-301.md",
+  "reports/tasks/HC-UX-430.md",
   "reports/tasks/HC-REL-STABLE-GATE.md",
   "reports/tasks/HC-REL-ALPHA-7.md",
   "reports/evidence/baseline/manifest.json",
@@ -956,7 +958,11 @@ check(
   vocTasks.get("HC-UX-430")?.dependencies?.includes("HC-PROV-301") &&
     vocTasks.get("HC-ONB-431")?.dependencies?.includes("HC-PROV-301") &&
     vocTasks.get("HC-DIAG-432")?.dependencies?.includes("HC-PROV-301") &&
-    customerValueTaskIds.every((taskId) => vocTasks.get(taskId)?.status === "planned"),
+    vocTasks.get("HC-UX-430")?.status === "in_review" &&
+    vocBoardTasks.get("HC-UX-430")?.status === "in_review" &&
+    vocTasks.get("HC-UX-430")?.branch === "codex/desktop-ux/hc-ux-430" &&
+    vocTasks.get("HC-UX-430")?.taskManifest === "reports/tasks/HC-UX-430.md" &&
+    ["HC-ONB-431", "HC-DIAG-432"].every((taskId) => vocTasks.get(taskId)?.status === "planned"),
 );
 check(
   "Fusion and Computer Use remain behind their required safety and diagnostics work",

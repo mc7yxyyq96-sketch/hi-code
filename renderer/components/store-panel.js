@@ -1,4 +1,20 @@
-export const STORE_PAGE_SIZE = 24;
+export const STORE_VIRTUAL_ROW_HEIGHT = 94;
+export const STORE_VIRTUAL_OVERSCAN = 4;
+
+export function storeVirtualRange({ total, scrollTop = 0, viewportHeight = 560, rowHeight = STORE_VIRTUAL_ROW_HEIGHT, overscan = STORE_VIRTUAL_OVERSCAN } = {}) {
+  const count = Math.max(0, Math.floor(Number(total) || 0));
+  const height = Math.max(1, Number(rowHeight) || STORE_VIRTUAL_ROW_HEIGHT);
+  const top = Math.max(0, Number(scrollTop) || 0);
+  const visible = Math.max(1, Math.ceil(Math.max(1, Number(viewportHeight) || 560) / height));
+  const start = Math.max(0, Math.floor(top / height) - overscan);
+  const end = Math.min(count, start + visible + overscan * 2);
+  return {
+    start,
+    end,
+    offsetTop: start * height,
+    totalHeight: count * height,
+  };
+}
 
 export const STORE_KIND_LABELS = {
   all: "全部",

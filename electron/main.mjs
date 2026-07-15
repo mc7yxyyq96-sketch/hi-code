@@ -2,7 +2,7 @@
 // projects typed runtime events to the renderer over the existing IPC surface.
 process.env.FORCE_COLOR = "1"; // make chalk emit ANSI even without a TTY
 
-import { app, BrowserWindow, ipcMain, dialog, shell, safeStorage } from "electron";
+import { app, BrowserWindow, ipcMain, dialog, shell, safeStorage, Menu } from "electron";
 import electronUpdater from "electron-updater";
 import path from "node:path";
 import os from "node:os";
@@ -75,6 +75,8 @@ import { FileAttachmentStore } from "../dist/attachment-store.js";
 import { createDefaultCommandRegistry } from "../dist/command-registry.js";
 import { buildSafeChildEnv } from "../dist/process-env.js";
 import { openMacApp, parseOpenAppRequest } from "./services/native-open-service.mjs";
+import { installNativeMenu } from "./services/native-menu-service.mjs";
+import { createStoreCatalogCache } from "./services/store-catalog-cache.mjs";
 import { BUILTIN_STORE_CATALOG } from "./store-catalog.mjs";
 
 // Data dir (~/.hicode, or a legacy ~/.vibe if that's what exists) is resolved
@@ -83,6 +85,7 @@ const CONFIG_PATH = path.join(HICODE_DIR, "config.json");
 const AUTH_PATH = path.join(HICODE_DIR, "auth.json");
 const STORE_PATH = path.join(HICODE_DIR, "store.json");
 const STORE_DIR = path.join(HICODE_DIR, "store");
+const STORE_CATALOG_CACHE_PATH = path.join(STORE_DIR, "catalog-cache.json");
 const LOG_DIR = path.join(HICODE_DIR, "logs");
 const SECRET_DIR = path.join(HICODE_DIR, "secrets");
 const JOB_CENTER_PATH = path.join(HICODE_DIR, "jobs", "job-center.json");
@@ -181,6 +184,8 @@ connectAssistantTextOutput(runtimeEventBus, {
   write: (text) => send("output", text),
 });
 const storeItemCache = new Map();
+const storeCatalogCache = createStoreCatalogCache({ filePath: STORE_CATALOG_CACHE_PATH });
+const storeCatalogRefreshes = new Map();
 const runtimeJobStatusMirror = new Map();
 let activeRuntimeJobCenterId = null;
 const inputQueue = new RuntimeJobQueue(
@@ -1307,19 +1312,7 @@ function matchesStoreFilters(item, filters) {
   return storeSearchScore(item, filters) > 0;
 }
 
-async function listStoreCatalog(options = {}) {
-  const filters = normalizeStoreOptions(options);
-  const state = loadStoreState();
-  const source = activeStoreSource();
-  const sourcesToQuery = storeSourcesForQuery(source);
-  const catalogs = await Promise.all(sourcesToQuery.map(async (s) => {
-    try {
-      return await fetchCatalogForSource(s, filters);
-    } catch {
-      return [];
-    }
-  }));
-  const rawItems = catalogs.flat();
+function buildStoreCatalogResult({ rawItems, filters, state, source }) {
   const merged = new Map();
   const invalidItems = [];
   for (const raw of rawItems) {
@@ -1364,6 +1357,126 @@ async function listStoreCatalog(options = {}) {
     catalogIssues: invalidItems.slice(0, 20),
     items,
   };
+}
+
+async function fetchStoreCatalog(filters, state, source) {
+  const sourcesToQuery = storeSourcesForQuery(source);
+  const catalogs = await Promise.all(sourcesToQuery.map(async (catalogSource) => {
+    try {
+      return await fetchCatalogForSource(catalogSource, filters);
+    } catch {
+      return [];
+    }
+  }));
+  return buildStoreCatalogResult({ rawItems: catalogs.flat(), filters, state, source });
+}
+
+function storeCatalogKey(source, filters) {
+  return JSON.stringify([source.id, filters.query, filters.kind, filters.category]);
+}
+
+function hydrateStoreInstallState(catalog, state) {
+  const items = Array.isArray(catalog?.items) ? catalog.items.map((item) => {
+    const installedRecord = state.installed[item.id];
+    const next = {
+      ...item,
+      installed: Boolean(installedRecord),
+      enabled: installedRecord?.enabled !== false,
+      installedAt: installedRecord?.installedAt,
+    };
+    storeItemCache.set(next.id, next);
+    return next;
+  }) : [];
+  return { ...catalog, items };
+}
+
+function withStorePerformance(catalog, { source, startedAt, cacheAgeMs = 0, refreshRecommended = false }) {
+  const durationMs = Math.max(0, Math.round(performance.now() - startedAt));
+  const targetMs = source === "cache" ? 300 : 1500;
+  return {
+    ...catalog,
+    refreshRecommended,
+    performance: {
+      source,
+      durationMs,
+      targetMs,
+      withinTarget: durationMs <= targetMs,
+      cacheAgeMs: Math.max(0, Math.round(cacheAgeMs)),
+    },
+  };
+}
+
+function fallbackStoreCatalog(filters, state, source) {
+  const rawItems = BUILTIN_STORE_CATALOG.map((item) => withStoreSource(item, STORE_SOURCES.find((item) => item.id === "builtin-cn")));
+  return {
+    ...buildStoreCatalogResult({ rawItems, filters, state, source }),
+    partial: true,
+    partialReason: `正在后台刷新${source.name}`,
+  };
+}
+
+function scheduleStoreCatalogRefresh(key, filters, state, source) {
+  if (storeCatalogRefreshes.has(key)) return storeCatalogRefreshes.get(key);
+  const refresh = new Promise((resolve) => setTimeout(resolve, 0))
+    .then(async () => {
+      const startedAt = performance.now();
+      const catalog = await fetchStoreCatalog(filters, state, source);
+      storeCatalogCache.set(key, catalog);
+      send("store-catalog-updated", {
+        sourceId: source.id,
+        query: filters.query,
+        kind: filters.kind,
+        category: filters.category,
+        durationMs: Math.round(performance.now() - startedAt),
+      });
+      return catalog;
+    })
+    .catch((error) => {
+      appendRuntimeLog({
+        id: `store-refresh-${Date.now()}-${crypto.randomUUID()}`,
+        type: "store.catalog.refresh.failed",
+        title: "store.catalog.refresh.failed",
+        payload: { sourceId: source.id, error: redactSensitive(error?.message || String(error)) },
+        createdAt: Date.now(),
+      });
+      return null;
+    })
+    .finally(() => storeCatalogRefreshes.delete(key));
+  storeCatalogRefreshes.set(key, refresh);
+  return refresh;
+}
+
+async function listStoreCatalog(options = {}) {
+  const startedAt = performance.now();
+  const filters = normalizeStoreOptions(options);
+  const state = loadStoreState();
+  const source = activeStoreSource();
+  const key = storeCatalogKey(source, filters);
+  const refresh = options?.refresh === true;
+  const cached = refresh ? null : storeCatalogCache.get(key);
+
+  if (cached) {
+    if (!cached.fresh) scheduleStoreCatalogRefresh(key, filters, state, source);
+    return withStorePerformance(hydrateStoreInstallState(cached.value, state), {
+      source: "cache",
+      startedAt,
+      cacheAgeMs: cached.ageMs,
+      refreshRecommended: !cached.fresh,
+    });
+  }
+
+  if (refresh || source.id === "builtin-cn") {
+    const catalog = await fetchStoreCatalog(filters, state, source);
+    storeCatalogCache.set(key, catalog);
+    return withStorePerformance(catalog, { source: "network", startedAt });
+  }
+
+  scheduleStoreCatalogRefresh(key, filters, state, source);
+  return withStorePerformance(fallbackStoreCatalog(filters, state, source), {
+    source: "fallback",
+    startedAt,
+    refreshRecommended: true,
+  });
 }
 
 function setStoreSource(sourceId) {
@@ -2687,6 +2800,11 @@ app.whenReady().then(() => {
   });
   if (legacyStdoutBridgeEnabled) installBridge();
   else setSpinnerEnabled(false);
+  installNativeMenu({
+    app,
+    Menu,
+    sendCommand: (command) => send("native-menu-command", command),
+  });
   ensureMainWindow();
   app.on("activate", () => {
     ensureMainWindow();
