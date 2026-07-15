@@ -8,6 +8,16 @@ Baseline: verified `0.6.0-alpha.8` development line
 
 One engine must support Electron, CLI, TUI, future SDK/app-server clients, isolated provider execution, and industrial engineering workflows. Runtime events, permissions, artifacts, gates, and release evidence are shared contracts. UI surfaces and tool adapters are clients of those contracts, not alternate implementations of them.
 
+## VOC-2026-07-14 Extension
+
+The accepted customer-value architecture adds two shared execution layers and one focused industrial projection:
+
+- Fusion orchestrates independent Provider candidates through Planner, Critic, Judge, Synthesizer, and deterministic Verifier stages while retaining cost, token, latency, privacy, disagreement, and provenance.
+- Computer Use implements an allowlisted, approval-scoped, audited final fallback after API/SDK, Licensed Worker, and File Exchange routes.
+- Industrial Studio presents Design, Data, Manufacturing, and User Intelligence over a canonical Industrial Engineering Graph; the ECAD Electrical Engineering Graph is its first complete vertical.
+
+These additions reuse Runtime, Provider, MCP, Job Center, Quality Gate, Evidence, and Release Builder contracts. Detailed industrial entities, connector states, machine-output rules, and product truth boundaries are defined in `docs/product/industrial-intelligence-architecture.md`.
+
 ## Current Runtime Topology
 
 ```mermaid

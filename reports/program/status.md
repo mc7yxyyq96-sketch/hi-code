@@ -1,12 +1,30 @@
 # Hi Code Program Status
 
-Updated: 2026-07-13
+Updated: 2026-07-15
 
 Program state: Active
 
 Current verified release candidate: `0.6.0-alpha.8`
 
-Active development slice: `0.6.0-beta.2`
+Active development slice: `VOC-2026-07-14 Customer Value Stabilization`
+
+## Program Change VOC-2026-07-14
+
+The customer-feedback change is accepted without reopening completed Runtime, MCP, security, Provider, release-pipeline, or Stable Gate work. `HC-PROV-301` remains completed, `RISK-PROV-001` remains closed, and the post-Provider Stable Gate remains engineering-passed with internal status `PASS_INTERNAL_ONLY`. `RISK-REL-001` remains open and continues to block only signed stable promotion.
+
+The intake baseline was rerun from clean `main` commit `d85216c9428ae8d7836714bc14bd15f3e6baa8fe`: build, verify, release check, 80/80 feature tests, 1408/1408 Program Control checks, and the full-tree DoD scan all passed; the DoD scan reported zero findings. The user npm shim required a CI-mode pnpm dependency refresh in the worktree, but no source change or relaxed gate was used.
+
+The next execution order is:
+
+1. `HC-UX-430`, `HC-ONB-431`, and `HC-DIAG-432` may run in parallel after this program-control commit.
+2. `HC-FUS-440` and `HC-CU-450` may run in parallel after their declared dependencies.
+3. `HC-IND-501` establishes Industrial Engineering Graph v2.
+4. `HC-IND-502` and `HC-ECAD-520` may run in parallel.
+5. `HC-ECAD-521` and `HC-ECAD-522` establish ECAD design and data intelligence.
+6. `HC-ECAD-523` and `HC-ECAD-524` establish manufacturing intelligence and truthful vendor connector routes.
+7. `HC-ECAD-530` completes the guided control-cabinet vertical before the Industrial Preview Gate.
+
+`HC-IND-510` is retained as historical planned scope and marked superseded by `HC-ECAD-530`; no completed task was deleted or redone. The accepted change and worktree plan are recorded in `docs/program/VOC-2026-07-14.md` and `planning/customer-value-roadmap.json`.
 
 ## Source Baseline
 

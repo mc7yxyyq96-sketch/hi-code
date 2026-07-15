@@ -12,6 +12,12 @@ Hi Code is a product-grade, local-first AI engineering workbench. The near-term 
 
 The program does not use source-code volume or copied behavior as a completion metric. It uses verified user outcomes, stable contracts, recoverable state, security boundaries, and release evidence.
 
+## Accepted Program Change
+
+`VOC-2026-07-14` is the controlling customer-value amendment for work after the completed Provider hardening and Stable engineering recheck. The next sequence is desktop UX, guided onboarding, diagnostics, Fusion, secure Computer Use, the shared Industrial Engineering Graph, and one complete ECAD control-cabinet vertical. Existing broad industrial modules remain compatible but are not expanded ahead of this sequence.
+
+The detailed decision, dependency graph, product architecture, and measurable outcomes are recorded in `docs/program/VOC-2026-07-14.md`, `docs/product/industrial-intelligence-architecture.md`, and `planning/customer-value-roadmap.json`.
+
 ## Current Product Fact
 
 The `0.6.0-alpha.6` source baseline already provides a working Electron application, CLI/TUI runtime, tool permissions, MCP, Git, Store, Job Center, Provider registry, isolated workspaces, Patch Arena, industrial project models, adapters, gates, sample generation, and release packaging. These capabilities have automated coverage.
@@ -47,6 +53,8 @@ Files under `reports/audit/` and `reports/final-acceptance-historical.md` are hi
 | `0.6.0-alpha.8` | Full event-store replay, turn recovery, Electron compatibility upgrade | Event-only conversation recovery and real Electron E2E both pass |
 | `0.6.0-alpha.9` | Provider parity foundation and durable execution contracts | Configured providers report honest capability and isolated runs are recoverable |
 | `0.6.0-beta` | Stable desktop coding loop across supported platforms | No open release blocker; packaging, upgrade, recovery, and security gates pass |
+| Customer Value preview | Desktop UX, onboarding, diagnostics, Fusion, and controlled Computer Use | Measured latency, multi-width Electron E2E, truthful diagnostics/provenance, and action safety gates pass |
+| Industrial Studio preview | Canonical industrial/electrical graphs and the ECAD control-cabinet flagship | Design, data, manufacturing, connectors, Release Package, and Evidence Binder pass without status inflation |
 | Later industrial releases | Domain-specific engineering depth on the shared engine | Real tool evidence or explicit dry-run/external-required status for every claim |
 
 The authoritative task list and later release slices remain in `planning/backlog.json`.

@@ -5,13 +5,22 @@
   "sourceCommit": "6ed9ed666bb817f8d1e863c76b0bf61b31c7b52d",
   "horizonDays": 90,
   "status": "active",
-  "updatedAt": "2026-07-13T15:27:17Z",
+  "updatedAt": "2026-07-15T14:25:39Z",
   "principles": [
     "Runtime Protocol is the single source of truth",
     "No big-bang rewrite",
     "No fake buttons, mock-only production paths, or fake gates",
     "Real, simulated, not_run, and external_required are never conflated",
     "Every task produces tests, documentation, and evidence"
+  ],
+  "programChanges": [
+    {
+      "id": "VOC-2026-07-14",
+      "recordedAt": "2026-07-15T14:25:39Z",
+      "source": "verified customer feedback",
+      "decision": "Stabilize Provider, desktop UX, onboarding, diagnostics, Fusion, and Computer Use before deepening one ECAD flagship vertical.",
+      "document": "docs/program/VOC-2026-07-14.md"
+    }
   ],
   "tasks": [
     {
@@ -395,15 +404,146 @@
       "evidenceManifest": "reports/evidence/HC-PROV-301/manifest.json"
     },
     {
+      "id": "HC-UX-430",
+      "release": "Customer Value preview",
+      "priority": "P0",
+      "title": "Desktop UX Stabilization",
+      "owner": "desktop-ux",
+      "estimatedDays": 8,
+      "dependencies": ["HC-PROV-301", "HC-UI-302", "HC-QA-101"],
+      "deliverables": [
+        "industrial AppShell and design system",
+        "Execution Profile Card for model, speed, reasoning, privacy, and budget",
+        "native Electron Edit/View menus and shortcuts",
+        "permission fingerprint dedupe and scoped memory",
+        "cached Store background refresh and virtual list",
+        "720/800/1100/1440/1920 Electron screenshot regression"
+      ],
+      "acceptance": [
+        "identical permission requests do not repeat in one session",
+        "native Edit/View commands execute real renderer actions",
+        "cached Store open P95 is at most 300ms",
+        "cold Store open P95 is at most 1.5s",
+        "core actions remain reachable at every supported desktop width",
+        "Electron Playwright E2E and screenshot regression pass"
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "HC-ONB-431",
+      "release": "Customer Value preview",
+      "priority": "P1",
+      "title": "Guided Onboarding and Simple Mode",
+      "owner": "desktop-ux",
+      "estimatedDays": 6,
+      "dependencies": ["HC-PROV-301", "HC-UI-302"],
+      "deliverables": [
+        "role-based startup for software, ECAD, CAD/SolidWorks, and PLC/embedded users",
+        "simple and expert modes",
+        "five-minute interactive tutorial",
+        "one-click sample project launch",
+        "page-level contextual help",
+        "six-step industrial project wizard"
+      ],
+      "acceptance": [
+        "onboarding changes live product state instead of only rendering documentation",
+        "every role reaches a runnable sample or configured workspace",
+        "simple mode hides complexity without removing an expert-mode route",
+        "wizard state survives restart and validates each step"
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "HC-DIAG-432",
+      "release": "Customer Value preview",
+      "priority": "P0",
+      "title": "Kernel and Capability Diagnostics",
+      "owner": "runtime-engine",
+      "estimatedDays": 5,
+      "dependencies": ["HC-PROV-301", "HC-MCP-410", "HC-SEC-402"],
+      "deliverables": [
+        "System Diagnostics UI",
+        "hicode doctor and hicode doctor --json",
+        "Runtime, Provider, MCP, Sandbox, Keychain, Worker, Adapter, and Build diagnostics",
+        "effective, weak, unavailable, and approval_required status model",
+        "redacted Support Bundle"
+      ],
+      "acceptance": [
+        "CLI and Desktop diagnostics share the same probes",
+        "unavailable and weak capabilities are never reported effective",
+        "support bundles exclude credentials and sensitive environment values",
+        "diagnostic failures include actionable remediation and evidence"
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "HC-FUS-440",
+      "release": "Fusion preview",
+      "priority": "P0",
+      "title": "Multi-Provider Fusion Mode",
+      "owner": "runtime-engine",
+      "estimatedDays": 9,
+      "dependencies": ["HC-PROV-301", "HC-UX-430", "HC-ONB-431", "HC-DIAG-432"],
+      "deliverables": [
+        "Fast, Standard, Expert, and Fusion execution modes",
+        "Planner, Provider Candidate, Critic, Judge, and Synthesizer stages",
+        "Tool, Test, and Quality Gate verifier",
+        "cost, token, latency, privacy budgets and provider fallback",
+        "disagreement and provenance UI"
+      ],
+      "acceptance": [
+        "Fusion produces a judged synthesis rather than concatenated answers",
+        "provider failure degrades without inventing success",
+        "budget limits stop or reduce execution deterministically",
+        "unverified results are never labeled verified",
+        "each claim links to provider, tool, test, gate, or explicit unsupported evidence"
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "HC-CU-450",
+      "release": "Computer Use preview",
+      "priority": "P0",
+      "title": "Secure Computer Use",
+      "owner": "security-release",
+      "estimatedDays": 9,
+      "dependencies": ["HC-SEC-402", "HC-DIAG-432"],
+      "deliverables": [
+        "ComputerActionProvider for screenshot, click, type, key, scroll, drag, and wait",
+        "application allowlist and sensitive-region masking",
+        "approval scopes, pause, resume, and emergency stop",
+        "action audit with Job, Event, and Evidence integration",
+        "controlled test application Electron E2E"
+      ],
+      "acceptance": [
+        "execution priority is API/SDK then Licensed Worker then File Exchange then Computer Use",
+        "actions outside the allowlist or approval scope fail closed",
+        "emergency stop terminates active input and records evidence",
+        "sensitive regions are masked before model transport",
+        "commercial applications remain unverified until licensed real-tool evidence exists"
+      ],
+      "status": "planned"
+    },
+    {
       "id": "HC-IND-501",
       "release": "Industrial Studio preview",
-      "priority": "P1",
+      "priority": "P0",
       "title": "Industrial Engineering Graph v2",
       "owner": "industrial-platform",
-      "estimatedDays": 7,
-      "dependencies": ["HC-RUN-202"],
-      "deliverables": ["graph schema", "unit/parameter model", "traceability/change impact", "migration"],
-      "acceptance": ["requirements trace to verification/evidence", "versioned relations work", "invalid unit or link is rejected"],
+      "estimatedDays": 9,
+      "dependencies": ["HC-RUN-202", "HC-FUS-440", "HC-CU-450"],
+      "deliverables": [
+        "versioned graph schema for Requirement, System, Subsystem, Component, Interface, Parameter, Unit, Material, Artifact, Verification, Evidence, Cost, ManufacturingOperation, and ChangeImpact",
+        "typed relation and migration layer",
+        "unit and parameter validation",
+        "traceability and change-impact engine"
+      ],
+      "acceptance": [
+        "requirements trace through design, artifact, verification, and evidence",
+        "versioned relationships preserve source and revision history",
+        "invalid unit, checksum, status, or relationship is rejected",
+        "change-impact results are deterministic and evidence-backed"
+      ],
       "status": "planned"
     },
     {
@@ -428,6 +568,142 @@
       "dependencies": ["HC-IND-501", "HC-UI-302"],
       "deliverables": ["structured graph", "CAD/PCB/PLC/electrical/BOM artifacts", "change impact", "evidence binder"],
       "acceptance": ["all artifacts are traceable", "real/simulated state is correct", "failed gate blocks release", "sample release package validates"],
+      "status": "superseded",
+      "supersededBy": "HC-ECAD-530",
+      "disposition": "Preserved as historical scope; the customer-validated ECAD 3.0 vertical replaces execution of the generic 2.0 sample."
+    },
+    {
+      "id": "HC-ECAD-520",
+      "release": "Industrial Studio preview",
+      "priority": "P0",
+      "title": "Electrical Engineering Graph",
+      "owner": "industrial-platform",
+      "estimatedDays": 8,
+      "dependencies": ["HC-IND-501"],
+      "deliverables": [
+        "canonical ElectricalProject graph",
+        "FunctionLocation, Device, ManufacturerPart, Terminal, Connection, Wire, Cable, PLCPoint, Circuit, Panel, Enclosure, MountingPlate, DINRail, WireDuct, Busbar, QuoteLine, BOMLine, ManufacturingOperation, ValidationRule, Drawing, and Revision entities",
+        "stable id, version, source, unit, traceability, status, checksum, and validation evidence contracts"
+      ],
+      "acceptance": [
+        "every entity validates stable identity and revision",
+        "connections reject invalid endpoint and unit combinations",
+        "source, status, checksum, and validation evidence survive round-trip persistence",
+        "neutral serialization is deterministic"
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "HC-ECAD-521",
+      "release": "Industrial Studio preview",
+      "priority": "P0",
+      "title": "ECAD Design Intelligence",
+      "owner": "industrial-platform",
+      "estimatedDays": 10,
+      "dependencies": ["HC-ECAD-520", "HC-FUS-440"],
+      "deliverables": [
+        "natural-language electrical requirement parser",
+        "component recommendation, selection, quotation, BOM, and connection graph",
+        "deterministic schematic layout, numbering, cross-reference, terminal, and wire numbering",
+        "Electrical Rule Check, cost optimization, and change impact",
+        "semantic SVG/DXF or neutral drawing output"
+      ],
+      "acceptance": [
+        "drawings are generated from semantic electrical objects rather than images",
+        "quotation and BOM rows link to validated catalog evidence",
+        "ERC failures block verified status",
+        "the same graph produces deterministic numbering and drawing output"
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "HC-ECAD-522",
+      "release": "Industrial Studio preview",
+      "priority": "P0",
+      "title": "ECAD Data Intelligence",
+      "owner": "industrial-platform",
+      "estimatedDays": 8,
+      "dependencies": ["HC-ECAD-520"],
+      "deliverables": [
+        "component catalog import and field normalization",
+        "duplicate part detection",
+        "symbol mapping or generation and 3D model association",
+        "enterprise material code, supplier, price, lifecycle, and alternative mapping",
+        "data quality score and catalog enrichment evidence"
+      ],
+      "acceptance": [
+        "catalog imports are reproducible and provenance-preserving",
+        "duplicate and conflicting manufacturer parts are surfaced",
+        "price and lifecycle records include source and effective date",
+        "enrichment cannot raise quality without evidence"
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "HC-ECAD-523",
+      "release": "Industrial Studio preview",
+      "priority": "P0",
+      "title": "ECAD Manufacturing Intelligence",
+      "owner": "industrial-platform",
+      "estimatedDays": 12,
+      "dependencies": ["HC-ECAD-521", "HC-ECAD-522", "HC-IND-502"],
+      "deliverables": [
+        "3D control-cabinet object model and automatic placement",
+        "collision, spacing, DIN rail, wire duct, routing, wire length, and fill checks",
+        "terminal, label, wire-number, and busbar parameter models",
+        "wire cut list, drilling/milling neutral output, CNC neutral package, assembly instruction, and FAT/SAT",
+        "machine-specific postprocessor interface"
+      ],
+      "acceptance": [
+        "machine output requires postprocessor, schema validation, approval, and checksum",
+        "LLM output cannot directly become unvalidated machine control code",
+        "simulated and not_run checks never become passed",
+        "manufacturing quantities trace to graph entities and revision"
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "HC-ECAD-524",
+      "release": "Industrial Studio preview",
+      "priority": "P1",
+      "title": "ECAD Vendor Connectors",
+      "owner": "industrial-platform",
+      "estimatedDays": 10,
+      "dependencies": ["HC-ECAD-520", "HC-IND-502", "HC-CU-450"],
+      "deliverables": [
+        "canonical graph to neutral exchange connector SDK",
+        "Official API, Licensed Worker, and Computer Use fallback chain",
+        "EPLAN, SOLIDWORKS Electrical, SEE Electrical, and 利驰 connector profiles",
+        "WSCAD capability benchmark"
+      ],
+      "acceptance": [
+        "connector state is one of real, simulated, not_run, external_required, unsupported, or approval_required",
+        "WSCAD is not claimed integrated without a supported interface",
+        "real state requires licensed versioned tool evidence",
+        "fallback selection follows the declared execution priority"
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "HC-ECAD-530",
+      "release": "Industrial Studio preview",
+      "priority": "P0",
+      "title": "Control Cabinet Full Demo 3.0",
+      "owner": "industrial-platform",
+      "estimatedDays": 12,
+      "dependencies": ["HC-ONB-431", "HC-ECAD-521", "HC-ECAD-522", "HC-ECAD-523", "HC-ECAD-524"],
+      "deliverables": [
+        "simple guided control-cabinet workflow from requirements through selection and quotation",
+        "schematic, BOM, PLC I/O, 3D layout, routing, busbar, wire-length, cut-list, and CNC neutral artifacts",
+        "validation, FAT/SAT, Release Package, and Evidence Binder"
+      ],
+      "acceptance": [
+        "a non-expert completes all fifteen guided steps",
+        "every result traces to the canonical electrical graph",
+        "installed licensed tools alone may produce real status",
+        "missing tools remain simulated or not_run",
+        "failed gate or approval blocks the release package"
+      ],
       "status": "planned"
     }
   ],

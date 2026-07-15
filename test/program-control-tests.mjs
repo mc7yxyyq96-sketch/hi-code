@@ -71,10 +71,14 @@ const requiredFiles = [
   "docs/openai-responses-adapter.md",
   "docs/electron-compatibility.md",
   "docs/runtime-stores.md",
+  "docs/program/VOC-2026-07-14.md",
+  "docs/product/industrial-intelligence-architecture.md",
   "planning/backlog.json",
   "planning/release-board.json",
+  "planning/customer-value-roadmap.json",
   "reports/program/status.md",
   "reports/program/risks.json",
+  "reports/program/voc-2026-07-14-integration-review.md",
   "reports/tasks/HC-PROG-100.md",
   "reports/tasks/HC-QA-101.md",
   "reports/tasks/HC-RUN-201.md",
@@ -158,6 +162,7 @@ for (const relative of requiredFiles) {
 
 const backlog = readJson(root, "planning/backlog.json");
 const board = readJson(root, "planning/release-board.json");
+const customerValueRoadmap = readJson(root, "planning/customer-value-roadmap.json");
 const risks = readJson(root, "reports/program/risks.json");
 const manifest = readJson(root, "reports/evidence/baseline/manifest.json");
 const qaManifest = readJson(root, "reports/evidence/HC-QA-101/manifest.json");
@@ -214,6 +219,15 @@ const executionPolicyTask = backlog.tasks.find((task) => task.id === "HC-SEC-402
 const releasePipelineTask = backlog.tasks.find((task) => task.id === "HC-REL-420");
 const mcpConnectionTask = backlog.tasks.find((task) => task.id === "HC-MCP-410");
 const providerHardeningTask = backlog.tasks.find((task) => task.id === "HC-PROV-301");
+const customerValueTaskIds = ["HC-UX-430", "HC-ONB-431", "HC-DIAG-432"];
+const fusionTaskIds = ["HC-FUS-440", "HC-CU-450"];
+const industrialTaskIds = [
+  "HC-IND-501", "HC-IND-502", "HC-ECAD-520", "HC-ECAD-521", "HC-ECAD-522",
+  "HC-ECAD-523", "HC-ECAD-524", "HC-ECAD-530",
+];
+const vocTaskIds = [...customerValueTaskIds, ...fusionTaskIds, ...industrialTaskIds];
+const vocTasks = new Map(vocTaskIds.map((id) => [id, backlog.tasks.find((task) => task.id === id)]));
+const vocBoardTasks = new Map(vocTaskIds.map((id) => [id, board.tasks.find((task) => task.id === id)]));
 const qaTask = board.tasks.find((task) => task.id === "HC-QA-101");
 const runtimeTask = board.tasks.find((task) => task.id === "HC-RUN-201");
 const runtimeStoreTask = board.tasks.find((task) => task.id === "HC-RUN-202");
@@ -918,6 +932,92 @@ check(
     !fs.readFileSync(path.join(root, "reports/releases/0.6.0-stable/gate-report.md"), "utf8").includes("Formal Release created: **Yes**") &&
     !fs.readFileSync(path.join(root, "reports/releases/0.6.0-stable/gate-report.md"), "utf8").includes("Tag created: **Yes**"),
 );
+check(
+  "VOC-2026-07-14 is recorded without rewriting the immutable program source",
+  backlog.programChanges?.some((change) =>
+    change.id === "VOC-2026-07-14" &&
+    change.document === "docs/program/VOC-2026-07-14.md") &&
+    backlog.sourceCommit === manifest.source?.commit &&
+    board.programChange?.id === "VOC-2026-07-14" &&
+    board.programChange?.roadmap === "planning/customer-value-roadmap.json" &&
+    customerValueRoadmap.id === "VOC-2026-07-14",
+);
+for (const taskId of vocTaskIds) {
+  check(`${taskId} exists in the backlog`, Boolean(vocTasks.get(taskId)));
+  check(`${taskId} exists on the release board`, Boolean(vocBoardTasks.get(taskId)));
+  check(
+    `${taskId} dependencies resolve to retained backlog tasks`,
+    vocTasks.get(taskId)?.dependencies?.every((dependencyId) => backlog.tasks.some((task) => task.id === dependencyId)) === true,
+    JSON.stringify(vocTasks.get(taskId)?.dependencies),
+  );
+}
+check(
+  "customer-value tasks start only after accepted Provider and desktop foundations",
+  vocTasks.get("HC-UX-430")?.dependencies?.includes("HC-PROV-301") &&
+    vocTasks.get("HC-ONB-431")?.dependencies?.includes("HC-PROV-301") &&
+    vocTasks.get("HC-DIAG-432")?.dependencies?.includes("HC-PROV-301") &&
+    customerValueTaskIds.every((taskId) => vocTasks.get(taskId)?.status === "planned"),
+);
+check(
+  "Fusion and Computer Use remain behind their required safety and diagnostics work",
+  ["HC-UX-430", "HC-ONB-431", "HC-DIAG-432"].every((dependencyId) =>
+    vocTasks.get("HC-FUS-440")?.dependencies?.includes(dependencyId)) &&
+    vocTasks.get("HC-CU-450")?.dependencies?.includes("HC-SEC-402") &&
+    vocTasks.get("HC-CU-450")?.dependencies?.includes("HC-DIAG-432"),
+);
+check(
+  "industrial work remains blocked behind Fusion and secure Computer Use",
+  vocTasks.get("HC-IND-501")?.dependencies?.includes("HC-FUS-440") &&
+    vocTasks.get("HC-IND-501")?.dependencies?.includes("HC-CU-450") &&
+    vocTasks.get("HC-IND-502")?.dependencies?.includes("HC-IND-501") &&
+    vocTasks.get("HC-ECAD-520")?.dependencies?.includes("HC-IND-501"),
+);
+check(
+  "ECAD delivery and flagship demo preserve the approved dependency order",
+  ["HC-ECAD-521", "HC-ECAD-522", "HC-IND-502"].every((dependencyId) =>
+    vocTasks.get("HC-ECAD-523")?.dependencies?.includes(dependencyId)) &&
+    ["HC-ECAD-520", "HC-IND-502", "HC-CU-450"].every((dependencyId) =>
+      vocTasks.get("HC-ECAD-524")?.dependencies?.includes(dependencyId)) &&
+    ["HC-ONB-431", "HC-ECAD-521", "HC-ECAD-522", "HC-ECAD-523", "HC-ECAD-524"].every((dependencyId) =>
+      vocTasks.get("HC-ECAD-530")?.dependencies?.includes(dependencyId)),
+);
+check(
+  "legacy control-cabinet demo is retained as superseded history",
+  backlog.tasks.find((task) => task.id === "HC-IND-510")?.status === "superseded" &&
+    backlog.tasks.find((task) => task.id === "HC-IND-510")?.supersededBy === "HC-ECAD-530" &&
+    board.tasks.find((task) => task.id === "HC-IND-510")?.status === "superseded",
+);
+check(
+  "customer-value roadmap fixes measurable desktop and onboarding targets",
+  customerValueRoadmap.valueMetrics?.desktop?.cachedStoreOpenP95Ms === 300 &&
+    customerValueRoadmap.valueMetrics?.desktop?.coldStoreOpenP95Ms === 1500 &&
+    JSON.stringify(customerValueRoadmap.valueMetrics?.desktop?.supportedWidths) === JSON.stringify([720, 800, 1100, 1440, 1920]) &&
+    customerValueRoadmap.valueMetrics?.onboarding?.interactiveTutorialMinutes === 5 &&
+    customerValueRoadmap.valueMetrics?.onboarding?.industrialWizardSteps === 6,
+);
+check(
+  "industrial connector truth states cannot collapse simulated work into real",
+  ["real", "simulated", "not_run", "external_required", "unsupported", "approval_required"].every((status) =>
+    customerValueRoadmap.valueMetrics?.industrial?.truthfulStates?.includes(status)) &&
+    board.gates?.find((gate) => gate.id === "industrial-preview")?.status === "planned",
+);
+check(
+  "VOC worktree plan assigns one distinct branch to every new task",
+  new Set(customerValueRoadmap.worktrees?.map((entry) => entry.branch)).size === vocTaskIds.length &&
+    vocTaskIds.every((taskId) => customerValueRoadmap.worktrees?.some((entry) => entry.taskId === taskId)),
+);
+check(
+  "VOC does not reopen accepted Provider, MCP, release, or Stable Gate work",
+  providerHardeningTask?.status === "completed" &&
+    mcpConnectionTask?.status === "completed" &&
+    releasePipelineTask?.status === "completed" &&
+    stableGateBoardTask?.status === "completed" &&
+    risks.risks?.find((risk) => risk.id === "RISK-PROV-001")?.status === "closed" &&
+    risks.risks?.find((risk) => risk.id === "RISK-REL-001")?.status === "open",
+);
+for (const riskId of ["RISK-UX-007", "RISK-FUS-001", "RISK-CU-001", "RISK-ECAD-001"]) {
+  check(`${riskId} is tracked as an open delivery risk`, risks.risks?.find((risk) => risk.id === riskId)?.status === "open");
+}
 check("alpha.8 version is synchronized", packageJson.version === "0.6.0-alpha.8" && packageLock.version === packageJson.version && packageLock.packages?.[""]?.version === packageJson.version && fs.readFileSync(path.join(root, "VERSION"), "utf8").trim() === packageJson.version);
 check("alpha.8 release candidate gate passed", board.currentRelease === packageJson.version && board.candidate?.version === packageJson.version && board.candidate?.branch === "codex/release/0.6.0-alpha.8" && board.candidate?.status === "passed" && board.candidate?.evidence === "reports/evidence/HC-REL-ALPHA-8/manifest.json" && board.gates?.find((gate) => gate.id === "alpha-8-release-candidate")?.status === "passed");
 check("historical alpha.7 release candidate gate remains passed", board.gates?.find((gate) => gate.id === "alpha-7-release-candidate")?.status === "passed");

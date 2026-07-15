@@ -1,0 +1,138 @@
+{
+  "schemaVersion": 1,
+  "id": "VOC-2026-07-14",
+  "updatedAt": "2026-07-15T14:25:39Z",
+  "objective": "Resolve concentrated customer UX, permissions, performance, diagnostics, and tutorial problems before delivering Fusion, secure Computer Use, and one complete ECAD control-cabinet vertical.",
+  "verifiedBaseline": {
+    "providerHardening": "completed",
+    "providerRisk": "closed",
+    "stableEngineeringGate": "PASS_INTERNAL_ONLY",
+    "stablePromotion": "blocked_by_RISK-REL-001",
+    "build": "passed",
+    "verify": "passed",
+    "releaseCheck": "passed",
+    "featureTests": "80/80 passed",
+    "programControl": "1408/1408 passed",
+    "dodScan": "0 findings"
+  },
+  "principles": [
+    "Do not reopen completed MCP, security, release, Provider, or Stable Gate work.",
+    "No capability is real or verified without matching execution and evidence.",
+    "API/SDK is preferred over Licensed Worker, File Exchange, and Computer Use in that order.",
+    "One task owns one worktree, one review, one evidence manifest, and one independent commit.",
+    "Customer-value and industrial gates do not weaken Security, DoD, Skeleton Detector, or release checks."
+  ],
+  "phases": [
+    {
+      "id": "customer-value",
+      "parallel": true,
+      "tasks": ["HC-UX-430", "HC-ONB-431", "HC-DIAG-432"],
+      "gate": "customer-value-preview"
+    },
+    {
+      "id": "fusion-and-computer-use",
+      "parallel": true,
+      "tasks": ["HC-FUS-440", "HC-CU-450"],
+      "gate": "fusion-computer-use-preview"
+    },
+    {
+      "id": "industrial-foundation",
+      "parallel": false,
+      "tasks": ["HC-IND-501"],
+      "gate": "industrial-graph-v2"
+    },
+    {
+      "id": "worker-and-electrical-graph",
+      "parallel": true,
+      "tasks": ["HC-IND-502", "HC-ECAD-520"],
+      "gate": "electrical-foundation"
+    },
+    {
+      "id": "ecad-intelligence",
+      "parallel": true,
+      "tasks": ["HC-ECAD-521", "HC-ECAD-522"],
+      "gate": "ecad-design-data"
+    },
+    {
+      "id": "ecad-delivery",
+      "parallel": true,
+      "tasks": ["HC-ECAD-523", "HC-ECAD-524"],
+      "gate": "ecad-manufacturing-connectors"
+    },
+    {
+      "id": "flagship-demo",
+      "parallel": false,
+      "tasks": ["HC-ECAD-530"],
+      "gate": "industrial-preview"
+    }
+  ],
+  "dependencies": [
+    {"from": "HC-PROV-301", "to": "HC-UX-430"},
+    {"from": "HC-PROV-301", "to": "HC-ONB-431"},
+    {"from": "HC-PROV-301", "to": "HC-DIAG-432"},
+    {"from": "HC-UX-430", "to": "HC-FUS-440"},
+    {"from": "HC-ONB-431", "to": "HC-FUS-440"},
+    {"from": "HC-DIAG-432", "to": "HC-FUS-440"},
+    {"from": "HC-SEC-402", "to": "HC-CU-450"},
+    {"from": "HC-DIAG-432", "to": "HC-CU-450"},
+    {"from": "HC-FUS-440", "to": "HC-IND-501"},
+    {"from": "HC-CU-450", "to": "HC-IND-501"},
+    {"from": "HC-IND-501", "to": "HC-IND-502"},
+    {"from": "HC-IND-501", "to": "HC-ECAD-520"},
+    {"from": "HC-ECAD-520", "to": "HC-ECAD-521"},
+    {"from": "HC-ECAD-520", "to": "HC-ECAD-522"},
+    {"from": "HC-ECAD-521", "to": "HC-ECAD-523"},
+    {"from": "HC-ECAD-522", "to": "HC-ECAD-523"},
+    {"from": "HC-IND-502", "to": "HC-ECAD-523"},
+    {"from": "HC-ECAD-520", "to": "HC-ECAD-524"},
+    {"from": "HC-IND-502", "to": "HC-ECAD-524"},
+    {"from": "HC-CU-450", "to": "HC-ECAD-524"},
+    {"from": "HC-ECAD-521", "to": "HC-ECAD-530"},
+    {"from": "HC-ECAD-522", "to": "HC-ECAD-530"},
+    {"from": "HC-ECAD-523", "to": "HC-ECAD-530"},
+    {"from": "HC-ECAD-524", "to": "HC-ECAD-530"},
+    {"from": "HC-ONB-431", "to": "HC-ECAD-530"}
+  ],
+  "valueMetrics": {
+    "desktop": {
+      "cachedStoreOpenP95Ms": 300,
+      "coldStoreOpenP95Ms": 1500,
+      "supportedWidths": [720, 800, 1100, 1440, 1920],
+      "duplicatePermissionPromptsPerFingerprintPerSession": 0
+    },
+    "onboarding": {
+      "interactiveTutorialMinutes": 5,
+      "rolePaths": 4,
+      "industrialWizardSteps": 6
+    },
+    "fusion": {
+      "verifiedWithoutEvidence": 0,
+      "requiredStages": ["planner", "candidate", "critic", "judge", "synthesizer", "verifier"]
+    },
+    "computerUse": {
+      "unapprovedActions": 0,
+      "unmaskedSensitiveEvidence": 0,
+      "emergencyStopRequired": true
+    },
+    "industrial": {
+      "flagshipVerticals": 1,
+      "flagship": "ECAD control cabinet",
+      "truthfulStates": ["real", "simulated", "not_run", "external_required", "unsupported", "approval_required"]
+    }
+  },
+  "worktrees": [
+    {"taskId": "HC-UX-430", "branch": "codex/desktop-ux/hc-ux-430", "pathSuffix": "worktrees/hi-code-hc-ux-430"},
+    {"taskId": "HC-ONB-431", "branch": "codex/desktop-ux/hc-onb-431", "pathSuffix": "worktrees/hi-code-hc-onb-431"},
+    {"taskId": "HC-DIAG-432", "branch": "codex/runtime-engine/hc-diag-432", "pathSuffix": "worktrees/hi-code-hc-diag-432"},
+    {"taskId": "HC-FUS-440", "branch": "codex/runtime-engine/hc-fus-440", "pathSuffix": "worktrees/hi-code-hc-fus-440"},
+    {"taskId": "HC-CU-450", "branch": "codex/security-release/hc-cu-450", "pathSuffix": "worktrees/hi-code-hc-cu-450"},
+    {"taskId": "HC-IND-501", "branch": "codex/industrial/hc-ind-501", "pathSuffix": "worktrees/hi-code-hc-ind-501"},
+    {"taskId": "HC-IND-502", "branch": "codex/industrial/hc-ind-502", "pathSuffix": "worktrees/hi-code-hc-ind-502"},
+    {"taskId": "HC-ECAD-520", "branch": "codex/industrial/hc-ecad-520", "pathSuffix": "worktrees/hi-code-hc-ecad-520"},
+    {"taskId": "HC-ECAD-521", "branch": "codex/industrial/hc-ecad-521", "pathSuffix": "worktrees/hi-code-hc-ecad-521"},
+    {"taskId": "HC-ECAD-522", "branch": "codex/industrial/hc-ecad-522", "pathSuffix": "worktrees/hi-code-hc-ecad-522"},
+    {"taskId": "HC-ECAD-523", "branch": "codex/industrial/hc-ecad-523", "pathSuffix": "worktrees/hi-code-hc-ecad-523"},
+    {"taskId": "HC-ECAD-524", "branch": "codex/industrial/hc-ecad-524", "pathSuffix": "worktrees/hi-code-hc-ecad-524"},
+    {"taskId": "HC-ECAD-530", "branch": "codex/industrial/hc-ecad-530", "pathSuffix": "worktrees/hi-code-hc-ecad-530"}
+  ]
+}

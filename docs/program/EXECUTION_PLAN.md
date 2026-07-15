@@ -8,6 +8,26 @@
 
 ---
 
+## 2026-07-14 Customer-Value Amendment
+
+`VOC-2026-07-14` changes the next execution sequence without invalidating completed work. `HC-PROV-301`, the post-Provider Stable Gate recheck, `HC-MCP-410`, `HC-SEC-402`, and `HC-REL-420` remain accepted evidence; `RISK-REL-001` remains the sole signed stable-promotion blocker.
+
+The authoritative next sequence is:
+
+1. `HC-UX-430`, `HC-ONB-431`, and `HC-DIAG-432` may execute in parallel.
+2. `HC-FUS-440` and `HC-CU-450` execute after their declared customer-value dependencies.
+3. `HC-IND-501` establishes the shared industrial graph.
+4. `HC-IND-502` and `HC-ECAD-520` may execute in parallel.
+5. `HC-ECAD-521` and `HC-ECAD-522` establish design and data intelligence.
+6. `HC-ECAD-523` and `HC-ECAD-524` establish manufacturing and connector intelligence.
+7. `HC-ECAD-530` must pass the Industrial Preview Gate as the first complete flagship vertical.
+
+The product information architecture is Design Intelligence, Data Intelligence, Manufacturing Intelligence, and User Intelligence on the shared Runtime, Provider/Fusion, MCP, Computer Use, Licensed Worker, Job Center, Quality Gate, Evidence, and Release Builder layers. Detailed scope and truth boundaries are in `docs/program/VOC-2026-07-14.md`, `docs/product/industrial-intelligence-architecture.md`, and `planning/customer-value-roadmap.json`.
+
+The previous broad industrial roadmap remains historical context. Where it conflicts with this amendment, the customer-value sequence above controls execution.
+
+---
+
 ## 1. 执行摘要
 
 ### 1.1 当前真实成熟度
