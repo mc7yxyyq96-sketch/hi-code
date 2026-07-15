@@ -2,9 +2,10 @@
 
 ## Decision
 
-Pending machine evidence. The implementation is complete enough for isolated
-review, but Program Control must not close `RISK-UX-007` until the task evidence
-manifest records every required command passing.
+Accepted. The clean implementation commit
+`3de0b62be1bb2080b9885e1a35fcf1d545ebd03d` passed all 14 commands recorded in
+`reports/evidence/HC-UX-430/manifest.json`. `RISK-UX-007` is closed by this
+evidence; Customer Value Preview remains gated by HC-ONB-431 and HC-DIAG-432.
 
 ## Compatibility Review
 
@@ -36,6 +37,7 @@ responsive design metadata. Real Electron E2E covers native menu interactions,
 profile-card visibility and bounds, Store cold/cache timing, bounded rendered
 rows, and screenshot regression at 720/800/1100/1440/1920.
 
-Final acceptance requires the committed implementation to pass the complete
-evidence profile, followed by Program Control validation of the manifest and
-risk closure.
+The evidence profile passed with 14/14 commands, zero failed commands, and a
+zero-finding full-tree DoD scan. Program Control independently verifies the
+task and board state, implementation commit, command set, log existence, log
+hashes, risk closure, and reproducible evidence script.

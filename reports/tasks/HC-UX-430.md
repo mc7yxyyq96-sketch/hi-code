@@ -1,12 +1,18 @@
 # HC-UX-430 Desktop UX Stabilization
 
-Status: In Review
+Status: Completed
 
 Branch: `codex/desktop-ux/hc-ux-430`
 
 Parent commit: `aed6055dc9ee28aa2b7780a93614bebefe87073a`
 
 Started: `2026-07-15T15:10:39Z`
+
+Completed: `2026-07-15T17:33:18.004Z`
+
+Implementation commit: `3de0b62be1bb2080b9885e1a35fcf1d545ebd03d`
+
+Evidence: `reports/evidence/HC-UX-430/manifest.json`
 
 ## Scope
 
@@ -45,13 +51,18 @@ business behavior remains authoritative and compatible.
 - Remote Store failures and cold fallback remain explicit; fallback data is
   marked partial and is not represented as a complete remote catalog.
 
-## Current Verification
+## Verification
 
-Focused tests and real Electron E2E pass. The latest Electron run records cold
-Store open at 47 ms, cold API P95 at 1.1 ms, cached API P95 at 0.3 ms, and 12
-rendered rows for 12 visible results. The complete 14-command evidence capture
-and final Program Control acceptance are the remaining review steps; this task
-is not marked complete before those artifacts exist.
+The clean implementation commit passed all 14 evidence commands. This includes
+build, focused desktop UX, Renderer, typed App Shell, Security, verify,
+release:check, 80/80 feature tests, DoD unit and full-tree scans, production
+audit, real Electron E2E, Program Control, and staged-diff validation. The DoD
+scan reported zero findings.
+
+The accepted Electron run records cold Store open at 47 ms, cold API P95 at
+1.1 ms, cached API P95 at 0.3 ms, and 12 rendered rows for 12 visible results.
+It also verifies real native menu actions and responsive reachability at
+720/800/1100/1440/1920.
 
 ## Rollback
 

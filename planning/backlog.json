@@ -5,7 +5,7 @@
   "sourceCommit": "6ed9ed666bb817f8d1e863c76b0bf61b31c7b52d",
   "horizonDays": 90,
   "status": "active",
-  "updatedAt": "2026-07-15T14:25:39Z",
+  "updatedAt": "2026-07-15T17:33:18.004Z",
   "principles": [
     "Runtime Protocol is the single source of truth",
     "No big-bang rewrite",
@@ -427,10 +427,12 @@
         "core actions remain reachable at every supported desktop width",
         "Electron Playwright E2E and screenshot regression pass"
       ],
-      "status": "in_review",
+      "status": "completed",
       "startedAt": "2026-07-15T15:10:39Z",
+      "completedAt": "2026-07-15T17:33:18.004Z",
       "branch": "codex/desktop-ux/hc-ux-430",
-      "taskManifest": "reports/tasks/HC-UX-430.md"
+      "taskManifest": "reports/tasks/HC-UX-430.md",
+      "evidenceManifest": "reports/evidence/HC-UX-430/manifest.json"
     },
     {
       "id": "HC-ONB-431",

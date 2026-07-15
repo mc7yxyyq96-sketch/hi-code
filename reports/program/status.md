@@ -14,11 +14,11 @@ The customer-feedback change is accepted without reopening completed Runtime, MC
 
 The intake baseline was rerun from clean `main` commit `d85216c9428ae8d7836714bc14bd15f3e6baa8fe`: build, verify, release check, 80/80 feature tests, 1408/1408 Program Control checks, and the full-tree DoD scan all passed; the DoD scan reported zero findings. The user npm shim required a CI-mode pnpm dependency refresh in the worktree, but no source change or relaxed gate was used.
 
-`HC-UX-430` is in review on `codex/desktop-ux/hc-ux-430`. The implementation now derives one effective Execution Profile Card, installs native Edit/View behavior, deduplicates exact approved permission requests for one process session, and uses a private bounded Store cache with background refresh and virtual rows. Real Electron E2E passes at 720/800/1100/1440/1920; final evidence capture and Program Control review remain required before closing `RISK-UX-007`.
+`HC-UX-430` is completed on `codex/desktop-ux/hc-ux-430`. Implementation commit `3de0b62be1bb2080b9885e1a35fcf1d545ebd03d` derives one effective Execution Profile Card, installs native Edit/View behavior, deduplicates exact approved permission requests for one process session, and uses a private bounded Store cache with background refresh and virtual rows. The clean 14-command evidence run passed build, verify, release check, Security, production audit, Program Control, and real Electron E2E at 720/800/1100/1440/1920; the full-tree DoD scan reported zero findings. Accepted Store measurements were 47 ms cold route open, 1.1 ms cold API P95, and 0.3 ms cached API P95. `RISK-UX-007` is closed; `HC-ONB-431` and `HC-DIAG-432` are now the remaining Customer Value Preview tasks.
 
 The next execution order is:
 
-1. `HC-UX-430`, `HC-ONB-431`, and `HC-DIAG-432` may run in parallel after this program-control commit.
+1. `HC-UX-430` is complete; `HC-ONB-431` and `HC-DIAG-432` may now run in parallel.
 2. `HC-FUS-440` and `HC-CU-450` may run in parallel after their declared dependencies.
 3. `HC-IND-501` establishes Industrial Engineering Graph v2.
 4. `HC-IND-502` and `HC-ECAD-520` may run in parallel.

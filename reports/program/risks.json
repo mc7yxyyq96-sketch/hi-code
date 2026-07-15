@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "program": "Hi Code Product-Grade Desktop and Industrial Workbench",
-  "updatedAt": "2026-07-15T14:25:39Z",
+  "updatedAt": "2026-07-15T17:33:18.004Z",
   "risks": [
     {
       "id": "RISK-RUN-001",
@@ -307,16 +307,22 @@
     {
       "id": "RISK-UX-007",
       "severity": "high",
-      "status": "open",
+      "status": "closed",
       "owner": "desktop-ux",
       "title": "Desktop settings, permissions, Store performance, and responsive routes can remain fragmented",
       "evidence": [
         "docs/program/VOC-2026-07-14.md",
         "planning/customer-value-roadmap.json",
-        "HC-UX-430 customer acceptance criteria"
+        "docs/desktop-ux-stabilization.md",
+        "reports/tasks/HC-UX-430.md",
+        "reports/program/hc-ux-430-integration-review.md",
+        "reports/evidence/HC-UX-430/manifest.json",
+        "test/desktop-ux-tests.mjs",
+        "tests/electron-e2e/run.mjs",
+        "tests/electron-e2e/fixtures/layout-baseline.json"
       ],
       "impact": "Users can select inconsistent execution controls, receive duplicate permission prompts, wait on uncached Store requests, or lose core actions at supported window sizes.",
-      "mitigation": "HC-UX-430 must implement one Execution Profile Card, native Edit/View actions, permission fingerprint dedupe with scoped memory, cached Store background refresh with virtualized rows, measured P95 latency, and Electron screenshot regression at 720/800/1100/1440/1920.",
+      "mitigation": "HC-UX-430 delivered one Execution Profile Card, native Edit/View actions, exact-session permission fingerprint dedupe, a private Store cache with background refresh and virtualized rows, measured P95 latency, and real Electron regression coverage at 720/800/1100/1440/1920.",
       "trigger": "Any fake control, repeated same-scope prompt, cached Store P95 above 300 ms, cold P95 above 1.5 s, or core action without a responsive alternative blocks the Customer Value Preview Gate."
     },
     {

@@ -1,0 +1,38 @@
+$ npm run test:app-shell
+
+> hi-code@0.6.0-alpha.8 test:app-shell
+> vite build --config vite.renderer.config.ts && tsx test/app-shell-tests.ts
+
+vite v6.2.6 building for production...
+transforming...
+✓ 72 modules transformed.
+rendering chunks...
+computing gzip size...
+renderer/generated/hi-code.css                         5.24 kB │ gzip:   1.92 kB
+renderer/generated/app-shell.js                      289.70 kB │ gzip:  72.91 kB
+renderer/generated/chunks/xterm-runtime-DOnvTC-9.js  414.54 kB │ gzip:  92.86 kB
+renderer/generated/chunks/code-editor-oiW-xu-R.js    772.97 kB │ gzip: 232.99 kB
+✓ built in 774ms
+
+[app-shell] typed route registry
+  ✓ registry preserves every production shell destination
+  ✓ duplicate route IDs fail closed
+  ✓ duplicate legacy panel/navigation mappings fail closed
+
+[app-shell] external store
+  ✓ store publishes immutable route and drawer transitions
+  ✓ store records a visible compatibility error
+
+[app-shell] legacy panel adapter
+  ✓ adapter validates and applies one legacy route atomically
+  ✓ adapter rejects missing production panels with an actionable error
+  ✓ adapter routes user intent through the existing real trigger
+  ✓ non-navigable transcript state is not exposed as a fake button
+
+[app-shell] production integration contract
+  ✓ stable renderer entry mounts the generated App Shell before legacy bootstrap
+  ✓ production HTML provides a dedicated App Shell mount
+  ✓ the generated bundle exists after a production build
+  ✓ real Electron acceptance includes the full 720-1920 range
+
+=== 13 passed, 0 failed ===

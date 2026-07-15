@@ -1,0 +1,43 @@
+$ npm run test:desktop-ux
+
+> hi-code@0.6.0-alpha.8 test:desktop-ux
+> node test/desktop-ux-tests.mjs
+
+
+[desktop-ux] permission fingerprints
+
+  ⚠ permission required
+  npm run build
+
+  ⚠ permission required
+  npm run build
+  ✓ an exact approval is remembered only for the current permission state
+
+  ⚠ permission required
+  npm run build
+
+  ⚠ permission required
+  npm publish
+  ✓ different actions never share an exact approval
+
+  ⚠ permission required
+  write docs/report.md
+  ✓ concurrent identical requests share one decision
+
+  ⚠ permission required
+  deploy customer-secret-project
+
+  ⚠ permission required
+  deploy customer-secret-project
+  ✓ denials are not remembered and fingerprints do not expose action text
+
+[desktop-ux] native menu and execution profile
+  ✓ native Edit/View menus use Electron roles and bounded renderer commands
+  ✓ execution profile derives model speed privacy and budget from real config
+
+[desktop-ux] Store cache and virtual list
+  ✓ Store cache persists privately, expires truthfully, and replaces safely
+  ✓ virtual Store range stays bounded for large catalogs
+  ✓ production AppShell declares the industrial design system and five supported widths
+
+=== 9 passed, 0 failed ===

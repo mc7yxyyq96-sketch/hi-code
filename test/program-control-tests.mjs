@@ -135,6 +135,7 @@ const requiredFiles = [
   "reports/evidence/HC-REL-420/ci-matrix.json",
   "reports/evidence/HC-MCP-410/manifest.json",
   "reports/evidence/HC-PROV-301/manifest.json",
+  "reports/evidence/HC-UX-430/manifest.json",
   "reports/evidence/HC-REL-STABLE-GATE/manifest.json",
   "reports/evidence/HC-REL-STABLE-GATE/gate-result.json",
   "reports/releases/0.6.0-stable/gate-report.md",
@@ -196,6 +197,7 @@ const releasePipelineManifest = readJson(root, "reports/evidence/HC-REL-420/mani
 const releasePipelineCiEvidence = readJson(root, "reports/evidence/HC-REL-420/ci-matrix.json");
 const mcpConnectionManifest = readJson(root, "reports/evidence/HC-MCP-410/manifest.json");
 const providerHardeningManifest = readJson(root, "reports/evidence/HC-PROV-301/manifest.json");
+const desktopUxManifest = readJson(root, "reports/evidence/HC-UX-430/manifest.json");
 const stableGateManifest = readJson(root, "reports/evidence/HC-REL-STABLE-GATE/manifest.json");
 const stableGateResult = readJson(root, "reports/evidence/HC-REL-STABLE-GATE/gate-result.json");
 const packageJson = readJson(root, "package.json");
@@ -958,11 +960,41 @@ check(
   vocTasks.get("HC-UX-430")?.dependencies?.includes("HC-PROV-301") &&
     vocTasks.get("HC-ONB-431")?.dependencies?.includes("HC-PROV-301") &&
     vocTasks.get("HC-DIAG-432")?.dependencies?.includes("HC-PROV-301") &&
-    vocTasks.get("HC-UX-430")?.status === "in_review" &&
-    vocBoardTasks.get("HC-UX-430")?.status === "in_review" &&
+    vocTasks.get("HC-UX-430")?.status === "completed" &&
+    vocBoardTasks.get("HC-UX-430")?.status === "completed" &&
     vocTasks.get("HC-UX-430")?.branch === "codex/desktop-ux/hc-ux-430" &&
     vocTasks.get("HC-UX-430")?.taskManifest === "reports/tasks/HC-UX-430.md" &&
+    vocTasks.get("HC-UX-430")?.evidenceManifest === "reports/evidence/HC-UX-430/manifest.json" &&
+    vocBoardTasks.get("HC-UX-430")?.evidence === "reports/evidence/HC-UX-430/manifest.json" &&
     ["HC-ONB-431", "HC-DIAG-432"].every((taskId) => vocTasks.get(taskId)?.status === "planned"),
+);
+check(
+  "HC-UX-430 evidence records every desktop stabilization command passing",
+  desktopUxManifest.summary?.allPassed === true &&
+    desktopUxManifest.summary?.total === 14 &&
+    desktopUxManifest.summary?.failed === 0,
+  JSON.stringify(desktopUxManifest.summary),
+);
+check(
+  "HC-UX-430 evidence is captured from its isolated branch and implementation commit",
+  desktopUxManifest.source?.branch === "codex/desktop-ux/hc-ux-430" &&
+    desktopUxManifest.source?.parentCommit === "3de0b62be1bb2080b9885e1a35fcf1d545ebd03d" &&
+    desktopUxManifest.capture?.workingTreeClean === true,
+  JSON.stringify({ source: desktopUxManifest.source, capture: desktopUxManifest.capture }),
+);
+for (const requiredCommand of ["build", "desktop-ux-tests", "renderer-tests", "app-shell-tests", "security-tests", "verify", "release-check", "feature-tests", "dod-tests", "dod-scan", "production-audit", "electron-e2e", "program-control", "git-diff-check"]) {
+  check(`HC-UX-430 captured ${requiredCommand}`, desktopUxManifest.commands?.some((command) => command.id === requiredCommand && command.status === "passed"));
+}
+for (const command of desktopUxManifest.commands || []) {
+  const absolute = path.join(root, command.logPath || "");
+  check(`HC-UX-430 ${command.id} log exists`, Boolean(command.logPath) && fs.existsSync(absolute));
+  if (fs.existsSync(absolute)) check(`HC-UX-430 ${command.id} log hash matches`, digest(absolute) === command.logSha256);
+}
+check(
+  "HC-UX-430 evidence capture and global verification remain reproducible",
+  packageJson.scripts["test:desktop-ux"] === "node test/desktop-ux-tests.mjs" &&
+    packageJson.scripts["program:evidence:desktop-ux"] === "node scripts/capture-task-evidence.mjs --task=HC-UX-430" &&
+    fs.readFileSync(path.join(root, "scripts/verify.mjs"), "utf8").includes("test/desktop-ux-tests.mjs"),
 );
 check(
   "Fusion and Computer Use remain behind their required safety and diagnostics work",
@@ -1021,7 +1053,15 @@ check(
     risks.risks?.find((risk) => risk.id === "RISK-PROV-001")?.status === "closed" &&
     risks.risks?.find((risk) => risk.id === "RISK-REL-001")?.status === "open",
 );
-for (const riskId of ["RISK-UX-007", "RISK-FUS-001", "RISK-CU-001", "RISK-ECAD-001"]) {
+check(
+  "RISK-UX-007 is closed only by accepted desktop evidence",
+  risks.risks?.some((risk) =>
+    risk.id === "RISK-UX-007" &&
+    risk.status === "closed" &&
+    risk.evidence?.includes("reports/evidence/HC-UX-430/manifest.json") &&
+    risk.evidence?.includes("tests/electron-e2e/run.mjs")),
+);
+for (const riskId of ["RISK-FUS-001", "RISK-CU-001", "RISK-ECAD-001"]) {
   check(`${riskId} is tracked as an open delivery risk`, risks.risks?.find((risk) => risk.id === riskId)?.status === "open");
 }
 check("alpha.8 version is synchronized", packageJson.version === "0.6.0-alpha.8" && packageLock.version === packageJson.version && packageLock.packages?.[""]?.version === packageJson.version && fs.readFileSync(path.join(root, "VERSION"), "utf8").trim() === packageJson.version);

@@ -1,0 +1,7 @@
+$ npm run audit:prod
+
+> hi-code@0.6.0-alpha.8 audit:prod
+> node scripts/audit-production.mjs --audit-level=high
+
+[audit:prod] audited 89 production packages
+[audit:prod] 0 advisories, 0 blocking at high+
