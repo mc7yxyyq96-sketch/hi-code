@@ -1,13 +1,28 @@
 {
   "schemaVersion": 1,
   "program": "Hi Code Product-Grade Desktop and Industrial Workbench",
-  "updatedAt": "2026-07-15T17:33:18.004Z",
+  "updatedAt": "2026-07-16T12:40:35Z",
   "status": "active",
   "programChange": {
     "id": "VOC-2026-07-14",
     "recordedAt": "2026-07-15T14:25:39Z",
     "strategy": "Customer-value stabilization, Fusion, secure Computer Use, then one evidence-backed ECAD flagship vertical.",
     "roadmap": "planning/customer-value-roadmap.json"
+  },
+  "coordinationCheckpoint": {
+    "id": "VOC-PHASE-2-CHECKPOINT",
+    "recordedAt": "2026-07-16T12:40:35Z",
+    "localCommit": "55506620929d61ece5059032ebf9e4b571a17a51",
+    "remote": "origin/main",
+    "remoteCommit": "55506620929d61ece5059032ebf9e4b571a17a51",
+    "pushStatus": "pushed",
+    "forcePush": false,
+    "historyRewritten": false,
+    "formalReleaseCreated": false,
+    "tagCreated": false,
+    "registeredWorktrees": 28,
+    "auditedWorktreesClean": true,
+    "ownership": "reports/program/voc-phase-2-ownership.md"
   },
   "source": {
     "version": "0.6.0-alpha.6",
@@ -185,6 +200,13 @@
       "branch": "codex/program-control/voc-2026-07-14",
       "path": "/Users/jack/Documents/Codex/2026-07-03/new-chat/worktrees/hi-code-voc-2026-07-14",
       "mode": "active-program-change-worktree"
+    },
+    {
+      "taskId": "VOC-PHASE-2-CHECKPOINT",
+      "branch": "codex/integration-review/voc-phase-2-checkpoint",
+      "path": "/Users/jack/Documents/New project 3/hi-code-voc-phase-2-control",
+      "mode": "active-coordination-worktree",
+      "sourceCommit": "55506620929d61ece5059032ebf9e4b571a17a51"
     }
   ],
   "tasks": [

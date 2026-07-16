@@ -80,6 +80,7 @@ const requiredFiles = [
   "reports/program/risks.json",
   "reports/program/voc-2026-07-14-integration-review.md",
   "reports/program/hc-ux-430-integration-review.md",
+  "reports/program/voc-phase-2-ownership.md",
   "reports/tasks/HC-PROG-100.md",
   "reports/tasks/HC-QA-101.md",
   "reports/tasks/HC-RUN-201.md",
@@ -945,6 +946,34 @@ check(
     board.programChange?.id === "VOC-2026-07-14" &&
     board.programChange?.roadmap === "planning/customer-value-roadmap.json" &&
     customerValueRoadmap.id === "VOC-2026-07-14",
+);
+check(
+  "VOC Phase 2 remote checkpoint is reproducible and non-destructive",
+  board.coordinationCheckpoint?.localCommit === "55506620929d61ece5059032ebf9e4b571a17a51" &&
+    board.coordinationCheckpoint?.remoteCommit === board.coordinationCheckpoint?.localCommit &&
+    board.coordinationCheckpoint?.remote === "origin/main" &&
+    board.coordinationCheckpoint?.pushStatus === "pushed" &&
+    board.coordinationCheckpoint?.forcePush === false &&
+    board.coordinationCheckpoint?.historyRewritten === false &&
+    board.coordinationCheckpoint?.formalReleaseCreated === false &&
+    board.coordinationCheckpoint?.tagCreated === false &&
+    board.coordinationCheckpoint?.ownership === "reports/program/voc-phase-2-ownership.md",
+  JSON.stringify(board.coordinationCheckpoint),
+);
+check(
+  "VOC Phase 2 ownership reserves shared registries for integration",
+  fs.readFileSync(path.join(root, "reports/program/voc-phase-2-ownership.md"), "utf8").includes("codex/desktop-ux/hc-onb-431") &&
+    fs.readFileSync(path.join(root, "reports/program/voc-phase-2-ownership.md"), "utf8").includes("codex/runtime-engine/hc-diag-432") &&
+    fs.readFileSync(path.join(root, "reports/program/voc-phase-2-ownership.md"), "utf8").includes("codex/integration-review/voc-phase-2") &&
+    fs.readFileSync(path.join(root, "reports/program/voc-phase-2-ownership.md"), "utf8").includes("Shared files are changed only"),
+);
+check(
+  "VOC Phase 2 checkpoint preserves every open delivery risk",
+  JSON.stringify(risks.checkpoint?.openRiskIds) === JSON.stringify([
+    "RISK-REL-001", "RISK-IND-001", "RISK-FUS-001", "RISK-CU-001", "RISK-ECAD-001", "RISK-ENV-001",
+  ]) &&
+    risks.checkpoint?.openRiskIds?.every((riskId) => risks.risks?.find((risk) => risk.id === riskId)?.status === "open"),
+  JSON.stringify(risks.checkpoint),
 );
 for (const taskId of vocTaskIds) {
   check(`${taskId} exists in the backlog`, Boolean(vocTasks.get(taskId)));

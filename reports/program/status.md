@@ -1,12 +1,25 @@
 # Hi Code Program Status
 
-Updated: 2026-07-15
+Updated: 2026-07-16
 
 Program state: Active
 
 Current verified release candidate: `0.6.0-alpha.8`
 
 Active development slice: `VOC-2026-07-14 Customer Value Stabilization`
+
+## VOC Phase 2 Remote Checkpoint
+
+- Verified local delivery commit: `55506620929d61ece5059032ebf9e4b571a17a51`
+- Verified remote `origin/main`: `55506620929d61ece5059032ebf9e4b571a17a51`
+- Checkpoint result: normal direct push succeeded; no force push, history rewrite, release, or new tag was used.
+- Required Provider and desktop evidence is present on `main`, including `HC-PROV-301` and `HC-UX-430` task reports and evidence manifests.
+- Worktree audit: 28 retained worktrees were registered after creating the Phase 2 coordination worktree; existing task worktrees were retained and the audited working trees were clean.
+- Coordination branch: `codex/integration-review/voc-phase-2-checkpoint` at the verified commit.
+- Planned isolated task branches: `codex/desktop-ux/hc-onb-431` and `codex/runtime-engine/hc-diag-432`, both from the same verified Phase 2 checkpoint.
+- Open risks remain unchanged: `RISK-REL-001`, `RISK-IND-001`, `RISK-FUS-001`, `RISK-CU-001`, `RISK-ECAD-001`, and `RISK-ENV-001`. `RISK-REL-001` continues to block only signed public promotion.
+
+The exclusive and shared-file ownership rules for Phase 2 are recorded in `reports/program/voc-phase-2-ownership.md`. Shared Help menu, router, navigation, preload, IPC, command registry, and package-script changes are reserved for the Integration & Review branch.
 
 ## Program Change VOC-2026-07-14
 
