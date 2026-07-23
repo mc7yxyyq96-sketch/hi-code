@@ -191,16 +191,17 @@ export function runBash(
 /** Search file contents using ripgrep if available, else grep -r. */
 export async function grep(
   ctx: ToolContext,
-  args: { pattern: string; path?: string; glob?: string; ignore_case?: boolean },
+  args: { pattern: string; path?: string; glob?: string; ignore_case?: boolean; limit?: number },
   signal?: AbortSignal,
 ): Promise<string> {
   const resolved = resolveWorkspacePath(ctx, args.path ?? ".", { mustExist: true });
   if ("error" in resolved) return `Error: ${resolved.error}`;
   const where = resolved.abs;
+  const limit = Math.max(1, Math.min(500, Number(args.limit ?? 100)));
   const hasRg = await commandExists("rg");
   let cmd: string;
   if (hasRg) {
-    const flags = ["--line-number", "--no-heading", "--color=never", "-S"];
+    const flags = ["--line-number", "--no-heading", "--color=never", "-S", `-m ${limit}`];
     if (args.ignore_case) flags.push("-i");
     if (args.glob) flags.push(`--glob ${shellQuote(args.glob)}`);
     cmd = `rg ${flags.join(" ")} ${shellQuote(args.pattern)} ${shellQuote(where)}`;
@@ -209,7 +210,7 @@ export async function grep(
     cmd = `grep -rn ${ic} --exclude-dir=node_modules --exclude-dir=.git ${shellQuote(args.pattern)} ${shellQuote(where)}`;
   }
   const res = await runBash(ctx, { command: cmd, timeout: 30000 }, signal);
-  const lines = res.output.split("\n").slice(0, 100);
+  const lines = res.output.split("\n").slice(0, limit);
   if (res.exitCode !== 0 && lines.join("").trim() === "") return "(no matches)";
   return lines.join("\n");
 }

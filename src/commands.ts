@@ -19,7 +19,7 @@ import { mcpStatus } from "./mcp.js";
 export const COMMAND_NAMES = [
   "help", "clear", "compact", "undo", "diff",
   "team", "build", "agent", "agents", "council", "debate",
-  "models", "model", "mode", "yolo",
+  "models", "model", "mode", "agent-mode", "am", "plan", "ask", "yolo",
   "sessions", "resume", "mcp", "sandbox",
   "cost", "tools", "init", "cwd", "exit",
 ].map((c) => "/" + c);
@@ -131,9 +131,36 @@ export async function handleCommand(input: string, env: CommandEnv): Promise<boo
       if (arg === "default" || arg === "acceptEdits" || arg === "yolo") {
         env.perms.mode = arg;
         ui.info(`  permission mode → ${chalk.bold(arg)}`);
+      } else if (arg === "build" || arg === "plan" || arg === "ask") {
+        env.perms.agentMode = arg;
+        ui.info(`  agent mode → ${chalk.bold(arg)}`);
       } else {
-        ui.info(`  current mode: ${chalk.bold(env.perms.mode)}  (default | acceptEdits | yolo)`);
+        ui.info(`  permission: ${chalk.bold(env.perms.mode)}  (default | acceptEdits | yolo)`);
+        ui.info(`  agent: ${chalk.bold(env.perms.agentMode || "build")}  (build | plan | ask)`);
       }
+      return true;
+    }
+
+    case "agent-mode":
+    case "am": {
+      if (arg === "build" || arg === "plan" || arg === "ask") {
+        env.perms.agentMode = arg;
+        ui.info(`  agent mode → ${chalk.bold(arg)}`);
+      } else {
+        ui.info(`  agent mode: ${chalk.bold(env.perms.agentMode || "build")}  (build | plan | ask)`);
+      }
+      return true;
+    }
+
+    case "plan": {
+      env.perms.agentMode = "plan";
+      ui.info(`  agent mode → ${chalk.bold("plan")} (read-only planning)`);
+      return true;
+    }
+
+    case "ask": {
+      env.perms.agentMode = "ask";
+      ui.info(`  agent mode → ${chalk.bold("ask")} (read-only Q&A)`);
       return true;
     }
 
@@ -328,7 +355,10 @@ function printHelp() {
     ["/resume [id]", "resume a saved session (list if no id)"],
     ["/mcp", "list connected MCP servers & their tools"],
     ["/sandbox [on|off]", "toggle bash sandbox (macOS write-confinement)"],
-    ["/mode [m]", "permission mode: default | acceptEdits | yolo"],
+    ["/mode [m]", "permission: default|acceptEdits|yolo · agent: build|plan|ask"],
+    ["/agent-mode [m]", "agent profile: build (edit) | plan | ask"],
+    ["/plan", "switch to Plan agent mode (read-only)"],
+    ["/ask", "switch to Ask agent mode (read-only Q&A)"],
     ["/yolo", "toggle yolo (auto-approve everything)"],
     ["/cost", "token usage this session"],
     ["/tools", "list available tools"],

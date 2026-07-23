@@ -4,6 +4,7 @@ import type { VibeConfig } from "./config.js";
 import { defaultProfile } from "./config.js";
 import { type Session, newSession, contentText } from "./context.js";
 import { newPermissionState, requestPermission, type PermissionMode, type AskFn } from "./permissions.js";
+import { AGENT_MODE_PROFILES, type AgentMode } from "./agent-modes.js";
 import { type ExecEnv } from "./tools/index.js";
 import { runBash, type BashOutputStream } from "./tools/bash.js";
 import { resolveWorkspacePath } from "./tools/fs.js";
@@ -18,7 +19,12 @@ import { createRuntimeProtocolEvent } from "./runtime-protocol.js";
 import { appendRuntimeProtocolEvent, readRuntimeProtocolEvents } from "./runtime-event-store.js";
 
 /** System prompt for the agent, including project notes and git status. */
-export function buildSystemPrompt(cwd: string, model?: string, reasoningLevel: VibeConfig["reasoningLevel"] = "medium"): string {
+export function buildSystemPrompt(
+  cwd: string,
+  model?: string,
+  reasoningLevel: VibeConfig["reasoningLevel"] = "medium",
+  agentMode: AgentMode = "build",
+): string {
   let projectNotes = "";
   for (const name of ["AGENTS.md", "CLAUDE.md", "README.md"]) {
     const p = path.join(cwd, name);
@@ -33,10 +39,14 @@ export function buildSystemPrompt(cwd: string, model?: string, reasoningLevel: V
     ? `\nYou are Hi Code, and your underlying model is "${model}" (served via an OpenAI-compatible endpoint). If the user asks what model you are, answer truthfully that you are Hi Code running on ${model} — do NOT claim to be Claude, GPT, or any other model.`
     : "";
   const reasoningLine = reasoningInstruction(reasoningLevel);
+  const modeLine = AGENT_MODE_PROFILES[agentMode]?.systemGuidance || AGENT_MODE_PROFILES.build.systemGuidance;
   return `You are Hi Code, an interactive software-engineering agent. You help the user with coding tasks, in the spirit of a pair programmer.${modelLine}
 
 Working directory: ${cwd}
 Platform: ${process.platform}${gitLine}
+
+# Agent mode
+${modeLine}
 
 # How you work
 - You have tools: read_file, write_file, edit_file, ls, glob, grep, bash. Use them to actually inspect and change the codebase — never guess at file contents.

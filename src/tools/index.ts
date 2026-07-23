@@ -131,6 +131,8 @@ export const TOOL_SCHEMAS: ToolSchema[] = [
         properties: {
           pattern: { type: "string" },
           path: { type: "string", description: "Root to search from (default cwd)." },
+          limit: { type: "integer", description: "Max matches to return (default 200)." },
+          max_depth: { type: "integer", description: "Max directory depth to walk (default 16)." },
         },
         required: ["pattern"],
       },
@@ -148,6 +150,7 @@ export const TOOL_SCHEMAS: ToolSchema[] = [
           path: { type: "string" },
           glob: { type: "string", description: "Restrict to files matching this glob." },
           ignore_case: { type: "boolean" },
+          limit: { type: "integer", description: "Max matching lines (default 100)." },
         },
         required: ["pattern"],
       },

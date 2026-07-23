@@ -117,6 +117,7 @@ check("parity shell demotes industrial/store from primary nav", html.includes('c
 check("parity shell pins automation and composer workspace/thinking pills", html.includes('id="automationBtn"') && html.includes('id="automationView"') && html.includes('id="workspacePill"') && html.includes('id="thinkingPill"') && bootstrap.includes("mountAutomationPanel") && bootstrap.includes("showAutomation") && bootstrap.includes("updateComposerPills"));
 check("skills/mcp pages expose search and store entry", html.includes('id="capSearch"') && bootstrap.includes("capabilityMatchesQuery") && bootstrap.includes("技能商店") && bootstrap.includes("MCP 商店"));
 check("parity wave1 surfaces browser/codemap/memory", html.includes('id="browserToggleBtn"') && html.includes('id="browserPanel"') && html.includes('id="codemapBtn"') && html.includes('id="memoryBtn"') && bootstrap.includes("mountBrowserPanel") && bootstrap.includes("mountCodemapPanel") && bootstrap.includes("mountMemoryPanel") && bootstrap.includes("showCodemap") && bootstrap.includes("showMemory"));
+check("parity wave2 agent mode pill", html.includes('id="agentModePill"') && bootstrap.includes("AGENT_MODE_ORDER") && bootstrap.includes("/agent-mode"));
 check("compact narrative is visible in chat process", bootstrap.includes('phase: "compacting"') && chatProcess.includes("buildCompactElement") && assistantTurn.includes('phase === "compacted"'));
 
 console.log("\n[renderer] state");

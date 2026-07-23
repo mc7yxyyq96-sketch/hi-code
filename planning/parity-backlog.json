@@ -256,7 +256,7 @@
       "wave": 2,
       "area": "agents",
       "title": "Build/Plan agent modes + permission matrix",
-      "status": "pending",
+      "status": "complete",
       "refs": [
         "OpenCode",
         "Codex"
@@ -267,7 +267,7 @@
       "wave": 2,
       "area": "tools",
       "title": "LSP/grep/glob depth parity",
-      "status": "pending",
+      "status": "complete",
       "refs": [
         "OpenCode",
         "Grok Build"
@@ -278,7 +278,7 @@
       "wave": 2,
       "area": "runtime",
       "title": "Headless/script entry + ACP stub",
-      "status": "pending",
+      "status": "complete",
       "refs": [
         "Grok Build"
       ]

@@ -225,15 +225,21 @@ export function ls(ctx: ToolContext, args: { path?: string }): string {
 }
 
 // ---------------- glob ----------------
-export function glob(ctx: ToolContext, args: { pattern: string; path?: string }): string {
+export function glob(
+  ctx: ToolContext,
+  args: { pattern: string; path?: string; limit?: number; max_depth?: number },
+): string {
   const resolved = resolveWorkspacePath(ctx, args.path ?? ".", { mustExist: true });
   if ("error" in resolved) return `Error: ${resolved.error}`;
   const root = resolved.abs;
   const re = globToRegExp(args.pattern);
   const matches: { p: string; mtime: number }[] = [];
   const IGNORE = new Set(["node_modules", ".git", "dist", "build", ".next", "__pycache__"]);
+  const limit = Math.max(1, Math.min(1000, Number(args.limit ?? 200)));
+  const maxDepth = Math.max(1, Math.min(32, Number(args.max_depth ?? 16)));
 
-  function walk(dir: string) {
+  function walk(dir: string, depth: number) {
+    if (depth > maxDepth) return;
     let entries: fs.Dirent[];
     try {
       entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -244,7 +250,7 @@ export function glob(ctx: ToolContext, args: { pattern: string; path?: string })
       const full = path.join(dir, e.name);
       if (e.isDirectory()) {
         if (IGNORE.has(e.name)) continue;
-        walk(full);
+        walk(full, depth + 1);
       } else {
         const r = path.relative(root, full);
         if (re.test(r)) {
@@ -257,10 +263,10 @@ export function glob(ctx: ToolContext, args: { pattern: string; path?: string })
       }
     }
   }
-  walk(root);
+  walk(root, 0);
   matches.sort((a, b) => b.mtime - a.mtime);
   if (!matches.length) return "(no matches)";
-  return matches.slice(0, 200).map((m) => m.p).join("\n");
+  return matches.slice(0, limit).map((m) => m.p).join("\n");
 }
 
 function globToRegExp(pattern: string): RegExp {

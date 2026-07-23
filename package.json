@@ -15,12 +15,14 @@
   "type": "module",
   "main": "electron/main.mjs",
   "bin": {
-    "hicode": "dist/index.js"
+    "hicode": "dist/index.js",
+    "hicode-headless": "dist/headless.js"
   },
   "scripts": {
     "dev": "tsx src/index.ts",
-    "build": "tsc -p tsconfig.json && chmod +x dist/index.js",
+    "build": "tsc -p tsconfig.json && chmod +x dist/index.js dist/headless.js",
     "start": "node dist/index.js",
+    "headless": "node dist/headless.js",
     "test": "node test/feature-tests.mjs",
     "test:feature": "node test/feature-tests.mjs",
     "test:runtime-protocol": "node test/runtime-protocol-tests.mjs",

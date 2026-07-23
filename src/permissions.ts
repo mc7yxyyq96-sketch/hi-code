@@ -1,4 +1,5 @@
 import chalk from "chalk";
+import { type AgentMode, resolveToolDecision } from "./agent-modes.js";
 
 export type PermissionMode = "default" | "acceptEdits" | "yolo";
 
@@ -7,12 +8,17 @@ export type AskFn = (question: string) => Promise<string>;
 
 export interface PermissionState {
   mode: PermissionMode;
+  /** OpenCode-style agent profile (build/plan/ask). */
+  agentMode: AgentMode;
   /** Tools the user chose "always allow" for during this session. */
   allowlist: Set<string>;
 }
 
-export function newPermissionState(mode: PermissionMode = "default"): PermissionState {
-  return { mode, allowlist: new Set() };
+export function newPermissionState(
+  mode: PermissionMode = "default",
+  agentMode: AgentMode = "build",
+): PermissionState {
+  return { mode, agentMode, allowlist: new Set() };
 }
 
 export interface PermissionRequest {
@@ -27,7 +33,7 @@ export type Decision = "allow" | "always" | "deny";
 
 /**
  * Decide whether an action may proceed. Read-only tools never prompt.
- * Honors yolo / acceptEdits modes and the session allowlist.
+ * Honors agentMode matrix, yolo / acceptEdits modes and the session allowlist.
  */
 export async function requestPermission(
   state: PermissionState,
@@ -35,8 +41,22 @@ export async function requestPermission(
   ask: AskFn,
 ): Promise<Decision> {
   if (!req.mutating) return "allow";
+
+  const agentDecision = resolveToolDecision(state.agentMode || "build", req.tool);
+  if (agentDecision === "deny") {
+    console.log();
+    console.log(chalk.red(`  ✕ blocked by ${state.agentMode} mode: ${req.action}`));
+    return "deny";
+  }
+  if (agentDecision === "auto-allow") return "allow";
+
   if (state.mode === "yolo") return "allow";
-  if (state.mode === "acceptEdits" && (req.tool === "write_file" || req.tool === "edit_file")) return "allow";
+  if (
+    state.mode === "acceptEdits" &&
+    (req.tool === "write_file" || req.tool === "edit_file" || req.tool === "apply_patch")
+  ) {
+    return "allow";
+  }
   if (state.allowlist.has(req.tool)) return "allow";
 
   console.log();

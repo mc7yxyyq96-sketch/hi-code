@@ -1380,10 +1380,14 @@ const modelPill = composer.querySelector("#modelPill");
 const modelName = composer.querySelector("#modelName");
 const workspacePill = composer.querySelector("#workspacePill");
 const workspacePillLabel = composer.querySelector("#workspacePillLabel");
+const agentModePill = composer.querySelector("#agentModePill");
+const agentModePillLabel = composer.querySelector("#agentModePillLabel");
 const thinkingPill = composer.querySelector("#thinkingPill");
 const thinkingPillLabel = composer.querySelector("#thinkingPillLabel");
 const accessBtn = composer.querySelector("#access");
 const accessLabel = composer.querySelector("#accessLabel");
+const AGENT_MODE_ORDER = ["build", "plan", "ask"];
+let agentMode = "build";
 const queueStatus = composer.querySelector("#queueStatus");
 const queueCount = composer.querySelector("#queueCount");
 const queuePreview = composer.querySelector("#queuePreview");
@@ -3715,6 +3719,18 @@ modelPill.onclick = (e) => {
 workspacePill?.addEventListener("click", (e) => {
   e.stopPropagation();
   pickFolder();
+});
+agentModePill?.addEventListener("click", (e) => {
+  e.stopPropagation();
+  const idx = Math.max(0, AGENT_MODE_ORDER.indexOf(agentMode));
+  agentMode = AGENT_MODE_ORDER[(idx + 1) % AGENT_MODE_ORDER.length];
+  if (agentModePillLabel) {
+    agentModePillLabel.textContent = agentMode === "build" ? "Build" : agentMode === "plan" ? "Plan" : "Ask";
+  }
+  agentModePill?.setAttribute("title", `Agent 模式：${agentModePillLabel?.textContent || agentMode}`);
+  api.send(`/agent-mode ${agentMode}`);
+  if (inChat) addSystemNote(`已切换到 ${agentModePillLabel?.textContent || agentMode} 模式`);
+  else toast.ok(`Agent 模式：${agentModePillLabel?.textContent || agentMode}`);
 });
 thinkingPill?.addEventListener("click", async (e) => {
   e.stopPropagation();
