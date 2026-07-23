@@ -1,6 +1,6 @@
 {
   "name": "hi-code",
-  "version": "0.7.0-parity.1",
+  "version": "0.7.0-parity.2",
   "description": "Hi Code \u2014 a desktop coding agent for any OpenAI-compatible model.",
   "author": "Hi Code contributors",
   "license": "MIT",
@@ -88,6 +88,7 @@
       "dist/**/*",
       "electron/**/*",
       "renderer/**/*",
+      "services/gateway/**/*",
       "package.json"
     ],
     "directories": {

@@ -15,6 +15,8 @@ import os from "node:os";
 import { fileURLToPath } from "node:url";
 import { createChannelRegistry } from "./channels.mjs";
 import { createSessionRouter } from "./session-router.mjs";
+import { acceptWebSocket } from "./ws.mjs";
+import { createTelegramPoller } from "./telegram-poller.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -64,8 +66,10 @@ export function createGatewayServer({ port, token, host = "127.0.0.1", now = () 
   const startedAt = now();
   const channels = createChannelRegistry();
   const sessions = createSessionRouter({ now });
+  /** @type {Set<{ send: Function, close: Function }>} */
+  const sockets = new Set();
   const state = {
-    version: "0.1.0-wave3",
+    version: "0.2.0-wave3",
     host,
     port,
     token,
@@ -75,7 +79,25 @@ export function createGatewayServer({ port, token, host = "127.0.0.1", now = () 
       holdsClientMasterKey: false,
     },
     webhooks: [],
+    wsClients: 0,
   };
+
+  function broadcast(event) {
+    state.wsClients = sockets.size;
+    for (const client of sockets) {
+      try { client.send(event); } catch { /* ignore */ }
+    }
+  }
+
+  const telegram = createTelegramPoller({
+    getToken: () => channels.getToken("telegram"),
+    onMessage: (message) => {
+      const accepted = channels.acceptInbound(message);
+      if (!accepted.ok) return;
+      const session = sessions.routeInbound(accepted.message);
+      broadcast({ type: "channel.inbound", session, message: accepted.message });
+    },
+  });
 
   const server = http.createServer(async (req, res) => {
     if (req.method === "OPTIONS") return json(res, 204, {});
@@ -135,7 +157,18 @@ export function createGatewayServer({ port, token, host = "127.0.0.1", now = () 
     if (pathname === "/v1/channels/configure" && req.method === "POST") {
       const body = await readBody(req);
       const result = channels.configure(body.id, body.config || {});
-      return json(res, result.ok ? 200 : 400, result);
+      if (result.ok && body.id === "telegram") {
+        if (result.channel?.enabled) telegram.start();
+        else telegram.stop();
+      }
+      return json(res, result.ok ? 200 : 400, { ...result, telegram: telegram.status() });
+    }
+
+    if (pathname === "/v1/channels/telegram/start" && req.method === "POST") {
+      return json(res, 200, telegram.start());
+    }
+    if (pathname === "/v1/channels/telegram/stop" && req.method === "POST") {
+      return json(res, 200, telegram.stop());
     }
 
     if (pathname === "/v1/channels/inbound" && req.method === "POST") {
@@ -176,14 +209,51 @@ export function createGatewayServer({ port, token, host = "127.0.0.1", now = () 
     if (pathname === "/v1/control" && req.method === "GET") {
       return json(res, 200, {
         ok: true,
-        panels: ["channels", "sessions", "memory", "mcp", "webhooks", "relay"],
+        panels: ["channels", "sessions", "memory", "mcp", "webhooks", "relay", "ws"],
         channels: channels.list(),
         sessions: sessions.list().slice(0, 20),
         relay: { configured: state.relay.configured, holdsClientMasterKey: false },
+        ws: { clients: sockets.size, path: "/v1/ws" },
+        telegram: telegram.status(),
       });
     }
 
     return json(res, 404, { ok: false, error: "not found" });
+  });
+
+  server.on("upgrade", (req, socket, head) => {
+    const url = new URL(req.url || "/", `http://${host}`);
+    if (url.pathname !== "/v1/ws") {
+      socket.write("HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\n");
+      socket.destroy();
+      return;
+    }
+    const client = acceptWebSocket(req, socket, head, { token });
+    if (!client) return;
+    sockets.add(client);
+    state.wsClients = sockets.size;
+    client.send({ type: "hello", version: state.version, at: now() });
+    client.onMessage = (data) => {
+      if (data?.type === "ping") {
+        client.send({ type: "pong", at: now() });
+        return;
+      }
+      if (data?.type === "inbound") {
+        const accepted = channels.acceptInbound(data);
+        if (!accepted.ok) {
+          client.send({ type: "error", error: accepted.error });
+          return;
+        }
+        const session = sessions.routeInbound(accepted.message);
+        broadcast({ type: "channel.inbound", session, message: accepted.message });
+        return;
+      }
+      client.send({ type: "ack", received: data?.type || "unknown" });
+    };
+    socket.on("close", () => {
+      sockets.delete(client);
+      state.wsClients = sockets.size;
+    });
   });
 
   function listen() {
@@ -202,10 +272,13 @@ export function createGatewayServer({ port, token, host = "127.0.0.1", now = () 
   }
 
   function close() {
+    telegram.stop();
+    for (const client of sockets) client.close();
+    sockets.clear();
     return new Promise((resolve) => server.close(() => resolve({ ok: true })));
   }
 
-  return { server, listen, close, channels, sessions, state };
+  return { server, listen, close, channels, sessions, state, telegram, broadcast };
 }
 
 async function main() {

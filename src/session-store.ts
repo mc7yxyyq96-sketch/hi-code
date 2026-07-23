@@ -13,6 +13,14 @@ import type { RuntimeProtocolEvent } from "./runtime-protocol.js";
 
 const SESSIONS_DIR = path.join(HICODE_DIR, "sessions");
 
+/** UI narrative for an assistant turn (thinking/tools/diffs), separate from LLM wire messages. */
+export interface SessionNarrative {
+  role: "user" | "assistant";
+  text: string;
+  assistantTurn?: unknown;
+  at?: number;
+}
+
 export interface StoredSession {
   id: string;
   cwd: string;
@@ -23,6 +31,8 @@ export interface StoredSession {
   totalPromptTokens: number;
   totalCompletionTokens: number;
   messages: ChatMessage[];
+  /** Durable in-chat process trees for history rebuild. */
+  narratives?: SessionNarrative[];
 }
 
 export interface SessionMeta {
@@ -41,6 +51,8 @@ export interface SessionDisplayMessage {
   role: "user" | "assistant";
   text: string;
   replayOnly?: boolean;
+  assistantTurn?: unknown;
+  agentRun?: unknown;
 }
 
 export function newSessionId(): string {
@@ -68,12 +80,82 @@ export function saveSession(id: string, cwd: string, model: string, session: Ses
       totalPromptTokens: session.totalPromptTokens,
       totalCompletionTokens: session.totalCompletionTokens,
       messages: session.messages,
+      narratives: existing?.narratives,
     };
     fs.writeFileSync(file, JSON.stringify(data), { mode: 0o600 });
   } catch (e) {
     // Persistence is best-effort; never crash the session over it.
     if (process.env.VIBE_DEBUG) console.error(`[vibe] saveSession failed: ${(e as Error).message}`);
   }
+}
+
+/**
+ * Append a durable UI narrative (user/assistant + optional AssistantTurn tree).
+ * Creates a minimal session file when the LLM session has not been saved yet.
+ */
+export function appendSessionNarrative(
+  id: string,
+  entry: SessionNarrative,
+  meta: { cwd?: string; model?: string } = {},
+): { ok: boolean; error?: string; count?: number } {
+  try {
+    fs.mkdirSync(SESSIONS_DIR, { recursive: true, mode: 0o700 });
+    const file = path.join(SESSIONS_DIR, `${id}.json`);
+    const existing = fs.existsSync(file) ? readRaw(file) : undefined;
+    const role = entry.role === "user" ? "user" : "assistant";
+    const text = String(entry.text || "").trim();
+    const narrative: SessionNarrative = {
+      role,
+      text,
+      assistantTurn: entry.assistantTurn ?? undefined,
+      at: Number(entry.at) || Date.now(),
+    };
+    const narratives = Array.isArray(existing?.narratives) ? existing!.narratives.slice() : [];
+    narratives.push(narrative);
+    const data: StoredSession = {
+      id,
+      cwd: existing?.cwd || meta.cwd || "",
+      model: existing?.model || meta.model || "",
+      createdAt: existing?.createdAt ?? Date.now(),
+      updatedAt: Date.now(),
+      firstPrompt:
+        existing?.firstPrompt ||
+        (role === "user" ? oneLine(text, 80) : existing?.firstPrompt) ||
+        oneLine(text, 80) ||
+        "(会话)",
+      totalPromptTokens: existing?.totalPromptTokens || 0,
+      totalCompletionTokens: existing?.totalCompletionTokens || 0,
+      messages: existing?.messages || [],
+      narratives,
+    };
+    fs.writeFileSync(file, JSON.stringify(data), { mode: 0o600 });
+    return { ok: true, count: narratives.length };
+  } catch (e) {
+    return { ok: false, error: (e as Error).message || String(e) };
+  }
+}
+
+/** Prefer durable narratives when present; otherwise fall back to LLM messages. */
+export function formatSessionDisplayMessages(stored?: StoredSession | null): SessionDisplayMessage[] {
+  if (!stored) return [];
+  if (Array.isArray(stored.narratives) && stored.narratives.length) {
+    return stored.narratives
+      .filter((m) => m && (m.role === "user" || m.role === "assistant"))
+      .map((m) => ({
+        role: m.role,
+        text: String(m.text || "").trim(),
+        assistantTurn: m.assistantTurn,
+        agentRun: m.assistantTurn,
+      }))
+      .filter((m) => m.text.length > 0 || m.assistantTurn);
+  }
+  return (stored.messages || [])
+    .filter((m) => m.role === "user" || m.role === "assistant")
+    .map((m) => ({
+      role: m.role as "user" | "assistant",
+      text: contentText(m.content).trim(),
+    }))
+    .filter((m) => m.text.length > 0 && !m.text.startsWith("[Earlier conversation summary]"));
 }
 
 export function loadSession(id: string): StoredSession | undefined {

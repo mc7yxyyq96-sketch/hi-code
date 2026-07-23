@@ -1398,6 +1398,8 @@ const queueClear = composer.querySelector("#queueClear");
 
 let busy = false, agentBody = null, agentRaw = "", yolo = false, cwd = "", inChat = false;
 let currentAssistantTurn = null;
+let pendingNarrativeUserText = "";
+let pendingNarrativeUserSaved = false;
 let currentModel = { model: "", baseURL: "", capabilities: null };
 let pendingAttachments = [];
 let queuedInputs = [];
@@ -2325,11 +2327,48 @@ function setBusy(v) {
   input.disabled = false;
   input.focus();
 }
+async function persistCurrentTurnNarrative(status = "done") {
+  const sessionId = runningSessionId || currentSessionId || activeRuntimeSessionId;
+  if (!sessionId || !api.has?.("saveSessionNarrative")) return;
+  try {
+    if (pendingNarrativeUserText && !pendingNarrativeUserSaved) {
+      await api.saveSessionNarrative({
+        sessionId,
+        role: "user",
+        text: pendingNarrativeUserText,
+        cwd,
+        model: currentModel?.model || "",
+      });
+      pendingNarrativeUserSaved = true;
+    }
+    if (currentAssistantTurn) {
+      const turn = serializeTurn(finalizeTurn(currentAssistantTurn, status, currentAssistantTurn.error || ""));
+      const text = (turn.items || [])
+        .filter((item) => item.type === "text")
+        .map((item) => item.content || "")
+        .join("\n")
+        .trim() || agentRaw.trim() || "(无文本输出)";
+      await api.saveSessionNarrative({
+        sessionId,
+        role: "assistant",
+        text,
+        assistantTurn: turn,
+        cwd,
+        model: currentModel?.model || "",
+      });
+    }
+  } catch {
+    // Narrative persistence is best-effort.
+  }
+}
+
 function runLine(text, options = {}) {
   if (!text) return;
   if (busy) return enqueueInput(text);
   showChat();
   beginRunStatus(text);
+  pendingNarrativeUserText = options.displayText || text;
+  pendingNarrativeUserSaved = false;
   addUserMessage(options.displayText || text, options.attachments || []); startAgentMessage(); setBusy(true);
   runningSessionId = activeRuntimeSessionId || runningSessionId || currentSessionId;
   if (runningSessionId && !currentSessionId) currentSessionId = runningSessionId;
@@ -3063,7 +3102,7 @@ api.onReady((d) => {
   refreshWorkbench();
 });
 api.onOutput((s) => appendOutput(s));
-api.onTurnDone(() => {
+api.onTurnDone(async () => {
   setBusy(false);
   let finalStatus = "done";
   let finalDetail = "任务已结束";
@@ -3079,6 +3118,9 @@ api.onTurnDone(() => {
     finishRunStatus(finalStatus, finalDetail);
   }
   finishAgentMessageIfEmpty(finalStatus, finalDetail);
+  await persistCurrentTurnNarrative(finalStatus);
+  pendingNarrativeUserText = "";
+  pendingNarrativeUserSaved = false;
   if (liveSessionSnapshot?.id === runningSessionId) {
     liveSessionSnapshot = null;
   }

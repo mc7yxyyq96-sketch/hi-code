@@ -108,6 +108,7 @@ export function createHiCodeApi(rawApi = window.hicode, { onError = null } = {})
     resumeSession: (id) => call("resumeSession", [id], []),
     newSession: () => call("newSession", [], { ok: false, error: "新对话创建失败" }),
     readSession: (id) => call("readSession", [id], []),
+    saveSessionNarrative: (payload) => call("saveSessionNarrative", [payload], { ok: false }),
     deleteSession: (id) => call("deleteSession", [id], false),
     getConfig: () => call("getConfig", [], ""),
     saveConfig: (text) => call("saveConfig", [text]),

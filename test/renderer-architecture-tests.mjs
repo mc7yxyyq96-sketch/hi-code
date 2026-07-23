@@ -40,6 +40,7 @@ const css = fs.readFileSync(path.join(root, "renderer", "style.css"), "utf8");
 const toastSource = fs.readFileSync(path.join(root, "renderer", "components", "toast.js"), "utf8");
 const chatProcess = fs.readFileSync(path.join(root, "renderer", "components", "chat-process.js"), "utf8");
 const assistantTurn = fs.readFileSync(path.join(root, "renderer", "app", "assistant-turn.js"), "utf8");
+const preload = fs.readFileSync(path.join(root, "electron", "preload.cjs"), "utf8");
 check("renderer.js is a thin module entry", rendererEntry.includes("bootstrapHiCode") && rendererEntry.split("\n").length <= 6);
 check("index.html loads renderer as ES module", html.includes('type="module" src="renderer.js"'));
 check("bootstrap uses API wrapper", bootstrap.includes("createHiCodeApi(window.hicode"));
@@ -119,6 +120,7 @@ check("skills/mcp pages expose search and store entry", html.includes('id="capSe
 check("parity wave1 surfaces browser/codemap/memory", html.includes('id="browserToggleBtn"') && html.includes('id="browserPanel"') && html.includes('id="codemapBtn"') && html.includes('id="memoryBtn"') && bootstrap.includes("mountBrowserPanel") && bootstrap.includes("mountCodemapPanel") && bootstrap.includes("mountMemoryPanel") && bootstrap.includes("showCodemap") && bootstrap.includes("showMemory"));
 check("parity wave2 agent mode pill", html.includes('id="agentModePill"') && bootstrap.includes("AGENT_MODE_ORDER") && bootstrap.includes("/agent-mode"));
 check("parity wave3 gateway surface", html.includes('id="gatewayBtn"') && html.includes('id="gatewayView"') && bootstrap.includes("mountGatewayPanel") && bootstrap.includes("showGateway"));
+check("durable assistant turn narratives persist on turn done", bootstrap.includes("persistCurrentTurnNarrative") && bootstrap.includes("saveSessionNarrative") && preload.includes("session:save-narrative"));
 check("compact narrative is visible in chat process", bootstrap.includes('phase: "compacting"') && chatProcess.includes("buildCompactElement") && assistantTurn.includes('phase === "compacted"'));
 
 console.log("\n[renderer] state");

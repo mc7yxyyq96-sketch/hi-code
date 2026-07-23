@@ -82,5 +82,10 @@ export function createChannelRegistry() {
     return out;
   }
 
-  return { list, configure, acceptInbound };
+  function getToken(id) {
+    const adapter = adapters.get(String(id || ""));
+    return adapter?.config?._token ? String(adapter.config._token) : "";
+  }
+
+  return { list, configure, acceptInbound, getToken };
 }

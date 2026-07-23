@@ -83,6 +83,7 @@ contextBridge.exposeInMainWorld("hicode", {
   resumeSession: (id) => checkedInvoke("resume-session", id, "sessionId"),
   newSession: () => safeInvoke("new-session"),
   readSession: (id) => checkedInvoke("read-session", id, "sessionId"),
+  saveSessionNarrative: (payload) => safeInvoke("session:save-narrative", optionalObject(payload)),
   deleteSession: (id) => checkedInvoke("delete-session", id, "sessionId"),
   getConfig: () => safeInvoke("get-config"),
   saveConfig: (text) => checkedInvoke("save-config", text, "configText"),

@@ -31,6 +31,7 @@ export function mountGatewayPanel({
         </label>
         <button type="submit" class="ghost">连接远程</button>
       </form>
+      <div class="gateway-hint" data-role="wsHint">WebSocket：启动后连接 ws://127.0.0.1:&lt;port&gt;/v1/ws?token=…</div>
       <pre class="gateway-log" data-role="log">尚未连接</pre>
     </div>
   `;
@@ -45,12 +46,20 @@ export function mountGatewayPanel({
   async function refresh() {
     const result = await statusGateway();
     const running = !!result?.running;
+    const port = result?.marker?.port;
+    const token = result?.marker?.token;
     summary.innerHTML = `
       <div class="cap-stat"><b>${running ? "ON" : "OFF"}</b><span>本地</span></div>
-      <div class="cap-stat"><b>${result?.marker?.port || "—"}</b><span>端口</span></div>
+      <div class="cap-stat"><b>${port || "—"}</b><span>端口</span></div>
       <div class="cap-stat"><b>${result?.control?.channels?.length || 0}</b><span>通道</span></div>
-      <div class="cap-stat"><b>${result?.control?.sessions?.length || 0}</b><span>会话</span></div>
+      <div class="cap-stat"><b>${result?.control?.ws?.clients ?? 0}</b><span>WS</span></div>
     `;
+    const hint = root.querySelector('[data-role="wsHint"]');
+    if (hint) {
+      hint.textContent = running && port
+        ? `WebSocket：ws://127.0.0.1:${port}/v1/ws?token=${token || "…"}`
+        : "WebSocket：启动本地 Gateway 后显示连接串";
+    }
     log.textContent = JSON.stringify(result, null, 2);
     return result;
   }

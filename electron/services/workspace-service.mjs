@@ -32,6 +32,8 @@ export function createWorkspaceService({
   deleteSession,
   loadSession,
   replaySessionMessages = () => [],
+  appendSessionNarrative = null,
+  formatSessionDisplayMessages = null,
   getRuntime,
   configPath,
   loadConfig,
@@ -172,10 +174,34 @@ export function createWorkspaceService({
     readSession(id) {
       try {
         const sessionId = ipcString(id);
-        const messages = formatSessionMessages(loadSession(sessionId));
+        const stored = loadSession(sessionId);
+        const messages = typeof formatSessionDisplayMessages === "function"
+          ? formatSessionDisplayMessages(stored)
+          : formatSessionMessages(stored);
         return messages.length ? messages : replaySessionMessages(sessionId);
       } catch {
         return [];
+      }
+    },
+
+    saveNarrative(payload = {}) {
+      if (typeof appendSessionNarrative !== "function") {
+        return { ok: false, error: "narrative persistence unavailable" };
+      }
+      try {
+        const sessionId = ipcString(payload.sessionId || payload.id || "");
+        if (!sessionId) return { ok: false, error: "sessionId required" };
+        return appendSessionNarrative(sessionId, {
+          role: payload.role === "user" ? "user" : "assistant",
+          text: String(payload.text || ""),
+          assistantTurn: payload.assistantTurn || payload.agentRun || undefined,
+          at: Number(payload.at) || Date.now(),
+        }, {
+          cwd: payload.cwd || getCwd(),
+          model: payload.model || "",
+        });
+      } catch (error) {
+        return { ok: false, error: error?.message || String(error) };
       }
     },
 
@@ -271,6 +297,7 @@ export function registerWorkspaceIpc({ register, workspace }) {
   register.handle("new-session", () => workspace.newSession());
   register.handle("delete-session", (_event, id) => workspace.deleteSession(id));
   register.handle("read-session", (_event, id) => workspace.readSession(id));
+  register.handle("session:save-narrative", (_event, payload) => workspace.saveNarrative(ipcObject(payload)));
   register.handle("get-config", () => workspace.getConfig());
   register.handle("save-config", (_event, text) => workspace.saveConfig(text));
   register.handle("test-model", (_event, profile) => workspace.testModel(profile));

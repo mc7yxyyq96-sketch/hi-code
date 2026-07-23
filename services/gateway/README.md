@@ -28,8 +28,14 @@ node services/gateway/server.mjs --port 8787 --token dev-token
 Electron IPC: `gateway:start|stop|status|connect-remote`  
 UI: sidebar **Gateway**
 
+## Realtime
+
+- `WS /v1/ws?token=…` — authenticated desktop/remote stream (`hello`, `ping/pong`, `inbound`, `channel.inbound`)
+- Telegram long-poll: configure bot token via `POST /v1/channels/configure` then auto-starts poller
+
 ## Status
 
 - Local process + session router + channel stubs: **shipped**
-- Live Telegram/Discord polling bots: next increment
-- Full WS remote desktop stream: next increment (HTTP remote connect works now)
+- Authenticated WebSocket: **shipped**
+- Telegram long-poll: **shipped** (requires real bot token)
+- Discord live bot: next increment

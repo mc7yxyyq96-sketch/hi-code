@@ -90,7 +90,7 @@
         "Yan",
         "Codex"
       ],
-      "notes": "History restore reads assistantTurn/agentRun when present; durable session writer still pending"
+      "notes": "Durable narratives written via session:save-narrative; history rebuild prefers narratives"
     },
     {
       "id": "A-07",
