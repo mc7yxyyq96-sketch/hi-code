@@ -14,6 +14,8 @@ import { mountQualityGatePanel } from "../components/quality-gate-panel.js";
 import { mountReleaseCenterPanel } from "../components/release-center-panel.js";
 import { mountSampleProjectPanel } from "../components/sample-project-panel.js";
 import { capabilityDescription, capabilityLifecycleState, capabilityMeta, CAPABILITY_META } from "../components/mcp-panel.js";
+import { mountAutomationPanel } from "../components/automation-panel.js";
+import { mountTerminalPanel } from "../components/terminal-panel.js";
 import { normalizeRuntimeQueue, summarizeRunText } from "../components/runtime-panel.js";
 import { modelPickerSection, pickerRow } from "../components/settings-panel.js";
 import { renderUsagePanel } from "../components/settings-usage-panel.js";
@@ -32,7 +34,6 @@ import {
   serializeTurn,
 } from "./assistant-turn.js";
 import { renderAssistantTurn } from "../components/chat-process.js";
-import { mountTerminalPanel } from "../components/terminal-panel.js";
 
 /* Hi Code renderer — chat-first parity shell (clean-room). */
 const SIDEBAR_COLLAPSED_KEY = "hicode.sidebarCollapsed";
@@ -1306,6 +1307,8 @@ const settings = $("settings"), cfg = $("cfg"), cfgErr = $("cfg-err");
 const currentProject = $("currentProject");
 const filesModal = $("files"), filePath = $("filePath"), fileList = $("fileList"), filePreview = $("filePreview");
 const capabilityView = $("capabilityView"), capTitle = $("capTitle"), capSubtitle = $("capSubtitle"), capSummary = $("capSummary"), capList = $("capList"), capActions = $("capActions");
+const capSearch = $("capSearch");
+const automationView = $("automationView");
 const commandView = $("commandView"), commandSearch = $("commandSearch"), commandSummary = $("commandSummary"), commandList = $("commandList"), commandComposerSlot = $("commandComposerSlot"), commandFocusInput = $("commandFocusInput"), commandRunInput = $("commandRunInput");
 const gitView = $("gitView"), gitSub = $("gitSub"), gitBranch = $("gitBranch"), gitDirty = $("gitDirty"), gitStaged = $("gitStaged"), gitUnstaged = $("gitUnstaged");
 const jobView = $("jobView"), jobSummary = $("jobSummary"), jobList = $("jobList"), jobDetail = $("jobDetail"), jobRefresh = $("jobRefresh"), jobStatusText = $("jobStatusText");
@@ -1356,7 +1359,7 @@ const aboutRepoBtn = $("aboutRepoBtn"), aboutReleasesBtn = $("aboutReleasesBtn")
 const providerHint = $("providerHint");
 const quickBaseURL = $("quickBaseURL"), quickApiKey = $("quickApiKey"), quickModel = $("quickModel"), quickContext = $("quickContext");
 const advancedConfig = $("advanced-config");
-const routeViews = { home, chatview, capabilityView, commandView, gitView, jobView, arenaView, industrialView };
+const routeViews = { home, chatview, capabilityView, automationView, commandView, gitView, jobView, arenaView, industrialView };
 
 // Build the single composer from the template, start it in the home slot.
 const composer = $("composer-tpl").content.firstElementChild.cloneNode(true);
@@ -1370,6 +1373,10 @@ const cmdmenu = composer.querySelector("#cmdmenu");
 const modelPicker = composer.querySelector("#modelPicker");
 const modelPill = composer.querySelector("#modelPill");
 const modelName = composer.querySelector("#modelName");
+const workspacePill = composer.querySelector("#workspacePill");
+const workspacePillLabel = composer.querySelector("#workspacePillLabel");
+const thinkingPill = composer.querySelector("#thinkingPill");
+const thinkingPillLabel = composer.querySelector("#thinkingPillLabel");
 const accessBtn = composer.querySelector("#access");
 const accessLabel = composer.querySelector("#accessLabel");
 const queueStatus = composer.querySelector("#queueStatus");
@@ -1965,10 +1972,33 @@ async function showStore() {
   toolchain.stop();
   qualityGates.stop();
   releaseCenter.stop();
+  automationPanel.stop();
   inChat = false;
   syncState({ inChat });
   showRoute({ main, views: routeViews, route: "capabilityView", mainClass: "capability", activeNav: "storeBtn", setActiveNav });
   await renderStore();
+}
+
+async function showAutomation() {
+  jobCenter.stop();
+  patchArena.stop();
+  industrialProject.stop();
+  domainPacks.stop();
+  agentTeam.stop();
+  toolchain.stop();
+  qualityGates.stop();
+  releaseCenter.stop();
+  inChat = false;
+  syncState({ inChat });
+  showRoute({
+    main,
+    views: routeViews,
+    route: "automationView",
+    mainClass: "automation",
+    activeNav: "automationBtn",
+    setActiveNav,
+  });
+  await automationPanel.refresh();
 }
 
 function showCommandCenter() {
@@ -3433,6 +3463,7 @@ function initParityShell() {
   });
   $("openSkillsCard")?.addEventListener("click", () => showCapabilities("skills"));
   $("openMcpCard")?.addEventListener("click", () => showCapabilities("mcp"));
+  $("openAutomationCard")?.addEventListener("click", () => showAutomation());
 
   const terminal = mountTerminalPanel({
     root: $("terminalPanel"),
@@ -3445,6 +3476,27 @@ function initParityShell() {
   });
   $("terminalToggleBtn")?.addEventListener("click", () => terminal.toggle());
 }
+
+const automationPanel = mountAutomationPanel({
+  root: $("automationRoot"),
+  listAutomations: () => api.listAutomations(),
+  createAutomation: (payload) => api.createAutomation(payload),
+  updateAutomation: (payload) => api.updateAutomation(payload),
+  removeAutomation: (id) => api.removeAutomation(id),
+  setEnabled: (payload) => api.setAutomationEnabled(payload),
+  markRun: (payload) => api.markAutomationRun(payload),
+  getWorkspace: async () => cwd || (await api.getCwd()) || "",
+  runPrompt: async (prompt) => {
+    showHome();
+    input.value = String(prompt || "");
+    input.focus();
+    await submit();
+  },
+  onToast: (kind, message) => {
+    if (kind === "error") toast.error(message);
+    else toast.ok(message);
+  },
+});
 
 initSidebarCollapse();
 initParityShell();
@@ -3473,6 +3525,7 @@ async function pickFolder() {
     syncState({ cwd });
     projName.textContent = shortPath(dir);
     currentProject.textContent = shortPath(dir);
+    updateComposerPills();
     chat.innerHTML = "";
     loadSessions();
     if (inChat) addSystemNote("已切换到 " + dir);
@@ -3519,6 +3572,11 @@ async function attachImageFile(file) {
   }
 }
 $("projRow").onclick = pickFolder;
+if (capSearch) {
+  capSearch.addEventListener("input", () => {
+    if (currentCapability) renderCapabilities(currentCapability, false);
+  });
+}
 $("settingsBtn").onclick = () => openSettings("usage");
 $("filesBtn").onclick = () => fileTree.open(cwd);
 $("jobsBtn").onclick = () => showJobCenter();
@@ -3530,6 +3588,7 @@ $("pluginsBtn").onclick = () => showCapabilities("plugins");
 $("skillsBtn").onclick = () => showCapabilities("skills");
 $("agentsBtn").onclick = () => showCapabilities("agents");
 $("mcpBtn").onclick = () => showCapabilities("mcp");
+$("automationBtn").onclick = () => showAutomation();
 storeConfirmClose.onclick = closeStoreInstallPreview;
 storeConfirmCancel.onclick = closeStoreInstallPreview;
 storeConfirmInstall.onclick = confirmStoreInstall;
@@ -3543,6 +3602,18 @@ modelPill.onclick = (e) => {
   e.stopPropagation();
   toggleModelPicker();
 };
+workspacePill?.addEventListener("click", (e) => {
+  e.stopPropagation();
+  pickFolder();
+});
+thinkingPill?.addEventListener("click", async (e) => {
+  e.stopPropagation();
+  const config = normalizeConfig(parseConfig((await api.getConfig()) || cfgText));
+  const order = REASONING_LEVELS.map(([key]) => key);
+  const current = config.reasoningLevel || "medium";
+  const next = order[(Math.max(0, order.indexOf(current)) + 1) % order.length];
+  await switchReasoningLevel(next);
+});
 modelPicker.addEventListener("click", (e) => e.stopPropagation());
 document.addEventListener("click", () => hideModelPicker());
 document.addEventListener("keydown", (e) => {
@@ -3619,22 +3690,54 @@ async function getCapabilityStoreItems(kind, items) {
   return managed;
 }
 
+function capabilityMatchesQuery(kind, item, query) {
+  if (!query) return true;
+  const haystack = [
+    item.name,
+    item.description,
+    item.path,
+    item.command,
+    ...(item.args || []),
+    ...(item.tags || []),
+    capabilityDescription(kind, item),
+    capabilityMeta(kind, item),
+  ].filter(Boolean).join(" ").toLowerCase();
+  return haystack.includes(query);
+}
+
 async function renderCapabilities(kind, refresh = false) {
   const meta = CAPABILITY_META[kind];
   const all = await getCapabilities(refresh);
   const items = all[kind] || [];
   const managedStoreItems = await getCapabilityStoreItems(kind, items);
+  const query = String(capSearch?.value || "").trim().toLowerCase();
+  const visible = items.filter((item) => capabilityMatchesQuery(kind, item, query));
   capTitle.textContent = meta.title;
   capSubtitle.textContent = meta.subtitle;
   capActions.innerHTML = "";
   capSummary.innerHTML = "";
   capList.innerHTML = "";
+  if (capSearch) {
+    capSearch.placeholder = kind === "skills"
+      ? "搜索技能名称、路径或说明…"
+      : kind === "mcp"
+        ? "搜索 MCP 名称、命令或参数…"
+        : "搜索插件 / 技能 / MCP / 智能体…";
+  }
 
   const refreshBtn = document.createElement("button");
   refreshBtn.className = "ghost";
   refreshBtn.textContent = "刷新";
   refreshBtn.onclick = () => renderCapabilities(kind, true);
   capActions.appendChild(refreshBtn);
+
+  if (kind === "skills" || kind === "mcp") {
+    const storeBtn = document.createElement("button");
+    storeBtn.className = "ghost";
+    storeBtn.textContent = kind === "skills" ? "技能商店" : "MCP 商店";
+    storeBtn.onclick = () => showStore();
+    capActions.appendChild(storeBtn);
+  }
 
   if (kind === "mcp") {
     const cfgBtn = document.createElement("button");
@@ -3649,6 +3752,7 @@ async function renderCapabilities(kind, refresh = false) {
     ["技能", all.skills?.length || 0],
     ["MCP", all.mcp?.length || 0],
     ["智能体", all.agents?.length || 0],
+    ["显示", visible.length],
   ];
   for (const [label, value] of stats) {
     const stat = document.createElement("div");
@@ -3659,15 +3763,15 @@ async function renderCapabilities(kind, refresh = false) {
     capSummary.appendChild(stat);
   }
 
-  if (!items.length) {
+  if (!visible.length) {
     const empty = document.createElement("div");
     empty.className = "cap-empty";
-    empty.textContent = meta.empty;
+    empty.textContent = items.length && query ? `没有匹配「${capSearch.value.trim()}」的条目。` : meta.empty;
     capList.appendChild(empty);
     return;
   }
 
-  for (const item of items) {
+  for (const item of visible) {
     const row = document.createElement("div");
     row.className = "cap-item";
     row.innerHTML = `
@@ -4451,6 +4555,20 @@ providerGrid.querySelectorAll(".provider").forEach((btn) => {
   };
 });
 
+function updateComposerPills(profile = {}, reasoningLevel) {
+  if (workspacePillLabel) {
+    workspacePillLabel.textContent = shortPath(cwd || "~") || "工作区";
+    workspacePill?.setAttribute("title", cwd ? `工作区：${cwd}` : "选择工作区");
+  }
+  if (thinkingPillLabel) {
+    const level = reasoningLevel || normalizeConfig(parseConfig(cfgText || "{}")).reasoningLevel || "medium";
+    thinkingPillLabel.textContent = `推理·${reasoningLabel(level)}`;
+  }
+  if (profile?.model && modelName) {
+    // keep existing model label updates in setCurrentModelDisplay
+  }
+}
+
 function setCurrentModelDisplay(profile = {}) {
   const label = profile.model || "model";
   currentModel = {
@@ -4462,6 +4580,8 @@ function setCurrentModelDisplay(profile = {}) {
   modelName.textContent = label;
   modelName.title = profile.baseURL || "";
   modelSide.textContent = label;
+  const reasoning = normalizeConfig(parseConfig(cfgText || "{}")).reasoningLevel || "medium";
+  updateComposerPills(profile, reasoning);
 }
 
 function modelCapabilityHint(profile = {}) {
@@ -4551,6 +4671,7 @@ async function switchReasoningLevel(level) {
   const config = normalizeConfig(parseConfig((await api.getConfig()) || cfgText));
   config.reasoningLevel = level;
   await saveConfigText(JSON.stringify(config, null, 2), `推理等级已切换为 ${reasoningLabel(level)}。`, { closeSettings: false });
+  updateComposerPills(config.profiles?.[config.defaultProfile], level);
   await renderModelPicker();
 }
 

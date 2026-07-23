@@ -257,4 +257,12 @@ contextBridge.exposeInMainWorld("hicode", {
   onTerminalReady: (cb) => typeof cb === "function" && ipcRenderer.on("terminal:ready", (_e, d) => cb(optionalObject(d))),
   onTerminalData: (cb) => typeof cb === "function" && ipcRenderer.on("terminal:data", (_e, d) => cb(optionalObject(d))),
   onTerminalExit: (cb) => typeof cb === "function" && ipcRenderer.on("terminal:exit", (_e, d) => cb(optionalObject(d))),
+  listAutomations: () => safeInvoke("automation:list"),
+  getAutomation: (id) => checkedInvoke("automation:get", id, "id"),
+  createAutomation: (payload) => safeInvoke("automation:create", optionalObject(payload)),
+  updateAutomation: (payload) => safeInvoke("automation:update", optionalObject(payload)),
+  removeAutomation: (id) => checkedInvoke("automation:remove", id, "id"),
+  setAutomationEnabled: (payload) => safeInvoke("automation:set-enabled", optionalObject(payload)),
+  dueAutomations: (payload) => safeInvoke("automation:due", optionalObject(payload)),
+  markAutomationRun: (payload) => safeInvoke("automation:mark-run", optionalObject(payload)),
 });

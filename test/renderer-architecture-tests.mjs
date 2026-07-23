@@ -112,6 +112,8 @@ check("model connection test surfaces vision capability hint", bootstrap.include
 check("agent chat bubble never stays blank on empty model output", bootstrap.includes("createAssistantTurn") && bootstrap.includes("function finishAgentMessageIfEmpty") && bootstrap.includes("这次模型没有返回可显示内容") && bootstrap.includes("paintCurrentTurn") && css.includes(".agent-body.agent-empty") && css.includes(".agent-body.agent-error"));
 check("parity shell wires inline assistant turn narrative", bootstrap.includes("projectRuntimeEvent") && bootstrap.includes("renderAssistantTurn") && html.includes("parity-theme.css") && html.includes('data-theme="dark"') && html.includes('id="themeToggleBtn"'));
 check("parity shell demotes industrial/store from primary nav", html.includes('class="nav-row nav-advanced" id="industrialBtn"') && html.includes('class="nav-row nav-advanced" id="storeBtn"') && html.includes('class="nav-row nav-pinned" id="skillsBtn"') && html.includes('class="nav-row nav-pinned" id="mcpBtn"'));
+check("parity shell pins automation and composer workspace/thinking pills", html.includes('id="automationBtn"') && html.includes('id="automationView"') && html.includes('id="workspacePill"') && html.includes('id="thinkingPill"') && bootstrap.includes("mountAutomationPanel") && bootstrap.includes("showAutomation") && bootstrap.includes("updateComposerPills"));
+check("skills/mcp pages expose search and store entry", html.includes('id="capSearch"') && bootstrap.includes("capabilityMatchesQuery") && bootstrap.includes("技能商店") && bootstrap.includes("MCP 商店"));
 
 console.log("\n[renderer] state");
 resetState();

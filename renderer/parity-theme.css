@@ -475,3 +475,145 @@ body.terminal-open #main {
   border: 1px solid var(--hc-border) !important;
   background: var(--hc-bg-elev) !important;
 }
+
+.cap-toolbar {
+  margin: 0 0 14px;
+}
+
+.cap-toolbar input {
+  width: 100%;
+  border: 1px solid var(--hc-border);
+  background: var(--hc-bg-elev);
+  color: var(--hc-text);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+
+.auto-shell {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 28px 24px 48px;
+}
+
+.auto-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 18px;
+}
+
+.auto-head h2 {
+  margin: 0 0 6px;
+  font-size: 28px;
+  color: var(--hc-text);
+}
+
+.auto-head p,
+.auto-hint {
+  margin: 0;
+  color: var(--hc-text-faint);
+  font-size: 13px;
+}
+
+.auto-form {
+  border: 1px solid var(--hc-border);
+  background: var(--hc-bg-elev);
+  border-radius: 14px;
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.auto-form-grid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 12px;
+}
+
+.auto-form label,
+.auto-prompt-label {
+  display: grid;
+  gap: 6px;
+  color: var(--hc-text-muted);
+  font-size: 12px;
+}
+
+.auto-form input,
+.auto-form select,
+.auto-form textarea {
+  border: 1px solid var(--hc-border);
+  background: #111;
+  color: var(--hc-text);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font: inherit;
+}
+
+.auto-form-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.auto-summary {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.auto-list {
+  display: grid;
+  gap: 10px;
+}
+
+.auto-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  border: 1px solid var(--hc-border);
+  background: var(--hc-bg-elev);
+  border-radius: 14px;
+  padding: 14px 16px;
+}
+
+.auto-item.disabled {
+  opacity: 0.72;
+}
+
+.auto-name {
+  font-weight: 600;
+  color: var(--hc-text);
+  margin-bottom: 4px;
+}
+
+.auto-desc {
+  color: var(--hc-text-muted);
+  font-size: 13px;
+  margin-bottom: 6px;
+  white-space: pre-wrap;
+}
+
+.auto-meta {
+  color: var(--hc-text-faint);
+  font-size: 12px;
+}
+
+.auto-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-content: flex-start;
+  justify-content: flex-end;
+}
+
+@media (max-width: 720px) {
+  .auto-form-grid,
+  .auto-item {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+  }
+}

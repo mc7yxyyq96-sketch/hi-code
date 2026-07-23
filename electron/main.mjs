@@ -52,6 +52,7 @@ import { createSecurityService, redactSensitive } from "./services/security-serv
 import { createAppInfoService } from "./services/app-info-service.mjs";
 import { createUsageService } from "./services/usage-service.mjs";
 import { createTerminalService } from "./services/terminal-service.mjs";
+import { createAutomationService } from "./services/automation-service.mjs";
 import { recordUsage } from "../dist/usage-store.js";
 import { openMacApp, parseOpenAppRequest } from "./services/native-open-service.mjs";
 import { BUILTIN_STORE_CATALOG } from "./store-catalog.mjs";
@@ -71,6 +72,7 @@ const PATCH_ARENA_PATH = path.join(HICODE_DIR, "patch-arena", "arena-runs.json")
 const PATCH_ARENA_ARTIFACT_DIR = path.join(HICODE_DIR, "patch-arena", "artifacts");
 const DOMAIN_PACK_DIR = path.join(HICODE_DIR, "domain-packs");
 const AGENT_TEAM_DIR = path.join(HICODE_DIR, "agent-team");
+const AUTOMATION_PATH = path.join(HICODE_DIR, "automations.json");
 const CODEX_DIR = path.join(os.homedir(), ".codex");
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -2551,6 +2553,7 @@ function createMainServices() {
       gitCommit,
     }),
     terminal: createTerminalService({ getCwd: () => cwd }),
+    automation: createAutomationService({ storePath: AUTOMATION_PATH }),
     workspace: createWorkspaceService({
       dialog,
       getWindow: () => win,

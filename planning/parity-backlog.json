@@ -182,7 +182,7 @@
       "wave": 1,
       "area": "skills",
       "title": "Skills market page",
-      "status": "pending",
+      "status": "complete",
       "refs": [
         "Yan",
         "Hermes"
@@ -193,7 +193,7 @@
       "wave": 1,
       "area": "mcp",
       "title": "MCP manage page",
-      "status": "pending",
+      "status": "complete",
       "refs": [
         "Yan",
         "OpenCode"
@@ -204,7 +204,7 @@
       "wave": 1,
       "area": "automation",
       "title": "Automation / schedules page",
-      "status": "pending",
+      "status": "complete",
       "refs": [
         "Yan",
         "Hermes"

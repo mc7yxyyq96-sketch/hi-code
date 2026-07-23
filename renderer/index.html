@@ -61,6 +61,7 @@
             <button class="nav-row nav-pinned active" id="newChat" title="新对话"><span class="i-edit"></span><span class="nav-label">新对话</span></button>
             <button class="nav-row nav-pinned" id="skillsBtn" title="技能"><span class="i-spark"></span><span class="nav-label">技能</span></button>
             <button class="nav-row nav-pinned" id="mcpBtn" title="MCP"><span class="i-network"></span><span class="nav-label">MCP</span></button>
+            <button class="nav-row nav-pinned" id="automationBtn" title="自动化"><span class="i-stack"></span><span class="nav-label">自动化</span></button>
             <button class="nav-row nav-optional" id="searchToggle" title="搜索"><span class="i-search"></span><span class="nav-label">搜索</span></button>
             <button class="nav-row nav-optional" id="filesBtn" title="文件"><span class="i-folder"></span><span class="nav-label">文件</span></button>
             <button class="nav-row nav-optional" id="gitBtn" title="Git"><span class="i-git"></span><span class="nav-label">Git</span></button>
@@ -129,6 +130,7 @@
             <button class="qcard" data-cmd="help"><span class="qi i-chat"></span><span class="qt">开始编码</span><span class="qd">在当前工作区读写文件、执行命令、提交改动</span></button>
             <button class="qcard" id="openSkillsCard"><span class="qi i-spark"></span><span class="qt">技能</span><span class="qd">浏览并启用 Agent Skills</span></button>
             <button class="qcard" id="openMcpCard"><span class="qi i-network"></span><span class="qt">MCP</span><span class="qd">连接外部工具与数据源</span></button>
+            <button class="qcard" id="openAutomationCard"><span class="qi i-stack"></span><span class="qt">自动化</span><span class="qd">定时任务与调度提示词</span></button>
           </div>
         </section>
 
@@ -205,9 +207,16 @@
               </div>
               <div id="capActions" class="cap-actions"></div>
             </div>
+            <div class="cap-toolbar">
+              <input id="capSearch" spellcheck="false" placeholder="搜索技能 / MCP / 插件…" />
+            </div>
             <div id="capSummary" class="cap-summary"></div>
             <div id="capList" class="cap-list"></div>
           </div>
+        </section>
+
+        <section id="automationView" class="hidden">
+          <div id="automationRoot"></div>
         </section>
 
         <section id="commandView" class="hidden">
@@ -579,7 +588,9 @@
         <div class="composer-bar">
           <div class="cb-left">
             <button id="attach" class="cb-icon" title="添加图片附件"><span class="i-plus"></span></button>
+            <button id="workspacePill" class="cb-pill" title="切换工作区"><span class="i-folder"></span> <span id="workspacePillLabel">工作区</span></button>
             <button id="access" class="cb-pill" title="访问权限"><span class="dot"></span> <span id="accessLabel">需确认</span></button>
+            <button id="thinkingPill" class="cb-pill" title="推理强度"><span class="i-spark"></span> <span id="thinkingPillLabel">推理·中</span></button>
           </div>
           <div class="cb-right">
             <button id="modelPill" class="cb-pill" title="模型设置"><span class="i-cpu"></span> <span id="modelName">…</span></button>

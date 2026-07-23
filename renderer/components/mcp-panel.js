@@ -7,10 +7,10 @@ export const CAPABILITY_META = {
     nav: "pluginsBtn",
   },
   skills: {
-    title: "技能",
-    subtitle: "可复用的工作流说明，会影响智能体做事方式。",
+    title: "技能市场",
+    subtitle: "浏览本机与商店中的 Agent Skills，安装后可在对话里用 $技能名 调用。",
     icon: "i-spark",
-    empty: "还没有发现本地技能。",
+    empty: "还没有发现本地技能。可从商店安装，或把 SKILL.md 放到 ~/.codex/skills。",
     nav: "skillsBtn",
   },
   agents: {
@@ -21,10 +21,10 @@ export const CAPABILITY_META = {
     nav: "agentsBtn",
   },
   mcp: {
-    title: "MCP",
-    subtitle: "从 ~/.hicode/config.json 读取的 Model Context Protocol 服务。",
+    title: "MCP 管理",
+    subtitle: "管理 stdio MCP：启停、配置 JSON、查看工具来源（~/.hicode/config.json）。",
     icon: "i-network",
-    empty: "还没有配置 MCP server。",
+    empty: "还没有配置 MCP server。点击「配置 MCP」或从商店安装。",
     nav: "mcpBtn",
   },
 };
