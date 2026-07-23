@@ -118,6 +118,7 @@ check("parity shell pins automation and composer workspace/thinking pills", html
 check("skills/mcp pages expose search and store entry", html.includes('id="capSearch"') && bootstrap.includes("capabilityMatchesQuery") && bootstrap.includes("技能商店") && bootstrap.includes("MCP 商店"));
 check("parity wave1 surfaces browser/codemap/memory", html.includes('id="browserToggleBtn"') && html.includes('id="browserPanel"') && html.includes('id="codemapBtn"') && html.includes('id="memoryBtn"') && bootstrap.includes("mountBrowserPanel") && bootstrap.includes("mountCodemapPanel") && bootstrap.includes("mountMemoryPanel") && bootstrap.includes("showCodemap") && bootstrap.includes("showMemory"));
 check("parity wave2 agent mode pill", html.includes('id="agentModePill"') && bootstrap.includes("AGENT_MODE_ORDER") && bootstrap.includes("/agent-mode"));
+check("parity wave3 gateway surface", html.includes('id="gatewayBtn"') && html.includes('id="gatewayView"') && bootstrap.includes("mountGatewayPanel") && bootstrap.includes("showGateway"));
 check("compact narrative is visible in chat process", bootstrap.includes('phase: "compacting"') && chatProcess.includes("buildCompactElement") && assistantTurn.includes('phase === "compacted"'));
 
 console.log("\n[renderer] state");

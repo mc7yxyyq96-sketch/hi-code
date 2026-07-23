@@ -23,6 +23,8 @@
     "build": "tsc -p tsconfig.json && chmod +x dist/index.js dist/headless.js",
     "start": "node dist/index.js",
     "headless": "node dist/headless.js",
+    "gateway": "node services/gateway/server.mjs",
+    "test:gateway": "node test/gateway-tests.mjs",
     "test": "node test/feature-tests.mjs",
     "test:feature": "node test/feature-tests.mjs",
     "test:runtime-protocol": "node test/runtime-protocol-tests.mjs",

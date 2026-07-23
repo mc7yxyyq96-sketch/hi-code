@@ -288,7 +288,7 @@
       "wave": 3,
       "area": "gateway",
       "title": "Local Gateway process",
-      "status": "pending",
+      "status": "complete",
       "refs": [
         "OpenClaw",
         "Hermes"
@@ -298,8 +298,8 @@
       "id": "F-02",
       "wave": 3,
       "area": "channels",
-      "title": "Multi-channel adapters (Telegram+1)",
-      "status": "pending",
+      "title": "Multi-channel adapters (Telegram+Discord stubs)",
+      "status": "complete",
       "refs": [
         "OpenClaw"
       ]
@@ -309,7 +309,7 @@
       "wave": 3,
       "area": "remote",
       "title": "Desktop connect remote Gateway",
-      "status": "pending",
+      "status": "complete",
       "refs": [
         "Hermes"
       ]
@@ -319,7 +319,7 @@
       "wave": 3,
       "area": "admin",
       "title": "Control UI for MCP/channels/memory/webhooks",
-      "status": "pending",
+      "status": "complete",
       "refs": [
         "OpenClaw",
         "Hermes"
@@ -330,7 +330,7 @@
       "wave": 3,
       "area": "relay",
       "title": "Wire NewAPI / Model Gateway (no client master keys)",
-      "status": "pending",
+      "status": "complete",
       "refs": [
         "Hi Code"
       ]

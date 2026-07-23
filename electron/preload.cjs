@@ -280,4 +280,8 @@ contextBridge.exposeInMainWorld("hicode", {
   removeMemory: (payload) => safeInvoke("memory:remove", optionalObject(payload)),
   pinMemory: (payload) => safeInvoke("memory:pin", optionalObject(payload)),
   rollbackRunChanges: () => safeInvoke("memory:rollback-run"),
+  gatewayStart: (payload) => safeInvoke("gateway:start", optionalObject(payload)),
+  gatewayStop: () => safeInvoke("gateway:stop"),
+  gatewayStatus: () => safeInvoke("gateway:status"),
+  gatewayConnectRemote: (payload) => safeInvoke("gateway:connect-remote", optionalObject(payload)),
 });

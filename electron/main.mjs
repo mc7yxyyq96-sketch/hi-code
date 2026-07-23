@@ -56,6 +56,7 @@ import { createAutomationService } from "./services/automation-service.mjs";
 import { createBrowserService } from "./services/browser-service.mjs";
 import { createCodemapService } from "./services/codemap-service.mjs";
 import { createMemoryService } from "./services/memory-service.mjs";
+import { createGatewayService } from "./services/gateway-service.mjs";
 import { recordUsage } from "../dist/usage-store.js";
 import { openMacApp, parseOpenAppRequest } from "./services/native-open-service.mjs";
 import { BUILTIN_STORE_CATALOG } from "./store-catalog.mjs";
@@ -2565,6 +2566,7 @@ function createMainServices() {
       getCwd: () => cwd,
       rejectPendingDiffs: () => rejectAllDiffs(),
     }),
+    gateway: createGatewayService(),
     workspace: createWorkspaceService({
       dialog,
       getWindow: () => win,

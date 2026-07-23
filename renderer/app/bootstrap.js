@@ -19,6 +19,7 @@ import { mountTerminalPanel } from "../components/terminal-panel.js";
 import { mountBrowserPanel } from "../components/browser-panel.js";
 import { mountCodemapPanel } from "../components/codemap-panel.js";
 import { mountMemoryPanel } from "../components/memory-panel.js";
+import { mountGatewayPanel } from "../components/gateway-panel.js";
 import { normalizeRuntimeQueue, summarizeRunText } from "../components/runtime-panel.js";
 import { modelPickerSection, pickerRow } from "../components/settings-panel.js";
 import { renderUsagePanel } from "../components/settings-usage-panel.js";
@@ -1314,6 +1315,7 @@ const capSearch = $("capSearch");
 const automationView = $("automationView");
 const codemapView = $("codemapView");
 const memoryView = $("memoryView");
+const gatewayView = $("gatewayView");
 const commandView = $("commandView"), commandSearch = $("commandSearch"), commandSummary = $("commandSummary"), commandList = $("commandList"), commandComposerSlot = $("commandComposerSlot"), commandFocusInput = $("commandFocusInput"), commandRunInput = $("commandRunInput");
 const gitView = $("gitView"), gitSub = $("gitSub"), gitBranch = $("gitBranch"), gitDirty = $("gitDirty"), gitStaged = $("gitStaged"), gitUnstaged = $("gitUnstaged");
 const jobView = $("jobView"), jobSummary = $("jobSummary"), jobList = $("jobList"), jobDetail = $("jobDetail"), jobRefresh = $("jobRefresh"), jobStatusText = $("jobStatusText");
@@ -1364,7 +1366,7 @@ const aboutRepoBtn = $("aboutRepoBtn"), aboutReleasesBtn = $("aboutReleasesBtn")
 const providerHint = $("providerHint");
 const quickBaseURL = $("quickBaseURL"), quickApiKey = $("quickApiKey"), quickModel = $("quickModel"), quickContext = $("quickContext");
 const advancedConfig = $("advanced-config");
-const routeViews = { home, chatview, capabilityView, automationView, codemapView, memoryView, commandView, gitView, jobView, arenaView, industrialView };
+const routeViews = { home, chatview, capabilityView, automationView, codemapView, memoryView, gatewayView, commandView, gitView, jobView, arenaView, industrialView };
 
 // Build the single composer from the template, start it in the home slot.
 const composer = $("composer-tpl").content.firstElementChild.cloneNode(true);
@@ -2052,6 +2054,28 @@ async function showMemory() {
     setActiveNav,
   });
   await memoryPanel.refresh();
+}
+
+async function showGateway() {
+  jobCenter.stop();
+  patchArena.stop();
+  industrialProject.stop();
+  domainPacks.stop();
+  agentTeam.stop();
+  toolchain.stop();
+  qualityGates.stop();
+  releaseCenter.stop();
+  inChat = false;
+  syncState({ inChat });
+  showRoute({
+    main,
+    views: routeViews,
+    route: "gatewayView",
+    mainClass: "gateway",
+    activeNav: "gatewayBtn",
+    setActiveNav,
+  });
+  await gatewayPanel.refresh();
 }
 
 function showCommandCenter() {
@@ -3610,6 +3634,18 @@ const memoryPanel = mountMemoryPanel({
   },
 });
 
+const gatewayPanel = mountGatewayPanel({
+  root: $("gatewayRoot"),
+  startGateway: (payload) => api.gatewayStart(payload),
+  stopGateway: () => api.gatewayStop(),
+  statusGateway: () => api.gatewayStatus(),
+  connectRemote: (payload) => api.gatewayConnectRemote(payload),
+  onToast: (kind, message) => {
+    if (kind === "error") toast.error(message);
+    else toast.ok(message);
+  },
+});
+
 initSidebarCollapse();
 initParityShell();
 $("newChat").onclick = startNewConversation;
@@ -3703,6 +3739,7 @@ $("mcpBtn").onclick = () => showCapabilities("mcp");
 $("automationBtn").onclick = () => showAutomation();
 $("codemapBtn").onclick = () => showCodemap();
 $("memoryBtn").onclick = () => showMemory();
+$("gatewayBtn").onclick = () => showGateway();
 storeConfirmClose.onclick = closeStoreInstallPreview;
 storeConfirmCancel.onclick = closeStoreInstallPreview;
 storeConfirmInstall.onclick = confirmStoreInstall;
