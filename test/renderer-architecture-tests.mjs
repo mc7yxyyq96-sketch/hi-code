@@ -109,7 +109,9 @@ check("composer sends image attachments through workspace-relative refs", bootst
 check("composer supports pasted and dropped images", bootstrap.includes('input.addEventListener("paste"') && bootstrap.includes('composer.addEventListener("drop"') && bootstrap.includes("readImageFileAsDataUrl"));
 check("run status keeps runtime output errors visible", bootstrap.includes("function detectRuntimeOutputError") && bootstrap.includes("lastRunErrorDetail") && bootstrap.includes('label: "模型请求失败"') && bootstrap.includes('runState.status === "error" || lastRunErrorDetail'));
 check("model connection test surfaces vision capability hint", bootstrap.includes("function modelCapabilityHint") && bootstrap.includes("visionCapabilityNotice") && bootstrap.includes("图片输入：当前模型可能不支持") && bootstrap.includes("currentModel.capabilities"));
-check("agent chat bubble never stays blank on empty model output", bootstrap.includes("Hi Code 正在思考") && bootstrap.includes("function finishAgentMessageIfEmpty") && bootstrap.includes("这次模型没有返回可显示内容") && css.includes(".agent-body.agent-empty") && css.includes(".agent-body.agent-error"));
+check("agent chat bubble never stays blank on empty model output", bootstrap.includes("createAssistantTurn") && bootstrap.includes("function finishAgentMessageIfEmpty") && bootstrap.includes("这次模型没有返回可显示内容") && bootstrap.includes("paintCurrentTurn") && css.includes(".agent-body.agent-empty") && css.includes(".agent-body.agent-error"));
+check("parity shell wires inline assistant turn narrative", bootstrap.includes("projectRuntimeEvent") && bootstrap.includes("renderAssistantTurn") && html.includes("parity-theme.css") && html.includes('data-theme="dark"') && html.includes('id="themeToggleBtn"'));
+check("parity shell demotes industrial/store from primary nav", html.includes('class="nav-row nav-advanced" id="industrialBtn"') && html.includes('class="nav-row nav-advanced" id="storeBtn"') && html.includes('class="nav-row nav-pinned" id="skillsBtn"') && html.includes('class="nav-row nav-pinned" id="mcpBtn"'));
 
 console.log("\n[renderer] state");
 resetState();

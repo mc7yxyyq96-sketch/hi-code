@@ -1,0 +1,369 @@
+{
+  "product": "Hi Code",
+  "program": "parity-superset",
+  "version": "0.7.0-parity.0",
+  "updatedAt": "2026-07-23",
+  "policy": {
+    "cleanRoom": true,
+    "forbidCopyFrom": [
+      "Yan Agent asar/source/assets"
+    ],
+    "supersetOf": [
+      "Yan Agent 1.3.0",
+      "OpenCode",
+      "Codex",
+      "Grok Build",
+      "OpenClaw",
+      "Hermes"
+    ],
+    "noPermanentCuts": true
+  },
+  "waves": {
+    "0": "shell + inline chat process + runtime projection",
+    "1": "Yan feature floor",
+    "2": "OpenCode/Codex/Grok coding agent",
+    "3": "OpenClaw/Hermes gateway",
+    "4": "full gates + packaging + advanced packs"
+  },
+  "items": [
+    {
+      "id": "A-01",
+      "wave": 0,
+      "area": "shell",
+      "title": "Dark default + light toggle",
+      "status": "complete",
+      "refs": [
+        "Yan",
+        "OpenCode"
+      ]
+    },
+    {
+      "id": "A-02",
+      "wave": 0,
+      "area": "shell",
+      "title": "Chat-first IA; demote industrial/store/arena from primary chrome",
+      "status": "complete",
+      "refs": [
+        "Yan",
+        "Codex"
+      ]
+    },
+    {
+      "id": "A-03",
+      "wave": 0,
+      "area": "shell",
+      "title": "Sidebar sessions + Skills/MCP/Automation nav",
+      "status": "complete",
+      "refs": [
+        "Yan"
+      ]
+    },
+    {
+      "id": "A-04",
+      "wave": 0,
+      "area": "composer",
+      "title": "Workspace/model/thinking pills + Stop",
+      "status": "pending",
+      "refs": [
+        "Yan"
+      ]
+    },
+    {
+      "id": "A-05",
+      "wave": 0,
+      "area": "chat-process",
+      "title": "Inline thinking → tool-step → text → change-summary",
+      "status": "complete",
+      "refs": [
+        "Yan",
+        "Codex",
+        "OpenCode"
+      ]
+    },
+    {
+      "id": "A-06",
+      "wave": 0,
+      "area": "chat-process",
+      "title": "Persist AssistantTurn tree; history rebuild",
+      "status": "pending",
+      "refs": [
+        "Yan",
+        "Codex"
+      ]
+    },
+    {
+      "id": "A-07",
+      "wave": 0,
+      "area": "permissions",
+      "title": "Allow / always / deny for shell",
+      "status": "pending",
+      "refs": [
+        "Yan",
+        "OpenCode"
+      ]
+    },
+    {
+      "id": "B-01",
+      "wave": 0,
+      "area": "runtime",
+      "title": "Project Runtime events into AssistantTurn",
+      "status": "complete",
+      "refs": [
+        "Hi Code",
+        "Yan"
+      ]
+    },
+    {
+      "id": "B-02",
+      "wave": 1,
+      "area": "tools",
+      "title": "File tool union (read/range/write/edit/patch/list/search)",
+      "status": "pending",
+      "refs": [
+        "Yan",
+        "OpenCode"
+      ]
+    },
+    {
+      "id": "B-03",
+      "wave": 1,
+      "area": "tools",
+      "title": "Code intelligence tools (outline/symbol/refs/index)",
+      "status": "pending",
+      "refs": [
+        "Yan"
+      ]
+    },
+    {
+      "id": "B-04",
+      "wave": 1,
+      "area": "tools",
+      "title": "Git tool union",
+      "status": "pending",
+      "refs": [
+        "Yan"
+      ]
+    },
+    {
+      "id": "B-05",
+      "wave": 1,
+      "area": "tools",
+      "title": "todo_write + spawn_subagent(s)",
+      "status": "pending",
+      "refs": [
+        "Yan",
+        "OpenCode"
+      ]
+    },
+    {
+      "id": "B-06",
+      "wave": 1,
+      "area": "policy",
+      "title": "Enforce read-before-edit",
+      "status": "pending",
+      "refs": [
+        "Yan"
+      ]
+    },
+    {
+      "id": "B-07",
+      "wave": 1,
+      "area": "runtime",
+      "title": "Visible context compact + interrupt",
+      "status": "pending",
+      "refs": [
+        "OpenCode",
+        "Hi Code"
+      ]
+    },
+    {
+      "id": "C-01",
+      "wave": 1,
+      "area": "skills",
+      "title": "Skills market page",
+      "status": "pending",
+      "refs": [
+        "Yan",
+        "Hermes"
+      ]
+    },
+    {
+      "id": "C-02",
+      "wave": 1,
+      "area": "mcp",
+      "title": "MCP manage page",
+      "status": "pending",
+      "refs": [
+        "Yan",
+        "OpenCode"
+      ]
+    },
+    {
+      "id": "C-03",
+      "wave": 1,
+      "area": "automation",
+      "title": "Automation / schedules page",
+      "status": "pending",
+      "refs": [
+        "Yan",
+        "Hermes"
+      ]
+    },
+    {
+      "id": "D-01",
+      "wave": 1,
+      "area": "terminal",
+      "title": "Built-in PTY terminal panel",
+      "status": "pending",
+      "refs": [
+        "Yan"
+      ]
+    },
+    {
+      "id": "D-02",
+      "wave": 1,
+      "area": "browser",
+      "title": "Built-in browser panel",
+      "status": "pending",
+      "refs": [
+        "Yan"
+      ]
+    },
+    {
+      "id": "D-03",
+      "wave": 1,
+      "area": "codemap",
+      "title": "Project code map",
+      "status": "pending",
+      "refs": [
+        "Yan"
+      ]
+    },
+    {
+      "id": "D-04",
+      "wave": 1,
+      "area": "memory",
+      "title": "Workspace memory + run change rollback",
+      "status": "pending",
+      "refs": [
+        "Yan",
+        "Hermes"
+      ]
+    },
+    {
+      "id": "E-01",
+      "wave": 2,
+      "area": "agents",
+      "title": "Build/Plan agent modes + permission matrix",
+      "status": "pending",
+      "refs": [
+        "OpenCode",
+        "Codex"
+      ]
+    },
+    {
+      "id": "E-02",
+      "wave": 2,
+      "area": "tools",
+      "title": "LSP/grep/glob depth parity",
+      "status": "pending",
+      "refs": [
+        "OpenCode",
+        "Grok Build"
+      ]
+    },
+    {
+      "id": "E-03",
+      "wave": 2,
+      "area": "runtime",
+      "title": "Headless/script entry + ACP stub",
+      "status": "pending",
+      "refs": [
+        "Grok Build"
+      ]
+    },
+    {
+      "id": "F-01",
+      "wave": 3,
+      "area": "gateway",
+      "title": "Local Gateway process",
+      "status": "pending",
+      "refs": [
+        "OpenClaw",
+        "Hermes"
+      ]
+    },
+    {
+      "id": "F-02",
+      "wave": 3,
+      "area": "channels",
+      "title": "Multi-channel adapters (Telegram+1)",
+      "status": "pending",
+      "refs": [
+        "OpenClaw"
+      ]
+    },
+    {
+      "id": "F-03",
+      "wave": 3,
+      "area": "remote",
+      "title": "Desktop connect remote Gateway",
+      "status": "pending",
+      "refs": [
+        "Hermes"
+      ]
+    },
+    {
+      "id": "F-04",
+      "wave": 3,
+      "area": "admin",
+      "title": "Control UI for MCP/channels/memory/webhooks",
+      "status": "pending",
+      "refs": [
+        "OpenClaw",
+        "Hermes"
+      ]
+    },
+    {
+      "id": "F-05",
+      "wave": 3,
+      "area": "relay",
+      "title": "Wire NewAPI / Model Gateway (no client master keys)",
+      "status": "pending",
+      "refs": [
+        "Hi Code"
+      ]
+    },
+    {
+      "id": "G-01",
+      "wave": 4,
+      "area": "gates",
+      "title": "Full parity checklist evidence + E2E",
+      "status": "pending",
+      "refs": [
+        "all"
+      ]
+    },
+    {
+      "id": "G-02",
+      "wave": 4,
+      "area": "packaging",
+      "title": "Signed-ready unsigned installers mac/win",
+      "status": "pending",
+      "refs": [
+        "Yan",
+        "Hi Code"
+      ]
+    },
+    {
+      "id": "G-03",
+      "wave": 4,
+      "area": "advanced",
+      "title": "Industrial/store/arena as advanced pack (not primary chrome)",
+      "status": "pending",
+      "refs": [
+        "Hi Code"
+      ]
+    }
+  ]
+}

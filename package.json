@@ -1,7 +1,7 @@
 {
   "name": "hi-code",
-  "version": "0.6.0-alpha.6",
-  "description": "Hi Code — a desktop coding agent for any OpenAI-compatible model.",
+  "version": "0.7.0-parity.0",
+  "description": "Hi Code \u2014 a desktop coding agent for any OpenAI-compatible model.",
   "author": "Hi Code contributors",
   "license": "MIT",
   "homepage": "https://github.com/mc7yxyyq96-sketch/hi-code#readme",
@@ -56,7 +56,8 @@
     "app": "npm run build && electron .",
     "dist:mac": "npm run build && electron-builder --mac dmg",
     "dist:win": "npm run build && electron-builder --win --x64",
-    "dist:all": "npm run build && electron-builder --mac dmg --win --x64"
+    "dist:all": "npm run build && electron-builder --mac dmg --win --x64",
+    "test:assistant-turn": "node test/assistant-turn-tests.mjs"
   },
   "dependencies": {
     "chalk": "^5.3.0",

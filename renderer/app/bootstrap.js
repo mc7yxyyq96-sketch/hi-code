@@ -23,9 +23,21 @@ import { createToastController } from "../components/toast.js";
 import { $ } from "../utils/dom.js";
 import { escapeHtml, formatDuration, shortPath } from "../utils/format.js";
 import { parseJsonObject, validateQuickProfileFields } from "../utils/validation.js";
+import {
+  applyChangeSummary,
+  appendTextDelta,
+  createAssistantTurn,
+  finalizeTurn,
+  projectRuntimeEvent,
+  serializeTurn,
+} from "./assistant-turn.js";
+import { renderAssistantTurn } from "../components/chat-process.js";
 
-/* Hi Code renderer — Codex-like workspace UI. */
+/* Hi Code renderer — chat-first parity shell (clean-room). */
 const SIDEBAR_COLLAPSED_KEY = "hicode.sidebarCollapsed";
+const THEME_KEY = "hicode.parity.theme";
+const PANELS_KEY = "hicode.parity.panels";
+const ADVANCED_KEY = "hicode.parity.advanced";
 
 export function bootstrapHiCode() {
 if (!window.hicode) {
@@ -1366,6 +1378,7 @@ const queueOpenJob = composer.querySelector("#queueOpenJob");
 const queueClear = composer.querySelector("#queueClear");
 
 let busy = false, agentBody = null, agentRaw = "", yolo = false, cwd = "", inChat = false;
+let currentAssistantTurn = null;
 let currentModel = { model: "", baseURL: "", capabilities: null };
 let pendingAttachments = [];
 let queuedInputs = [];
@@ -2107,13 +2120,32 @@ function addUserMessage(text, attachments = []) {
   el.appendChild(bubble);
   chat.appendChild(el); scrollDown();
 }
+function stripAnsi(value) {
+  return String(value || "").replace(/\u001b\[[0-9;]*m/g, "");
+}
+
+function paintCurrentTurn() {
+  if (!agentBody || !currentAssistantTurn) return;
+  renderAssistantTurn(agentBody, currentAssistantTurn);
+  if (agentBody.closest(".msg.agent")) {
+    agentBody.closest(".msg.agent").dataset.assistantTurn = JSON.stringify(serializeTurn(currentAssistantTurn));
+  }
+}
+
 function startAgentMessage() {
   const el = document.createElement("div"); el.className = "msg agent";
   el.innerHTML = `<div class="avatar"><span class="logo"></span></div><div class="agent-body agent-pending"></div>`;
   chat.appendChild(el);
   agentBody = el.querySelector(".agent-body");
-  agentBody.textContent = "Hi Code 正在思考…";
   agentRaw = "";
+  currentAssistantTurn = createAssistantTurn({ status: "working" });
+  projectRuntimeEvent(currentAssistantTurn, {
+    type: "turn:update",
+    title: "Thinking",
+    summary: "正在理解任务…",
+    payload: { phase: "thinking" },
+  });
+  paintCurrentTurn();
   scrollDown();
 }
 function appendOutput(chunk) {
@@ -2122,10 +2154,12 @@ function appendOutput(chunk) {
     return;
   }
   if (!agentBody) startAgentMessage();
+  if (!currentAssistantTurn) currentAssistantTurn = createAssistantTurn({ status: "working" });
   const stick = atBottom();
   agentRaw += chunk;
-  agentBody.classList.remove("agent-pending", "agent-empty", "agent-error");
-  agentBody.innerHTML = ansiToHtml(agentRaw);
+  const plain = stripAnsi(chunk);
+  if (plain.trim()) appendTextDelta(currentAssistantTurn, plain);
+  paintCurrentTurn();
   const outputError = detectRuntimeOutputError(chunk);
   if (outputError) {
     lastRunErrorDetail = outputError;
@@ -2144,7 +2178,14 @@ function appendOutput(chunk) {
   if (stick) scrollDown();
 }
 function finishAgentMessageIfEmpty(status = "done", detail = "") {
-  if (!agentBody || agentRaw.trim()) return;
+  if (currentAssistantTurn) {
+    finalizeTurn(currentAssistantTurn, status, detail);
+    if (diffs?.length) applyChangeSummary(currentAssistantTurn, diffs);
+    paintCurrentTurn();
+  }
+  if (!agentBody) return;
+  const hasNarrative = !!(currentAssistantTurn?.items?.length || agentRaw.trim());
+  if (hasNarrative) return;
   agentBody.classList.remove("agent-pending", "agent-empty", "agent-error");
   if (status === "error" || status === "denied" || status === "interrupted") {
     agentBody.classList.add("agent-error");
@@ -2411,6 +2452,14 @@ function addToolEvent(event) {
   syncState({ toolEvents });
   updateRunStatusFromEvent(event);
   renderTimeline();
+  if (!currentAssistantTurn && busy) currentAssistantTurn = createAssistantTurn({ status: "working" });
+  if (currentAssistantTurn) {
+    if (!agentBody) startAgentMessage();
+    projectRuntimeEvent(currentAssistantTurn, event);
+    if (event?.type === "diff:created" && diffs?.length) applyChangeSummary(currentAssistantTurn, diffs);
+    paintCurrentTurn();
+    scrollDown();
+  }
 }
 
 function coalesceToolEvents(events) {
@@ -2920,12 +2969,19 @@ api.onTurnDone(() => {
   runningSessionId = null;
   if (currentSessionId === null && activeRuntimeSessionId) currentSessionId = activeRuntimeSessionId;
   agentBody = null;
+  currentAssistantTurn = null;
   loadSessions();
   refreshWorkbench();
   setTimeout(runNextQueuedInput, 80);
 });
 api.onToolEvent?.((event) => addToolEvent(event));
-api.onDiffsChanged?.((nextDiffs) => setDiffs(nextDiffs));
+api.onDiffsChanged?.((nextDiffs) => {
+  setDiffs(nextDiffs);
+  if (currentAssistantTurn) {
+    applyChangeSummary(currentAssistantTurn, nextDiffs);
+    paintCurrentTurn();
+  }
+});
 api.onRuntimeQueue?.((state) => {
   runtimeQueueState = normalizeRuntimeQueue(state);
   syncState({ runtimeQueueState });
@@ -3327,7 +3383,40 @@ function initSidebarCollapse() {
   };
 }
 
+function applyParityTheme(theme) {
+  const next = theme === "light" ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", next);
+  try { localStorage.setItem(THEME_KEY, next); } catch { /* ignore */ }
+}
+
+function initParityShell() {
+  let theme = "dark";
+  try { theme = localStorage.getItem(THEME_KEY) || "dark"; } catch { theme = "dark"; }
+  applyParityTheme(theme);
+
+  try {
+    if (localStorage.getItem(PANELS_KEY) === "1") document.body.classList.add("panels-open");
+    if (localStorage.getItem(ADVANCED_KEY) === "1") document.body.classList.add("show-advanced");
+  } catch { /* ignore */ }
+
+  $("themeToggleBtn")?.addEventListener("click", () => {
+    const current = document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark";
+    applyParityTheme(current === "dark" ? "light" : "dark");
+  });
+  $("panelsToggleBtn")?.addEventListener("click", () => {
+    document.body.classList.toggle("panels-open");
+    try { localStorage.setItem(PANELS_KEY, document.body.classList.contains("panels-open") ? "1" : "0"); } catch { /* ignore */ }
+  });
+  $("advancedToggleBtn")?.addEventListener("click", () => {
+    document.body.classList.toggle("show-advanced");
+    try { localStorage.setItem(ADVANCED_KEY, document.body.classList.contains("show-advanced") ? "1" : "0"); } catch { /* ignore */ }
+  });
+  $("openSkillsCard")?.addEventListener("click", () => showCapabilities("skills"));
+  $("openMcpCard")?.addEventListener("click", () => showCapabilities("mcp"));
+}
+
 initSidebarCollapse();
+initParityShell();
 $("newChat").onclick = startNewConversation;
 $("searchToggle").onclick = () => {
   const w = $("searchWrap"); w.classList.toggle("hidden");
