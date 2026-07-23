@@ -38,6 +38,8 @@ const bootstrap = fs.readFileSync(path.join(root, "renderer", "app", "bootstrap.
 const html = fs.readFileSync(path.join(root, "renderer", "index.html"), "utf8");
 const css = fs.readFileSync(path.join(root, "renderer", "style.css"), "utf8");
 const toastSource = fs.readFileSync(path.join(root, "renderer", "components", "toast.js"), "utf8");
+const chatProcess = fs.readFileSync(path.join(root, "renderer", "components", "chat-process.js"), "utf8");
+const assistantTurn = fs.readFileSync(path.join(root, "renderer", "app", "assistant-turn.js"), "utf8");
 check("renderer.js is a thin module entry", rendererEntry.includes("bootstrapHiCode") && rendererEntry.split("\n").length <= 6);
 check("index.html loads renderer as ES module", html.includes('type="module" src="renderer.js"'));
 check("bootstrap uses API wrapper", bootstrap.includes("createHiCodeApi(window.hicode"));
@@ -114,6 +116,8 @@ check("parity shell wires inline assistant turn narrative", bootstrap.includes("
 check("parity shell demotes industrial/store from primary nav", html.includes('class="nav-row nav-advanced" id="industrialBtn"') && html.includes('class="nav-row nav-advanced" id="storeBtn"') && html.includes('class="nav-row nav-pinned" id="skillsBtn"') && html.includes('class="nav-row nav-pinned" id="mcpBtn"'));
 check("parity shell pins automation and composer workspace/thinking pills", html.includes('id="automationBtn"') && html.includes('id="automationView"') && html.includes('id="workspacePill"') && html.includes('id="thinkingPill"') && bootstrap.includes("mountAutomationPanel") && bootstrap.includes("showAutomation") && bootstrap.includes("updateComposerPills"));
 check("skills/mcp pages expose search and store entry", html.includes('id="capSearch"') && bootstrap.includes("capabilityMatchesQuery") && bootstrap.includes("技能商店") && bootstrap.includes("MCP 商店"));
+check("parity wave1 surfaces browser/codemap/memory", html.includes('id="browserToggleBtn"') && html.includes('id="browserPanel"') && html.includes('id="codemapBtn"') && html.includes('id="memoryBtn"') && bootstrap.includes("mountBrowserPanel") && bootstrap.includes("mountCodemapPanel") && bootstrap.includes("mountMemoryPanel") && bootstrap.includes("showCodemap") && bootstrap.includes("showMemory"));
+check("compact narrative is visible in chat process", bootstrap.includes('phase: "compacting"') && chatProcess.includes("buildCompactElement") && assistantTurn.includes('phase === "compacted"'));
 
 console.log("\n[renderer] state");
 resetState();

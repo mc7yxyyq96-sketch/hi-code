@@ -422,6 +422,248 @@ body.terminal-open #main {
   padding-bottom: min(42vh, 420px);
 }
 
+.hc-browser-panel {
+  position: fixed;
+  left: var(--hc-sidebar-w);
+  right: 0;
+  bottom: 0;
+  height: 0;
+  overflow: hidden;
+  background: #111;
+  border-top: 1px solid var(--hc-border);
+  z-index: 41;
+  display: flex;
+  flex-direction: column;
+  transition: height 160ms ease;
+}
+
+body.browser-open .hc-browser-panel {
+  height: min(56vh, 560px);
+}
+
+body.browser-open #main {
+  padding-bottom: min(56vh, 560px);
+}
+
+.hc-browser-chrome {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--hc-border);
+  background: #161616;
+}
+
+.hc-browser-form {
+  flex: 1;
+}
+
+.hc-browser-form input {
+  width: 100%;
+  border: 1px solid var(--hc-border);
+  background: #111;
+  color: var(--hc-text);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
+.hc-browser-host {
+  flex: 1;
+  min-height: 180px;
+  background: #0b0b0b;
+}
+
+.hc-browser-status {
+  padding: 4px 12px 8px;
+  font-size: 11px;
+  color: var(--hc-text-faint);
+}
+
+.hc-compact-round {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  margin: 8px 0;
+  padding: 8px 10px;
+  border: 1px solid var(--hc-border);
+  border-radius: 10px;
+  background: rgba(120, 160, 255, 0.08);
+  color: var(--hc-text-muted);
+  font-size: 12px;
+}
+
+.hc-compact-round.is-running {
+  border-color: rgba(120, 160, 255, 0.35);
+}
+
+.hc-compact-label {
+  font-weight: 600;
+  color: var(--hc-text);
+}
+
+.codemap-shell,
+.memory-shell {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 28px 24px 48px;
+}
+
+.codemap-head,
+.memory-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.codemap-head h2,
+.memory-head h2 {
+  margin: 0 0 6px;
+  font-size: 28px;
+}
+
+.codemap-head p,
+.memory-head p {
+  margin: 0;
+  color: var(--hc-text-faint);
+  font-size: 13px;
+}
+
+.codemap-summary,
+.memory-summary {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.codemap-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 14px;
+}
+
+.codemap-pane,
+.memory-form,
+.memory-item {
+  border: 1px solid var(--hc-border);
+  background: var(--hc-bg-elev);
+  border-radius: 14px;
+}
+
+.codemap-pane-title {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--hc-border);
+  font-size: 12px;
+  color: var(--hc-text-faint);
+}
+
+.codemap-tree,
+.codemap-symbols {
+  max-height: 62vh;
+  overflow: auto;
+  padding: 8px 0;
+}
+
+.codemap-file,
+.codemap-symbol {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  color: var(--hc-text);
+  padding: 6px 12px;
+  cursor: pointer;
+  font: inherit;
+}
+
+.codemap-file:hover,
+.codemap-symbol:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.codemap-dir > summary {
+  cursor: pointer;
+  padding: 6px 0;
+  color: var(--hc-text-muted);
+}
+
+.codemap-symbol-name {
+  display: block;
+  font-weight: 600;
+}
+
+.codemap-symbol-meta {
+  display: block;
+  font-size: 11px;
+  color: var(--hc-text-faint);
+}
+
+.memory-form {
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.memory-form textarea,
+.memory-form input {
+  border: 1px solid var(--hc-border);
+  background: #111;
+  color: var(--hc-text);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font: inherit;
+}
+
+.memory-form-actions,
+.memory-head-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.memory-list {
+  display: grid;
+  gap: 10px;
+}
+
+.memory-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px;
+}
+
+.memory-item.pinned {
+  border-color: rgba(120, 160, 255, 0.35);
+}
+
+.memory-text {
+  white-space: pre-wrap;
+  margin-bottom: 6px;
+}
+
+.memory-meta {
+  font-size: 12px;
+  color: var(--hc-text-faint);
+}
+
+.memory-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-content: flex-start;
+}
+
+@media (max-width: 860px) {
+  .codemap-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .hc-term-head {
   display: flex;
   justify-content: space-between;

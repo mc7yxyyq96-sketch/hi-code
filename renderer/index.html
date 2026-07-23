@@ -62,6 +62,8 @@
             <button class="nav-row nav-pinned" id="skillsBtn" title="技能"><span class="i-spark"></span><span class="nav-label">技能</span></button>
             <button class="nav-row nav-pinned" id="mcpBtn" title="MCP"><span class="i-network"></span><span class="nav-label">MCP</span></button>
             <button class="nav-row nav-pinned" id="automationBtn" title="自动化"><span class="i-stack"></span><span class="nav-label">自动化</span></button>
+            <button class="nav-row nav-pinned" id="codemapBtn" title="Code Map"><span class="i-folder"></span><span class="nav-label">Code Map</span></button>
+            <button class="nav-row nav-pinned" id="memoryBtn" title="记忆"><span class="i-chat"></span><span class="nav-label">记忆</span></button>
             <button class="nav-row nav-optional" id="searchToggle" title="搜索"><span class="i-search"></span><span class="nav-label">搜索</span></button>
             <button class="nav-row nav-optional" id="filesBtn" title="文件"><span class="i-folder"></span><span class="nav-label">文件</span></button>
             <button class="nav-row nav-optional" id="gitBtn" title="Git"><span class="i-git"></span><span class="nav-label">Git</span></button>
@@ -110,6 +112,7 @@
           <div class="workspace-actions parity-toolbar">
             <button id="themeToggleBtn" class="parity-chip" type="button" title="切换浅色/深色">主题</button>
             <button id="terminalToggleBtn" class="parity-chip" type="button" title="内置终端">终端</button>
+            <button id="browserToggleBtn" class="parity-chip" type="button" title="内置浏览器">浏览器</button>
             <button id="panelsToggleBtn" class="parity-chip" type="button" title="显示时间线与改动旁栏">过程旁栏</button>
             <button id="advancedToggleBtn" class="parity-chip" type="button" title="显示工业/商城等高级入口">高级</button>
             <button id="diffBtn" class="top-btn"><span class="i-stack"></span> 改动</button>
@@ -217,6 +220,14 @@
 
         <section id="automationView" class="hidden">
           <div id="automationRoot"></div>
+        </section>
+
+        <section id="codemapView" class="hidden">
+          <div id="codemapRoot"></div>
+        </section>
+
+        <section id="memoryView" class="hidden">
+          <div id="memoryRoot"></div>
         </section>
 
         <section id="commandView" class="hidden">
@@ -790,6 +801,7 @@
     </div>
 
     <aside id="terminalPanel" class="hc-terminal-panel" aria-label="内置终端"></aside>
+    <aside id="browserPanel" class="hc-browser-panel" aria-label="内置浏览器"></aside>
 
     <div id="storeConfirm" class="modal hidden">
       <div class="modal-card store-confirm-card">

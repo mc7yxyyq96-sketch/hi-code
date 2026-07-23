@@ -22,6 +22,9 @@ import { registerAppInfoIpc } from "../services/app-info-service.mjs";
 import { registerUsageIpc } from "../services/usage-service.mjs";
 import { registerTerminalIpc } from "../services/terminal-service.mjs";
 import { registerAutomationIpc } from "../services/automation-service.mjs";
+import { registerBrowserIpc } from "../services/browser-service.mjs";
+import { registerCodemapIpc } from "../services/codemap-service.mjs";
+import { registerMemoryIpc } from "../services/memory-service.mjs";
 import { BrowserWindow } from "electron";
 
 export function registerIpcHandlers({ services, ipcMain, dialog, shell, logger = null }) {
@@ -52,6 +55,9 @@ export function registerIpcHandlers({ services, ipcMain, dialog, shell, logger =
   registerUsageIpc({ register, usage: services.usage });
   registerTerminalIpc({ register, terminal: services.terminal, BrowserWindow });
   registerAutomationIpc({ register, automation: services.automation });
+  registerBrowserIpc({ register, browser: services.browser });
+  registerCodemapIpc({ register, codemap: services.codemap });
+  registerMemoryIpc({ register, memory: services.memory });
 
   return register;
 }

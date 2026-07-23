@@ -52,6 +52,23 @@ function testPermissionWaiting() {
   assert.equal(turn.items.at(-1)?.type, "permission");
 }
 
+function testCompactProjection() {
+  const turn = createAssistantTurn();
+  projectRuntimeEvent(turn, {
+    type: "turn:update",
+    summary: "12000/16000",
+    payload: { phase: "compacting" },
+  });
+  projectRuntimeEvent(turn, {
+    type: "turn:update",
+    summary: "已压缩 8 条历史消息",
+    payload: { phase: "compacted", removed: 8 },
+  });
+  assert.equal(turn.items.filter((item) => item.type === "compact").length, 2);
+  assert.equal(turn.items.at(-1)?.removed, 8);
+}
+
 testProjectionPipeline();
 testPermissionWaiting();
+testCompactProjection();
 console.log("assistant-turn-tests: ok");

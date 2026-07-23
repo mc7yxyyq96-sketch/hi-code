@@ -53,6 +53,9 @@ import { createAppInfoService } from "./services/app-info-service.mjs";
 import { createUsageService } from "./services/usage-service.mjs";
 import { createTerminalService } from "./services/terminal-service.mjs";
 import { createAutomationService } from "./services/automation-service.mjs";
+import { createBrowserService } from "./services/browser-service.mjs";
+import { createCodemapService } from "./services/codemap-service.mjs";
+import { createMemoryService } from "./services/memory-service.mjs";
 import { recordUsage } from "../dist/usage-store.js";
 import { openMacApp, parseOpenAppRequest } from "./services/native-open-service.mjs";
 import { BUILTIN_STORE_CATALOG } from "./store-catalog.mjs";
@@ -73,6 +76,7 @@ const PATCH_ARENA_ARTIFACT_DIR = path.join(HICODE_DIR, "patch-arena", "artifacts
 const DOMAIN_PACK_DIR = path.join(HICODE_DIR, "domain-packs");
 const AGENT_TEAM_DIR = path.join(HICODE_DIR, "agent-team");
 const AUTOMATION_PATH = path.join(HICODE_DIR, "automations.json");
+const MEMORY_DIR = path.join(HICODE_DIR, "memory");
 const CODEX_DIR = path.join(os.homedir(), ".codex");
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -2554,6 +2558,13 @@ function createMainServices() {
     }),
     terminal: createTerminalService({ getCwd: () => cwd }),
     automation: createAutomationService({ storePath: AUTOMATION_PATH }),
+    browser: createBrowserService({ getWindow: () => win }),
+    codemap: createCodemapService({ getCwd: () => cwd }),
+    memory: createMemoryService({
+      rootDir: MEMORY_DIR,
+      getCwd: () => cwd,
+      rejectPendingDiffs: () => rejectAllDiffs(),
+    }),
     workspace: createWorkspaceService({
       dialog,
       getWindow: () => win,

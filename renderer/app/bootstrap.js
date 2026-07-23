@@ -16,6 +16,9 @@ import { mountSampleProjectPanel } from "../components/sample-project-panel.js";
 import { capabilityDescription, capabilityLifecycleState, capabilityMeta, CAPABILITY_META } from "../components/mcp-panel.js";
 import { mountAutomationPanel } from "../components/automation-panel.js";
 import { mountTerminalPanel } from "../components/terminal-panel.js";
+import { mountBrowserPanel } from "../components/browser-panel.js";
+import { mountCodemapPanel } from "../components/codemap-panel.js";
+import { mountMemoryPanel } from "../components/memory-panel.js";
 import { normalizeRuntimeQueue, summarizeRunText } from "../components/runtime-panel.js";
 import { modelPickerSection, pickerRow } from "../components/settings-panel.js";
 import { renderUsagePanel } from "../components/settings-usage-panel.js";
@@ -1309,6 +1312,8 @@ const filesModal = $("files"), filePath = $("filePath"), fileList = $("fileList"
 const capabilityView = $("capabilityView"), capTitle = $("capTitle"), capSubtitle = $("capSubtitle"), capSummary = $("capSummary"), capList = $("capList"), capActions = $("capActions");
 const capSearch = $("capSearch");
 const automationView = $("automationView");
+const codemapView = $("codemapView");
+const memoryView = $("memoryView");
 const commandView = $("commandView"), commandSearch = $("commandSearch"), commandSummary = $("commandSummary"), commandList = $("commandList"), commandComposerSlot = $("commandComposerSlot"), commandFocusInput = $("commandFocusInput"), commandRunInput = $("commandRunInput");
 const gitView = $("gitView"), gitSub = $("gitSub"), gitBranch = $("gitBranch"), gitDirty = $("gitDirty"), gitStaged = $("gitStaged"), gitUnstaged = $("gitUnstaged");
 const jobView = $("jobView"), jobSummary = $("jobSummary"), jobList = $("jobList"), jobDetail = $("jobDetail"), jobRefresh = $("jobRefresh"), jobStatusText = $("jobStatusText");
@@ -1359,7 +1364,7 @@ const aboutRepoBtn = $("aboutRepoBtn"), aboutReleasesBtn = $("aboutReleasesBtn")
 const providerHint = $("providerHint");
 const quickBaseURL = $("quickBaseURL"), quickApiKey = $("quickApiKey"), quickModel = $("quickModel"), quickContext = $("quickContext");
 const advancedConfig = $("advanced-config");
-const routeViews = { home, chatview, capabilityView, automationView, commandView, gitView, jobView, arenaView, industrialView };
+const routeViews = { home, chatview, capabilityView, automationView, codemapView, memoryView, commandView, gitView, jobView, arenaView, industrialView };
 
 // Build the single composer from the template, start it in the home slot.
 const composer = $("composer-tpl").content.firstElementChild.cloneNode(true);
@@ -2001,6 +2006,50 @@ async function showAutomation() {
   await automationPanel.refresh();
 }
 
+async function showCodemap() {
+  jobCenter.stop();
+  patchArena.stop();
+  industrialProject.stop();
+  domainPacks.stop();
+  agentTeam.stop();
+  toolchain.stop();
+  qualityGates.stop();
+  releaseCenter.stop();
+  inChat = false;
+  syncState({ inChat });
+  showRoute({
+    main,
+    views: routeViews,
+    route: "codemapView",
+    mainClass: "codemap",
+    activeNav: "codemapBtn",
+    setActiveNav,
+  });
+  await codemapPanel.refresh();
+}
+
+async function showMemory() {
+  jobCenter.stop();
+  patchArena.stop();
+  industrialProject.stop();
+  domainPacks.stop();
+  agentTeam.stop();
+  toolchain.stop();
+  qualityGates.stop();
+  releaseCenter.stop();
+  inChat = false;
+  syncState({ inChat });
+  showRoute({
+    main,
+    views: routeViews,
+    route: "memoryView",
+    mainClass: "memory",
+    activeNav: "memoryBtn",
+    setActiveNav,
+  });
+  await memoryPanel.refresh();
+}
+
 function showCommandCenter() {
   jobCenter.stop();
   patchArena.stop();
@@ -2406,6 +2455,7 @@ function turnUpdateLabel(event) {
   const phase = event.payload?.phase;
   if (phase === "thinking") return "模型思考中";
   if (phase === "compacting") return "压缩上下文";
+  if (phase === "compacted") return "上下文已压缩";
   if (phase === "calling-tools") return "准备调用工具";
   if (phase === "interrupted") return "正在停止";
   return event.title || "任务进行中";
@@ -3371,6 +3421,22 @@ function executeCommand(name) {
     return;
   }
   if (name === "/tools") return showIndustrialProject();
+  if (name === "/codemap" || name === "/map") return showCodemap();
+  if (name === "/memory") return showMemory();
+  if (name === "/compact") {
+    showChat();
+    if (!agentBody || !currentAssistantTurn) startAgentMessage();
+    projectRuntimeEvent(currentAssistantTurn, {
+      type: "turn:update",
+      title: "Compacting context",
+      summary: "正在按用户请求压缩上下文…",
+      payload: { phase: "compacting" },
+    });
+    paintCurrentTurn();
+    updateRunStatus({ label: "压缩上下文", detail: "手动 /compact", status: "running" });
+    runLine(name);
+    return;
+  }
   if (name === "/clear") {
     chat.innerHTML = "";
     api.send("/clear");
@@ -3474,7 +3540,25 @@ function initParityShell() {
     onData: (cb) => api.onTerminalData?.(cb),
     onExit: (cb) => api.onTerminalExit?.(cb),
   });
-  $("terminalToggleBtn")?.addEventListener("click", () => terminal.toggle());
+  const browser = mountBrowserPanel({
+    root: $("browserPanel"),
+    openBrowser: (payload) => api.browserOpen(payload),
+    closeBrowser: () => api.browserClose(),
+    setBounds: (bounds) => api.browserBounds(bounds),
+    navigate: (url) => api.browserNavigate({ url }),
+    back: () => api.browserBack(),
+    forward: () => api.browserForward(),
+    reload: () => api.browserReload(),
+    onMeta: (cb) => api.onBrowserMeta?.(cb),
+  });
+  $("terminalToggleBtn")?.addEventListener("click", async () => {
+    if (browser.isOpen()) await browser.close();
+    terminal.toggle();
+  });
+  $("browserToggleBtn")?.addEventListener("click", async () => {
+    if (document.body.classList.contains("terminal-open")) terminal.close();
+    await browser.toggle();
+  });
 }
 
 const automationPanel = mountAutomationPanel({
@@ -3492,6 +3576,30 @@ const automationPanel = mountAutomationPanel({
     input.focus();
     await submit();
   },
+  onToast: (kind, message) => {
+    if (kind === "error") toast.error(message);
+    else toast.ok(message);
+  },
+});
+
+const codemapPanel = mountCodemapPanel({
+  root: $("codemapRoot"),
+  scan: () => api.scanCodemap({ cwd }),
+  onOpenFile: (filePath, line) => {
+    showHome();
+    input.value = `请打开并说明 ${filePath}${line ? `:${line}` : ""}`;
+    input.focus();
+  },
+});
+
+const memoryPanel = mountMemoryPanel({
+  root: $("memoryRoot"),
+  listMemory: (payload) => api.listMemory(payload),
+  addMemory: (payload) => api.addMemory(payload),
+  removeMemory: (payload) => api.removeMemory(payload),
+  pinMemory: (payload) => api.pinMemory(payload),
+  rollbackRun: () => api.rollbackRunChanges(),
+  getWorkspace: async () => cwd || (await api.getCwd()) || "",
   onToast: (kind, message) => {
     if (kind === "error") toast.error(message);
     else toast.ok(message);
@@ -3589,6 +3697,8 @@ $("skillsBtn").onclick = () => showCapabilities("skills");
 $("agentsBtn").onclick = () => showCapabilities("agents");
 $("mcpBtn").onclick = () => showCapabilities("mcp");
 $("automationBtn").onclick = () => showAutomation();
+$("codemapBtn").onclick = () => showCodemap();
+$("memoryBtn").onclick = () => showMemory();
 storeConfirmClose.onclick = closeStoreInstallPreview;
 storeConfirmCancel.onclick = closeStoreInstallPreview;
 storeConfirmInstall.onclick = confirmStoreInstall;

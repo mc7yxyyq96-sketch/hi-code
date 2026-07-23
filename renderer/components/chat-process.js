@@ -95,6 +95,16 @@ export function buildTextRoundElement(content) {
   return el;
 }
 
+export function buildCompactElement(item = {}) {
+  const el = document.createElement("div");
+  el.className = `hc-compact-round${item.phase === "running" ? " is-running" : ""}`;
+  const label = item.phase === "running" ? "正在压缩上下文" : "上下文已压缩";
+  const detail = item.content || (item.removed ? `移除 ${item.removed} 条历史` : "");
+  el.innerHTML = `<span class="hc-compact-label">${label}</span><span class="hc-compact-detail"></span>`;
+  el.querySelector(".hc-compact-detail").textContent = detail;
+  return el;
+}
+
 export function buildSystemNoteElement(content) {
   const el = document.createElement("div");
   el.className = "hc-system-round";
@@ -189,6 +199,8 @@ export function renderAssistantTurn(bodyEl, turn, { preserveScroll = true } = {}
       activity.appendChild(buildToolStepElement(item));
     } else if (item.type === "text") {
       activity.appendChild(buildTextRoundElement(item.content));
+    } else if (item.type === "compact") {
+      activity.appendChild(buildCompactElement(item));
     } else if (item.type === "system") {
       activity.appendChild(buildSystemNoteElement(item.content));
     } else if (item.type === "permission") {

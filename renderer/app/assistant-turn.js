@@ -142,8 +142,19 @@ export function projectRuntimeEvent(turn, event = {}) {
     }
     if (phase === "compacting") {
       turn.items.push({
-        type: "system",
+        type: "compact",
+        phase: "running",
         content: event.summary || "正在压缩上下文…",
+        at: Date.now(),
+      });
+      turn.status = "working";
+    }
+    if (phase === "compacted") {
+      turn.items.push({
+        type: "compact",
+        phase: "done",
+        content: event.summary || "上下文已压缩",
+        removed: Number(event.payload?.removed || 0),
         at: Date.now(),
       });
     }

@@ -54,7 +54,22 @@ export async function runLoop(
         if (!quiet) startSpinner("compacting context");
         const removed = await compact(p, session).catch(() => 0);
         if (!quiet) stopSpinner();
-        if (removed > 0 && !quiet) ui.info(`  ↳ compacted ${removed} messages to stay within context`);
+        if (removed > 0) {
+          env.emitEvent?.({
+            type: "turn:update",
+            tool: "agent",
+            title: "Context compacted",
+            summary: `已压缩 ${removed} 条历史消息（${est}/${p.contextWindow} tokens）`,
+            status: "done",
+            payload: {
+              phase: "compacted",
+              removed,
+              estimatedTokens: est,
+              contextWindow: p.contextWindow,
+            },
+          });
+          if (!quiet) ui.info(`  ↳ compacted ${removed} messages to stay within context`);
+        }
       }
     }
 

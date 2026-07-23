@@ -171,7 +171,7 @@
       "wave": 1,
       "area": "runtime",
       "title": "Visible context compact + interrupt",
-      "status": "pending",
+      "status": "complete",
       "refs": [
         "OpenCode",
         "Hi Code"
@@ -225,7 +225,7 @@
       "wave": 1,
       "area": "browser",
       "title": "Built-in browser panel",
-      "status": "pending",
+      "status": "complete",
       "refs": [
         "Yan"
       ]
@@ -235,7 +235,7 @@
       "wave": 1,
       "area": "codemap",
       "title": "Project code map",
-      "status": "pending",
+      "status": "complete",
       "refs": [
         "Yan"
       ]
@@ -245,7 +245,7 @@
       "wave": 1,
       "area": "memory",
       "title": "Workspace memory + run change rollback",
-      "status": "pending",
+      "status": "complete",
       "refs": [
         "Yan",
         "Hermes"
