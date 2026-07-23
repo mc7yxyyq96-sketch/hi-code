@@ -51,6 +51,7 @@ import { createWorkspaceService, modelCapabilityHint } from "./services/workspac
 import { createSecurityService, redactSensitive } from "./services/security-service.mjs";
 import { createAppInfoService } from "./services/app-info-service.mjs";
 import { createUsageService } from "./services/usage-service.mjs";
+import { createTerminalService } from "./services/terminal-service.mjs";
 import { recordUsage } from "../dist/usage-store.js";
 import { openMacApp, parseOpenAppRequest } from "./services/native-open-service.mjs";
 import { BUILTIN_STORE_CATALOG } from "./store-catalog.mjs";
@@ -2549,6 +2550,7 @@ function createMainServices() {
       gitGenerateCommitMessage,
       gitCommit,
     }),
+    terminal: createTerminalService({ getCwd: () => cwd }),
     workspace: createWorkspaceService({
       dialog,
       getWindow: () => win,

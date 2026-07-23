@@ -250,4 +250,11 @@ contextBridge.exposeInMainWorld("hicode", {
   buildReleasePackage: (payload) => safeInvoke("release:build", optionalObject(payload)),
   openReleasePackage: (payload) => safeInvoke("release:open", optionalObject(payload)),
   createIndustrialControlBoxSample: (payload) => safeInvoke("sample:industrial-control-box:create", optionalObject(payload)),
+  terminalCreate: (payload) => safeInvoke("terminal:create", optionalObject(payload)),
+  terminalWrite: (payload) => safeInvoke("terminal:write", optionalObject(payload)),
+  terminalKill: (payload) => safeInvoke("terminal:kill", optionalObject(payload)),
+  terminalList: () => safeInvoke("terminal:list"),
+  onTerminalReady: (cb) => typeof cb === "function" && ipcRenderer.on("terminal:ready", (_e, d) => cb(optionalObject(d))),
+  onTerminalData: (cb) => typeof cb === "function" && ipcRenderer.on("terminal:data", (_e, d) => cb(optionalObject(d))),
+  onTerminalExit: (cb) => typeof cb === "function" && ipcRenderer.on("terminal:exit", (_e, d) => cb(optionalObject(d))),
 });

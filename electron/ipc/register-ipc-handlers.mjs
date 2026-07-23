@@ -20,6 +20,8 @@ import { registerWorkspaceIpc } from "../services/workspace-service.mjs";
 import { registerSecurityIpc } from "../services/security-service.mjs";
 import { registerAppInfoIpc } from "../services/app-info-service.mjs";
 import { registerUsageIpc } from "../services/usage-service.mjs";
+import { registerTerminalIpc } from "../services/terminal-service.mjs";
+import { BrowserWindow } from "electron";
 
 export function registerIpcHandlers({ services, ipcMain, dialog, shell, logger = null }) {
   if (!services) throw new Error("registerIpcHandlers requires services");
@@ -47,6 +49,7 @@ export function registerIpcHandlers({ services, ipcMain, dialog, shell, logger =
   registerWorkspaceIpc({ register, workspace: services.workspace, dialog, shell });
   registerAppInfoIpc({ register, appInfo: services.appInfo });
   registerUsageIpc({ register, usage: services.usage });
+  registerTerminalIpc({ register, terminal: services.terminal, BrowserWindow });
 
   return register;
 }

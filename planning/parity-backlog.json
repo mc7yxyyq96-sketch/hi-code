@@ -214,7 +214,7 @@
       "wave": 1,
       "area": "terminal",
       "title": "Built-in PTY terminal panel",
-      "status": "pending",
+      "status": "complete",
       "refs": [
         "Yan"
       ]

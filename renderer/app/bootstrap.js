@@ -32,6 +32,7 @@ import {
   serializeTurn,
 } from "./assistant-turn.js";
 import { renderAssistantTurn } from "../components/chat-process.js";
+import { mountTerminalPanel } from "../components/terminal-panel.js";
 
 /* Hi Code renderer — chat-first parity shell (clean-room). */
 const SIDEBAR_COLLAPSED_KEY = "hicode.sidebarCollapsed";
@@ -3413,6 +3414,17 @@ function initParityShell() {
   });
   $("openSkillsCard")?.addEventListener("click", () => showCapabilities("skills"));
   $("openMcpCard")?.addEventListener("click", () => showCapabilities("mcp"));
+
+  const terminal = mountTerminalPanel({
+    root: $("terminalPanel"),
+    createSession: (payload) => api.terminalCreate(payload),
+    writeSession: (payload) => api.terminalWrite(payload),
+    killSession: (payload) => api.terminalKill(payload),
+    onReady: (cb) => api.onTerminalReady?.(cb),
+    onData: (cb) => api.onTerminalData?.(cb),
+    onExit: (cb) => api.onTerminalExit?.(cb),
+  });
+  $("terminalToggleBtn")?.addEventListener("click", () => terminal.toggle());
 }
 
 initSidebarCollapse();
