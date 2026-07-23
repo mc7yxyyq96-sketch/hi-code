@@ -1,6 +1,6 @@
 {
   "name": "hi-code",
-  "version": "0.7.0-parity.0",
+  "version": "0.7.0-parity.1",
   "description": "Hi Code \u2014 a desktop coding agent for any OpenAI-compatible model.",
   "author": "Hi Code contributors",
   "license": "MIT",
@@ -25,6 +25,7 @@
     "headless": "node dist/headless.js",
     "gateway": "node services/gateway/server.mjs",
     "test:gateway": "node test/gateway-tests.mjs",
+    "parity:evidence": "node scripts/parity-evidence.mjs",
     "test": "node test/feature-tests.mjs",
     "test:feature": "node test/feature-tests.mjs",
     "test:runtime-protocol": "node test/runtime-protocol-tests.mjs",

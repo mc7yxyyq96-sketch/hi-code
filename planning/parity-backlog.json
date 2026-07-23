@@ -340,7 +340,7 @@
       "wave": 4,
       "area": "gates",
       "title": "Full parity checklist evidence + E2E",
-      "status": "pending",
+      "status": "complete",
       "refs": [
         "all"
       ]
@@ -350,7 +350,7 @@
       "wave": 4,
       "area": "packaging",
       "title": "Signed-ready unsigned installers mac/win",
-      "status": "pending",
+      "status": "complete",
       "refs": [
         "Yan",
         "Hi Code"
@@ -361,7 +361,7 @@
       "wave": 4,
       "area": "advanced",
       "title": "Industrial/store/arena as advanced pack (not primary chrome)",
-      "status": "pending",
+      "status": "complete",
       "refs": [
         "Hi Code"
       ]
