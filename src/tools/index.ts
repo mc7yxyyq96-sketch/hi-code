@@ -3,8 +3,21 @@ import type { VibeConfig } from "../config.js";
 import { ui } from "../ui.js";
 import { requestPermission, type PermissionState, type AskFn } from "../permissions.js";
 import { type ToolContext, readFile, writeFile, editFile, planEdit, ls, glob, resolveWorkspacePath } from "./fs.js";
+import { applyPatch, findSymbol, getFileOutline } from "./code-intel.js";
 import { runBash, grep, type BashOutputStream } from "./bash.js";
 import { newDiffId, type DiffEntry, type RuntimeEventDraft } from "../events.js";
+import {
+  createReadBeforeEditState,
+  recordFileRead,
+  requireReadBeforeEdit,
+  type ReadBeforeEditState,
+} from "../policies/read-before-edit.js";
+import {
+  gitCommit,
+  gitFileDiff,
+  gitInfo,
+  gitWorkflowStatus,
+} from "../git.js";
 
 export interface ExecEnv {
   cfg: VibeConfig;
@@ -28,6 +41,10 @@ export interface ExecEnv {
   emitEvent?: (event: RuntimeEventDraft) => string | void;
   /** Records a file's prior content before a mutation, for /undo. null = file didn't exist. */
   recordChange?: (absPath: string, before: string | null, diffId?: string) => void;
+  /** Per-turn read-before-edit enforcement state. */
+  readPolicy?: ReadBeforeEditState;
+  /** Optional todo board updated by todo_write. */
+  todos?: Array<{ text: string; status: "pending" | "in_progress" | "done" }>;
 }
 
 /** Result of running a tool: text goes back to the model. */
@@ -174,7 +191,161 @@ export const TOOL_SCHEMAS: ToolSchema[] = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "read_file_range",
+      description: "Read a specific inclusive line range from a workspace file.",
+      parameters: {
+        type: "object",
+        properties: {
+          path: { type: "string" },
+          start_line: { type: "integer", description: "1-based start line" },
+          end_line: { type: "integer", description: "1-based end line" },
+        },
+        required: ["path", "start_line", "end_line"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "apply_patch",
+      description: "Apply a precise old_string→new_string patch to a file (alias of edit with patch semantics).",
+      parameters: {
+        type: "object",
+        properties: {
+          path: { type: "string" },
+          old_string: { type: "string" },
+          new_string: { type: "string" },
+          replace_all: { type: "boolean" },
+        },
+        required: ["path", "old_string", "new_string"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_file_outline",
+      description: "Return a lightweight symbol outline for a source file.",
+      parameters: {
+        type: "object",
+        properties: {
+          path: { type: "string" },
+          limit: { type: "integer" },
+        },
+        required: ["path"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "find_symbol",
+      description: "Find definitions of a symbol name across the workspace.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string" },
+          path: { type: "string", description: "Optional subdirectory to search" },
+          limit: { type: "integer" },
+        },
+        required: ["name"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "search_symbols",
+      description: "Alias of find_symbol for OpenCode-style symbol search.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string" },
+          path: { type: "string" },
+          limit: { type: "integer" },
+        },
+        required: ["name"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "todo_write",
+      description: "Update the turn todo board with planned steps and progress.",
+      parameters: {
+        type: "object",
+        properties: {
+          todos: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                text: { type: "string" },
+                status: { type: "string", enum: ["pending", "in_progress", "done"] },
+              },
+              required: ["text"],
+            },
+          },
+        },
+        required: ["todos"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "git_status",
+      description: "Show git workflow status for the workspace.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "git_diff",
+      description: "Show git diff for a path or the whole workspace.",
+      parameters: {
+        type: "object",
+        properties: {
+          path: { type: "string" },
+          staged: { type: "boolean" },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "git_log",
+      description: "Show recent git commits.",
+      parameters: {
+        type: "object",
+        properties: { limit: { type: "integer" } },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "git_commit",
+      description: "Create a git commit with the given message (requires staged changes).",
+      parameters: {
+        type: "object",
+        properties: { message: { type: "string" } },
+        required: ["message"],
+      },
+    },
+  },
 ];
+
+export function ensureExecEnvPolicy(env: ExecEnv): ReadBeforeEditState {
+  if (!env.readPolicy) env.readPolicy = createReadBeforeEditState();
+  return env.readPolicy;
+}
 
 // No-op reporter used when an agent runs quietly (e.g. in a parallel batch),
 // so several concurrent agents don't garble the terminal.
@@ -288,12 +459,28 @@ async function executeToolInner(
 ): Promise<ToolOutcome> {
   const out = reporter(env);
 
+  ensureExecEnvPolicy(env);
+
   switch (name) {
     case "read_file": {
       out.toolCall("read_file", args.path ?? "");
       const res = readFile(env.ctx, args);
+      if (!String(res).startsWith("Error:")) recordFileRead(env.readPolicy, args.path ?? "");
       out.toolResult(res);
       return { content: res, summary: args.path };
+    }
+    case "read_file_range": {
+      const start = Math.max(1, Number(args.start_line ?? 1));
+      const end = Math.max(start, Number(args.end_line ?? start));
+      out.toolCall("read_file_range", `${args.path}:${start}-${end}`);
+      const res = readFile(env.ctx, {
+        path: args.path,
+        offset: start,
+        limit: end - start + 1,
+      });
+      if (!String(res).startsWith("Error:")) recordFileRead(env.readPolicy, args.path ?? "");
+      out.toolResult(res);
+      return { content: res, summary: `${args.path}:${start}-${end}` };
     }
     case "ls": {
       out.toolCall("ls", args.path ?? ".");
@@ -313,13 +500,99 @@ async function executeToolInner(
       out.toolResult(res);
       return { content: res, summary: args.pattern };
     }
+    case "get_file_outline": {
+      out.toolCall("get_file_outline", args.path ?? "");
+      const res = getFileOutline(env.ctx, args);
+      if (!String(res).startsWith("Error:")) recordFileRead(env.readPolicy, args.path ?? "");
+      out.toolResult(res);
+      return { content: res, summary: args.path };
+    }
+    case "find_symbol":
+    case "search_symbols": {
+      out.toolCall(name, args.name ?? "");
+      const res = findSymbol(env.ctx, args);
+      out.toolResult(res);
+      return { content: res, summary: args.name };
+    }
+    case "todo_write": {
+      const todos = Array.isArray(args.todos) ? args.todos : [];
+      const nextTodos = todos.map((todo: any) => ({
+        text: String(todo?.text || ""),
+        status: (["pending", "in_progress", "done"].includes(todo?.status) ? todo.status : "pending") as
+          | "pending"
+          | "in_progress"
+          | "done",
+      }));
+      env.todos = nextTodos;
+      const summary = `${nextTodos.filter((t: { status: string }) => t.status === "done").length}/${nextTodos.length} done`;
+      env.emitEvent?.({
+        type: "turn:update",
+        tool: "todo_write",
+        title: "Todos updated",
+        summary,
+        status: "done",
+        payload: { todos: nextTodos },
+      });
+      out.toolResult(summary);
+      return { content: JSON.stringify({ ok: true, todos: nextTodos }, null, 2), summary };
+    }
+    case "git_status": {
+      out.toolCall("git_status", "");
+      const status = gitWorkflowStatus(env.ctx.cwd);
+      const info = gitInfo(env.ctx.cwd);
+      const content = JSON.stringify({ ...status, info }, null, 2);
+      out.toolResult(content);
+      return { content, summary: status.ok ? `${status.dirty} dirty` : status.error || "git error" };
+    }
+    case "git_diff": {
+      out.toolCall("git_diff", args.path ?? ".");
+      if (!args.path) {
+        const res = await runBash(
+          env.ctx,
+          { command: args.staged ? "git diff --cached" : "git diff", timeout: 30_000 },
+          env.signal,
+        );
+        out.toolResult(res.output || "(empty diff)");
+        return { content: res.output || "(empty diff)", summary: "diff", exitCode: res.exitCode };
+      }
+      const result = gitFileDiff(env.ctx.cwd, String(args.path), !!args.staged);
+      const content = result.ok ? result.diff || "(empty diff)" : `Error: ${result.error}`;
+      out.toolResult(content);
+      return { content, summary: result.ok ? "diff" : "error" };
+    }
+    case "git_log": {
+      out.toolCall("git_log", "");
+      const limit = Math.max(1, Math.min(50, Number(args.limit ?? 10)));
+      const res = await runBash(
+        env.ctx,
+        { command: `git log -n ${limit} --oneline --decorate`, timeout: 30_000 },
+        env.signal,
+      );
+      out.toolResult(res.output);
+      return { content: res.output || "(no commits)", summary: `${limit} commits`, exitCode: res.exitCode };
+    }
+    case "git_commit": {
+      out.toolCall("git_commit", String(args.message ?? "").slice(0, 60));
+      emitPermissionRequested(env, "git_commit", `git commit: ${args.message}`);
+      const decision = await requestPermission(
+        env.perms,
+        { tool: "git_commit", action: `git commit: ${args.message}`, mutating: true },
+        env.ask,
+      );
+      if (decision === "deny") return { content: "Denied by user.", summary: "denied" };
+      const result = gitCommit(env.ctx.cwd, String(args.message ?? ""));
+      const content = result.ok ? `Committed ${result.hash || ""}`.trim() : `Error: ${result.error}`;
+      out.toolResult(content);
+      return { content, summary: result.ok ? "committed" : "error" };
+    }
     case "write_file": {
       out.toolCall("write_file", args.path ?? "");
       return await previewAndWrite(env, args);
     }
-    case "edit_file": {
-      out.toolCall("edit_file", args.path ?? "");
-      return await previewAndEdit(env, args);
+    case "edit_file":
+    case "apply_patch": {
+      out.toolCall(name, args.path ?? "");
+      return await previewAndEdit(env, args, name);
     }
     case "bash": {
       out.toolCall("bash", String(args.command ?? "").slice(0, 80));
@@ -369,6 +642,7 @@ async function executeToolInner(
 
 async function previewAndWrite(env: ExecEnv, args: { path: string; content: string }): Promise<ToolOutcome> {
   const out = reporter(env);
+  ensureExecEnvPolicy(env);
   const fs = await import("node:fs");
   const resolved = resolveWorkspacePath(env.ctx, args.path, { forWrite: true });
   if ("error" in resolved) {
@@ -378,6 +652,13 @@ async function previewAndWrite(env: ExecEnv, args: { path: string; content: stri
   }
   const abs = resolved.abs;
   const existed = fs.existsSync(abs);
+  if (existed) {
+    const policy = requireReadBeforeEdit(env.readPolicy, args.path);
+    if (!policy.ok) {
+      out.error(policy.error);
+      return { content: policy.error, summary: "policy" };
+    }
+  }
   const old = existed ? fs.readFileSync(abs, "utf8") : "";
   out.diff(old, args.content, args.path);
   emitPermissionRequested(env, "write_file", `write ${args.path}`, args.path);
@@ -413,8 +694,15 @@ async function previewAndWrite(env: ExecEnv, args: { path: string; content: stri
 async function previewAndEdit(
   env: ExecEnv,
   args: { path: string; old_string: string; new_string: string; replace_all?: boolean },
+  toolName: "edit_file" | "apply_patch" = "edit_file",
 ): Promise<ToolOutcome> {
   const out = reporter(env);
+  ensureExecEnvPolicy(env);
+  const policy = requireReadBeforeEdit(env.readPolicy, args.path);
+  if (!policy.ok) {
+    out.error(policy.error);
+    return { content: policy.error, summary: "policy" };
+  }
   const plan = planEdit(env.ctx, args);
   if ("error" in plan) {
     const msg = `Error: ${plan.error}`;
@@ -422,14 +710,14 @@ async function previewAndEdit(
     return { content: msg, summary: "no match" };
   }
   out.diff(plan.oldContent, plan.newContent, args.path);
-  emitPermissionRequested(env, "edit_file", `edit ${args.path}`, args.path);
+  emitPermissionRequested(env, toolName, `edit ${args.path}`, args.path);
   const decision = await requestPermission(
     env.perms,
-    { tool: "edit_file", action: `edit ${args.path}`, mutating: true },
+    { tool: toolName, action: `edit ${args.path}`, mutating: true },
     env.ask,
   );
   if (decision === "deny") return { content: "Denied by user.", summary: "denied" };
-  const r = editFile(env.ctx, args);
+  const r = toolName === "apply_patch" ? applyPatch(env.ctx, args) : editFile(env.ctx, args);
   if ("error" in r) {
     out.error(r.error);
     return { content: "Error: " + r.error, summary: "error" };
@@ -445,7 +733,7 @@ async function previewAndEdit(
     before: plan.oldContent,
     after: plan.newContent,
     status: "pending",
-    tool: "edit_file",
+    tool: toolName,
     createdAt: Date.now(),
   });
   out.info("  " + r.message);
@@ -479,8 +767,16 @@ function emitDiffCreated(env: ExecEnv, diff: DiffEntry): void {
 
 function toolTitle(name: string, args: any): string {
   if (name === "read_file") return `Read ${args.path ?? "file"}`;
+  if (name === "read_file_range") return `Read ${args.path ?? "file"}:${args.start_line ?? "?"}-${args.end_line ?? "?"}`;
   if (name === "write_file") return `Write ${args.path ?? "file"}`;
-  if (name === "edit_file") return `Edit ${args.path ?? "file"}`;
+  if (name === "edit_file" || name === "apply_patch") return `Edit ${args.path ?? "file"}`;
+  if (name === "get_file_outline") return `Outline ${args.path ?? "file"}`;
+  if (name === "find_symbol" || name === "search_symbols") return `Find ${args.name ?? "symbol"}`;
+  if (name === "todo_write") return "Update todos";
+  if (name === "git_status") return "Git status";
+  if (name === "git_diff") return `Git diff ${args.path ?? ""}`.trim();
+  if (name === "git_log") return "Git log";
+  if (name === "git_commit") return "Git commit";
   if (name === "ls") return `List ${args.path ?? "."}`;
   if (name === "glob") return `Glob ${args.pattern ?? ""}`;
   if (name === "grep") return `Grep ${args.pattern ?? ""}`;

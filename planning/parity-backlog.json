@@ -119,7 +119,7 @@
       "wave": 1,
       "area": "tools",
       "title": "File tool union (read/range/write/edit/patch/list/search)",
-      "status": "pending",
+      "status": "complete",
       "refs": [
         "Yan",
         "OpenCode"
@@ -130,7 +130,7 @@
       "wave": 1,
       "area": "tools",
       "title": "Code intelligence tools (outline/symbol/refs/index)",
-      "status": "pending",
+      "status": "complete",
       "refs": [
         "Yan"
       ]
@@ -140,7 +140,7 @@
       "wave": 1,
       "area": "tools",
       "title": "Git tool union",
-      "status": "pending",
+      "status": "complete",
       "refs": [
         "Yan"
       ]
@@ -150,7 +150,7 @@
       "wave": 1,
       "area": "tools",
       "title": "todo_write + spawn_subagent(s)",
-      "status": "pending",
+      "status": "complete",
       "refs": [
         "Yan",
         "OpenCode"
@@ -161,7 +161,7 @@
       "wave": 1,
       "area": "policy",
       "title": "Enforce read-before-edit",
-      "status": "pending",
+      "status": "complete",
       "refs": [
         "Yan"
       ]

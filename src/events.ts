@@ -13,7 +13,7 @@ export type ToolEventType =
 
 export type DiffStatus = "pending" | "accepted" | "rejected" | "undone";
 
-export type DiffTool = "write_file" | "edit_file" | "undo";
+export type DiffTool = "write_file" | "edit_file" | "apply_patch" | "undo";
 
 export interface DiffEntry {
   id: string;

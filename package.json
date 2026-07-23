@@ -57,7 +57,8 @@
     "dist:mac": "npm run build && electron-builder --mac dmg",
     "dist:win": "npm run build && electron-builder --win --x64",
     "dist:all": "npm run build && electron-builder --mac dmg --win --x64",
-    "test:assistant-turn": "node test/assistant-turn-tests.mjs"
+    "test:assistant-turn": "node test/assistant-turn-tests.mjs",
+    "test:parity-tools": "npm run build && node test/parity-tool-union-tests.mjs"
   },
   "dependencies": {
     "chalk": "^5.3.0",
