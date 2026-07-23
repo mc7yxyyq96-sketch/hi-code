@@ -63,7 +63,7 @@
       "wave": 0,
       "area": "composer",
       "title": "Workspace/model/thinking pills + Stop",
-      "status": "pending",
+      "status": "complete",
       "refs": [
         "Yan"
       ]
@@ -85,7 +85,7 @@
       "wave": 0,
       "area": "chat-process",
       "title": "Persist AssistantTurn tree; history rebuild",
-      "status": "in_progress",
+      "status": "complete",
       "refs": [
         "Yan",
         "Codex"
@@ -97,7 +97,7 @@
       "wave": 0,
       "area": "permissions",
       "title": "Allow / always / deny for shell",
-      "status": "pending",
+      "status": "complete",
       "refs": [
         "Yan",
         "OpenCode"

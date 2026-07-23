@@ -502,6 +502,50 @@ body.browser-open #main {
   color: var(--hc-text);
 }
 
+.hc-permission-inline {
+  border: 1px solid rgba(240, 180, 80, 0.35);
+  background: rgba(240, 180, 80, 0.08);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin: 8px 0;
+}
+
+.hc-permission-title {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.hc-permission-action {
+  font-family: var(--hc-mono);
+  font-size: 12px;
+  color: var(--hc-text-muted);
+  margin-bottom: 8px;
+}
+
+.hc-permission-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.hc-permission-actions button {
+  border: 1px solid var(--hc-border);
+  background: #161616;
+  color: var(--hc-text);
+  border-radius: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.hc-permission-actions button.danger {
+  border-color: rgba(255, 100, 100, 0.4);
+  color: #ffb4b4;
+}
+
+.hc-permission-inline.is-resolved {
+  opacity: 0.7;
+}
+
 .codemap-shell,
 .memory-shell {
   max-width: 1100px;

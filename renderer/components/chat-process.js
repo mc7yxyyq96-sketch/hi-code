@@ -112,16 +112,27 @@ export function buildSystemNoteElement(content) {
   return el;
 }
 
-export function buildPermissionElement(item = {}) {
+export function buildPermissionElement(item = {}, { onDecide } = {}) {
   const el = document.createElement("div");
   el.className = "hc-permission-inline";
   el.dataset.permId = item.id || "";
   el.innerHTML = `
     <div class="hc-permission-title">需要权限确认</div>
     <div class="hc-permission-action"></div>
-    <div class="hc-permission-hint">请在下方权限条选择：允许 / 总是允许 / 拒绝</div>
+    <div class="hc-permission-actions">
+      <button type="button" data-v="y">允许</button>
+      <button type="button" data-v="a">总是允许</button>
+      <button type="button" data-v="n" class="danger">拒绝</button>
+    </div>
   `;
   el.querySelector(".hc-permission-action").textContent = item.action || "";
+  el.querySelectorAll("button[data-v]").forEach((btn) => {
+    btn.onclick = () => {
+      if (typeof onDecide === "function") onDecide(item.id, btn.dataset.v);
+      el.classList.add("is-resolved");
+      el.querySelectorAll("button").forEach((b) => { b.disabled = true; });
+    };
+  });
   return el;
 }
 
@@ -181,7 +192,7 @@ export function buildRunHeaderElement(turn = {}) {
 /**
  * Render a full AssistantTurn into an agent message body element.
  */
-export function renderAssistantTurn(bodyEl, turn, { preserveScroll = true } = {}) {
+export function renderAssistantTurn(bodyEl, turn, { preserveScroll = true, onPermissionDecide } = {}) {
   if (!bodyEl || !turn) return;
   const stick = preserveScroll ? nearBottom(bodyEl) : false;
   bodyEl.classList.add("hc-agent-output");
@@ -204,7 +215,7 @@ export function renderAssistantTurn(bodyEl, turn, { preserveScroll = true } = {}
     } else if (item.type === "system") {
       activity.appendChild(buildSystemNoteElement(item.content));
     } else if (item.type === "permission") {
-      activity.appendChild(buildPermissionElement(item));
+      activity.appendChild(buildPermissionElement(item, { onDecide: onPermissionDecide }));
     }
   }
 

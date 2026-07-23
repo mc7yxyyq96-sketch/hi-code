@@ -2234,7 +2234,14 @@ function stripAnsi(value) {
 
 function paintCurrentTurn() {
   if (!agentBody || !currentAssistantTurn) return;
-  renderAssistantTurn(agentBody, currentAssistantTurn);
+  renderAssistantTurn(agentBody, currentAssistantTurn, {
+    onPermissionDecide: (permId, value) => {
+      // Prefer inline permission; ask box remains as fallback.
+      if (window.__hicodeAskId != null) api.answer(window.__hicodeAskId, value);
+      else if (permId) api.answer(permId, value);
+      askBox?.classList.add("hidden");
+    },
+  });
   if (agentBody.closest(".msg.agent")) {
     agentBody.closest(".msg.agent").dataset.assistantTurn = JSON.stringify(serializeTurn(currentAssistantTurn));
   }
@@ -3097,8 +3104,16 @@ api.onRuntimeQueue?.((state) => {
   renderQueueStatus();
 });
 api.onAsk(({ id, q }) => {
+  window.__hicodeAskId = id;
   askQ.textContent = q; askBox.classList.remove("hidden");
-  askBox.querySelectorAll(".btn").forEach((b) => { b.onclick = () => { askBox.classList.add("hidden"); api.answer(id, b.dataset.v); }; });
+  askBox.querySelectorAll(".btn").forEach((b) => {
+    b.onclick = () => {
+      askBox.classList.add("hidden");
+      window.__hicodeAskId = null;
+      api.answer(id, b.dataset.v);
+    };
+  });
+  paintCurrentTurn();
   scrollDown();
 });
 
