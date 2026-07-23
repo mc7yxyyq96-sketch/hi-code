@@ -85,11 +85,12 @@
       "wave": 0,
       "area": "chat-process",
       "title": "Persist AssistantTurn tree; history rebuild",
-      "status": "pending",
+      "status": "in_progress",
       "refs": [
         "Yan",
         "Codex"
-      ]
+      ],
+      "notes": "History restore reads assistantTurn/agentRun when present; durable session writer still pending"
     },
     {
       "id": "A-07",

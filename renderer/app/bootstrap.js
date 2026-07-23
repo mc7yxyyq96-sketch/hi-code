@@ -3102,10 +3102,29 @@ function renderChatFromMessages(msgs) {
   chat.innerHTML = "";
   showChat();
   for (const m of msgs) {
-    if (m.role === "user") addUserMessage(m.text);
-    else { startAgentMessage(); agentBody.textContent = m.text; }
+    if (m.role === "user") addUserMessage(m.text || m.content || "");
+    else {
+      startAgentMessage();
+      const saved = m.assistantTurn || m.agentRun || null;
+      if (saved && typeof saved === "object") {
+        currentAssistantTurn = createAssistantTurn(saved);
+        paintCurrentTurn();
+      } else {
+        const text = m.text || m.content || "";
+        if (text) {
+          appendTextDelta(currentAssistantTurn, text);
+          paintCurrentTurn();
+        } else if (agentBody) {
+          agentBody.textContent = "";
+        }
+      }
+      agentBody = null;
+      currentAssistantTurn = null;
+      agentRaw = "";
+    }
   }
   agentBody = null;
+  currentAssistantTurn = null;
   agentRaw = "";
   scrollDown();
 }
